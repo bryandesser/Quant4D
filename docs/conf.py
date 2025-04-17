@@ -1,4 +1,5 @@
 import sphinx_rtd_theme
+from datetime import datetime
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -9,14 +10,30 @@ import sphinx_rtd_theme
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Quant4D'
-copyright = '2025, Bryan D Esser'
+copyright = f"{datetime.today().year}, Bryan D Esser"
 author = 'Bryan D Esser'
 release = '2025.03.17'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = "sphinx_rtd_theme"
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_rtd_theme",
+]
+
+user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54"
+
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+}
+
+# Include todo items/lists
+todo_include_todos = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
