@@ -31,6 +31,9 @@ The simplest way to install `Quant4D` is via the installer file (`Quant4D.mlappi
     :height: 400
     :align: center
 
+|
+|
+
 Running Quant4D code directly
 -----------------------------
 
