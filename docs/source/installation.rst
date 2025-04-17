@@ -11,7 +11,7 @@ Installation
 MATLAB Requirements
 -------------------
 
-`Quant4D`` is tested and stable on MATLAB R2021a or later. If performing a fresh installation of MATLAB, please ensure the following MATLAB Toolboxes are selected during the installation process: 
+`Quant4D` is tested and stable on MATLAB R2021a or later. If performing a fresh installation of MATLAB, please ensure the following MATLAB Toolboxes are selected during the installation process: 
 
 #. Image Processing
 #. Parallel Computing
@@ -30,9 +30,6 @@ The simplest way to install `Quant4D` is via the installer file (`Quant4D.mlappi
     :width: 400
     :height: 400
     :align: center
-
-|
-|
 
 Running Quant4D code directly
 -----------------------------
