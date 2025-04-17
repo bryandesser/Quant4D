@@ -24,8 +24,12 @@ If some or all of the required Toolboxes are missing, they can be installed by f
 Installing Quant4D App
 ----------------------
 
-The simplest way to install `Quant4D` is via the installer file (`Quant4D.mlappinstall <https://github.com/bryandesser/Quant4D/blob/f2763094d9dcb171a399657edfd25c3209d20d6a/Quant4D.mlappinstall>`). Download and open the file, which will open MATLAB and ask to install `Quant4D` into **My Apps**. Click `Install` and then open the app from the **Apps** tab on the MATLAB Toolstrip. The app may be burried on the list - if so, click the drop-down arrow on the far right of the toolstrip.
+The simplest way to install `Quant4D` is via the installer file (`Quant4D.mlappinstall <https://github.com/bryandesser/Quant4D/blob/f2763094d9dcb171a399657edfd25c3209d20d6a/Quant4D.mlappinstall>`). Download and open the file, which will open MATLAB and ask to install `Quant4D` into **My Apps** (see below). Click `Install` and then open the app from the **Apps** tab on the MATLAB Toolstrip. The app may be burried on the list - if so, click the drop-down arrow on the far right of the toolstrip.
 
+.. image:: ../_static/app_install.png
+    :width: 400
+    :height: 400
+    :align: center
 
 Running Quant4D code directly
 -----------------------------
