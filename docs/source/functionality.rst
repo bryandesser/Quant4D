@@ -17,8 +17,8 @@ Settings Window
 Import Window
 ^^^^^^^^^^^^^
 .. image:: ../_static/import_window.png
-    :width: 268
-    :height: 306
+    :width: 306
+    :height: 268
     :align: center
 
 Preview Window
