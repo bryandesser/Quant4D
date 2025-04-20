@@ -10,6 +10,7 @@ Contents
    :maxdepth: 2
    
    installation
+   graphical_user_interface
    functionality
    license
    acknowledgements
