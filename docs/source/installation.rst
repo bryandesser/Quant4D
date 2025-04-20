@@ -34,4 +34,4 @@ The simplest way to install `Quant4D` is via the installer file (`Quant4D.mlappi
 Running Quant4D code directly
 -----------------------------
 
-`Quant4D` can also be run directly from the code, which gives access to debugging and live user interaction with the underlying experimental data for additional functionality. To do this, download the 
+`Quant4D` can also be run directly from the source code, which gives access to debugging and live user interaction with the underlying experimental data for additional functionality. To do this, first download the `source code <https://github.com/bryandesser/Quant4D/tree/7a0527fe79274a72725b0d18c124ca5045baee8c/source_code>`_. Then open the 
