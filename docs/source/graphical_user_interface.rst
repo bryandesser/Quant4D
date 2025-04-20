@@ -16,7 +16,7 @@ Import Window
     :height: 268
     :align: center
 
-The import window allows the user to import several common file formats (EMPAD ``.raw``, Gatan ``.dm3/.dm4``, Medipix ``.mib``, MRC, HDF5) as well as any file format for which the user knows the filestructure. 
+The import window allows the user to import several common file formats (EMPAD ``.raw``, Gatan ``.dm3/.dm4``, Medipix ``.mib``, MRC, HDF5) as well as any file format for which the user knows the file structure. 
 
 Preview Window
 **************
