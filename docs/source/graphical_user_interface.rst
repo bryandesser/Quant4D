@@ -1,4 +1,6 @@
 .. _graphical_user_interface:
+.. role:: red
+.. role:: green
 
 Graphical user interface
 ========================
