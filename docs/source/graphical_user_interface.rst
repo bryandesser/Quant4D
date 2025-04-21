@@ -14,6 +14,18 @@ Settings Window
     :height: 230
     :align: center
 
+Display Tab
+^^^^^^^^^^^
+* `Image`: Currently selected image window. Dropdown allows selection of any currently available image window. 
+* `Show image`: Bring currently selected image window to the front (or show if currently closed).
+* `Image lock`: Lock current image window selection; helps keeps focus on image statistics for the selected image window. 
+* `Colormap`: Change the displayed colormap for the selected image window.
+* `Invert`: Invert selected colormap.
+* `Image stats`: Statistics for the currently selected image window.
+* `Histogram`: Display histogram for currently selected image window. Allows for interactive brightness/contrast and log/linear view.
+* `Brightness/Contrast/Gamma`: Controlled via sliderbar or text input; reset via the icon at the left. 
+* `Mask`: Modify mask opacity used on currently selected image window (i.e. diffraction pattern mask or real-space ROI). Display mask via icon at the left.
+
 Import Window
 *************
 .. image:: ../_static/import_window.png
