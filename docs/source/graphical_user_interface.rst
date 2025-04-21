@@ -26,6 +26,18 @@ Display Tab
 * `Brightness/Contrast/Gamma`: Controlled via sliderbar or numerical input; reset via the icon at the left. 
 * `Mask`: Modify mask opacity used on currently selected image window (i.e. diffraction pattern mask or real-space ROI). Display mask via icon at the left.
 
+Misc Tab
+^^^^^^^^
+* `Calculation Policy`: Active automatically updates all image displays as the user iteracts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI; Passive only updates image displays when the user clicks the Refresh button on the Main Window.
+* `Annular integration step`: User-defined step size for pre-computed annular images. Smaller steps give finer control of annular detectors at the expense of larger memory usage.
+* `Detector coordinate options`: Polar or cartesian coordinates; locations displayed in absolute or relative to transmitted beam center; pixel or angular units.   
+* `Diffraction/Real-space image windows`: set image window size; define x,y orientation (i.e. origin location); rotate image; show/hide axes on image.
+* `Show image windows`: Show image window or bring to front (i.e. if closed or hidden).
+
+Info Tab
+^^^^^^^^
+* `
+
 Import Window
 *************
 .. image:: ../_static/import_window.png
