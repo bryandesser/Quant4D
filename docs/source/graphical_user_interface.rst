@@ -85,7 +85,7 @@ Preview Window
     :height: 365
     :align: center
 
-Upon selection a file to import, but before clicking **Import Data** on the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct. If parametrs like the header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first, middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image display controls (brightness/contrast/gamma).
+Upon file selection, but before clicking **Import Data** in the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct. If parametrs like header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first, middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image display controls (brightness/contrast/gamma).
 
 Image Windows
 *************
