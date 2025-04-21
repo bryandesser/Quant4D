@@ -25,8 +25,8 @@ Parameters
 ^^^^^^^^^^
 * `Sub-dataset`: Coice of dataset in hierarchical datasets such as ``.hdf5`` and ``.dm3/.dm4`` files.
 * `Data offset`: Offset to the start of the 4D-STEM dataset in bytes.
-* `Frame header`: Header data size in bytes before *each* image frame. 
-* `Frame footer`: Footer data size in bytes before *each* image frame.
+* `Frame header`: Header data size in bytes repeated before *each* image frame. 
+* `Frame footer`: Footer data size in bytes repeated after *each* image frame.
 * `Data type`: Data type of the 4D-STEM dataset (8-, 16-, 32-, or 64-bit; signed integer, unsigned integer, or floating point)
 * `Byte order`: Big or little endian ordering.
 * `Pixels (x,y)`: Number of detector pixels in each frame. 
