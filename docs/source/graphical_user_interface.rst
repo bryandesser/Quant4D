@@ -16,7 +16,7 @@ Settings Window
 
 Display Tab
 ^^^^^^^^^^^
-* **`Image`**: Currently selected image window. Dropdown allows selection of any currently available image window. 
+* `**Image**``: Currently selected image window. Dropdown allows selection of any currently available image window. 
 * **`Show image`**: Bring currently selected image window to the front (or show if currently closed).
 * **`Image lock`**: Lock current image window selection; helps keeps focus on image statistics for the selected image window. 
 * **`Colormap`**: Change the displayed colormap for the selected image window.
