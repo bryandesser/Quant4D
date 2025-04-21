@@ -23,7 +23,7 @@ Display Tab
 * `Invert`: Invert selected colormap.
 * `Image stats`: Statistics for the currently selected image window.
 * `Histogram`: Display histogram for currently selected image window. Allows for interactive brightness/contrast and log/linear view.
-* `Brightness/Contrast/Gamma`: Controlled via sliderbar or text input; reset via the icon at the left. 
+* `Brightness/Contrast/Gamma`: Controlled via sliderbar or numerical input; reset via the icon at the left. 
 * `Mask`: Modify mask opacity used on currently selected image window (i.e. diffraction pattern mask or real-space ROI). Display mask via icon at the left.
 
 Import Window
