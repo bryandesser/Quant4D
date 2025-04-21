@@ -35,7 +35,7 @@ Parameters
 File information
 ^^^^^^^^^^^^^^^^
 `Size`: Actual file size in GiB.
-`Estimated size`: Estimated dataset size in GiB based on the above parameters. If the two agree, the text will be shown in :green:green; if not, it will show in :red:red. 
+`Estimated size`: Estimated dataset size in GiB based on the above parameters. If the two agree, the text will be shown in :green:`green`; if not, it will show in :red:`red`. 
 `Dataset Info from Metadata`: Information automatically detected from the file metadata.
 
 Preview Window
