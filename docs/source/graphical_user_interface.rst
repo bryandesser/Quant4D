@@ -19,7 +19,7 @@ Import Window
 The import window allows the user to import several common file formats (EMPAD, Gatan, Medipix, MRC, HDF5) as well as any file format for which the user knows the file structure.
 
 * ``.raw`` files are assumed to be in the EMPAD file format with 128x128 detector frames separated by a 1024 byte footer.
-* ``.dm3/.dm4`` and ``.hdf5`` files are scanned allowing the user to select the correct dataset
+* ``.dm3/.dm4`` and ``.hdf5`` files are scanned allowing the user to select the correct dataset.
 * ``.mib`` file metadata are scanned for the relavent parameters. 
 
 Parameters
@@ -38,6 +38,14 @@ File information
 * `Size`: Actual file size in GiB.
 * `Estimated size`: Estimated dataset size in GiB based on the above parameters. If the two agree, the text will be shown in green; if not, it will show in red. 
 * `Dataset Info from Metadata`: Information automatically detected from the file metadata.
+
+Import Options
+^^^^^^^^^^^^^^
+* `Memory`: Physical Memory reads the dataset into RAM (assuming there is sufficient memory available); Virtual Memory generates a `memmapfile <https://www.mathworks.com/help/matlab/ref/memmapfile.html>`_ for lazy loading. Virtual memory option is only available for contiguous datasets (i.e. no frame headers or footers), and is not particularly efficient on Windows systems.  
+* `GPU`: Selected GPU device (if available with sufficient memory).
+* `Pixels Partial Import`: Bin and/or crop each frame.
+* `Frames Partial Import`: Subsample and/or crop the 4D-STEM dataset probe positions. 
+* `Import Summary`: Summarized import options. 
 
 Preview Window
 **************
