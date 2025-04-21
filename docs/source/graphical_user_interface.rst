@@ -36,7 +36,9 @@ Misc Tab
 
 Info Tab
 ^^^^^^^^
-* `
+* `Dataset info`: All information and parameters used for the currently loaded dataset. 
+* `Swap byte order`: Swap big endian <-> little endian in case incorrectly selected on import.
+* `Swap Diffraction/Real-space X/Y`: Swap x,y axes for diffraction and/or real-space in case incorrecrtly selected on import. Most useful for non-square datasets.
 
 Import Window
 *************
