@@ -80,7 +80,7 @@ Import Options
 
 Preview Window
 **************
-.. image:: ../_static/import_window.png
+.. image:: ../_static/import_preview.png
     :width: 1097
     :height: 729
     :align: center
