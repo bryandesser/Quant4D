@@ -9,6 +9,11 @@ Main Window
 
 Settings Window
 ***************
+.. image:: ../_static/settings.png
+    :width: 411
+    :height: 230
+    :align: center
+
 Import Window
 *************
 .. image:: ../_static/import_window.png
