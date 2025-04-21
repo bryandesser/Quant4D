@@ -16,7 +16,7 @@ Import Window
     :height: 268
     :align: center
 
-The import window allows the user to import several common file formats (EMPAD ``.raw``, Gatan ``.dm3/.dm4``, Medipix ``.mib``, MRC, HDF5) as well as any file format for which the user knows the file structure.
+The import window allows the user to import several common file formats (EMPAD, Gatan, Medipix, MRC, HDF5) as well as any file format for which the user knows the file structure.
 
 * ``.raw`` files are assumed to be in the EMPAD file format with 128x128 detector frames separated by a 1024 byte footer.
 * ``.dm3/.dm4`` and ``.hdf5`` files are scanned allowing the user to select the correct dataset
