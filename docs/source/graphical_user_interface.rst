@@ -58,7 +58,15 @@ Main Window
     :height: 261
     :align: center
 
-The main window of the GUI has several different 
+The main window of the GUI has several different pages with mode-specific controls. The pages are as follows:
+ 
+ * **Import Preview**: for previewing individual diffraction frames before importing the entire dataset.
+ * **Alignment**: fit and calibrate transmitted beam centering and radius, including automatic alignment procedure. 
+ * **Annular/Round**: control simple annulus mask for BF/DF imaging.  
+ * **Segmented (DPC)**: generate a segmented annular/round detector and compute DPC-related images.
+ * **Center of Mass**: compute CoM-related images from an annular/round detector mask. 
+ * **Virtual Aperture**: control a round virtual aperture with rotational and/or mirror symmetry operations. 
+ * **Custom Detectors**: generate any number of additional detector masks or import your own from file. 
 
 Settings Window
 ***************
