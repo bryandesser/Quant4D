@@ -54,8 +54,6 @@ Upon file selection, but before clicking **Import Data** in the **Import Window*
 Main Window
 ***********
 .. image:: ../_static/main_window.png
-    :width: 984
-    :height: 261
     :align: center
 
 The main window of the GUI has several different pages with mode-specific controls. The pages are as follows:
