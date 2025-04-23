@@ -69,8 +69,6 @@ The main window of the GUI has several different pages with mode-specific contro
 Settings Window
 ***************
 .. image:: ../_static/settings.png
-    :width: 411
-    :height: 230
     :align: center
 
 Display Tab
