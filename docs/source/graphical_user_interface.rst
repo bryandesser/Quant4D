@@ -54,7 +54,7 @@ Upon file selection, but before clicking **Import Data** in the **Import Window*
 Main Window
 ***********
 .. image:: ../_static/main_window_montage.png
-    :width: 844
+    :width: 984
     :height: 261
     :align: center
 
