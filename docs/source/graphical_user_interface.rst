@@ -6,7 +6,8 @@ The graphical user interface (GUI) allows for intuitive interactions with the 4D
 
 Import Window
 *************
-.. image:: ../_static/import_window.png
+..
+    .. image:: ../_static/import_window.png
     :width: 306
     :height: 268
     :align: center
