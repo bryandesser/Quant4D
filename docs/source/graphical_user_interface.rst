@@ -86,6 +86,7 @@ Misc Tab
 ^^^^^^^^
 .. image:: ../_static/settings_misc_tab.png
     :align: right
+    :scale: 50%
 * **Calculation Policy**: Active automatically updates all image displays as the user iteracts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI; Passive only updates image displays when the user clicks the Refresh button on the Main Window.
 * **Annular integration step**: User-defined step size for pre-computed annular images. Smaller steps give finer control of annular detectors at the expense of larger memory usage.
 * **Detector coordinate options**: Polar or cartesian coordinates; locations displayed in absolute or relative to transmitted beam center; pixel or angular units.   
