@@ -132,5 +132,5 @@ Export Dataset Tab
 
 The **Export Dataset Tab** allows the users to export the dataset as HDF5 (`.h5`) or raw binary (`.raw`) format with options for selecting smaller ROIs in the diffraction and/or real-space dimensions. The output file dimensions can optionally be appended to the filename for convenience. 
 
-* **Diffraction Partial Export**: diffraction space can be binned to reduce file size; an ROI can be selected by changing the starting location (x_1,y_1) and the total number of pixels (X,Y).
-* **Real-space Partial Export**: real-space can be subsampled to reduce file size; an ROI can be selected by changing the starting location (x_1,y_1) and the total number of pixels (X,Y).
+* **Diffraction Partial Export**: diffraction space can be binned to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
+* **Real-space Partial Export**: real-space can be subsampled to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
