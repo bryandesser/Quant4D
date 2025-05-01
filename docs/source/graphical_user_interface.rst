@@ -7,8 +7,8 @@ The graphical user interface (GUI) allows for intuitive interactions with the 4D
 Import Window
 *************
 .. image:: ../_static/import_window.png
-    :scale: 50%
-..  :width: 306
+    :scale: 100%
+    :width: 306
     :height: 268
     :align: center
 
@@ -46,10 +46,10 @@ Import Options
 Preview Window
 **************
 .. image:: ../_static/import_preview.png
-    :scale: 50%
+    :scale: 100%
     :width: 549
     :height: 365
-..  :align: center
+    :align: center
     
 Upon file selection, but before clicking **Import Data** in the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct. If parametrs like header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first, middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image display controls (brightness/contrast/gamma).
 
