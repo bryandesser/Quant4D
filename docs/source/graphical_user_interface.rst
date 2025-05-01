@@ -45,6 +45,7 @@ Import Options
 Preview Window
 **************
 .. image:: ../_static/import_preview.png
+    :scale: 50%
 ..  :align: center
     :width: 549
     :height: 365
