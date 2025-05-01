@@ -55,6 +55,7 @@ Main Window
 ***********
 .. image:: ../_static/main_window.png
     :align: center
+    :target: ../_static/main_window.png
 
 The main window of the GUI has several different pages with mode-specific controls. The pages are as follows:
  
