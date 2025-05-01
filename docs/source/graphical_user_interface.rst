@@ -68,9 +68,6 @@ The main window of the GUI has several different pages with mode-specific contro
 
 Settings Window
 ***************
-.. image:: ../_static/settings.png
-    :align: center    
-
 Display Tab
 ^^^^^^^^^^^
 .. image:: ../_static/settings_display_tab.png
@@ -88,6 +85,7 @@ Display Tab
 Misc Tab
 ^^^^^^^^
 .. image:: ../_static/settings_misc_tab.png
+    :align: right
 * **Calculation Policy**: Active automatically updates all image displays as the user iteracts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI; Passive only updates image displays when the user clicks the Refresh button on the Main Window.
 * **Annular integration step**: User-defined step size for pre-computed annular images. Smaller steps give finer control of annular detectors at the expense of larger memory usage.
 * **Detector coordinate options**: Polar or cartesian coordinates; locations displayed in absolute or relative to transmitted beam center; pixel or angular units.   
@@ -97,6 +95,7 @@ Misc Tab
 Info Tab
 ^^^^^^^^
 .. image:: ../_static/settings_info_tab.png
+    :align: right
 * **Dataset info**: All information and parameters used for the currently loaded dataset. 
 * **Swap byte order**: Swap big endian <-> little endian in case incorrectly selected on import. Done in memory to avoid having to reimport the data.
 * **Swap Diffraction/Real-space X/Y**: Swap x,y axes for diffraction and/or real-space in case incorrecrtly selected on import. This is most useful for non-square datasets and CoM/DPC. Done in memory to avoid having to reimport the data.
