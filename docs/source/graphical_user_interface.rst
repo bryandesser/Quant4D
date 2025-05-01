@@ -113,14 +113,14 @@ Save/Export Window
 *************
 The **Save/Export** window allows users to save images or export a cropped and/or binned subset of the original 4D-STEM dataset.
 
-Save Tab
-^^^^^^^^
+Save Images Tab
+^^^^^^^^^^^^^^^
 .. image:: ../_static/save_window.png
     :align: center
-The **Save Tab** 
+The **Save Images Tab** 
 
-Export Tab
-^^^^^^^^^^
+Export Dataset Tab
+^^^^^^^^^^^^^^^^^^
 .. image:: ../_static/export_window.png
     :align: center
-The **Export Tab**
+The **Export Dataset Tab**
