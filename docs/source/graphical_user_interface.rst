@@ -106,13 +106,21 @@ Info Tab
 * **Swap byte order**: Swap big endian <-> little endian in case incorrectly selected on import. Done in memory to avoid having to reimport the data.
 * **Swap Diffraction/Real-space X/Y**: Swap x,y axes for diffraction and/or real-space in case incorrecrtly selected on import. This is most useful for non-square datasets and CoM/DPC. Done in memory to avoid having to reimport the data.
 
-.. rst-class:: page-break
-
-
 Image Windows
 *************
-test test test
 
-Export Window
+Save/Export Window
 *************
-test test test
+The **Save/Export** window allows users to save images or export a cropped and/or binned subset of the original 4D-STEM dataset.
+
+Save Tab
+^^^^^^^^
+.. image:: ../_static/save_window.png
+    :align: center
+The **Save Tab** 
+
+Export Tab
+^^^^^^^^^^
+.. image:: ../_static/export_window.png
+    :align: center
+The **Export Tab**
