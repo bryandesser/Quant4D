@@ -117,10 +117,16 @@ Save Images Tab
 ^^^^^^^^^^^^^^^
 .. image:: ../_static/save_window.png
     :align: center
-The **Save Images Tab** 
+The **Save Images Tab** displays all images available for saving for the current imaging mode. The user can select a filename prefix that will be prepended to all images selected for saving. Additionally, annular collection angles can be added to the filename, if desired. Multiple images can be selected by holding **ctrl** whilst clicking, while holding **shift** will select a continuous range of images for saving. 
+* **Raw data**: data will be saved in the same intensity units and pixel density as the original dataset in single precision TIFF file format.
+* **As-displayed**: data will be saved as-displayed on the screen in PNG file format
+* **with annotations**: PNG files will include all visible image annotations (i.e. detectors, ROIs, axes, etc.)
+* **DPI**: user-defined dots per inch resolution of the PNG file (default 72 DPI).
 
 Export Dataset Tab
 ^^^^^^^^^^^^^^^^^^
 .. image:: ../_static/export_window.png
     :align: center
-The **Export Dataset Tab**
+The **Export Dataset Tab** allows the users to export the dataset as HDF5 (`.h5`) or raw binary (`.raw`) format with options for selecting smaller ROIs in the diffraction and/or real-space dimensions. 
+* **Diffraction Partial Export**: diffraction space can be binned to reduce file size; an ROI can be selected by changing the starting location (x_1,y_1) and the total number of pixels (X,Y).
+* **Real-space Partial Export**: real-space can be subsampled to reduce file size; an ROI can be selected by changing the starting location (x_1,y_1) and the total number of pixels (X,Y).
