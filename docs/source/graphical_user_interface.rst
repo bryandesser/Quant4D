@@ -108,6 +108,8 @@ Info Tab
 
 Image Windows
 *************
+.. |image toolbar|    image:: ../_static/image_toolbar.png
+Individual windows are created for all images, including diffraction space, real-space, ROI masks, and vector colorwheel. All image windows that view the same space respond simultaneously to any changes in zoom and pan to unify their field of view. All image windows come with a toolbar |iamge toolbar| in the upper righthand corner that allows the user to zoom in/out, pan, reset the field of view, query pixel intensities, and export (save, copy, or copy as vector graphic).
 
 Save/Export Window
 *************
