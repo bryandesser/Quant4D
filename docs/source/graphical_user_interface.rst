@@ -124,6 +124,7 @@ Save Images Tab
 ^^^^^^^^^^^^^^^
 .. image:: ../_static/save_window.png
     :align: center
+    :scale: 50%
 
 The **Save Images Tab** displays all images available for saving for the current imaging mode. The user can select a filename prefix that will be prepended to all images selected for saving. Additionally, annular collection angles can be added to the filename, if desired. Multiple images can be selected by holding **ctrl** whilst clicking, while holding **shift** will select a continuous range of images for saving. 
 
