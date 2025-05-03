@@ -123,7 +123,7 @@ The **Save/Export** window allows users to save images or export a cropped and/o
 Save Images Tab
 ^^^^^^^^^^^^^^^
 .. image:: ../_static/save_window.png
-    :align: center
+    :align: right
     :scale: 75%
 
 The **Save Images Tab** displays all images available for saving for the current imaging mode. The user can select a filename prefix that will be prepended to all images selected for saving. Additionally, annular collection angles can be added to the filename, if desired. Multiple images can be selected by holding **ctrl** whilst clicking, while holding **shift** will select a continuous range of images for saving. 
