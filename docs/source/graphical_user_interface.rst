@@ -109,6 +109,8 @@ Info Tab
 Image Windows
 *************
 .. |image_toolbar| image:: ../_static/image_toolbar.png
+    :height: 2ex
+
 .. image:: ../_static/image_windows.png
     :align: center
     :scale: 50%
