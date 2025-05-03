@@ -29,7 +29,7 @@ The simplest way to install `Quant4D` is via the application installer file (`Qu
 .. image:: ../_static/app_install.png
     :width: 372
     :height: 320
-    :align: center
+    :align: right
 
 Running Quant4D code directly
 -----------------------------
