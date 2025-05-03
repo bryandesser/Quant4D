@@ -10,7 +10,7 @@ Import Window
     :scale: 100%
     :width: 306
     :height: 268
-    :align: center
+    :align: right
 
 The import window allows the user to import several common file formats (EMPAD, Gatan, Medipix, MRC, HDF5) as well as any file format for which the user knows the file structure.
 
