@@ -20,7 +20,7 @@ The import window allows the user to import several common file formats (EMPAD, 
 
 Parameters
 ^^^^^^^^^^
-* **Sub-dataset**: Coice of dataset in hierarchical datasets such as ``.hdf5`` and ``.dm3/.dm4`` files.
+* **Sub-dataset**: Choice of dataset in hierarchical datasets such as ``.hdf5`` and ``.dm3/.dm4`` files.
 * **Data offset**: Offset to the start of the 4D-STEM dataset in bytes.
 * **Frame header**: Header data size in bytes repeated before *each* image frame. 
 * **Frame footer**: Footer data size in bytes repeated after *each* image frame.
