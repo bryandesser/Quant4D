@@ -16,7 +16,7 @@ The import window allows the user to import several common file formats (EMPAD, 
 
 * ``.raw`` files are assumed to be in the EMPAD file format with 128x128 detector frames separated by a 1024 byte footer.
 * ``.dm3/.dm4`` and ``.hdf5`` files are scanned allowing the user to select the correct dataset.
-* ``.mib`` file metadata are scanned for the relavent parameters. 
+* ``.mib`` file metadata are scanned for the relevant parameters. 
 
 Parameters
 ^^^^^^^^^^
@@ -51,7 +51,7 @@ Preview Window
     :height: 365
     :align: center
     
-Upon file selection, but before clicking **Import Data** in the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct. If parametrs like header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first, middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image display controls (brightness/contrast/gamma).
+Upon file selection, but before clicking **Import Data** in the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct. If parameters like header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first, middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image display controls (brightness/contrast/gamma).
 
 Main Window
 ***********
@@ -91,7 +91,7 @@ Misc Tab
 .. image:: ../_static/settings_misc_tab.png
     :align: right
     :scale: 50%
-* **Calculation Policy**: Active automatically updates all image displays as the user iteracts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI; Passive only updates image displays when the user clicks the Refresh button on the Main Window.
+* **Calculation Policy**: Active automatically updates all image displays as the user interacts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI; Passive only updates image displays when the user clicks the Refresh button on the Main Window.
 * **Annular integration step**: User-defined step size for pre-computed annular images. Smaller steps give finer control of annular detectors at the expense of larger memory usage.
 * **Detector coordinate options**: Polar or cartesian coordinates; locations displayed in absolute or relative to transmitted beam center; pixel or angular units.   
 * **Diffraction/Real-space image windows**: set image window size; define x,y orientation (i.e. origin location); rotate image; show/hide axes on image.
@@ -104,7 +104,7 @@ Info Tab
     :scale: 50%
 * **Dataset info**: All information and parameters used for the currently loaded dataset. 
 * **Swap byte order**: Swap big endian <-> little endian in case incorrectly selected on import. Done in memory to avoid having to reimport the data.
-* **Swap Diffraction/Real-space X/Y**: Swap x,y axes for diffraction and/or real-space in case incorrecrtly selected on import. This is most useful for non-square datasets and CoM/DPC. Done in memory to avoid having to reimport the data.
+* **Swap Diffraction/Real-space X/Y**: Swap x,y axes for diffraction and/or real-space in case incorrectly selected on import. This is most useful for non-square datasets and CoM/DPC. Done in memory to avoid having to reimport the data.
 
 Image Windows
 *************

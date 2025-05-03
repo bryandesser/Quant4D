@@ -6,8 +6,6 @@ Installation
 .. contents:: Table of Contents
     :depth: 4
 
-
-
 MATLAB Requirements
 -------------------
 
@@ -27,7 +25,7 @@ Installing Quant4D App
     :scale: 50%
     :align: right
     
-The simplest way to install `Quant4D` is via the application installer file (`Quant4D.mlappinstall <https://github.com/bryandesser/Quant4D/blob/master/app_installer/Quant4D.mlappinstall>`_). Download and open the file, which will open MATLAB and ask to install `Quant4D` into **My Apps** (see below). Click `Install` and then open the app from the **Apps** tab on the MATLAB Toolstrip. The app may be burried on the list - if so, click the drop-down arrow on the far right of the toolstrip.
+The simplest way to install `Quant4D` is via the application installer file (`Quant4D.mlappinstall <https://github.com/bryandesser/Quant4D/blob/master/app_installer/Quant4D.mlappinstall>`_). Download and open the file, which will open MATLAB and ask to install `Quant4D` into **My Apps** (see below). Click `Install` and then open the app from the **Apps** tab on the MATLAB Toolstrip. The app may be buried on the list - if so, click the drop-down arrow on the far right of the toolstrip.
 
 Running Quant4D code directly
 -----------------------------
