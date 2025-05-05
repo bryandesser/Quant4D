@@ -39,7 +39,7 @@ Import Options
 ^^^^^^^^^^^^^^
 * **Memory**: Physical Memory reads the dataset into RAM (assuming there is sufficient memory available); Virtual Memory generates a `memmapfile <https://www.mathworks.com/help/matlab/ref/memmapfile.html>`_ for lazy loading. Virtual memory option is only available for contiguous datasets (i.e. no frame headers or footers), and is not particularly efficient on Windows systems.  
 * **GPU**: Selected GPU device (if available with sufficient memory).
-* **Pixels Partial Import**: Bin and/or crop each frame.
+* **Pixels Partial Import**: Bin and/or crop each diffraction frame.
 * **Frames Partial Import**: Subsample and/or crop the 4D-STEM dataset probe positions. 
 * **Import Summary**: Summarized import options. 
 
