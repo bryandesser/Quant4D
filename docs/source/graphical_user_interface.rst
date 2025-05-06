@@ -37,7 +37,8 @@ File information
 
 Import Options
 ^^^^^^^^^^^^^^
-* **Memory**: Physical Memory reads the dataset into RAM (assuming there is sufficient memory available); Virtual Memory generates a `memmapfile <https://www.mathworks.com/help/matlab/ref/memmapfile.html>`_ for lazy loading. Virtual memory option is only available for contiguous datasets (i.e. no frame headers or footers), and is not particularly efficient on Windows systems.  
+* **Memory**: Physical Memory reads the dataset into RAM (assuming there is sufficient memory available); Virtual Memory generates a `memmapfile <https://www.mathworks.com/help/matlab/ref/memmapfile.html>`_
+for lazy loading. Virtual memory option is only available for contiguous datasets (i.e. no frame headers or footers), and is not particularly efficient on Windows systems.  
 * **GPU**: Selected GPU device (if available with sufficient memory).
 * **Pixels Partial Import**: Bin and/or crop each diffraction frame.
 * **Frames Partial Import**: Subsample and/or crop the 4D-STEM dataset probe positions. 
@@ -51,7 +52,10 @@ Preview Window
     :height: 365
     :align: center
     
-Upon file selection, but before clicking **Import Data** in the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct. If parameters like header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first, middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image display controls (brightness/contrast/gamma).
+Upon file selection, but before clicking **Import Data** in the **Import Window**, the user can view individual frames from the dataset to ensure that the file parameters are correct.
+If parameters like header, footer, offset, or data type are incorrect, frames will display incorrectly especially further into the dataset. Preset buttons are available for the first,
+middle, and final probe positions in x and y, and the user can enter any given probe position as desired. Image statistics automatically update and the user is given access to image
+display controls (brightness/contrast/gamma).
 
 Main Window
 ***********
