@@ -37,8 +37,9 @@ File information
 
 Import Options
 ^^^^^^^^^^^^^^
-* **Memory**: Physical Memory reads the dataset into RAM (assuming there is sufficient memory available); Virtual Memory generates a `memmapfile <https://www.mathworks.com/help/matlab/ref/memmapfile.html>`_
-for lazy loading. Virtual memory option is only available for contiguous datasets (i.e. no frame headers or footers), and is not particularly efficient on Windows systems.  
+* **Memory**: Physical Memory reads the dataset into RAM (assuming there is sufficient memory available); Virtual Memory generates a
+`memmapfile <https://www.mathworks.com/help/matlab/ref/memmapfile.html>`_ for lazy loading. Virtual memory option is only available for contiguous datasets (i.e. no frame headers or footers),
+and is not particularly efficient on Windows systems.  
 * **GPU**: Selected GPU device (if available with sufficient memory).
 * **Pixels Partial Import**: Bin and/or crop each diffraction frame.
 * **Frames Partial Import**: Subsample and/or crop the 4D-STEM dataset probe positions. 
@@ -109,7 +110,8 @@ Info Tab
     :scale: 50%
 * **Dataset info**: All information and parameters used for the currently loaded dataset. 
 * **Swap byte order**: Swap big endian <-> little endian in case incorrectly selected on import. Done in memory to avoid having to reimport the data.
-* **Swap Diffraction/Real-space X/Y**: Swap x,y axes for diffraction and/or real-space in case incorrectly selected on import. This is most useful for non-square datasets and CoM/DPC. Done in memory to avoid having to reimport the data.
+* **Swap Diffraction/Real-space X/Y**: Swap x,y axes for diffraction and/or real-space in case incorrectly selected on import. This is most useful for non-square datasets and CoM/DPC.
+Done in memory to avoid having to reimport the data.
 
 Image Windows
 *************
@@ -150,5 +152,7 @@ Export Dataset Tab
 The **Export Dataset Tab** allows the users to export the dataset as HDF5 (`.h5`) or raw binary (`.raw`) format with options for selecting smaller ROIs in the diffraction and/or real-space dimensions.
 The output file dimensions can optionally be appended to the filename for convenience. 
 
-* **Diffraction Partial Export**: diffraction space can be binned to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
-* **Real-space Partial Export**: real-space can be subsampled to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
+* **Diffraction Partial Export**: diffraction space can be binned to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total
+number of pixels (X,Y).
+* **Real-space Partial Export**: real-space can be subsampled to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total
+number of pixels (X,Y).
