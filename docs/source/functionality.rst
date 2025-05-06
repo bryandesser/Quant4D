@@ -33,7 +33,7 @@ If this routine fails outright or incorrectly fits the transmitted beam, the use
 on the diffraction pattern, slider bars or numerical inputs (x, y, radius). All of these methods are linked and update automatically.
 Additionally, a routine is provided for aligning to the intersection of Kikuchi lines. The user can press the **X** button in the **Transmitted Beam Position Alignment** panel of the **Main Window**.
 The circular annotation will then be linked to the intersection of two line annotations, which can be interactively moved by the user to correspond to Kikuchi lines in the diffraction pattern.
-*Tip:* to better see the Kikuchi patterns, change the **gamma** of the diffraction pattern display in the **Display** tab of the **Settings** window. 
+*Tip:* to better see the Kikuchi patterns, change the gamma of the diffraction pattern display in the **Display** tab of the **Settings** window. 
 
 Diffraction scale
 ^^^^^^^^^^^^^^^^^
