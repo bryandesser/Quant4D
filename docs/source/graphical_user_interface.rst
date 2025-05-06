@@ -95,7 +95,8 @@ Misc Tab
 .. image:: ../_static/settings_misc_tab.png
     :align: right
     :scale: 50%
-* **Calculation Policy**: Active automatically updates all image displays as the user interacts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI; Passive only updates image displays when the user clicks the Refresh button on the Main Window.
+* **Calculation Policy**: Active automatically updates all image displays as the user interacts with the GUI; Reduced updates all image displays after the user is finished interacting with the GUI;
+Passive only updates image displays when the user clicks the Refresh button on the Main Window.
 * **Annular integration step**: User-defined step size for pre-computed annular images. Smaller steps give finer control of annular detectors at the expense of larger memory usage.
 * **Detector coordinate options**: Polar or cartesian coordinates; locations displayed in absolute or relative to transmitted beam center; pixel or angular units.   
 * **Diffraction/Real-space image windows**: set image window size; define x,y orientation (i.e. origin location); rotate image; show/hide axes on image.
@@ -118,7 +119,9 @@ Image Windows
 .. image:: ../_static/image_windows.png
     :align: center
     :scale: 50%
-Individual windows are created for all images, including diffraction space, real-space, ROI masks, and vector colorwheel. All image windows that view the same space respond simultaneously to any changes in zoom and pan to unify their field of view. All image windows come with a toolbar |image_toolbar| in the upper righthand corner that allows the user to export (save, copy, or copy as vector graphic), query pixel intensities, pan, zoom in/out, and reset the field of view.
+Individual windows are created for all images, including diffraction space, real-space, ROI masks, and vector colorwheel. All image windows that view the same space respond simultaneously
+to any changes in zoom and pan to unify their field of view. All image windows come with a toolbar |image_toolbar| in the upper righthand corner that allows the user to export
+(save, copy, or copy as vector graphic), query pixel intensities, pan, zoom in/out, and reset the field of view.
 
 Save/Export Window
 *************
@@ -130,7 +133,9 @@ Save Images Tab
     :align: right
     :scale: 75%
 
-The **Save Images Tab** displays all images available for saving for the current imaging mode. The user can select a filename prefix that will be prepended to all images selected for saving. Additionally, annular collection angles can be added to the filename, if desired. Multiple images can be selected by holding **ctrl** whilst clicking, while holding **shift** will select a continuous range of images for saving. 
+The **Save Images Tab** displays all images available for saving for the current imaging mode. The user can select a filename prefix that will be prepended to all images selected for saving.
+Additionally, annular collection angles can be added to the filename, if desired. Multiple images can be selected by holding **ctrl** whilst clicking, while holding **shift** will select
+a continuous range of images for saving. 
 
 * **Raw data**: data will be saved in the same intensity units and pixel density as the original dataset in single precision TIFF file format.
 * **As-displayed**: data will be saved as-displayed on the screen in PNG file format
@@ -142,7 +147,8 @@ Export Dataset Tab
 .. image:: ../_static/export_window.png
     :align: center
 
-The **Export Dataset Tab** allows the users to export the dataset as HDF5 (`.h5`) or raw binary (`.raw`) format with options for selecting smaller ROIs in the diffraction and/or real-space dimensions. The output file dimensions can optionally be appended to the filename for convenience. 
+The **Export Dataset Tab** allows the users to export the dataset as HDF5 (`.h5`) or raw binary (`.raw`) format with options for selecting smaller ROIs in the diffraction and/or real-space dimensions.
+The output file dimensions can optionally be appended to the filename for convenience. 
 
 * **Diffraction Partial Export**: diffraction space can be binned to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
 * **Real-space Partial Export**: real-space can be subsampled to reduce file size; an ROI can be selected by changing the starting location (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
