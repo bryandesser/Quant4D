@@ -1,4 +1,4 @@
-.. _api
+.. _api:
 
 .. automodule:: source_code
 
