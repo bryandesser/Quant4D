@@ -6,4 +6,6 @@ This is a test of automatic api documentation.
 
 .. automodule:: src
 
-.. autofunction:: guessFramesFromSize
+.. autoclass:: Quant4D
+    :show-inheritance:
+    :members:
