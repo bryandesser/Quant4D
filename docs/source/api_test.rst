@@ -1,3 +1,7 @@
 .. _api
 
-.. automodule:: source
+.. automodule:: source_code
+
+.. autoclass:: Quant4D
+    :show-inheritance:
+    :members:
