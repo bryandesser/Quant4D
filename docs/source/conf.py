@@ -1,4 +1,5 @@
 import sphinx_rtd_theme
+import sphinxcontrib.matlab
 from datetime import datetime
 
 # Configuration file for the Sphinx documentation builder.
