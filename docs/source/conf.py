@@ -31,7 +31,8 @@ extensions = [
 primary_domain = "mat"
 #this_dir = os.path.dirname(os.path.abspath(__file__))
 #matlab_src_dir = os.path.abspath(os.path.join(this_dir, '../../'))
-matlab_src_dir = "../source_code"
+thisdir = os.path.dirname(__file__)
+matlab_src_dir = os.path.abspath(os.path.join(thisdir, "..", "..", "source_code"))
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54"
 
