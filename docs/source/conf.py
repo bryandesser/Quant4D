@@ -36,6 +36,8 @@ extensions = [
 ]
 
 napoleon_numpy_docstring = True
+napoleon_custom_sections = [('Returns', 'params_style')]
+
 
 # Configure the matlab extension
 primary_domain = "mat"
