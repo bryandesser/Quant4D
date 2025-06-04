@@ -3,9 +3,10 @@
 API
 ===
 This is a test of automatic api documentation.
+..
+ .. automodule:: src
 
-.. automodule:: src
-
-.. autoclass:: Quant4D
+..
+ .. autoclass:: Quant4D
     :show-inheritance:
     :members:
