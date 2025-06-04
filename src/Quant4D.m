@@ -4394,7 +4394,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             if event.Source == app.ImportFileSelect
                 % Get user to select a file
-                [fileName, fileDir] = uigetfile({'*.raw;*.mib;*.mrc;*.dm3;*.dm4;*.npy;*.h5;*.hdf5','Supported Formats'; ...
+                [fileName, fileDir] = uigetfile({'*.raw;*.mib;*.mrc;*.dm3;*.dm4;*.npy;*.h5;*.hdf5;*.hspy','Supported Formats'; ...
                                                  '*.*','All Files'}, ...
                                                  'Select 4DSTEM Dataset');
                 
@@ -4422,24 +4422,24 @@ classdef Quant4D < matlab.apps.AppBase
                 switch lower(fileExt)
                     case ".mib"
                         % Medipix data
-                        app.Medipix.Value = 1;
+                        app.Medipix.Value = true;
                     
                     case ".mrc"
                         % MRC data
-                        app.MRC.Value = 1;
+                        app.MRC.Value = true;
                     
                     case {".dm3"; ".dm4"}
                         % Gatan K2/K3 data
-                        app.DM34.Value = 1;
+                        app.DM34.Value = true;
                     
-                    case {".h5"; ".hdf5"}
-                        app.HDF5.Value = 1;
+                    case {".h5"; ".hdf5"; ".hspy"}
+                        app.HDF5.Value = true;
                     
                     case {".raw"}
-                        app.EMPAD.Value = 1;
+                        app.EMPAD.Value = true;
                     
                     otherwise
-                        app.Custom.Value = 1;
+                        app.Custom.Value = true;
                 end
             
             else
