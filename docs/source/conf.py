@@ -35,6 +35,8 @@ extensions = [
     'sphinx.ext.githubpages',
 ]
 
+napoleon_numpy_docstring = True
+
 # Configure the matlab extension
 primary_domain = "mat"
 this_dir = os.path.dirname(__file__)
