@@ -12,6 +12,5 @@ Contents
    installation
    graphical_user_interface
    functionality
-   api
    license
    acknowledgements
