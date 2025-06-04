@@ -1262,8 +1262,10 @@ classdef Quant4D < matlab.apps.AppBase
             % Save images based on the user selections on the Save/Export UI
             %
             % Parameters:
-            %    app (Quant4D)
-            %    event: event class with Source information
+            %    app : (Quant4D)
+            %
+            %    event : 
+            %       event class with Source information
             %
             % Returns:
             %    pixels_dist : (int)
