@@ -10,6 +10,5 @@ This is a test of automatic api documentation.
 
 .. autoclass:: Quant4D
     :show-inheritance:
+    :members:
     :exclude-members: diffraction_dropdown
-
-..    :members:
