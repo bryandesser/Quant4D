@@ -1263,7 +1263,7 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    event : event class with Source information
+            %    event (event.EventData)
             %
             % Returns:
             %    pixels_dist (int) : binning distance in diffraction space
