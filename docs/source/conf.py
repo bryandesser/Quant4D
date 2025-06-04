@@ -27,7 +27,6 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.intersphinx",
     'sphinxcontrib.matlab',
-    'sphinxcontrib.bibtex',
     'sphinx.ext.duration',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
