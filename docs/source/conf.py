@@ -1,7 +1,11 @@
+import pathlib
+import sys
 import os
 import sphinx_rtd_theme
 import sphinxcontrib.matlab
 from datetime import datetime
+
+sys.path.insert(0, "../src")
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -20,17 +24,23 @@ release = '2025.03.17'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
+    "sphinx.ext.intersphinx",
     'sphinxcontrib.matlab',
+    'sphinxcontrib.bibtex',
+    'sphinx.ext.duration',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.imgmath',
+    'sphinx.ext.githubpages',
 ]
 
+# Configure the matlab extension
 primary_domain = "mat"
 this_dir = os.path.dirname(__file__)
 matlab_src_dir = os.path.abspath(os.path.join(this_dir, "..", "..", "src"))
+matlab_short_links = True
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54"
 
