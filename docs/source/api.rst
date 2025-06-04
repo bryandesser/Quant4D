@@ -4,8 +4,8 @@ API
 ===
 This is a test of automatic api documentation.
 
-.. automodule:: src
+.. automodule:: classes
 
-.. autoclass:: guessFramesFromSize
+.. autoclass:: Body
     :show-inheritance:
     :members:
