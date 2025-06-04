@@ -1266,13 +1266,13 @@ classdef Quant4D < matlab.apps.AppBase
             %    event (event.EventData)
             %
             % Returns:
-            %    pixels_dist (double) : binning distance in diffraction space
-            %    pixels_start (double, double) : starting pixel index in diffraction space (default: 1, unless cropping)
-            %    n_pixels (double, double) : number of pixels to be exported in diffraction space
-            %    pixels_end (double, double) :final pixel index in diffraction space (default: n_pixels, unless cropping)
-            %    frames_dist (double) : sub-sampling distance in real space
-            %    frames_start (double, double) : starting frame index in real space (default: 1, unless sub-sampling)
-            %    n_frames (double, double) : number of frames to be exported in real space
+            %    pixels_dist (int) : binning distance in diffraction space
+            %    pixels_start (int, int) : starting pixel index in diffraction space (default: 1, unless cropping)
+            %    n_pixels (int, int) : number of pixels to be exported in diffraction space
+            %    pixels_end (int, int) :final pixel index in diffraction space (default: n_pixels, unless cropping)
+            %    frames_dist (int) : sub-sampling distance in real space
+            %    frames_start (int, int) : starting frame index in real space (default: 1, unless sub-sampling)
+            %    n_frames (int, int) : number of frames to be exported in real space
 
             % initialize parameters
             diffraction_event = event;
