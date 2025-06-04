@@ -41,6 +41,10 @@ this_dir = os.path.dirname(__file__)
 matlab_src_dir = os.path.abspath(os.path.join(this_dir, "..", "..", "src"))
 matlab_short_links = True
 matlab_auto_link = "all"
+matlab_show_property_default_value = True
+matlab_show_property_specs = True
+matlab_class_signature = True
+
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54"
 
