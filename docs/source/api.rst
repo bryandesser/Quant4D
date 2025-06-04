@@ -5,9 +5,10 @@ API
 This is a test of automatic api documentation.
 
 .. module:: .
-    
+
 .. automodule:: .
 
 .. autoclass:: Quant4D
     :show-inheritance:
-    :members:
+
+..    :members:
