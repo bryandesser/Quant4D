@@ -1,4 +1,4 @@
-classdef Body < matlab.apps.AppBase
+classdef Quant4D < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -12560,7 +12560,7 @@ classdef Body < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = Body(varargin)
+        function app = Quant4D(varargin)
 
             % Create UIFigure and components
             createComponents(app)
