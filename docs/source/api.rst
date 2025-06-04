@@ -6,6 +6,6 @@ This is a test of automatic api documentation.
 
 .. automodule:: classes
 
-.. autoclass:: Quant4D
+.. autoapplication:: Quant4D
     :show-inheritance:
     :members:
