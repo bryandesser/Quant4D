@@ -503,7 +503,6 @@ classdef Quant4D < matlab.apps.AppBase
                 "Enable", switch_on_off(app, app.VirtualApertureMirror.Value))
         end
 
-
         function limit_virtual_aperture_UI(app)
             % Function to update UIs Limits/Labels for coordinate options
             %
@@ -570,7 +569,6 @@ classdef Quant4D < matlab.apps.AppBase
                  step_size})
         end
 
-
         function draw_virtual_aperture_annotation(app)
             % Function to draw virtual aperture annotations
             %
@@ -632,7 +630,6 @@ classdef Quant4D < matlab.apps.AppBase
                 app.annotations.VrApMirP.UserData.Move = addlistener(app.annotations.VrApMirP, "ROIMoved", @app.move_virtual_aperture);
                 addlistener(app.annotations.VrApMirP, "MovingROI", @app.move_virtual_aperture);
             end
-
 
         function move_virtual_aperture(app, source, event)
             % Live update function for virtual aperture annotations
@@ -797,7 +794,6 @@ classdef Quant4D < matlab.apps.AppBase
                 plot_all_patterns(app, event)
             end
         end
-
 
         function auto_align(app)
             % Auto-align transmitted beam
@@ -1381,7 +1377,6 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-
         function save_images(app)
             % Save images based on the user selections on the Save/Export UI
             %
@@ -1577,10 +1572,12 @@ classdef Quant4D < matlab.apps.AppBase
             % Real space.
             % 
             % Parameters:
+            %    app (Quant4D)
             %    filename (str) : 'prefixAxBxCxDbar' or 'scan_xC_yD.raw'
             %
             % Returns:
             %    None
+
                 s = regexp(filename, ["scan_x(\d*)_y(\d*).raw", "(\d*)x(\d*)x(\d*)x(\d*)"], "tokens");
                 
                 if ~isempty(s{1})
@@ -1609,7 +1606,7 @@ classdef Quant4D < matlab.apps.AppBase
             % estimated values in their respective numeric fields in the Import UI
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -1891,7 +1888,7 @@ classdef Quant4D < matlab.apps.AppBase
             % on the specifics of the imported dataset.
             %
             % Parameters:
-            %    event: event class with Source information
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -4226,7 +4223,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Code that executes after component creation
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %    debug: Boolean to enable/disable debug timings
             %
             % Returns:
@@ -4297,8 +4294,8 @@ classdef Quant4D < matlab.apps.AppBase
             % CancelImport, or ShowImportWindow (on the main UI). 
             %
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -4381,8 +4378,8 @@ classdef Quant4D < matlab.apps.AppBase
             % `ImportFilePath`, respectively)
             %
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -4458,8 +4455,8 @@ classdef Quant4D < matlab.apps.AppBase
             % category (`FileTypeButtonGroup`) or selects a new `SubDataset`
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -4838,8 +4835,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Function called when the user interacts with the Import UI
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -4929,8 +4926,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Function called when the user interacts with the Save/Export UI
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5006,8 +5003,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Function called when the user interacts with the Save/Export UI
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5113,8 +5110,8 @@ classdef Quant4D < matlab.apps.AppBase
             % in diffraction or real space
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5171,7 +5168,7 @@ classdef Quant4D < matlab.apps.AppBase
                 % `rotate_view`) from `axis_direction_callbacks`
                 %
                 % Parameters:
-                %    app: Quant4D
+                %    app (Quant4D)
                 %    id (str): figure/axes/image id
                 %    space (str): "Diffraction" or "Real" for the given `id`
                 %
@@ -5305,8 +5302,8 @@ classdef Quant4D < matlab.apps.AppBase
             % vector field, and mask opacity.
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5466,8 +5463,8 @@ classdef Quant4D < matlab.apps.AppBase
             % diffraction pattern accordingly. 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5538,8 +5535,8 @@ classdef Quant4D < matlab.apps.AppBase
             % of the available imaging modes). 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5735,8 +5732,8 @@ classdef Quant4D < matlab.apps.AppBase
             % size.
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5800,8 +5797,8 @@ classdef Quant4D < matlab.apps.AppBase
             % space x,y (i.e. [kx, ky, rx, ry] -> [ky, kx, rx, ry]).
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -5896,8 +5893,8 @@ classdef Quant4D < matlab.apps.AppBase
             % diffraction pattern before importing.
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -6028,8 +6025,8 @@ classdef Quant4D < matlab.apps.AppBase
             % transmitted beam x/y/radius, AutoAlign, etc.)
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -6091,8 +6088,8 @@ classdef Quant4D < matlab.apps.AppBase
             % segmented detector controls, scan direction alignment, etc.)
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -6847,8 +6844,8 @@ classdef Quant4D < matlab.apps.AppBase
             % virtual aperture annotations, and updating UI elements.
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -6923,8 +6920,8 @@ classdef Quant4D < matlab.apps.AppBase
             % 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8140,8 +8137,8 @@ classdef Quant4D < matlab.apps.AppBase
             % or iCoM/dCoM images, or saves a vector field image
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8175,8 +8172,8 @@ classdef Quant4D < matlab.apps.AppBase
             % buttons
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8222,8 +8219,8 @@ classdef Quant4D < matlab.apps.AppBase
             % `Windows` tab of the Settings UI. 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8302,8 +8299,8 @@ classdef Quant4D < matlab.apps.AppBase
             % the images (can also be called programmatically). 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8348,8 +8345,8 @@ classdef Quant4D < matlab.apps.AppBase
             % and unload all data from RAM and the GPU, if used.
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8365,8 +8362,8 @@ classdef Quant4D < matlab.apps.AppBase
             % for debugging. 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8383,8 +8380,8 @@ classdef Quant4D < matlab.apps.AppBase
             % User editable function for debugging. 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8410,8 +8407,8 @@ classdef Quant4D < matlab.apps.AppBase
             % User editable function for debugging. 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8426,8 +8423,8 @@ classdef Quant4D < matlab.apps.AppBase
             % progress dialogs are closed when the app exits.
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -8452,8 +8449,8 @@ classdef Quant4D < matlab.apps.AppBase
             % in the Settings UI. 
             % 
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
             %    None
