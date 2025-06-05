@@ -2527,10 +2527,10 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Returns:
             %    notes (str) : 
-            %    binning () : 
-            %    xy_start () : 
-            %    n_points () : 
-            %    xy_end () : 
+            %    binning (int) : 
+            %    xy_start ([int int]) : 
+            %    n_points ([int, int]) : 
+            %    xy_end ([int, int]) : 
 
             source = event.Source;
             
