@@ -1444,7 +1444,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    n_frames (int, int) : number of probe positions in Real space
             %
             % Returns:
-            %    gpu_note (str) : report on memory usage for the user
+            %    str : report on memory usage for the user
         
             igpu = app.GPU.Value;
             if ~igpu
@@ -2520,9 +2520,20 @@ classdef Quant4D < matlab.apps.AppBase
         % IMPORT START POSITIONS (CROPPING):
         %   app.dataset_parameters.pixels_start
         %   app.dataset_parameters.frames_start
-       
-        % Function to calculate importing/exporting ranges
         function [notes, binning, xy_start, n_points, xy_end] = range_import_export(app, event)
+            % Function to calculate import/export range for pixels/frames
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    notes (str) : 
+            %    binning () : 
+            %    xy_start () : 
+            %    n_points () : 
+            %    xy_end () : 
+
             source = event.Source;
             
             % `uispinner` upper/lower limits must be different, so now set lower limit `0` but force minimum to `1`
