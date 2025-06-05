@@ -1119,7 +1119,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    event (event.EventData)
             %
             % Returns:
-            %    err (int) : error code, default: false, -1 if an error has occurred
+            %    err (int | bool) : error code, default: false, -1 if an error has occurred
 
             err = false;
 
@@ -1622,12 +1622,15 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function import_data(app, event)
-            % Imports the selected dataset
+            % Function to prepare for dataset import, read the file, and
+            % switch the UI to `Alignment` mode
             %
             % Parameters:
-            %    event:
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
-            %
+            % Returns:
+            %    None
 
 
             debug_time = tic;
@@ -1690,8 +1693,17 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function err = read_file(app, event)
+            % Function to read the dataset from file
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    err (int | bool) : error code, default: false, -1 if an error has occurred
+
             debug_time = tic;
-            err = 0;
+            err = false;
 
             % Use local variables, which is faster
             offs = app.dataset_parameters.offset;
