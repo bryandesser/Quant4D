@@ -493,7 +493,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to update UI enable/disable states
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -508,7 +508,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to update UIs Limits/Labels for coordinate options
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -575,7 +575,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to draw virtual aperture annotations
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -638,9 +638,9 @@ classdef Quant4D < matlab.apps.AppBase
             % Live update function for virtual aperture annotations
             %
             % Parameters:
-            %    app: Quant4D
-            %    source: virtual aperture annotations (images.roi.Circle, images.roi.Point)
-            %    event: event class (ROIMoved, MovingROI)
+            %    app (Quant4D)
+            %    source (images.roi.Circle | images.roi.Point) : virtual aperture annotations
+            %    event (event.EventData) : ROIMoved, MovingROI
             %
             % Returns:
             %    None
