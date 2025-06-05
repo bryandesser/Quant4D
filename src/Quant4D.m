@@ -1561,8 +1561,7 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    dim3 (int): Total number of real-space frames in a 4D dataset that
-            %                has been read in as 3D.
+            %    dim3 (int): Total number of real-space frames in a 4D dataset that has been read in as 3D.
             %
             % Returns:
             %    None
@@ -1572,15 +1571,13 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function get_dims_from_name(app, filename)
-            % Guess dataset size from `filename` if it contains certain regular
-            % expressions. 
+            % Guess dataset size from ``filename`` if it contains certain
+            % regular expressions. Where A, B, C, D are integers. (A,B) = #
+            % pixels in Diffraction space. (C,D) = # probe positions in
+            % Real space.
             % 
             % Parameters:
-            %    filename (str): 'prefixAxBxCxDbar' or 'scan_xC_yD.raw'
-            %
-            %                       where A, B, C, D are integers:
-            %                           (A,B) = # pixels in Diffraction space
-            %                           (C,D) = # probe positions in Real space
+            %    filename (str) : 'prefixAxBxCxDbar' or 'scan_xC_yD.raw'
             %
             % Returns:
             %    None
