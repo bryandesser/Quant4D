@@ -1263,7 +1263,7 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Returns:
             %    pixels_dist (int) : binning distance in diffraction space
-            %    pixels_start (int, int) : starting pixel index in diffraction space (default: 1, unless cropping)
+            %    pixels_start ([int, int]) : starting pixel index in diffraction space (default: 1, unless cropping)
             %    n_pixels (int, int) : number of pixels to be exported in diffraction space
             %    pixels_end (int, int) :final pixel index in diffraction space (default: n_pixels, unless cropping)
             %    frames_dist (int) : sub-sampling distance in real space
