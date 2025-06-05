@@ -1444,8 +1444,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    n_frames (int, int) : number of probe positions in Real space
             %
             % Returns:
-            %    gpu_note : str
-            %        report on memory usage for the user
+            %    gpu_note (str) : report on memory usage for the user
         
             igpu = app.GPU.Value;
             if ~igpu
