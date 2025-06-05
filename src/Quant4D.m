@@ -1566,7 +1566,7 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function get_dims_from_name(app, filename)
-            % Guess dataset size from ``filename`` if it contains certain
+            % Guess dataset size from `filename` if it contains certain
             % regular expressions. Where A, B, C, D are integers. (A,B) = #
             % pixels in Diffraction space. (C,D) = # probe positions in
             % Real space.
@@ -1900,6 +1900,7 @@ classdef Quant4D < matlab.apps.AppBase
             % on the specifics of the imported dataset.
             %
             % Parameters:
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -2035,16 +2036,16 @@ classdef Quant4D < matlab.apps.AppBase
             flash_background(app, [app.DiffractionCalibrationGrid app.TransBeamAlignGrid])
         end
 
-        % Function to read Import Panel options into `app.dataset_parameters`
         function d = gather_import_options(app, preview)
             % Collects all import parameters from the Import UI into a
             % structure, `d`.
             %
             % Parameters:
-            %    preview: Boolean, true = Preview mode, false = Import
+            %    app (Quant4D)
+            %    preview (bool) : true = Preview mode, false = Import mode
             %
             % Returns:
-            %    d: structure
+            %    d (struct) : dataset parameters from Import UI
 
             % get file location
             d.file_path = app.ImportFilePath.Value;
@@ -2100,13 +2101,31 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Wrapper for `OnOffSwitchState()`
         function output = switch_on_off(~, status)
+        % Wrapper function for MATLAB's `OnOffSwitchState()`
+        %
+        % Parameters:
+        %    app (Quant4D) : ignored
+        %    status (int, bool) : 0 or false = off; 1 or true = on
+        %
+        % Returns:
+        %    output (str) : "on", "off"
+
             output = string(matlab.lang.OnOffSwitchState(status));
         end
 
-        % Set properties of objects that are not `source` if it is a changing event
         function set_external_source(app, event, object, varargin)
+            % Set properties of objects that are not `source` if it is a changing event
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %    object: UI component, annotation, list of objects with a common property
+            %    varargin : property/value pair(s) (i.e. "Value", 1)
+            %
+            % Returns:
+            %    None
+
             % Get source
             source = event.Source;
 
@@ -2141,16 +2160,32 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Rotation matrix, for degree input
         function R = rotation_matrix(~, degrees)
+            % Rotation matrix, for degree input
+            %
+            % Parameters:
+            %    app (Quant4D) : ignored
+            %    degrees (double) : angle in degrees
+            %
+            % Returns:
+            %    R (array) : 2D rotation matrix
+
             R = [cosd(degrees), sind(degrees);
                 -sind(degrees), cosd(degrees)];
         end
 
-        % Function to test whether an event is NOT "MovingROI" or
-        % "ValueChanging"; return `true` for `[]` etc. This helps to reduce
-        % computational load especially on image refresh
         function status = is_static_event(~, event)
+            % Function to test whether an event is NOT "MovingROI" or
+            % "ValueChanging"; return `true` for `[]` etc. This helps
+            % to reduce computational load, especially on image refresh.
+            %
+            % Parameters:
+            %    app (Quant4D) : ignored
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    status (bool) : true if `event` is static; else false
+
             status = isempty(event) || ...
                      ~(isfield(event,"EventName") || ...
                      isprop(event,"EventName")) || ...
@@ -2158,8 +2193,17 @@ classdef Quant4D < matlab.apps.AppBase
                      ~ismember(event.EventName, ["MovingROI" "ValueChanging"]);
         end
 
-        % Return all  DataSets with some key info
         function h = h5_datasets(~,file)
+            % Return all h5 Datasets with some key info
+            %
+            % Parameters:
+            %    app (Quant4D) : ignored
+            %    file (str) : file path from app.ImportFilePath.Value
+            %
+            % Returns:
+            %    h (struct) : h5 Dataset information, including Name,
+            %    Dataspace, Datatype, offset, size, byte_ordering, and
+            %    type.
 
             h5_info = h5info(file);
             h = struct("Name", {}, ...
@@ -2249,8 +2293,18 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to debug and time functions
         function debug_toc(app, event, notes, tic_start)
+            % Function to debug and time functions
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %    notes (str) : debugging information
+            %    tic_start (uint64) : stopwatch timer start
+            %
+            % Returns:
+            %    None
+
             if app.debug
                 source_name = "";
                 event_name = "";
@@ -2283,9 +2337,18 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to flash the background of UIs, which have `BackgroundColor`
-        % This process will pause the whole program during flashing
         function flash_background(~, target)
+            % Function to flash the background of UIs, which have
+            % `BackgroundColor`. This process will pause the whole
+            % program during flashing
+            %
+            % Parameters:
+            %    app (Quant4D) : ignored
+            %    target : UI component
+            %
+            % Returns:
+            %    None
+
             % Input `target` can be arrays of multiple UIs;
             % which will flash simultaneously 
             
@@ -2306,9 +2369,17 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % state button background color change to highlight when it
-        % is/isn't enabled
         function change_icon_background(app, source)
+            % state button background color change to highlight when it
+            % is/isn't enabled
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    source (matlab.ui.control.Button) : UI State Button
+            %
+            % Returns:
+            %    None
+
             if source.Value
                 source.BackgroundColor = app.sys_constants.highlight_color;
             else
@@ -2316,8 +2387,15 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to get all available GPUs
         function get_GPU(app)
+            % Function to get all available GPUs
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+
             % initialize items
             app.GPU.Items = {''};
             app.GPU.ItemsData = 0;
@@ -2363,8 +2441,16 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to Check usable system memory and make sure the file will fit
         function get_memory(app)
+            % Function to Check usable system memory and make sure the
+            % file will fit
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+
             if ispc
                 [~,tmp] = memory;
                 app.sys_constants.total_memory = tmp.PhysicalMemory.Total;
@@ -6464,7 +6550,7 @@ classdef Quant4D < matlab.apps.AppBase
                     end
 
                     % Update UI
-                    set_external_source(app, event, [app.DetectorRotationSlider app.DetectorRotationSpinner], "Value",detector_rotation)
+                    set_external_source(app, event, [app.DetectorRotationSlider, app.DetectorRotationSpinner], "Value",detector_rotation)
                     
                     % Update ROI
                     pos0 = [inner_radius, 0; outer_radius, 0; (inner_radius+outer_radius)/2, 0]*rotation_matrix(app, detector_rotation)+transmitted_beam_center;
@@ -6479,7 +6565,9 @@ classdef Quant4D < matlab.apps.AppBase
                 % Sub sub function for scan directions
                 function move_scan()
                     % Use polar relative pixel coordinates for calculation
-                    svx = app.annotations.ScanDir.xc.Center - transmitted_beam_center;  svy = app.annotations.ScanDir.yc.Center - transmitted_beam_center;
+                    svx = app.annotations.ScanDir.xc.Center - transmitted_beam_center;
+                    svy = app.annotations.ScanDir.yc.Center - transmitted_beam_center;
+
                     switch source
                         case app.annotations.ScanDir.xc
                             svx = event.CurrentCenter - transmitted_beam_center;
@@ -6500,8 +6588,8 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     % Not limiting annotation positions
                     set([app.annotations.ScanDir.xl app.annotations.ScanDir.yl],{"Position"},{[transmitted_beam_center;sp1];[transmitted_beam_center;sp2]})
-                    set_external_source(app, event, [app.annotations.ScanDir.xc app.annotations.ScanDir.yc],{"Center"},{sp1;sp2})
-                    set_external_source(app, event, [app.ScanDirectionSlider app.ScanDirectionSpinner], "Value",scan_direction)
+                    set_external_source(app, event, [app.annotations.ScanDir.xc, app.annotations.ScanDir.yc],{"Center"},{sp1;sp2})
+                    set_external_source(app, event, [app.ScanDirectionSlider, app.ScanDirectionSpinner], "Value",scan_direction)
                 end
             end
 
@@ -7835,7 +7923,7 @@ classdef Quant4D < matlab.apps.AppBase
                         % Sync centers if moved
                         if isprop(event, "CurrentCenter")
                             p1 = event.CurrentCenter;
-                            set_external_source(app, event,[ROI{1} ROI{2}],"Center",p1)
+                            set_external_source(app, event,[ROI{1}, ROI{2}],"Center",p1)
                         end
 
                         % Generate mask
