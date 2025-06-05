@@ -455,7 +455,7 @@ classdef Quant4D < matlab.apps.AppBase
     end
 
     properties (Access = public)
-        debug                                                           % Debug mode: `0` to disable; Not `0` enables timers/tracers
+        debug                                                           % Debug mode: false to disable; else enables timers/tracers
         data                                                            % Imported dataset, may be moved to GPU
         memfile                                                         % Memory map file of the imported dataset
         sys_constants                                                   % Constants for system info that set at app startup
@@ -466,12 +466,12 @@ classdef Quant4D < matlab.apps.AppBase
         figures                                                         % All figure windows excluding the Main UI
         image_axes                                                      % All image axes
         images                                                          % Arrays of raw data for the images/masks to be plotted/saved
-        image_displays                                                  % `Image` Objects with modified contrast for display, e.g. by `app.image_displays.(id) = imagesc(...)`
-        annotations                                                     % Image annotations on `axes` `uiaxes`, excluding annotations on `figure` `uifigure`
-        masks                                                           % Real and Diffraction space masks applied to `app.data`
-        ui_groups                                                       % Different groups of figures/axes/images; assigned just once at startup in `create_other_windows()`
+        image_displays                                                  % Image objects with modified contrast for display, e.g. by ``app.image_displays.(id) = imagesc(...)``
+        annotations                                                     % Image annotations on `axes` or `uiaxes`, excluding annotations on `figure` and `uifigure`
+        masks                                                           % Real and Diffraction space masks applied to data
+        ui_groups                                                       % Different groups of figures/axes/images; assigned just once at startup in create_other_windows()
         center = [0 0];                                                 % Central beam absolute pixel coordinates
-        center_rel = [0 0];                                             % Relative position of `app.center`: [0 0] (when "Absolute" position) or `app.center` (when "Relative")
+        center_rel = [0 0];                                             % Relative position of center: [0 0] (when "Absolute" position) or center (when "Relative")
         diff_scale = 1;                                                 % Diffraction pixel scale: 1 (when in pixel) or mrad/px (when in mrad)
         real_scale = 1;                                                 % Real-space pixel scale: 1 (when in pixel) or nm/px (when in nm). Not implemented yet
         variable_nodes                                                  % uitree nodes to display variables for users
@@ -1067,7 +1067,7 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function notes = get_import_info(app)
-            % Function to update current data info
+            % Function to update current dataset import parameters
             %
             % Parameters:
             %   app (Quant4D)
