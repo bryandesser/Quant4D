@@ -33,6 +33,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.imgmath',
     'sphinx.ext.githubpages',
+    'sphinx_autodoc_typehints',
 ]
 
 napoleon_numpy_docstring = True
