@@ -803,7 +803,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Auto-align transmitted beam
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -876,7 +876,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to align the transmitted beam to the intersection of two lines
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -953,9 +953,9 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to sync UIs/ROIs depending on the central beam location
             %
             % Parameters:
-            %    app: Quant4D
-            %    source (images.roi.Circle): app.annotations.TransBeam circle annotation
-            %    event: event Class, "ROIMoved" or "MovingROI"
+            %    app (Quant4D)
+            %    source (images.roi.Circle) : transmitted beam annotation
+            %    event (event.EventData) : ROIMoved, MovingROI
             %
             % Returns:
             %    None
@@ -1074,10 +1074,10 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to update current data info
             %
             % Parameters:
-            %   app: Quant4D
+            %   app (Quant4D)
             %
             % Returns:
-            %    str: collection of import parameters for display to the user
+            %    notes (str) : collection of import parameters for display to the user
 
             params = app.dataset_parameters;
             previous_params = app.tmp_variables.prev_D;
@@ -1119,11 +1119,11 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to export data as `.h5` or `.raw`
             %
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData)
             %
             % Returns:
-            %    int: error code, default: false, -1 if an error has occurred
+            %    err (int) : error code, default: false, -1 if an error has occurred
 
             err = false;
 
@@ -1320,9 +1320,9 @@ classdef Quant4D < matlab.apps.AppBase
             % Update Export Data boundaries as user change the Export Data Annotations
             %
             % Parameters:
-            %    app: Quant4D
-            %    source: ignored
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    source (images.roi.Rectangle) : real-space export annotations, ignored
+            %    event (event.EventData)
             %
             % Returns:
             %    None
@@ -1336,8 +1336,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Update image name prefix on the Save/Export UI
             %
             % Parameters:
-            %    app: Quant4D
-            %    event: event class with Source information
+            %    app (Quant4D)
+            %    event (event.EventData) 
             %
             % Returns:
             %    None
@@ -1386,7 +1386,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Save images based on the user selections on the Save/Export UI
             %
             % Parameters:
-            %    app: Quant4D
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -1444,12 +1444,12 @@ classdef Quant4D < matlab.apps.AppBase
             % warn if incompatible.
             %
             % Parameters:
-            %    app: Quant4D
-            %    n_pixels (1,2) (int): number of pixels in Diffraction space
-            %    n_frames (1,2) (int): number of probe positions in Real space
+            %    app (Quant4D)
+            %    n_pixels (int, int) : number of pixels in Diffraction space
+            %    n_frames (int, int) : number of probe positions in Real space
             %
             % Returns:
-            %    gpu_note (str): report on memory usage for the user
+            %    gpu_note (str) : report on memory usage for the user
         
             igpu = app.GPU.Value;
             if ~igpu
@@ -1511,12 +1511,12 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    n_pixels (1,2) (int): number of pixels in Diffraction space
-            %    n_frames (1,2) (int): number of probe positions in Real space
-            %    bytesize (1,1) (int): size of the data type in bytes
+            %    n_pixels (int, int): number of pixels in Diffraction space
+            %    n_frames (int, int): number of probe positions in Real space
+            %    bytesize (int): size of the data type in bytes
             %
             % Returns:
-            %    str: report on memory usage for the user
+            %    memory_note (str) : report on memory usage for the user
 
             % Display estimated size in green if matches actual size, brown if smaller, red if larger
             if app.tmp_variables.EstSize == app.tmp_variables.FileSize
