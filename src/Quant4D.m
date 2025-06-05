@@ -2527,10 +2527,10 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Returns:
             %    notes (str) : Diffraction or Real space-dependent notes on import range and binning
-            %    binning (int) : 
-            %    xy_start ([int int]) : 
-            %    n_points ([int int]) : 
-            %    xy_end ([int int]) : 
+            %    binning (int) : binning distance in Diffraction, sub-sampling distance in Real
+            %    xy_start ([int int]) : starting pixels or frames in x,y
+            %    n_points ([int int]) : number of pixels or frames in x,y
+            %    xy_end ([int int]) : ending pixels or frames in x,y
 
             source = event.Source;
             
@@ -2705,8 +2705,20 @@ classdef Quant4D < matlab.apps.AppBase
             notes = sprintf("%s:\n  X = %s–%s (%s)\n  Y = %s–%s (%s)\n", notes, ["" + xy_start; "" + xy_end; points_text]);
         end
 
-        % Function for progress bar of data import/export, with a `timer()` to update its progress per second
         function [wait_bar, tmr] = import_export_progress(app, process, n_frames, frame_size)
+            % Function for progress bar of data import/export, with a `timer()` to update its progress per second
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    process (str) : "Import", "Export"
+            %    n_frames (int) : total number of Real space frames (i.e. rx*ry)
+            %    frame_size (int) : frame size in bytes
+            %
+            % Returns:
+            %    wait_bar (matlab.ui.Figure) : waitbar to display progress
+            %    tmr (timer) : 1 Hz timer to update progress bar information (i.e. import rate)
+
+
             % `process` will be 'Import'/'Export', and used for texts like "Import/Export" + "ing/ed"
             wait_bar = progress_dialog(app, sprintf("\n%sing ...\n",process), "Data "+process, true);
             
@@ -2726,8 +2738,9 @@ classdef Quant4D < matlab.apps.AppBase
             % Kill the timer when progress windows closes
             wait_bar.DeleteFcn = {@(~,~,t) kill_timer(app,t), tmr};
 
-            % Update progress per second
             function update_waitbar(app, wait_bar)
+                % Update progress per second
+
                 % Current  and previous frame number
                 current_frame = app.tmp_variables.frame_number(1);
                 previous_frame = app.tmp_variables.frame_number(2);
@@ -2755,17 +2768,27 @@ classdef Quant4D < matlab.apps.AppBase
                 app.tmp_variables.frame_number(2) = current_frame;
             end
 
-            % Function to kill the timer and keep windows disabled when
-            % progress windows is closed
             function kill_timer(app, tmr)
+                % Function to kill the timer and keep windows disabled when
+                % progress windows is closed
+
                 stop(tmr);
                 delete(tmr);
                 app.enable_windows(false)
             end
         end
 
-        % Function to import mask for given (diffraction/real) space
         function mask = import_mask(app, space)
+            % Function to import mask for given (diffraction/real) space
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    space (str) : "Real", "Diffraction"
+            %
+            % Returns:
+            %    mask (array) : array imported by user to mask Real or Diffraction space
+
+
             % get `data_size` from `space`: "n_pixels" or "n_frames"
             if space == "Real"
                 space_name = "Real-space";
@@ -2853,8 +2876,16 @@ classdef Quant4D < matlab.apps.AppBase
             figure(app.figures.(space+"Mask"))
         end
 
-        % Wrapper function for (re)plotting all images
         function plot_all_patterns(app, event)
+            % Wrapper function for (re)plotting all images
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    None
+
             debug_time = tic;
 
             % Update images if visible OR not in changing event;
@@ -2873,8 +2904,17 @@ classdef Quant4D < matlab.apps.AppBase
             debug_toc(app, event, "", debug_time)
         end
 
-        % Generic function for plotting an image on a given axis with brightness/contrast/gamma values
         function plot_image(app, event, id)
+            % Generic function for plotting an image on a given axis with brightness/contrast/gamma values
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %    id (str) : image identification string
+            %
+            % Returns:
+            %    None
+
             % Special case for plotting the color wheel
             if id == "ColorWheel"
                 plot_colorwheel();
@@ -3224,9 +3264,18 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to check whether the named given value is changed
-        % compared to the previous value, and store the new value
         function status = is_different_to_previous(app, name, value)
+            % Function to check whether the given name value is changed
+            % compared to the previous value, and store the new value
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    name (str) : field name in app.previous_values
+            %    value : value of app.previous_values.(name) to be tested for update
+            %
+            % Returns:
+            %    status (bool) : Whether app.previous_values.(name) ~= value
+
             status = ~isfield(app.previous_values, name) || ...
                      ~isequal(app.previous_values.(name), value);
             if status
@@ -3234,11 +3283,19 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to determine whether to update images
-        %   Return true if any: 1) `app.CalculationPolicy.Value` is 2 (active update)
-        %                    OR 2) `app.CalculationPolicy.Value` is 1 (reduced) and not when changing
-        %                    OR 3) is a manual update (from update buttons or detector mode change)
         function to_update = to_update_image(app, event)
+            % Function to determine whether to update images
+            %   Return true if any: 1) `app.CalculationPolicy.Value` is 2 (active update)
+            %                    OR 2) `app.CalculationPolicy.Value` is 1 (reduced) and not when changing
+            %                    OR 3) is a manual update (from update buttons or detector mode change)
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    to_update (bool) : Whether or not image(s) should be updated at the time of calling based on app.CalculationPolicy and current user interactions
+
             calc = app.CalculationPolicy.Value;
             to_update = calc == 2 || ...
                         (calc && is_static_event(app, event)) || ...
@@ -3246,8 +3303,17 @@ classdef Quant4D < matlab.apps.AppBase
                         event.Source == app.Mode;
         end
 
-        % Function to mock UI callbacks
         function mock_UI_callbacks(app, source, value)
+            % Function to mock UI callbacks
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    source : UI elements
+            %    value (str) : additional information to be passed along to further function calls
+            %
+            % Returns:
+            %    None
+
             arguments
                 app
                 source
@@ -3314,12 +3380,23 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Wrapper for notification dialog; use `sprintf()` before calling this function to process "\n" in `message`
-        function selection = notification_dialog(app, icon, message, title_name, option)
+        function selection = notification_dialog(app, icon, msg, title_name, option)
+            % Wrapper for notification dialog; use `sprintf()` before calling this function to process "\n" in `message`
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    icon (str) : "quest", "list", "help", "warn", "error", "none", ""
+            %    msg (str) : dialog message
+            %    title_name (str) : dialog title
+            %    option : dialog selection options
+            %
+            % Returns:
+            %    selection (str | int) : user response
+
             arguments
                 app; 
                 icon; 
-                message; 
+                msg; 
                 title_name = ""; 
                 option = ["OK" "Cancel"];
             end
@@ -3333,39 +3410,39 @@ classdef Quant4D < matlab.apps.AppBase
             beep
 
             switch icon
-                case 'quest'
+                case "quest"
                     % `questdlg()` will block all windows and background process
                     if numel(option) > 2
-                        selection = questdlg(message, ...
+                        selection = questdlg(msg, ...
                                              title_name, ...
                                              option(1), ...
                                              option(2), ...
                                              option(3), ...
                                              option(1));
                     else
-                        selection = questdlg(message, ...
+                        selection = questdlg(msg, ...
                                              title_name, ...
                                              option(1), ...
                                              option(2), ...
                                              option(1));
                     end
                 
-                case 'list'
+                case "list"
                     % `listdlg()` will block all windows and background process
                     selection = listdlg("ListString", option, ...
                                         "SelectionMode", "single", ...
-                                        "PromptString", cellstr(split(message,newline)), ...
+                                        "PromptString", cellstr(split(msg,newline)), ...
                                         "Name", title_name, ...
                                         "ListSize", [300 150]);
                 
                 case {"help", "warn", "error", "none",""}
                     % The only way to set font size here is Tex; escape
                     % special characters in Tex; Tex is only used for font size
-                    message = "\fontsize{" + font_size + "}" + regexprep(message, "([\\^_{}])", "\\$1");
+                    msg = "\fontsize{" + font_size + "}" + regexprep(msg, "([\\^_{}])", "\\$1");
 
                     % Disable windows because `msgbox()` cannot block `uifigure()` windows
                     enable_windows(app,false)
-                    f = msgbox(message, ...
+                    f = msgbox(msg, ...
                                title_name, ...
                                icon, ...
                                struct('WindowStyle','modal','Interpreter','tex'));
@@ -4053,7 +4130,7 @@ classdef Quant4D < matlab.apps.AppBase
                                    app.ui_groups.image_type ~= "Mask" & ...
                                    ismember(app.ui_groups.image_id,app.DisplayImage.ItemsData);
 
-                sel = notification_dialog(app, ...
+                selection = notification_dialog(app, ...
                                           'list', ...
                                           sprintf("Select a Real-space Image to draw a polygon ROI.\n\n" + ...
                                             "Press 'Esc' to cancel during drawing. Please refer to MATLAB's 'drawpolygon' for more tips.\n"), ...
@@ -4061,14 +4138,14 @@ classdef Quant4D < matlab.apps.AppBase
                                           app.ui_groups.image_name(real_sace_images));
                 
                 % Revert to "full" is canceled
-                if isempty(sel)
+                if isempty(selection)
                     mock_UI_callbacks(app, app.RealROIShape, "full");
                     return;
                 end
                 
                 % Bring selected image window to front
                 options = app.ui_groups.image_id(real_sace_images);
-                selection_index = options(sel);
+                selection_index = options(selection);
                 ax = app.image_axes.(selection_index);
                 figure(app.figures.(selection_index))
                 
