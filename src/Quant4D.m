@@ -455,7 +455,7 @@ classdef Quant4D < matlab.apps.AppBase
     end
 
     properties (Access = public)
-        debug                                                           % Debug mode: false to disable; else enables timers/tracers
+        debug                                                           % Debug mode. false to disable; else enables timers/tracers
         data                                                            % Imported dataset, may be moved to GPU
         memfile                                                         % Memory map file of the imported dataset
         sys_constants                                                   % Constants for system info that set at app startup
@@ -471,9 +471,9 @@ classdef Quant4D < matlab.apps.AppBase
         masks                                                           % Real and Diffraction space masks applied to data
         ui_groups                                                       % Different groups of figures/axes/images; assigned just once at startup in create_other_windows()
         center = [0 0];                                                 % Central beam absolute pixel coordinates
-        center_rel = [0 0];                                             % Relative position of center: [0 0] (when "Absolute" position) or center (when "Relative")
-        diff_scale = 1;                                                 % Diffraction pixel scale: 1 (when in pixel) or mrad/px (when in mrad)
-        real_scale = 1;                                                 % Real-space pixel scale: 1 (when in pixel) or nm/px (when in nm). Not implemented yet
+        center_rel = [0 0];                                             % Relative position of center. [0 0] (when "Absolute" position) or center (when "Relative")
+        diff_scale = 1;                                                 % Diffraction pixel scale. 1 (when in pixel) or mrad/px (when in mrad)
+        real_scale = 1;                                                 % Real-space pixel scale. 1 (when in pixel) or nm/px (when in nm). Not implemented yet
         variable_nodes                                                  % uitree nodes to display variables for users
         byte_size = struct("uint8", 1, ...                              % size of each supported data type in bytes
                            "int8", 1, ...
@@ -1264,11 +1264,11 @@ classdef Quant4D < matlab.apps.AppBase
             % Returns:
             %    pixels_dist (int) : binning distance in diffraction space
             %    pixels_start ([int, int]) : starting pixel index in diffraction space (default: 1, unless cropping)
-            %    n_pixels (int, int) : number of pixels to be exported in diffraction space
-            %    pixels_end (int, int) :final pixel index in diffraction space (default: n_pixels, unless cropping)
+            %    n_pixels ([int, int]) : number of pixels to be exported in diffraction space
+            %    pixels_end ([int, int]) :final pixel index in diffraction space (default: n_pixels, unless cropping)
             %    frames_dist (int) : sub-sampling distance in real space
-            %    frames_start (int, int) : starting frame index in real space (default: 1, unless sub-sampling)
-            %    n_frames (int, int) : number of frames to be exported in real space
+            %    frames_start ([int, int]) : starting frame index in real space (default: 1, unless sub-sampling)
+            %    n_frames ([int, int]) : number of frames to be exported in real space
 
             % initialize parameters
             diffraction_event = event;
@@ -1440,8 +1440,8 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    n_pixels (int, int) : number of pixels in Diffraction space
-            %    n_frames (int, int) : number of probe positions in Real space
+            %    n_pixels ([int, int]) : number of pixels in Diffraction space
+            %    n_frames ([int, int]) : number of probe positions in Real space
             %
             % Returns:
             %    gpu_note (str) : report on memory usage for the user
@@ -1506,8 +1506,8 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    n_pixels (int, int): number of pixels in Diffraction space
-            %    n_frames (int, int): number of probe positions in Real space
+            %    n_pixels ([int, int]): number of pixels in Diffraction space
+            %    n_frames ([int, int]): number of probe positions in Real space
             %    bytesize (int): size of the data type in bytes
             %
             % Returns:
@@ -2106,7 +2106,7 @@ classdef Quant4D < matlab.apps.AppBase
         %
         % Parameters:
         %    app (Quant4D) : ignored
-        %    status (int, bool) : 0 or false = off; 1 or true = on
+        %    status (int | bool) : 0 or false = off; 1 or true = on
         %
         % Returns:
         %    output (str) : "on", "off"
@@ -2201,9 +2201,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    file (str) : file path from app.ImportFilePath.Value
             %
             % Returns:
-            %    h (struct) : h5 Dataset information, including Name,
-            %    Dataspace, Datatype, offset, size, byte_ordering, and
-            %    type.
+            %    h (struct) : h5 Dataset information, including Name, Dataspace, Datatype, offset, size, byte_ordering, and type.
 
             h5_info = h5info(file);
             h = struct("Name", {}, ...
