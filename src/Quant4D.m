@@ -1263,12 +1263,12 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Returns:
             %    pixels_dist (int) : binning distance in diffraction space
-            %    pixels_start ([int, int]) : starting pixel index in diffraction space (default: 1, unless cropping)
-            %    n_pixels ([int, int]) : number of pixels to be exported in diffraction space
-            %    pixels_end ([int, int]) :final pixel index in diffraction space (default: n_pixels, unless cropping)
+            %    pixels_start ([int int]) : starting pixel index in diffraction space (default: 1, unless cropping)
+            %    n_pixels ([int int]) : number of pixels to be exported in diffraction space
+            %    pixels_end ([int int]) :final pixel index in diffraction space (default: n_pixels, unless cropping)
             %    frames_dist (int) : sub-sampling distance in real space
-            %    frames_start ([int, int]) : starting frame index in real space (default: 1, unless sub-sampling)
-            %    n_frames ([int, int]) : number of frames to be exported in real space
+            %    frames_start ([int int]) : starting frame index in real space (default: 1, unless sub-sampling)
+            %    n_frames ([int int]) : number of frames to be exported in real space
 
             % initialize parameters
             diffraction_event = event;
@@ -1440,8 +1440,8 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    n_pixels ([int, int]) : number of pixels in Diffraction space
-            %    n_frames ([int, int]) : number of probe positions in Real space
+            %    n_pixels ([int int]) : number of pixels in Diffraction space
+            %    n_frames ([int int]) : number of probe positions in Real space
             %
             % Returns:
             %    gpu_note (str) : report on memory usage for the user
@@ -1506,8 +1506,8 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    n_pixels ([int, int]): number of pixels in Diffraction space
-            %    n_frames ([int, int]): number of probe positions in Real space
+            %    n_pixels ([int int]): number of pixels in Diffraction space
+            %    n_frames ([int int]): number of probe positions in Real space
             %    bytesize (int): size of the data type in bytes
             %
             % Returns:
@@ -2526,11 +2526,11 @@ classdef Quant4D < matlab.apps.AppBase
             %    event (event.EventData)
             %
             % Returns:
-            %    notes (str) : 
+            %    notes (str) : Diffraction or Real space-dependent notes on import range and binning
             %    binning (int) : 
             %    xy_start ([int int]) : 
-            %    n_points ([int, int]) : 
-            %    xy_end ([int, int]) : 
+            %    n_points ([int int]) : 
+            %    xy_end ([int int]) : 
 
             source = event.Source;
             
