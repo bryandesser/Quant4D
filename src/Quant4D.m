@@ -1679,8 +1679,8 @@ classdef Quant4D < matlab.apps.AppBase
                 app.Mode.Value = "Alignment";
 
                 % Not re-initializing and just to update all images if "swap data"
-                mock_UI_callbacks(app,app.UpdateImages)
-                mock_UI_callbacks(app,app.Mode)
+                mock_UI_callbacks(app, app.UpdateImages)
+                mock_UI_callbacks(app, app.Mode)
 
                 % Swap byte check
                 dataset_options_callbacks(app, event)
@@ -1887,8 +1887,8 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Check data NaN/Inf, without asking to sway byte-order
-            sel = check_NaN(app,app.data(:),1);
-            if strcmp(sel,'Set NaNs to 0')
+            selection = check_NaN(app, app.data(:), true);
+            if strcmp(selection,'Set NaNs to 0')
                 app.data(isnan(app.data(:)))=0;
             end
 
@@ -2019,13 +2019,13 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Update all images
-            mock_UI_callbacks(app,app.UpdateImages)
+            mock_UI_callbacks(app, app.UpdateImages)
 
             % Close progress bar and Enable panel objects
             delete(app.tmp_variables.progress_dialog);
 
             % Enter initializing alignment
-            mock_UI_callbacks(app,app.Mode)
+            mock_UI_callbacks(app, app.Mode)
             app.SettingsTabGroup.SelectedTab = app.DisplayTab;
 
             % Show the brightness/contrast/gamma controls
@@ -2471,7 +2471,7 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % ************************** UI components ************************       
+        % *********************** UI components ***********************
         % Import/export binning/sampling distances:
         %   app.DiffractionPartialImportPixelsDist
         %   app.RealPartialImportFramesDist
@@ -3284,10 +3284,11 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function to_update = to_update_image(app, event)
-            % Function to determine whether to update images
-            %   Return true if any: 1) `app.CalculationPolicy.Value` is 2 (active update)
-            %                    OR 2) `app.CalculationPolicy.Value` is 1 (reduced) and not when changing
-            %                    OR 3) is a manual update (from update buttons or detector mode change)
+            % Function to determine whether to update images. Return
+            % true if any: 1) `app.CalculationPolicy.Value` is 2
+            % (active update) OR 2) `app.CalculationPolicy.Value` is 1
+            % (reduced) and not when changing OR 3) is a manual update
+            % (from update buttons or detector mode change)
             %
             % Parameters:
             %    app (Quant4D)
@@ -3304,7 +3305,7 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         function mock_UI_callbacks(app, source, value)
-            % Function to mock UI callbacks
+            % Function to mock UI callbacks.
             %
             % Parameters:
             %    app (Quant4D)
@@ -3315,13 +3316,13 @@ classdef Quant4D < matlab.apps.AppBase
             %    None
 
             arguments
-                app
+                app {mustBeA(app, "Quant4D")}
                 source
-                value = [];
+                value {mustBeText} = "";
             end
             
             % Set value if passed in
-            if ~isempty(value)
+            if ~strcmp(value, "")
                 source.Value = value;
             end
             
@@ -3395,10 +3396,10 @@ classdef Quant4D < matlab.apps.AppBase
 
             arguments
                 app; 
-                icon; 
-                msg; 
-                title_name = ""; 
-                option = ["OK" "Cancel"];
+                icon {mustBeText, mustBeMember(icon,{"quest", "list", "help", "warn", "error", "none", ""})} = "";
+                msg {mustBeText} = "";
+                title_name {mustBeText} = "";
+                option = ["OK", "Cancel"];
             end
 
             selection = "";
@@ -3461,13 +3462,23 @@ classdef Quant4D < matlab.apps.AppBase
             set(0, "DefaultUIControlFontSize", default_font_size)
         end
 
-        % Wrapper for `waitbar`
-        function wait_bar = progress_dialog(app, message, title_name, interruptible)
+        function wait_bar = progress_dialog(app, msg, title_name, interruptible)
+            % Wrapper for `waitbar`
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    msg (str) : dialog message
+            %    title_name (str) : dialog title
+            %    interruptible (bool) : can the dialog be interrupted
+            %
+            % Returns:
+            %    wait_bar (matlab.ui.Figure) – waitbar to display progress
+            
             arguments
                 app;
-                message;
-                title_name = ""; 
-                interruptible = false;
+                msg {mustBeText} = "";
+                title_name {mustBeText} = ""; 
+                interruptible (1,1) {mustBeNumericOrLogical} = false;
             end
 
             % Disable all windows
@@ -3481,14 +3492,14 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             wait_bar = waitbar(0, ...
-                               message, ...
+                               msg, ...
                                "Name", title_name, ...
                                "WindowStyle", "modal");
             
             % For uninterruptible process:
             if ~interruptible
                 % Indeterminate progress bar
-                findall(wait_bar,"type","hgjavacomponent").JavaPeer.setIndeterminate(1);
+                findall(wait_bar,"type","hgjavacomponent").JavaPeer.setIndeterminate(true);
                 
                 % Disable the close function
                 wait_bar.CloseRequestFcn = [];
@@ -3498,9 +3509,17 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to unload data and clean all images; swap_data keeps
-        % all previous parameters and simply swaps out app.data
         function unload_data(app, swap_data)
+            % Function to unload data and clean all images; swap_data
+            % keeps all previous parameters and simply swaps out data
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    swap_data (bool) : swap dataset (true), unload all data (false)
+            %
+            % Returns:
+            %    None
+
             arguments
                 app
                 swap_data (1,:) {mustBeNumericOrLogical} = false;
@@ -3544,11 +3563,20 @@ classdef Quant4D < matlab.apps.AppBase
             app.previous_values = [];
         end
 
-        % Function to enable/disable windows/UI; disable is only for notification/progress bar/busy background etc
         function enable_windows(app, state)
+            % Function to enable/disable windows/UI; disable is only
+            % for notification/progress bar/busy background, etc.
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    state (bool) : enable (true) or disable (false) all windows
+            %
+            % Returns:
+            %    None
+            
             arguments
                 app
-                state (1,:) {mustBeNumericOrLogical} = true;
+                state (1,1) {mustBeNumericOrLogical} = true;
             end
 
             % Preview mode or not
@@ -3580,8 +3608,15 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to create other UI windows and Image figures
         function create_other_windows(app)
+            % Function to create other UI windows and Image figures
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+            
             debug_time = tic;
 
             % Set window position without using `movegui()`, to avoid its implicit `drawnow`
@@ -3773,7 +3808,7 @@ classdef Quant4D < matlab.apps.AppBase
                     case 'f5'
                         % update with the F5 key
                         if app.UpdateImages.Enable
-                            mock_UI_callbacks(app,app.UpdateImages);
+                            mock_UI_callbacks(app, app.UpdateImages);
                         end
                     case {'o', 'O'}
                         if ismember('control',event.Modifier)
@@ -3957,15 +3992,30 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        % Function to check NaN/Inf in data/image
         function selection = check_NaN(app, image, preview)
+            % Function to check NaN/Inf in data/image
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    image (array) : image to be checked for the presence of NaNs
+            %    preview (bool) : 
+            %
+            % Returns:
+            %    selection
+
+            arguments
+                app
+                image {mustBeNumericOrLogical} = 0;
+                preview (1,1) {mustBeNumericOrLogical} = true;
+            end
+            
             selection="";
             if any(isnan(image), "all") || any(isinf(image), "all")
                 title_text = 'NaN/Inf in Data!';
                 message = "There are NaN/Inf values in the data! Which may " + ...
                           "indicate the data structure is not correctly set " + ...
                           "(e.g. wrong Data Type, Byte Order, Data Offset, " + ...
-                          "Frame Header/Footer etc).\n\nIf any data are " + ...
+                          "Frame Header/Footer, etc).\n\nIf any data are " + ...
                           "corrupt, NaNs can be set to 0.";
 
                 % For preview only
@@ -3976,7 +4026,7 @@ classdef Quant4D < matlab.apps.AppBase
                                                     title_text, ...
                                                     ["Continue", "Set NaNs to 0"]);
 
-                elseif app.dataset_parameters.pixel_binning> 1 || app.dataset_parameters.frame_footer + app.dataset_parameters.frame_header > 0
+                elseif app.dataset_parameters.pixel_binning > 1 || (app.dataset_parameters.frame_footer + app.dataset_parameters.frame_header) > 0
                     selection = notification_dialog(app, ...
                                                     'quest', ...
                                                     sprintf(message+"\n\nRe-importing with corrected configuration is suggested."), ...
@@ -4458,8 +4508,8 @@ classdef Quant4D < matlab.apps.AppBase
             app.Quant4D_Fig.Visible = "on";
 
             % Plot axes display directions
-            mock_UI_callbacks(app,app.ShowDiffractionAxes);
-            mock_UI_callbacks(app,app.ShowRealAxes)
+            mock_UI_callbacks(app, app.ShowDiffractionAxes);
+            mock_UI_callbacks(app, app.ShowRealAxes)
             
             % Link Axes limits for zooming, `drawnow` implied
             linkaxes(app.ui_groups.real_axes);
@@ -4490,7 +4540,7 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     % Enter Import Preview Mode
                     if app.Mode.Value ~= "Preview"
-                        mock_UI_callbacks(app,app.Mode, "Preview");
+                        mock_UI_callbacks(app, app.Mode, "Preview");
                     end
 
                 case app.CancelImport
@@ -4914,7 +4964,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                     case app.HDF5
                         try
-                            app.tmp_variables.h5 = h5_datasets(app,app.ImportFilePath.Value);
+                            app.tmp_variables.h5 = h5_datasets(app, app.ImportFilePath.Value);
                         catch
                             notes = 'Read HDF5 file error';
                             err = -1;
@@ -5125,7 +5175,7 @@ classdef Quant4D < matlab.apps.AppBase
                 case app.ShowSaveWindow
                     figure(app.figures.Save)
                     % Trigger tab change callbacks defined in `@app.export_callbacks()`
-                    mock_UI_callbacks(app,app.SaveTabGroup);
+                    mock_UI_callbacks(app, app.SaveTabGroup);
                 
                 case app.SaveDirectoryButton
                     directory = uigetdir(app.SaveDirectoryPath.Value, 'Select Directory to Save Images');
@@ -6014,13 +6064,13 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     app.DatasetInfo.Value = get_import_info(app);
                     
-                    mock_UI_callbacks(app,app.UpdateImages)
+                    mock_UI_callbacks(app, app.UpdateImages)
                     
                     delete(app.tmp_variables.progress_dialog)
-                    sel = notification_dialog(app,'quest', "Is the current byte-order correct?",'Byte Order Swap',["Yes", "No. Revert"]);
+                    selection = notification_dialog(app,'quest', "Is the current byte-order correct?",'Byte Order Swap',["Yes", "No. Revert"]);
                     
                     % Run the process again if selected "No ....."
-                    if startsWith(sel, "No")
+                    if startsWith(selection, "No")
                         dataset_options_callbacks(app,struct("Source",app.SwapByteOrder,"EventName", ""))
                     end
 
@@ -6052,9 +6102,9 @@ classdef Quant4D < matlab.apps.AppBase
 
                 case app.PreviewButton
                     % Check data NaN/Inf, without asking to sway byte-order
-                    sel = check_NaN(app, app.images.Preview,1);
+                    selection = check_NaN(app, app.images.Preview, true);
 
-                    if strcmp(sel,'Set NaNs to 0')
+                    if strcmp(selection,'Set NaNs to 0')
                         app.data(isnan(app.data(:)))=0;
                     end
 
@@ -6062,8 +6112,8 @@ classdef Quant4D < matlab.apps.AppBase
                     app.DatasetInfo.Value = get_import_info(app);
                     
                     % Check data NaN/Inf, ask whether to sway byte-order
-                    sel = check_NaN(app, app.images.Diffraction,0);
-                    if strcmp(sel,'Set NaNs to 0')
+                    selection = check_NaN(app, app.images.Diffraction, false);
+                    if strcmp(selection,'Set NaNs to 0')
                         app.data(isnan(app.data(:)))=0;
                     end
 
@@ -6095,14 +6145,14 @@ classdef Quant4D < matlab.apps.AppBase
 
                 case app.UpdateImages % Update image
                     % Preview
-                    mock_UI_callbacks(app,app.PreviewButton)
+                    mock_UI_callbacks(app, app.PreviewButton)
 
                 case {app.PreviewFrameX app.PreviewFrameY} % Preview Frame X/Y
                     % Force Frame X/Y minimum as 1
                     event.Source.Value = max(event.Value, 1);
                     
                     % Preview
-                    mock_UI_callbacks(app,app.PreviewButton)
+                    mock_UI_callbacks(app, app.PreviewButton)
 
                 case {app.PreviewFrame_1_1;  app.PreviewFrame_X2_1;  app.PreviewFrame_X_1; % Preview location buttons
                       app.PreviewFrame_1_Y2; app.PreviewFrame_X2_Y2; app.PreviewFrame_X_Y2;
@@ -6354,7 +6404,7 @@ classdef Quant4D < matlab.apps.AppBase
                     end
 
                     % Update diffraction axes annotations
-                    mock_UI_callbacks(app,app.ShowDiffractionAxes)
+                    mock_UI_callbacks(app, app.ShowDiffractionAxes)
 
                 case app.AutoCurl
                     % display a progress dialog for user
@@ -6614,7 +6664,7 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     % Update saving prefix
                     if is_static_event(app, event)
-                        mock_UI_callbacks(app,app.SaveImagePrefix)
+                        mock_UI_callbacks(app, app.SaveImagePrefix)
                     end
 
                     % Whether to update segments as well
@@ -7161,7 +7211,7 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     % Update for selection change
                     if ~isempty(ROI)
-                        mock_UI_callbacks(app,app.CustomDetectorTable)
+                        mock_UI_callbacks(app, app.CustomDetectorTable)
                     end
                     
                     % Enable windows
@@ -7214,7 +7264,7 @@ classdef Quant4D < matlab.apps.AppBase
                     end
 
                     % Update for selection change
-                    mock_UI_callbacks(app,app.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
                 case app.CDDelResetMenu
                     % Remove all masks; Reset
@@ -7227,7 +7277,7 @@ classdef Quant4D < matlab.apps.AppBase
                     app.CustomDetectorTable.Selection = [];
                     
                     % Update for selection change
-                    mock_UI_callbacks(app,app.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
                 case {app.CustomDetectorNewCircle; % Create new mask
                       app.CustomDetectorNewGrid;
@@ -7317,7 +7367,7 @@ classdef Quant4D < matlab.apps.AppBase
                     color_custom_detector_table_label(app.CustomDetectorTable.Selection,app.annotations.Custom.(id){1}.UserData.Color);
                     
                     % Update for selection change
-                    mock_UI_callbacks(app,app.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
                 case {app.CustomDetectorIntraMask, app.CustomDetectorInvert, app.CustomDetectorMirror} % Intra-mask, Invert Mask, Mirror Mask
                     % Update values in `UserData` for current mask
@@ -7330,7 +7380,7 @@ classdef Quant4D < matlab.apps.AppBase
                     app.annotations.Custom.(sel.ID) = ROI;
                     
                     % Update for selection change
-                    mock_UI_callbacks(app,app.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
                 case app.CustomDetectorColor  % Change the color of mask annotations
                     % Open color selection palette
@@ -8348,7 +8398,7 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % update images
-            mock_UI_callbacks(app,app.UpdateImages)
+            mock_UI_callbacks(app, app.UpdateImages)
         end
 
         % Button pushed function: ShowCoMMagnitudeWindow, 
@@ -10259,7 +10309,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.HistogramAxes.YTick = [];
             app.HistogramAxes.ZTick = [];
             app.HistogramAxes.Box = 'on';
-            app.HistogramAxes.TickDir = 'in';
             app.HistogramAxes.NextPlot = 'add';
             app.HistogramAxes.Layout.Row = [1 3];
             app.HistogramAxes.Layout.Column = [1 3];
@@ -10299,7 +10348,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayBrightness.MajorTickLabels = {};
             app.DisplayBrightness.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayBrightness.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayBrightness.MinorTicks = [];
             app.DisplayBrightness.Layout.Row = 1;
             app.DisplayBrightness.Layout.Column = 2;
             app.DisplayBrightness.Value = 50;
@@ -10330,7 +10378,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayContrast.MajorTickLabels = {};
             app.DisplayContrast.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayContrast.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayContrast.MinorTicks = [];
             app.DisplayContrast.Layout.Row = 2;
             app.DisplayContrast.Layout.Column = 2;
             app.DisplayContrast.Value = 50;
@@ -10362,7 +10409,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayGamma.MajorTickLabels = {};
             app.DisplayGamma.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayGamma.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayGamma.MinorTicks = [];
             app.DisplayGamma.Layout.Row = 3;
             app.DisplayGamma.Layout.Column = 2;
             app.DisplayGamma.Value = 1;
@@ -10392,7 +10438,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayMaskOpacitySlider.MajorTicks = [];
             app.DisplayMaskOpacitySlider.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayMaskOpacitySlider.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayMaskOpacitySlider.MinorTicks = [];
             app.DisplayMaskOpacitySlider.Tooltip = {'Mask opacity displayed on pattern'};
             app.DisplayMaskOpacitySlider.Layout.Row = 4;
             app.DisplayMaskOpacitySlider.Layout.Column = 2;
@@ -10441,7 +10486,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.BandpassFilter.MajorTicks = [];
             app.BandpassFilter.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
             app.BandpassFilter.ValueChangingFcn = createCallbackFcn(app, @first_moment, true);
-            app.BandpassFilter.MinorTicks = [];
             app.BandpassFilter.Layout.Row = 1;
             app.BandpassFilter.Layout.Column = [1 2];
 
@@ -11515,7 +11559,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamR.MajorTicks = [];
             app.TransBeamR.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamR.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamR.MinorTicks = [];
             app.TransBeamR.Layout.Row = 4;
             app.TransBeamR.Layout.Column = [1 4];
 
@@ -11546,7 +11589,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamX.MajorTicks = [];
             app.TransBeamX.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamX.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamX.MinorTicks = [];
             app.TransBeamX.Layout.Row = 7;
             app.TransBeamX.Layout.Column = [1 4];
 
@@ -11577,7 +11619,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamY.MajorTicks = [];
             app.TransBeamY.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamY.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamY.MinorTicks = [];
             app.TransBeamY.Layout.Row = 10;
             app.TransBeamY.Layout.Column = [1 4];
 
@@ -11647,7 +11688,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.InnerAnnularRadius.MajorTicks = [];
             app.InnerAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.InnerAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.InnerAnnularRadius.MinorTicks = [];
             app.InnerAnnularRadius.Tag = 'AnnDetr RI';
             app.InnerAnnularRadius.Layout.Row = 2;
             app.InnerAnnularRadius.Layout.Column = [1 5];
@@ -11690,7 +11730,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.OuterAnnularRadius.MajorTicks = [];
             app.OuterAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.OuterAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.OuterAnnularRadius.MinorTicks = [];
             app.OuterAnnularRadius.Tag = 'AnnDetr RO';
             app.OuterAnnularRadius.Layout.Row = 5;
             app.OuterAnnularRadius.Layout.Column = [1 5];
@@ -11771,7 +11810,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ScanDirectionSlider.MajorTicks = [];
             app.ScanDirectionSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.ScanDirectionSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.ScanDirectionSlider.MinorTicks = [];
             app.ScanDirectionSlider.Tag = 'ScanDir';
             app.ScanDirectionSlider.Layout.Row = 2;
             app.ScanDirectionSlider.Layout.Column = [1 8];
@@ -11861,7 +11899,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorRotationSlider.MajorTicks = [];
             app.DetectorRotationSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.DetectorRotationSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.DetectorRotationSlider.MinorTicks = [];
             app.DetectorRotationSlider.Tag = 'SegDetr';
             app.DetectorRotationSlider.Layout.Row = [4 5];
             app.DetectorRotationSlider.Layout.Column = [1 8];
@@ -11950,7 +11987,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureR.MajorTicks = [];
             app.VirtualApertureR.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureR.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureR.MinorTicks = [];
             app.VirtualApertureR.Layout.Row = 2;
             app.VirtualApertureR.Layout.Column = [1 5];
 
@@ -11981,7 +12017,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureX.MajorTicks = [];
             app.VirtualApertureX.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureX.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureX.MinorTicks = [];
             app.VirtualApertureX.Layout.Row = 5;
             app.VirtualApertureX.Layout.Column = [1 5];
 
@@ -12012,7 +12047,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureY.MajorTicks = [];
             app.VirtualApertureY.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureY.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureY.MinorTicks = [];
             app.VirtualApertureY.Layout.Row = 8;
             app.VirtualApertureY.Layout.Column = [1 5];
 
@@ -12177,7 +12211,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureMirrorRotation.MajorTicks = [];
             app.VirtualApertureMirrorRotation.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureMirrorRotation.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureMirrorRotation.MinorTicks = [];
             app.VirtualApertureMirrorRotation.Layout.Row = 2;
             app.VirtualApertureMirrorRotation.Layout.Column = [1 7];
 
