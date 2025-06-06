@@ -455,7 +455,7 @@ classdef Quant4D < matlab.apps.AppBase
     end
 
     properties (Access = public)
-        debug                                                           % Debug mode. false to disable; else enables timers/tracers
+        debug = false                                                   % (bool) : Debug mode. false to disable; else enables timers/tracers
         data                                                            % Imported dataset, may be moved to GPU
         memfile                                                         % Memory map file of the imported dataset
         sys_constants                                                   % Constants for system info that set at app startup
@@ -4521,11 +4521,10 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Parameters:
             %    app (Quant4D)
-            %    debug: Boolean to enable/disable debug timings
+            %    debug (bool) : Enable (true), disable (false) timings for debugging
             %
             % Returns:
-            %    Quant4D class encapsulating all UI components,
-            %    parameters, and data 
+            %    None
             
             arguments
                 app;
