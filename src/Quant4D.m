@@ -1,6 +1,6 @@
 classdef Quant4D < matlab.apps.AppBase
 
-    % Properties that correspond to self components
+    % Properties that correspond to app components
     properties (Access = public)
         Quant4D_Fig                     matlab.ui.Figure
         diffraction_dropdown            matlab.ui.control.DropDown
@@ -458,7 +458,7 @@ classdef Quant4D < matlab.apps.AppBase
         debug                                                           % Debug mode. false to disable; else enables timers/tracers
         data                                                            % Imported dataset, may be moved to GPU
         memfile                                                         % Memory map file of the imported dataset
-        sys_constants                                                   % Constants for system info that set at self startup
+        sys_constants                                                   % Constants for system info that set at app startup
         tmp_variables                                                   % Temporary global variables, e.g. for progress bar and import etc., should never be cleared
         dataset_parameters                                              % Parameters of the current imported dataset; should be constants (except for data type conversion)
         common_parameters                                               % Common parameters, should be cleared when a dataset is unloaded
@@ -466,7 +466,7 @@ classdef Quant4D < matlab.apps.AppBase
         figures                                                         % All figure windows excluding the Main UI
         image_axes                                                      % All image axes
         images                                                          % Arrays of raw data for the images/masks to be plotted/saved
-        image_displays                                                  % Image objects with modified contrast for display, e.g. by ``self.image_displays.(id) = imagesc(...)``
+        image_displays                                                  % Image objects with modified contrast for display, e.g. by ``app.image_displays.(id) = imagesc(...)``
         annotations                                                     % Image annotations on `axes` or `uiaxes`, excluding annotations on `figure` and `uifigure`
         masks                                                           % Real and Diffraction space masks applied to data
         ui_groups                                                       % Different groups of figures/axes/images; assigned just once at startup in create_other_windows()
@@ -489,44 +489,44 @@ classdef Quant4D < matlab.apps.AppBase
 
     methods (Access = public)
 
-        function enable_virtual_aperture_UI(self)
+        function enable_virtual_aperture_UI(app)
             % Function to update UI enable/disable states
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
         
-            % Enable/Disable mirror UIs, except `self.VirtualApertureMirror`
-            set(setdiff(self.VirtualApertureMirrorGrid.Children,self.VirtualApertureMirror), ...
-                "Enable", switch_on_off(self, self.VirtualApertureMirror.Value))
+            % Enable/Disable mirror UIs, except `app.VirtualApertureMirror`
+            set(setdiff(app.VirtualApertureMirrorGrid.Children,app.VirtualApertureMirror), ...
+                "Enable", switch_on_off(app, app.VirtualApertureMirror.Value))
         end
 
-        function limit_virtual_aperture_UI(self)
+        function limit_virtual_aperture_UI(app)
             % Function to update UIs Limits/Labels for coordinate options
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
         
             % set virtual aperture step size to 1/4 diffraction scale (mrad/pixel)
-            step_size = 0.25*self.diff_scale; 
-            unit = self.DetectorCoordinateUnit.Value;
+            step_size = 0.25*app.diff_scale; 
+            unit = app.DetectorCoordinateUnit.Value;
         
             % reflect the coordinate system choice in the UI elements
-            if self.DetectorCoordinateSystem.Value == "Polar"
-                x_limits = [0, min([self.center, self.dataset_parameters.n_pixels-self.center]*2^.5)*self.diff_scale];
+            if app.DetectorCoordinateSystem.Value == "Polar"
+                x_limits = [0, min([app.center, app.dataset_parameters.n_pixels-app.center]*2^.5)*app.diff_scale];
                 y_limits = [-1 1]*180;
                 x_text = 'Distance';
                 y_text = 'Rotation';
                 y_unit = '°'; 
                 y_step = 4;
             else
-                x_limits = (self.TransBeamX.Limits-self.center_rel(1))*self.diff_scale;
-                y_limits = (self.TransBeamY.Limits-self.center_rel(2))*self.diff_scale;
+                x_limits = (app.TransBeamX.Limits-app.center_rel(1))*app.diff_scale;
+                y_limits = (app.TransBeamY.Limits-app.center_rel(2))*app.diff_scale;
                 x_text = 'X'; 
                 y_text = 'Y';
                 y_unit = unit;
@@ -534,24 +534,24 @@ classdef Quant4D < matlab.apps.AppBase
             end
             
             % update limits for sliders and numeric spinners
-            set([self.VirtualApertureX; ...
-                 self.VirtualApertureXSpinner; ...
-                 self.VirtualApertureY; ...
-                 self.VirtualApertureYSpinner; ...
-                 self.VirtualApertureRSpinner], ...
+            set([app.VirtualApertureX; ...
+                 app.VirtualApertureXSpinner; ...
+                 app.VirtualApertureY; ...
+                 app.VirtualApertureYSpinner; ...
+                 app.VirtualApertureRSpinner], ...
                 {"Limits"}, ...
                 {x_limits; ...
                  x_limits; ...
                  y_limits; ...
                  y_limits; ...
-                 self.TransBeamR.Limits*self.diff_scale})
+                 app.TransBeamR.Limits*app.diff_scale})
         
             % update labels
-            set([self.VrApXLabel; ...
-                 self.VrApYLabel; ...
-                 self.VrApX_NFLabel; ...
-                 self.VrApY_NFLabel; ...
-                 self.VrApR_NFLabel], ...
+            set([app.VrApXLabel; ...
+                 app.VrApYLabel; ...
+                 app.VrApX_NFLabel; ...
+                 app.VrApY_NFLabel; ...
+                 app.VrApR_NFLabel], ...
                 {'Text'}, ...
                 {x_text; ...
                  y_text; ...
@@ -560,33 +560,33 @@ classdef Quant4D < matlab.apps.AppBase
                  unit})
         
             % update step size for numeric spinner
-            set([self.VirtualApertureXSpinner; ...
-                 self.VirtualApertureYSpinner; ...
-                 self.VirtualApertureRSpinner], ...
+            set([app.VirtualApertureXSpinner; ...
+                 app.VirtualApertureYSpinner; ...
+                 app.VirtualApertureRSpinner], ...
                 {'Step'}, ...
                 {step_size; ...
                  y_step; ...
                  step_size})
         end
 
-        function draw_virtual_aperture_annotation(self)
+        function draw_virtual_aperture_annotation(app)
             % Function to draw virtual aperture annotations
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
             
                 % clear any previous virtual aperture annotations
-                delete(findobj(self.image_axes.Diffraction, "Tag","VrApertAnnot"))
+                delete(findobj(app.image_axes.Diffraction, "Tag","VrApertAnnot"))
             
                 % plot the apertures, and only allow the first one to be interactive
-                self.annotations.VrAp = gobjects(self.VirtualApertureSymmetry.Value*(1+self.VirtualApertureMirror.Value), 1);
-                for i = 1:numel(self.annotations.VrAp)
-                    self.annotations.VrAp(i) = drawcircle(self.image_axes.Diffraction, ...
-                                                         "Center", self.common_parameters.virtual_aperture_center, ...
-                                                         "Radius", self.VirtualApertureR.Value, ...
+                app.annotations.VrAp = gobjects(app.VirtualApertureSymmetry.Value*(1+app.VirtualApertureMirror.Value), 1);
+                for i = 1:numel(app.annotations.VrAp)
+                    app.annotations.VrAp(i) = drawcircle(app.image_axes.Diffraction, ...
+                                                         "Center", app.common_parameters.virtual_aperture_center, ...
+                                                         "Radius", app.VirtualApertureR.Value, ...
                                                          "Color","r", ...
                                                          "FaceAlpha", 0, ...
                                                          "Deletable", 0, ...
@@ -595,47 +595,47 @@ classdef Quant4D < matlab.apps.AppBase
                 end
                 
                 % Make sure the draggable annotations are at the front
-                bringToFront(self.annotations.VrAp(1));
+                bringToFront(app.annotations.VrAp(1));
             
                 % set aperture annotation parameters
-                set(self.annotations.VrAp(1), ...
+                set(app.annotations.VrAp(1), ...
                     "InteractionsAllowed", "all", ...
                     "DrawingArea", "unlimited")
                 
                 % add listeners to main virtual aperture annotation
-                self.annotations.VrAp(1).UserData.Move = addlistener(self.annotations.VrAp(1), "ROIMoved", @self.move_virtual_aperture);
-                addlistener(self.annotations.VrAp(1), "MovingROI", @self.move_virtual_aperture);
+                app.annotations.VrAp(1).UserData.Move = addlistener(app.annotations.VrAp(1), "ROIMoved", @app.move_virtual_aperture);
+                addlistener(app.annotations.VrAp(1), "MovingROI", @app.move_virtual_aperture);
             
                 % Mirror line/point annotations
-                self.annotations.VrApMirL = drawline(self.image_axes.Diffraction, ...
-                                                    "Position", [0 0; self.dataset_parameters.n_pixels], ...
+                app.annotations.VrApMirL = drawline(app.image_axes.Diffraction, ...
+                                                    "Position", [0 0; app.dataset_parameters.n_pixels], ...
                                                     "Color", [0 0.7 0], ...
                                                     "StripeColor", "k", ...
                                                     "LineWidth", 1.5, ...
                                                     "EdgeAlpha", 0.7, ...
                                                     "InteractionsAllowed", "none", ...
-                                                    "Visible", self.VirtualApertureMirror.Value, ...
+                                                    "Visible", app.VirtualApertureMirror.Value, ...
                                                     "Deletable", false, ...
                                                     "Tag","VrApertAnnot");
             
-                self.annotations.VrApMirP = drawpoint(self.image_axes.Diffraction, ...
-                                                     "Position", [min(self.dataset_parameters.n_pixels)/4 0] + self.center, ...
+                app.annotations.VrApMirP = drawpoint(app.image_axes.Diffraction, ...
+                                                     "Position", [min(app.dataset_parameters.n_pixels)/4 0] + app.center, ...
                                                      "Color", "g", ...
                                                      "MarkerSize", 8, ...
-                                                     "Visible", self.VirtualApertureMirror.Value, ...
+                                                     "Visible", app.VirtualApertureMirror.Value, ...
                                                      "Deletable", 0, ...
                                                      "Tag", "VrApertAnnot");
             
                 % add listeners to the mirror line point
-                self.annotations.VrApMirP.UserData.Move = addlistener(self.annotations.VrApMirP, "ROIMoved", @self.move_virtual_aperture);
-                addlistener(self.annotations.VrApMirP, "MovingROI", @self.move_virtual_aperture);
+                app.annotations.VrApMirP.UserData.Move = addlistener(app.annotations.VrApMirP, "ROIMoved", @app.move_virtual_aperture);
+                addlistener(app.annotations.VrApMirP, "MovingROI", @app.move_virtual_aperture);
             end
 
-        function move_virtual_aperture(self, source, event)
+        function move_virtual_aperture(app, source, event)
             % Live update function for virtual aperture annotations
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    source (images.roi.Circle | images.roi.Point) : virtual aperture annotations
             %    event (event.EventData) : ROIMoved, MovingROI
             %
@@ -643,71 +643,71 @@ classdef Quant4D < matlab.apps.AppBase
             %    None
         
             % To determine real-time values
-            transmitted_beam_center = self.center_rel;
-            scale = self.diff_scale;
-            num_pix = self.dataset_parameters.n_pixels;
-            mirror_angle = self.VirtualApertureMirrorRotation.Value;
-            radius = self.VirtualApertureR.Value;
-            virtual_aperture_center = self.common_parameters.virtual_aperture_center;
+            transmitted_beam_center = app.center_rel;
+            scale = app.diff_scale;
+            num_pix = app.dataset_parameters.n_pixels;
+            mirror_angle = app.VirtualApertureMirrorRotation.Value;
+            radius = app.VirtualApertureR.Value;
+            virtual_aperture_center = app.common_parameters.virtual_aperture_center;
             
             switch source
-                case self.annotations.VrAp(1)
+                case app.annotations.VrAp(1)
                     radius = source.Radius;
                     virtual_aperture_center = source.Center;
             
-                case {self.VirtualApertureX self.VirtualApertureXSpinner self.VirtualApertureY self.VirtualApertureYSpinner}
+                case {app.VirtualApertureX app.VirtualApertureXSpinner app.VirtualApertureY app.VirtualApertureYSpinner}
                     % Potentially converting from polar/relative/mrad to Cartesian absolute pixel coordinates
-                    x = self.VirtualApertureX.Value;
-                    y = self.VirtualApertureY.Value;
+                    x = app.VirtualApertureX.Value;
+                    y = app.VirtualApertureY.Value;
             
-                    if ismember(source, [self.VirtualApertureX self.VirtualApertureXSpinner])
+                    if ismember(source, [app.VirtualApertureX app.VirtualApertureXSpinner])
                         x = event.Value;
                     else
                         y = event.Value;
                     end
             
-                    if self.DetectorCoordinateSystem.Value == "Cartesian"
+                    if app.DetectorCoordinateSystem.Value == "Cartesian"
                         virtual_aperture_center = [x y]/scale + transmitted_beam_center;
                     else
                         [x,y] = pol2cart(deg2rad(y), x/scale);
-                        virtual_aperture_center = self.center+[x y];
+                        virtual_aperture_center = app.center+[x y];
                     end
             
-                case self.VirtualApertureR
+                case app.VirtualApertureR
                     radius = event.Value;
             
-                case self.VirtualApertureRSpinner
+                case app.VirtualApertureRSpinner
                     radius = event.Value/scale;
             
-                case self.VirtualApertureReset
-                    radius = self.TransBeamR.Value;
+                case app.VirtualApertureReset
+                    radius = app.TransBeamR.Value;
                     virtual_aperture_center = transmitted_beam_center;
             
-                case {self.VirtualApertureRotateCCW self.VirtualApertureRotateCW} % Rotation buttons
+                case {app.VirtualApertureRotateCCW app.VirtualApertureRotateCW} % Rotation buttons
                     % Clockwise if odd numbers of "Reverse X"
                     % "Reverse Y" "Rotate Clockwise" are true
-                    rot = self.VirtualApertureRotationStep.Value * (1-2*rem(self.ReverseDiffractionX.Value+self.ReverseDiffractionY.Value+(source == self.VirtualApertureRotateCW), 2));
-                    virtual_aperture_center = (virtual_aperture_center-transmitted_beam_center)*rotation_matrix(self, rot)+transmitted_beam_center;
+                    rot = app.VirtualApertureRotationStep.Value * (1-2*rem(app.ReverseDiffractionX.Value+app.ReverseDiffractionY.Value+(source == app.VirtualApertureRotateCW), 2));
+                    virtual_aperture_center = (virtual_aperture_center-transmitted_beam_center)*rotation_matrix(app, rot)+transmitted_beam_center;
             
-                case {self.VirtualApertureMirrorRotation self.VirtualApertureMirrorRotationSpinner}
+                case {app.VirtualApertureMirrorRotation app.VirtualApertureMirrorRotationSpinner}
                     % update the mirror line position
                     mirror_angle = event.Value;
             
-                case self.annotations.VrApMirP
+                case app.annotations.VrApMirP
                     mirror_position = source.Position - transmitted_beam_center;
                     mirror_angle = atan2d(mirror_position(2), mirror_position(1));
             end
             
             % Restrict aperture location/size
-            radius = min(radius, self.common_parameters.max_radius);
+            radius = min(radius, app.common_parameters.max_radius);
             virtual_aperture_center(virtual_aperture_center > num_pix) = num_pix(virtual_aperture_center > num_pix);
             virtual_aperture_center(virtual_aperture_center < 1) = 1;
-            self.common_parameters.virtual_aperture_center = virtual_aperture_center;
+            app.common_parameters.virtual_aperture_center = virtual_aperture_center;
             
             % Update GUI with Limits check
-            xy_limits = [self.VirtualApertureX.Limits; self.VirtualApertureY.Limits]';
+            xy_limits = [app.VirtualApertureX.Limits; app.VirtualApertureY.Limits]';
             
-            if self.DetectorCoordinateSystem.Value == "Cartesian"
+            if app.DetectorCoordinateSystem.Value == "Cartesian"
                 xyui = (virtual_aperture_center - transmitted_beam_center)*scale;
             else % "Polar"
                 xyui = virtual_aperture_center - transmitted_beam_center;
@@ -718,28 +718,28 @@ classdef Quant4D < matlab.apps.AppBase
             % Limit check
             xyui = clip(xyui, xy_limits(1,:), xy_limits(2,:));
             
-            set_external_source(self, event, ...
-                [self.VirtualApertureR; ...
-                self.VirtualApertureRSpinner; ...
-                self.VirtualApertureX; ...
-                self.VirtualApertureXSpinner; ...
-                self.VirtualApertureY; ...
-                self.VirtualApertureYSpinner], ...
+            set_external_source(app, event, ...
+                [app.VirtualApertureR; ...
+                app.VirtualApertureRSpinner; ...
+                app.VirtualApertureX; ...
+                app.VirtualApertureXSpinner; ...
+                app.VirtualApertureY; ...
+                app.VirtualApertureYSpinner], ...
                 {"Value"}, ...
                 {radius; ...
-                min(radius*scale, self.common_parameters.max_radius*scale); ...
+                min(radius*scale, app.common_parameters.max_radius*scale); ...
                 xyui(1); ...
                 xyui(1); ...
                 xyui(2); ...
                 xyui(2)})
             
-            set_external_source(self, event, ...
-                [self.VirtualApertureMirrorRotation; ...
-                self.VirtualApertureMirrorRotationSpinner], ...
+            set_external_source(app, event, ...
+                [app.VirtualApertureMirrorRotation; ...
+                app.VirtualApertureMirrorRotationSpinner], ...
                 "Value", mirror_angle)
             
             % Early return if only updating for coordinate options
-            if source == self.DetectorCoordinateSystem
+            if source == app.DetectorCoordinateSystem
                 return;
             end
             
@@ -747,75 +747,75 @@ classdef Quant4D < matlab.apps.AppBase
             [theta, rho] = cart2pol(virtual_aperture_center(1) - transmitted_beam_center(1), ...
                 virtual_aperture_center(2) - transmitted_beam_center(2));
             
-            angles = rad2deg(theta) + (0 : 360/self.VirtualApertureSymmetry.Value : 360*(1-1/self.VirtualApertureSymmetry.Value))';
+            angles = rad2deg(theta) + (0 : 360/app.VirtualApertureSymmetry.Value : 360*(1-1/app.VirtualApertureSymmetry.Value))';
             virtual_aperture_center_new = rho*[cosd(angles) sind(angles)];
             
             % If mirrored, double the amount of center positions
-            if self.VirtualApertureMirror.Value
-                R_mirror = rotation_matrix(self, 90 - mirror_angle);
+            if app.VirtualApertureMirror.Value
+                R_mirror = rotation_matrix(app, 90 - mirror_angle);
                 virtual_aperture_center_new = [virtual_aperture_center_new; virtual_aperture_center_new*R_mirror.*[-1 1]*(R_mirror')];
             end
             
             % Relative -> Absolute
             virtual_aperture_center_new = virtual_aperture_center_new + transmitted_beam_center;
-            set(self.annotations.VrAp, ...
+            set(app.annotations.VrAp, ...
                 {"Center"}, num2cell(virtual_aperture_center_new,2), ...
                 'Radius', radius)
             
             % Update mirror line ROIs, whether visible or not, deal
             % with any Infs by clipping to [-1e9, 1e9]
-            pos = [[1;self.dataset_parameters.n_pixels(1)], tand(mirror_angle)*([1;self.dataset_parameters.n_pixels(1)] - transmitted_beam_center(1)) + transmitted_beam_center(2)];
+            pos = [[1;app.dataset_parameters.n_pixels(1)], tand(mirror_angle)*([1;app.dataset_parameters.n_pixels(1)] - transmitted_beam_center(1)) + transmitted_beam_center(2)];
             pos = clip(pos,-1e9,1e9);
-            self.annotations.VrApMirL.Position = pos;
+            app.annotations.VrApMirL.Position = pos;
             
-            [x,y] = pol2cart(deg2rad(mirror_angle), sqrt(sum((self.annotations.VrApMirP.Position - transmitted_beam_center).^2)));
+            [x,y] = pol2cart(deg2rad(mirror_angle), sqrt(sum((app.annotations.VrApMirP.Position - transmitted_beam_center).^2)));
             
             % Restrict point within plot
             xy_point = [x y] + transmitted_beam_center;
             xy_point(xy_point > num_pix) = num_pix(xy_point > num_pix);
             xy_point(xy_point < 1) = 1;
-            set_external_source(self, event, self.annotations.VrApMirP, "Position", xy_point)
+            set_external_source(app, event, app.annotations.VrApMirP, "Position", xy_point)
             
             % Whether to update images
-            if to_update_image(self, event)
+            if to_update_image(app, event)
                 % Generate mask
-                mask_vr = false(self.dataset_parameters.n_pixels);
-                for i = 1:numel(self.annotations.VrAp)
-                    mask_vr = mask_vr | createMask(self.annotations.VrAp(i), self.image_displays.Diffraction)';
+                mask_vr = false(app.dataset_parameters.n_pixels);
+                for i = 1:numel(app.annotations.VrAp)
+                    mask_vr = mask_vr | createMask(app.annotations.VrAp(i), app.image_displays.Diffraction)';
                 end
             
                 % Invert mask?
-                if self.VirtualApertureInvert.Value
+                if app.VirtualApertureInvert.Value
                     mask_vr = 1 - mask_vr;
                 end
             
-                self.images.DiffractionMask = mask_vr;
-                self.images.Real = gather(reshape(reshape(mask_vr,1,[])*self.data, self.dataset_parameters.n_frames));
-                plot_all_patterns(self, event)
+                app.images.DiffractionMask = mask_vr;
+                app.images.Real = gather(reshape(reshape(mask_vr,1,[])*app.data, app.dataset_parameters.n_frames));
+                plot_all_patterns(app, event)
             end
         end
 
-        function auto_align(self)
+        function auto_align(app)
             % Auto-align transmitted beam
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
 
             % display a progress dialog
-            self.tmp_variables.progress_dialog = progress_dialog(self, 'Finding transmitted beam ...', "Auto Alignment");
+            app.tmp_variables.progress_dialog = progress_dialog(app, 'Finding transmitted beam ...', "Auto Alignment");
 
             % Align transmitted beam by trying to find the transmitted
-            % disk in the diffraction pattern (self.images.Diffraction),
+            % disk in the diffraction pattern (app.images.Diffraction),
             % apply slight Gaussian blur of 5 pixels to help the fit if
             % necessary
             try
                 warning("off");
-                [trans_beam_center, trans_beam_radius, ~] = imfindcircles(self.images.Diffraction*(-1)^self.DispColorMapInvert.Value, [1 round(max(self.dataset_parameters.n_pixels)/2)]);
+                [trans_beam_center, trans_beam_radius, ~] = imfindcircles(app.images.Diffraction*(-1)^app.DispColorMapInvert.Value, [1 round(max(app.dataset_parameters.n_pixels)/2)]);
                 if isempty(trans_beam_center)
-                    [trans_beam_center, trans_beam_radius, ~] = imfindcircles(imgaussfilt(self.images.Diffraction*(-1)^self.DispColorMapInvert.Value,5), [1 round(max(self.dataset_parameters.n_pixels)/2)]);
+                    [trans_beam_center, trans_beam_radius, ~] = imfindcircles(imgaussfilt(app.images.Diffraction*(-1)^app.DispColorMapInvert.Value,5), [1 round(max(app.dataset_parameters.n_pixels)/2)]);
                 end
                 warning("on");
             catch
@@ -825,15 +825,15 @@ classdef Quant4D < matlab.apps.AppBase
             trans_beam_center = fliplr(trans_beam_center);
 
             % Close the progress bar
-            delete(self.tmp_variables.progress_dialog);
+            delete(app.tmp_variables.progress_dialog);
 
             % Store old transmitted beam values
-            transBeam_old = [self.center self.TransBeamR.Value];
+            transBeam_old = [app.center app.TransBeamR.Value];
 
             % Find circle closest to the center of the diffraction
             % pattern, plot for user confirmation
             if isempty(trans_beam_center)
-                notification_dialog(self, ...
+                notification_dialog(app, ...
                     "warn", ...
                     "No transmitted beam detected. Please align the transmitted beam manually.", ...
                     "Auto-align Failed");
@@ -842,19 +842,19 @@ classdef Quant4D < matlab.apps.AppBase
                 % Assign radius and center value(s) found above using
                 % imfindcircles based on whichever is found to be
                 % closest to the diffraction pattern center
-                % `self.common_parameters.diffraction_center`
-                [~,im] = min(sqrt(sum((trans_beam_center-self.common_parameters.diffraction_center).^2,2)));
-                self.TransBeamX.Value = trans_beam_center(im,1);
-                self.TransBeamY.Value = trans_beam_center(im,2);
-                self.TransBeamR.Value = trans_beam_radius(im);
+                % `app.common_parameters.diffraction_center`
+                [~,im] = min(sqrt(sum((trans_beam_center-app.common_parameters.diffraction_center).^2,2)));
+                app.TransBeamX.Value = trans_beam_center(im,1);
+                app.TransBeamY.Value = trans_beam_center(im,2);
+                app.TransBeamR.Value = trans_beam_radius(im);
 
                 % To update annotation/panel values
-                transmitted_beam_callbacks(self,struct("Source", "", "EventName", ""));
+                transmitted_beam_callbacks(app,struct("Source", "", "EventName", ""));
 
                 % don't ask the user for feedback on the initial run of
-                % autoAlign(self)
-                if self.common_parameters.transmitted_beam_init
-                    selection = notification_dialog(self,'quest', "Is the auto-alignment correct?",'Auto-align',["Yes", "No. Revert"]);
+                % autoAlign(app)
+                if app.common_parameters.transmitted_beam_init
+                    selection = notification_dialog(app,'quest', "Is the auto-alignment correct?",'Auto-align',["Yes", "No. Revert"]);
                 else
                     selection = "Yes";
                 end
@@ -862,37 +862,37 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Revert alignment if not correctly detected
             if selection == "No. Revert"
-                self.TransBeamX.Value = transBeam_old(1);
-                self.TransBeamY.Value = transBeam_old(2);
-                self.TransBeamR.Value = transBeam_old(3);
+                app.TransBeamX.Value = transBeam_old(1);
+                app.TransBeamY.Value = transBeam_old(2);
+                app.TransBeamR.Value = transBeam_old(3);
             end
         end
 
-        function cross_align(self)
+        function cross_align(app)
             % Function to align the transmitted beam to the intersection of two lines
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
 
             % draw two line annotations
-            self.annotations.line1 = drawline("Parent", self.image_axes.Diffraction, ...
-                                             "Position", self.dataset_parameters.n_pixels.*[1 1;3 3]/4, ...
+            app.annotations.line1 = drawline("Parent", app.image_axes.Diffraction, ...
+                                             "Position", app.dataset_parameters.n_pixels.*[1 1;3 3]/4, ...
                                              "Color", "r", ...
                                              "Deletable",false);
 
-            self.annotations.line2 = drawline("Parent", self.image_axes.Diffraction, ...
-                                             "Position", self.dataset_parameters.n_pixels.*[1 3;3 1]/4, ...
+            app.annotations.line2 = drawline("Parent", app.image_axes.Diffraction, ...
+                                             "Position", app.dataset_parameters.n_pixels.*[1 3;3 1]/4, ...
                                              "Color", "r", ...
                                              "Deletable",false);
 
             % add listeners to the annotations
-            addlistener(self.annotations.line1, "ROIMoved", @find_intersection);
-            addlistener(self.annotations.line1, "MovingROI", @find_intersection);
-            addlistener(self.annotations.line2, "ROIMoved", @find_intersection);
-            addlistener(self.annotations.line2, "MovingROI", @find_intersection);
+            addlistener(app.annotations.line1, "ROIMoved", @find_intersection);
+            addlistener(app.annotations.line1, "MovingROI", @find_intersection);
+            addlistener(app.annotations.line2, "ROIMoved", @find_intersection);
+            addlistener(app.annotations.line2, "MovingROI", @find_intersection);
 
             % initialize transmitted beam to the intersection point of the two
             % line annotations
@@ -903,8 +903,8 @@ classdef Quant4D < matlab.apps.AppBase
             uiwait(h);
 
             % clear line annotations
-            delete(self.annotations.line1)
-            delete(self.annotations.line2)
+            delete(app.annotations.line1)
+            delete(app.annotations.line2)
 
             function find_intersection(~,~)
                 % Internal function to find the intersection point of two lines
@@ -918,77 +918,77 @@ classdef Quant4D < matlab.apps.AppBase
                 %    None
 
                 % get point-pairs
-                x1 = self.annotations.line1.Position(1,1);
-                x2 = self.annotations.line1.Position(2,1);
-                x3 = self.annotations.line2.Position(1,1);
-                x4 = self.annotations.line2.Position(2,1);
+                x1 = app.annotations.line1.Position(1,1);
+                x2 = app.annotations.line1.Position(2,1);
+                x3 = app.annotations.line2.Position(1,1);
+                x4 = app.annotations.line2.Position(2,1);
 
-                y1 = self.annotations.line1.Position(1,2);
-                y2 = self.annotations.line1.Position(2,2);
-                y3 = self.annotations.line2.Position(1,2);
-                y4 = self.annotations.line2.Position(2,2);
+                y1 = app.annotations.line1.Position(1,2);
+                y2 = app.annotations.line1.Position(2,2);
+                y3 = app.annotations.line2.Position(1,2);
+                y4 = app.annotations.line2.Position(2,2);
 
                 % get intersection from 4 point-pairs
-                self.center = [x1*y2-x2*y1, x3*y4-x4*y3] / ...
+                app.center = [x1*y2-x2*y1, x3*y4-x4*y3] / ...
                                 [   y2-y1,  y4-y3;
                                 -(x2-x1),-(x4-x3)];
 
                 % send values to transmitted beam UI elements
-                self.TransBeamX.Value = self.center(1);
-                self.TransBeamXSpinner.Value = self.center(1);
-                self.TransBeamY.Value = self.center(2);
-                self.TransBeamYSpinner.Value = self.center(2);
+                app.TransBeamX.Value = app.center(1);
+                app.TransBeamXSpinner.Value = app.center(1);
+                app.TransBeamY.Value = app.center(2);
+                app.TransBeamYSpinner.Value = app.center(2);
 
                 % update global center
-                self.annotations.TransBeam.Center = self.center;
+                app.annotations.TransBeam.Center = app.center;
 
             end
         end
 
-        function move_transmitted_beam(self, source, event)
+        function move_transmitted_beam(app, source, event)
             % Function to sync UIs/ROIs depending on the central beam location
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    source (images.roi.Circle) : transmitted beam annotation
             %    event (event.EventData) : ROIMoved, MovingROI
             %
             % Returns:
             %    None
 
-            trans_beam_center = [self.TransBeamX.Value, self.TransBeamY.Value];
-            radius = self.TransBeamR.Value;
-            alpha = self.Alpha.Value;
+            trans_beam_center = [app.TransBeamX.Value, app.TransBeamY.Value];
+            radius = app.TransBeamR.Value;
+            alpha = app.Alpha.Value;
             mrad_per_px = alpha/radius;
-            n_pixels = self.dataset_parameters.n_pixels;
+            n_pixels = app.dataset_parameters.n_pixels;
 
-            if isempty(findobj(self.image_axes.Diffraction, "Tag","TransBeamAnnot"))
-                self.annotations.TransBeam = []; % If ROI is not plotted
+            if isempty(findobj(app.image_axes.Diffraction, "Tag","TransBeamAnnot"))
+                app.annotations.TransBeam = []; % If ROI is not plotted
             else
                 switch event.Source
-                    case {self.TransBeamX, self.TransBeamXSpinner}
+                    case {app.TransBeamX, app.TransBeamXSpinner}
                         % Force X >= 1
                         trans_beam_center(1) = max(1, event.Value);
 
-                    case {self.TransBeamY, self.TransBeamYSpinner}
+                    case {app.TransBeamY, app.TransBeamYSpinner}
                         % Force Y >= 1
                         trans_beam_center(2) = max(1, event.Value);
 
-                    case {self.TransBeamR, self.TransBeamRSpinner}
+                    case {app.TransBeamR, app.TransBeamRSpinner}
                         % Radius
                         radius = event.Value;
 
-                    case self.Alpha
+                    case app.Alpha
                         % Calculate the diffraction scale
                         alpha = event.Value;
                         mrad_per_px = alpha/radius;
 
-                    case self.mradPx
+                    case app.mradPx
                         % Manually set the diffraction scale
                         mrad_per_px = event.Value;
                         alpha = mrad_per_px*radius;
 
-                    case self.annotations.TransBeam
+                    case app.annotations.TransBeam
                         % ROI
                         trans_beam_center = source.Center;
                         radius = source.Radius;
@@ -999,52 +999,52 @@ classdef Quant4D < matlab.apps.AppBase
             %center(center > n_pixels) = n_pixels(center > n_pixels);
             %center(center < 1) = 1;
             trans_beam_center = clip(trans_beam_center, 1, n_pixels);
-            self.center = trans_beam_center;
+            app.center = trans_beam_center;
 
             % Find the max allowed radius to the furthest corner from `center`
-            self.common_parameters.max_radius = ceil(sqrt(sum((abs(self.common_parameters.diffraction_center-trans_beam_center) + self.common_parameters.diffraction_center -1).^2)));
+            app.common_parameters.max_radius = ceil(sqrt(sum((abs(app.common_parameters.diffraction_center-trans_beam_center) + app.common_parameters.diffraction_center -1).^2)));
 
             % set the annular integration step size based on max radius
             % (convert to mrad for the UI); default to stepping each
             % pixel, with a max of 250 steps, otherwise pre-calculation
             % of the annular images can get quite slow
-            if event.Source ~= self.AnnularStep
-                self.AnnularStep.Value = self.mradPx.Value * max(1, self.common_parameters.max_radius/250);
+            if event.Source ~= app.AnnularStep
+                app.AnnularStep.Value = app.mradPx.Value * max(1, app.common_parameters.max_radius/250);
             end
 
             % make sure r is not larger than the max radius; cannot be
             % 0 so clip to eps
-            radius = clip(radius, eps, self.common_parameters.max_radius);
+            radius = clip(radius, eps, app.common_parameters.max_radius);
 
             % Update UI limits
-            set([self.TransBeamR, ...
-                self.TransBeamRSpinner], ...
+            set([app.TransBeamR, ...
+                app.TransBeamRSpinner], ...
                 "Limits", ...
-                [eps(), self.common_parameters.max_radius])
+                [eps(), app.common_parameters.max_radius])
 
-            set([self.InnerAnnularRadius, ...
-                self.OuterAnnularRadius, ...
-                self.VirtualApertureR, ...
-                self.BandpassFilterLow, ...
-                self.BandpassFilterHigh, ...
-                self.BandpassFilter], ...
+            set([app.InnerAnnularRadius, ...
+                app.OuterAnnularRadius, ...
+                app.VirtualApertureR, ...
+                app.BandpassFilterLow, ...
+                app.BandpassFilterHigh, ...
+                app.BandpassFilter], ...
                 "Limits", ...
-                [0, self.common_parameters.max_radius])
+                [0, app.common_parameters.max_radius])
 
             % Update UI values
-            set_external_source(self, ...
+            set_external_source(app, ...
                 event, ...
-                [self.TransBeamR; ...
-                self.TransBeamX; ...
-                self.TransBeamY; ...
-                self.TransBeamRSpinner; ...
-                self.TransBeamXSpinner; ...
-                self.TransBeamYSpinner; ...
-                self.BandpassFilterLow; ...
-                self.BandpassFilterHigh; ...
-                self.BandpassFilter; ...
-                self.Alpha; ...
-                self.mradPx], ...
+                [app.TransBeamR; ...
+                app.TransBeamX; ...
+                app.TransBeamY; ...
+                app.TransBeamRSpinner; ...
+                app.TransBeamXSpinner; ...
+                app.TransBeamYSpinner; ...
+                app.BandpassFilterLow; ...
+                app.BandpassFilterHigh; ...
+                app.BandpassFilter; ...
+                app.Alpha; ...
+                app.mradPx], ...
                 {"Value"}, ...
                 {radius; ...
                 trans_beam_center(1); ...
@@ -1053,30 +1053,30 @@ classdef Quant4D < matlab.apps.AppBase
                 trans_beam_center(1); ...
                 trans_beam_center(2); ...
                 0;...
-                self.common_parameters.max_radius; ...
-                [0, self.common_parameters.max_radius];...
+                app.common_parameters.max_radius; ...
+                [0, app.common_parameters.max_radius];...
                 alpha; ...
                 mrad_per_px})
 
             % Update ROI
-            set(self.annotations.TransBeam,"Center",trans_beam_center,'Radius',radius)
+            set(app.annotations.TransBeam,"Center",trans_beam_center,'Radius',radius)
 
             % Update global coordinate properties
-            detector_coordinates_callbacks(self, event)
+            detector_coordinates_callbacks(app, event)
 
         end
 
-        function notes = get_import_info(self)
+        function notes = get_import_info(app)
             % Function to update current dataset import parameters
             %
             % Parameters:
-            %   self (Quant4D)
+            %   app (Quant4D)
             %
             % Returns:
             %    notes (str) : collection of import parameters for display to the user
 
-            params = self.dataset_parameters;
-            previous_params = self.tmp_variables.prev_D;
+            params = app.dataset_parameters;
+            previous_params = app.tmp_variables.prev_D;
 
             % create a notes string with important info
             notes = "File: " + replace(params.file_path, "\", "\\");
@@ -1089,18 +1089,18 @@ classdef Quant4D < matlab.apps.AppBase
             notes = notes ...
                     + "\n\n" ...
                     + "# Current Data Info #\n" ...
-                    + "Byte Order: " + self.sys_constants.endian_text.(params.byte_orer) + "\n"...
+                    + "Byte Order: " + app.sys_constants.endian_text.(params.byte_orer) + "\n"...
                     + "Data Type: " + params.data_type + "\n"...
-                    + "Byte Size: " + self.byte_size.(params.data_type) + " bytes\n" ...
+                    + "Byte Size: " + app.byte_size.(params.data_type) + " bytes\n" ...
                     + sprintf("Diffraction size (X×Y): %d×%d\n",params.n_pixels) ...
                     + sprintf("Real-spaces size (X×Y): %d×%d\n\n",params.n_frames) ...
                     + "# Data Structure in File #\n" ...
                     + "Data Offset: " + previous_params.offset + " bytes\n" ...
                     + "Frame Header: " + previous_params.frame_header + "bytes\n" ...
                     + "Frame Footer: " + previous_params.frame_footer + " bytes\n" ...
-                    + "Byte Order: " + self.sys_constants.endian_text.(previous_params.byte_orer) + "\n"...
+                    + "Byte Order: " + app.sys_constants.endian_text.(previous_params.byte_orer) + "\n"...
                     + "Data Type: "+ previous_params.data_type + "\n"...
-                    + "Byte Size: " + self.byte_size.(previous_params.data_type) + " bytes" ...
+                    + "Byte Size: " + app.byte_size.(previous_params.data_type) + " bytes" ...
                     + "\n\n" ...
                     + "# File Meta Info Notes #\n" ...
                     + strjoin(previous_params.file_metadata,'\n') ...
@@ -1111,11 +1111,11 @@ classdef Quant4D < matlab.apps.AppBase
             notes = sprintf(notes);
         end
 
-        function err = export_data(self, event)
+        function err = export_data(app, event)
             % Function to export data as `.h5` or `.raw`
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -1124,34 +1124,34 @@ classdef Quant4D < matlab.apps.AppBase
             err = false;
 
             % export full file name with directory path
-            self.tmp_variables.efile = fullfile(self.SaveDirectoryPath.Value, self.ExportFilename.Value+"."+self.ExportDataType.Value);
+            app.tmp_variables.efile = fullfile(app.SaveDirectoryPath.Value, app.ExportFilename.Value+"."+app.ExportDataType.Value);
 
             % notify user and exit if the file already exists
-            if isfile(self.tmp_variables.efile)
-                notification_dialog(self, "warn", "File: '"+self.tmp_variables.efile+"' already exists!",'File Exists!');
+            if isfile(app.tmp_variables.efile)
+                notification_dialog(app, "warn", "File: '"+app.tmp_variables.efile+"' already exists!",'File Exists!');
                 return
             end
 
             % Update export range
-            [pixels_dist, pixels_start, n_pixels, pixels_end, frames_dist, frames_start, n_frames] = update_export_range(self, event);
+            [pixels_dist, pixels_start, n_pixels, pixels_end, frames_dist, frames_start, n_frames] = update_export_range(app, event);
 
             % Local variables
-            data_type = self.dataset_parameters.data_type;
-            frame_size = n_pixels(1) * n_pixels(2) * self.dataset_parameters.byte_size;
-            byte_order = self.ExportByteOrder.Value;
+            data_type = app.dataset_parameters.data_type;
+            frame_size = n_pixels(1) * n_pixels(2) * app.dataset_parameters.byte_size;
+            byte_order = app.ExportByteOrder.Value;
 
             % Progress window with per-second-updating `timer`
-            [self.tmp_variables.progress_dialog, self.tmp_variables.tmr] = import_export_progress(self, "Export", n_frames(1)*n_frames(2), frame_size);
+            [app.tmp_variables.progress_dialog, app.tmp_variables.tmr] = import_export_progress(app, "Export", n_frames(1)*n_frames(2), frame_size);
 
             % Make dataset 4D
-            self.data = reshape(self.data, [self.dataset_parameters.n_pixels, self.dataset_parameters.n_frames]);
+            app.data = reshape(app.data, [app.dataset_parameters.n_pixels, app.dataset_parameters.n_frames]);
 
-            if self.ExportDataType.Value == "h5"
+            if app.ExportDataType.Value == "h5"
                 % Sort out the h5 data type string; e.g. H5T_IEEE_F32LE, H5T_IEEE_F32BE, H5T_IEEE_F64LE, H5T_IEEE_F64BE
-                h5dt = "H5T_IEEE_F" + self.byte_size.(data_type)*8 + upper(byte_order) + "E";
+                h5dt = "H5T_IEEE_F" + app.byte_size.(data_type)*8 + upper(byte_order) + "E";
 
                 % C-like array indices for H5 low-level APIs
-                file_id = H5F.create(self.tmp_variables.efile);
+                file_id = H5F.create(app.tmp_variables.efile);
                 type_id = H5T.copy(h5dt);
                 file_space_id = H5S.create_simple(4, [n_frames(2), n_frames(1), n_pixels(2), n_pixels(1)], []);
                 memory_space_id = H5S.create_simple(2, [n_pixels(2), n_pixels(1)], []);
@@ -1167,17 +1167,17 @@ classdef Quant4D < matlab.apps.AppBase
                 for frame_y = 0 : n_frames(2) - 1
                     for frame_x = 0 : n_frames(1) - 1
                         % Break when progress windows closed
-                        if ~isvalid(self.tmp_variables.progress_dialog)
+                        if ~isvalid(app.tmp_variables.progress_dialog)
                             err = -1;
                             break;
                         end
 
                         % Update processed Frame Number for progress update
-                        self.tmp_variables.frame_number(1) = frame_y*n_frames(1) + frame_x + 1;
+                        app.tmp_variables.frame_number(1) = frame_y*n_frames(1) + frame_x + 1;
                         H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', [frame_y, frame_x, 0, 0], [], [], [1, 1, n_pixels(2), n_pixels(1)]);
 
                         % Selected frame
-                        frame = gather(self.data(pixels_start(1):pixels_end(1), ...
+                        frame = gather(app.data(pixels_start(1):pixels_end(1), ...
                             pixels_start(2):pixels_end(2), ...
                             frames_start(1)+frame_x*frames_dist, ...
                             frames_start(2)+frame_y*frames_dist));
@@ -1203,22 +1203,22 @@ classdef Quant4D < matlab.apps.AppBase
                 H5P.close(property_list);
                 H5F.close(file_id);
 
-            elseif self.ExportDataType.Value == "raw"
-                file_id = fopen(self.tmp_variables.efile,"w");
+            elseif app.ExportDataType.Value == "raw"
+                file_id = fopen(app.tmp_variables.efile,"w");
                 % One frame at a time
                 for frame_y = 0 : n_frames(2)-1
                     for frame_x = 0 : n_frames(1)-1
                         % Break when progress windows closed
-                        if ~isvalid(self.tmp_variables.progress_dialog)
+                        if ~isvalid(app.tmp_variables.progress_dialog)
                             err = -1;
                             break;
                         end
 
                         % Update processed Frame # for progress update
-                        self.tmp_variables.frame_number(1) = frame_y*n_frames(1) + frame_x + 1;
+                        app.tmp_variables.frame_number(1) = frame_y*n_frames(1) + frame_x + 1;
 
                         % Selected frame
-                        frame = gather(self.data(pixels_start(1):pixels_end(1), pixels_start(2):pixels_end(2), frames_start(1)+frame_x*frames_dist, frames_start(2)+frame_y*frames_dist));
+                        frame = gather(app.data(pixels_start(1):pixels_end(1), pixels_start(2):pixels_end(2), frames_start(1)+frame_x*frames_dist, frames_start(2)+frame_y*frames_dist));
 
                         % Pixel binning
                         if pixels_dist > 1
@@ -1236,29 +1236,29 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Close progress window
-            delete(self.tmp_variables.progress_dialog);
+            delete(app.tmp_variables.progress_dialog);
 
             % Make dataset 2D again
-            self.data = reshape(self.data, prod(self.dataset_parameters.n_pixels), []);
+            app.data = reshape(app.data, prod(app.dataset_parameters.n_pixels), []);
 
             if err
-                self.tmp_variables.progress_dialog = progress_dialog(self, "Deleting the canceled export file ...", "Export Canceled");
+                app.tmp_variables.progress_dialog = progress_dialog(app, "Deleting the canceled export file ...", "Export Canceled");
 
                 % Delete created file, if export canceled
-                delete(self.tmp_variables.efile);
-                delete(self.tmp_variables.progress_dialog)
+                delete(app.tmp_variables.efile);
+                delete(app.tmp_variables.progress_dialog)
             else
-                notification_dialog(self, "help", "Export to '"+self.tmp_variables.efile+"' finished!",'Export Finished!');
+                notification_dialog(app, "help", "Export to '"+app.tmp_variables.efile+"' finished!",'Export Finished!');
             end
 
-            enable_windows(self, true)
+            enable_windows(app, true)
         end
 
-        function [pixels_dist, pixels_start, n_pixels, pixels_end, frames_dist, frames_start, n_frames] = update_export_range(self, event)
+        function [pixels_dist, pixels_start, n_pixels, pixels_end, frames_dist, frames_start, n_frames] = update_export_range(app, event)
             % Save images based on the user selections on the Save/Export UI
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -1276,47 +1276,47 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Update Diffraction and Real-space export ranges; use dummy event if source is not a range UI
             if ~contains(event.Source.Tag, "Diffraction")
-                diffraction_event = struct("Source", self.DiffractionPartialExportPixelsDist, ...
-                    "Value", self.DiffractionPartialExportPixelsDist.Value);
+                diffraction_event = struct("Source", app.DiffractionPartialExportPixelsDist, ...
+                    "Value", app.DiffractionPartialExportPixelsDist.Value);
             end
 
             if ~contains(event.Source.Tag, "Real")
-                real_event = struct("Source", self.RealPartialExportFramesDist, ...
-                    "Value", self.RealPartialExportFramesDist.Value);
+                real_event = struct("Source", app.RealPartialExportFramesDist, ...
+                    "Value", app.RealPartialExportFramesDist.Value);
             end
 
             %notes, binning, xy_start, n_points, xy_end
-            [diffraction_note, pixels_dist, pixels_start, n_pixels, pixels_end] = range_import_export(self, diffraction_event);
-            [real_note, frames_dist, frames_start, n_frames,  ~] = range_import_export(self, real_event);
+            [diffraction_note, pixels_dist, pixels_start, n_pixels, pixels_end] = range_import_export(app, diffraction_event);
+            [real_note, frames_dist, frames_start, n_frames,  ~] = range_import_export(app, real_event);
 
             % Add dimension suffix and Remove old suffix
-            self.ExportFilename.Value = regexprep(self.ExportFilename.Value, '_\d*x\d*x\d*x\d*$', "");
-            if self.ExportDimensionSuffix.Value
-                self.ExportFilename.Value = sprintf('%s_%dx%dx%dx%d', self.ExportFilename.Value, n_pixels, n_frames);
+            app.ExportFilename.Value = regexprep(app.ExportFilename.Value, '_\d*x\d*x\d*x\d*$', "");
+            if app.ExportDimensionSuffix.Value
+                app.ExportFilename.Value = sprintf('%s_%dx%dx%dx%d', app.ExportFilename.Value, n_pixels, n_frames);
             end
 
             % Export summary notes
-            filenote = sprintf("Directory: '%s'\nFilename: '%s.%s'", self.SaveDirectoryPath.Value, self.ExportFilename.Value, self.ExportDataType.Value);
+            filenote = sprintf("Directory: '%s'\nFilename: '%s.%s'", app.SaveDirectoryPath.Value, app.ExportFilename.Value, app.ExportDataType.Value);
 
-            if self.ExportDataType.Value == "h5"
+            if app.ExportDataType.Value == "h5"
                 filenote = filenote + sprintf("\nDataset: '/STEM4D'");
             end
 
             notes = diffraction_note + real_note ...
-                + "\nData Type: " + self.dataset_parameters.data_type + " (was " + self.tmp_variables.prev_D.data_type + " in original file)" ...
-                + "\nByte Order: " + self.sys_constants.endian_text.(self.ExportByteOrder.Value) + " (was " + self.sys_constants.endian_text.(self.tmp_variables.prev_D.byte_orer) + " in original file)" ...
-                + "\nSystem Byte Order: " + self.sys_constants.endian_text.(self.sys_constants.system_endianness) ...
-                + sprintf('\nEstimated file size: %.3f GiB', prod([n_pixels n_frames])*self.dataset_parameters.byte_size/1024^3) ...
-                + sprintf('\nAvailable space: %.3f GiB', java.io.File(self.SaveDirectoryPath.Value).getUsableSpace/1024^3);
+                + "\nData Type: " + app.dataset_parameters.data_type + " (was " + app.tmp_variables.prev_D.data_type + " in original file)" ...
+                + "\nByte Order: " + app.sys_constants.endian_text.(app.ExportByteOrder.Value) + " (was " + app.sys_constants.endian_text.(app.tmp_variables.prev_D.byte_orer) + " in original file)" ...
+                + "\nSystem Byte Order: " + app.sys_constants.endian_text.(app.sys_constants.system_endianness) ...
+                + sprintf('\nEstimated file size: %.3f GiB', prod([n_pixels n_frames])*app.dataset_parameters.byte_size/1024^3) ...
+                + sprintf('\nAvailable space: %.3f GiB', java.io.File(app.SaveDirectoryPath.Value).getUsableSpace/1024^3);
 
-            self.ExportNotes.Value = filenote+sprintf("\n\n"+notes);
+            app.ExportNotes.Value = filenote+sprintf("\n\n"+notes);
         end
 
-        function move_export_annotation(self, ~, event)
+        function move_export_annotation(app, ~, event)
             % Update Export Data boundaries as user change the Export Data Annotations
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    source (images.roi.Rectangle) : real-space export annotations, ignored
             %    event (event.EventData)
             %
@@ -1324,40 +1324,40 @@ classdef Quant4D < matlab.apps.AppBase
             %    None
 
             debug_time = tic;
-            export_callbacks(self, event)
-            debug_toc(self, event, "", debug_time)
+            export_callbacks(app, event)
+            debug_toc(app, event, "", debug_time)
         end
 
-        function update_prefix(self, event)
+        function update_prefix(app, event)
             % Update image name prefix on the Save/Export UI
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData) 
             %
             % Returns:
             %    None
 
-            if is_static_event(self, event)
+            if is_static_event(app, event)
                 % If not in any annular mode, disable the inner/outer radii prefix
-                set([self.SavePrefixAngleInner; ...
-                    self.SavePrefixAngleOuter], ...
-                    "Enable", ismember(self.Mode.Value,["Annular" "CoM" "DPC"]))
+                set([app.SavePrefixAngleInner; ...
+                    app.SavePrefixAngleOuter], ...
+                    "Enable", ismember(app.Mode.Value,["Annular" "CoM" "DPC"]))
 
-                if ~self.SavePrefixAngleInner.Enable
-                    set([self.SavePrefixAngleInner self.SavePrefixAngleOuter], "Value",0);
+                if ~app.SavePrefixAngleInner.Enable
+                    set([app.SavePrefixAngleInner app.SavePrefixAngleOuter], "Value",0);
                 end
 
                 % Include inner and outer annular radii
                 ang = "";
                 inner_radius = "";
                 outer_radius = "";
-                if self.SavePrefixAngleInner.Value
-                    inner_radius = "" + round(self.InnerAnnularRadiusSpinner.Value,2);
+                if app.SavePrefixAngleInner.Value
+                    inner_radius = "" + round(app.InnerAnnularRadiusSpinner.Value,2);
                 end
 
-                if self.SavePrefixAngleOuter.Value
-                    outer_radius = ""+round(self.OuterAnnularRadiusSpinner.Value,2);
+                if app.SavePrefixAngleOuter.Value
+                    outer_radius = ""+round(app.OuterAnnularRadiusSpinner.Value,2);
                 end
 
                 if all([inner_radius outer_radius] ~= "")
@@ -1367,60 +1367,60 @@ classdef Quant4D < matlab.apps.AppBase
                 ang = inner_radius + ang + outer_radius;
 
                 if ang ~= ""
-                    ang = ang + self.DetectorCoordinateUnit.Value + "_";
+                    ang = ang + app.DetectorCoordinateUnit.Value + "_";
                 end
 
-                self.SaveImageList.Items = self.SaveImagePrefix.Value + ang + self.SaveImageList.ItemsData;
-                if self.Mode.Value == "DPC"
-                    self.SaveImageList.Items = replace(self.SaveImageList.Items, "CoM", "DPC");
+                app.SaveImageList.Items = app.SaveImagePrefix.Value + ang + app.SaveImageList.ItemsData;
+                if app.Mode.Value == "DPC"
+                    app.SaveImageList.Items = replace(app.SaveImageList.Items, "CoM", "DPC");
                 end
             end
         end
 
-        function save_images(self)
+        function save_images(app)
             % Save images based on the user selections on the Save/Export UI
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
 
             % Give the user a progress bar in case it takes some time to save
-            self.tmp_variables.progress_dialog = progress_dialog(self, 'Saving image(s) ...', "Image Saving");
+            app.tmp_variables.progress_dialog = progress_dialog(app, 'Saving image(s) ...', "Image Saving");
 
             % Save as 32-bit unscaled, uncompressed Tiff images
             tagstruct = struct('PlanarConfiguration',Tiff.PlanarConfiguration.Chunky,'Compression',Tiff.Compression.None, ...
                 'SampleFormat',Tiff.SampleFormat.IEEEFP,'Photometric',Tiff.Photometric.MinIsBlack,'BitsPerSample',32);
 
-            for id = reshape(string(self.SaveImageList.Value),1,[])
-                imgfile = fullfile(self.SaveDirectoryPath.Value, self.SaveImageList.Items{self.SaveImageList.ItemsData == id});
+            for id = reshape(string(app.SaveImageList.Value),1,[])
+                imgfile = fullfile(app.SaveDirectoryPath.Value, app.SaveImageList.Items{app.SaveImageList.ItemsData == id});
 
-                if self.SaveImagePNG.Value
-                    if self.SaveImageAnnotations.Value
-                        print(self.figures.(id), imgfile, '-dpng', "-r"+num2str(self.SaveImageDPI.Value))
+                if app.SaveImagePNG.Value
+                    if app.SaveImageAnnotations.Value
+                        print(app.figures.(id), imgfile, '-dpng', "-r"+num2str(app.SaveImageDPI.Value))
                     else
-                        imgd = self.image_displays.(id);
-                        imwrite(ind2rgb(round(255*imgd.CData)+1,self.image_axes.(id).Colormap).*imgd.AlphaData, [imgfile '.png'])
+                        imgd = app.image_displays.(id);
+                        imwrite(ind2rgb(round(255*imgd.CData)+1,app.image_axes.(id).Colormap).*imgd.AlphaData, [imgfile '.png'])
                     end
                 end
 
-                if self.SaveImageTIFF.Value
-                    if id == "DiffractionMask" && self.Mode.Value == "DPC"
+                if app.SaveImageTIFF.Value
+                    if id == "DiffractionMask" && app.Mode.Value == "DPC"
                         % Save all mask segments into a TIFF stack
-                        for j = 1:self.NRung.Value
-                            for i = 1:self.NSeg.Value
-                                im = uint8(reshape(self.masks.Seg(self.NSeg.Value*(j-1)+i, :), self.dataset_parameters.n_pixels))';
+                        for j = 1:app.NRung.Value
+                            for i = 1:app.NSeg.Value
+                                im = uint8(reshape(app.masks.Seg(app.NSeg.Value*(j-1)+i, :), app.dataset_parameters.n_pixels))';
                                 imwrite(im, [imgfile '.tif'], 'WriteMode','append');
                             end
                         end
-                    elseif id == "DiffractionMask" && self.Mode.Value == "CoM"
-                        im = uint8(self.masks.annular)';
+                    elseif id == "DiffractionMask" && app.Mode.Value == "CoM"
+                        im = uint8(app.masks.annular)';
                         imwrite(im, [imgfile '.tif']);
                     else
-                        % Other images (and "DiffractionMask" from `self.images.DiffractionMask` for other Detector Modes)
+                        % Other images (and "DiffractionMask" from `app.images.DiffractionMask` for other Detector Modes)
                         t = Tiff([imgfile '.tif'], "w");
-                        im = self.images.(id)';
+                        im = app.images.(id)';
                         [tagstruct.ImageLength, tagstruct.ImageWidth] = size(im);
                         tagstruct.SamplesPerPixel = size(im,3);
                         t.setTag(tagstruct);
@@ -1430,30 +1430,30 @@ classdef Quant4D < matlab.apps.AppBase
                 end
             end
 
-            delete(self.tmp_variables.progress_dialog);
+            delete(app.tmp_variables.progress_dialog);
         end
 
-        function gpu_note = check_GPU_memory(self, n_pixels, n_frames)
+        function gpu_note = check_GPU_memory(app, n_pixels, n_frames)
             % Check the amount of GPU memory on the available GPU(s),
             % compare with the estimated memory from `check_memory()` and
             % warn if incompatible.
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    n_pixels ([int int]) : number of pixels in Diffraction space
             %    n_frames ([int int]) : number of probe positions in Real space
             %
             % Returns:
             %    gpu_note (str) : report on memory usage for the user
         
-            igpu = self.GPU.Value;
+            igpu = app.GPU.Value;
             if ~igpu
                 gpu_note = "GPU disabled.";
             elseif prod([n_pixels n_frames]) > intmax("int32")
                 gpu_note = "GPU disabled, because dataset has more elements than MATLAB CUDA's maximum (2^31-1).";
-                self.GPU.Value = 0;
+                app.GPU.Value = 0;
             else
-                tgpu = sprintf('GPU %d. %s %.1f GiB', igpu, self.sys_constants.gpu(igpu).name, self.sys_constants.gpu(igpu).memory/1024^3);
+                tgpu = sprintf('GPU %d. %s %.1f GiB', igpu, app.sys_constants.gpu(igpu).name, app.sys_constants.gpu(igpu).memory/1024^3);
                 try
                     if ~parallel.gpu.GPUDevice.getDevice(igpu).DeviceSelected
                         gpuDevice(igpu);
@@ -1462,9 +1462,9 @@ classdef Quant4D < matlab.apps.AppBase
                     available_memory = parallel.gpu.GPUDevice.getDevice(igpu).AvailableMemory;
             
                     % If GPU is already in use, taking the current data size into account
-                    if isfield(self.dataset_parameters, "GPU") && self.dataset_parameters.gpu == self.GPU.Value
+                    if isfield(app.dataset_parameters, "GPU") && app.dataset_parameters.gpu == app.GPU.Value
                         try
-                            available_memory = available_memory + self.dataset_parameters.estimated_memory;
+                            available_memory = available_memory + app.dataset_parameters.estimated_memory;
                         catch
                         end
                     end
@@ -1473,12 +1473,12 @@ classdef Quant4D < matlab.apps.AppBase
             
                     warning_text = [];
             
-                    if self.tmp_variables.estimated_memory > available_memory - 128*1024^2 % Has 128 MiB extra?
+                    if app.tmp_variables.estimated_memory > available_memory - 128*1024^2 % Has 128 MiB extra?
                         gpu_note = tgpu+" does NOT have enough free memory ("+amem_t+"). 128 MiB extra free memory required.";
                         warning_text = 'GPU Not Enough Free Memory!';
-                        self.GPU.Value = 0;
+                        app.GPU.Value = 0;
             
-                    elseif self.tmp_variables.estimated_memory > available_memory - 512*1024^2 % Has 512 MiB extra?
+                    elseif app.tmp_variables.estimated_memory > available_memory - 512*1024^2 % Has 512 MiB extra?
                         gpu_note = tgpu+" has LIMITED free memory ("+amem_t+") and may cause errors.";
                         warning_text = 'GPU Limited Free Memory!';
             
@@ -1489,23 +1489,23 @@ classdef Quant4D < matlab.apps.AppBase
             
                     % Notify warnings if any
                     if ~isempty(warning_text)
-                        notification_dialog(self, "warn", gpu_note, warning_text);
+                        notification_dialog(app, "warn", gpu_note, warning_text);
                     end
             
                 catch ME
                     gpu_note = sprintf('Failed to select %s!\n%s\n%s\n%s',tgpu,ME.identifier,ME.message,ME.Correction);
-                    notification_dialog(self, "error", gpu_note, 'Error Selecting GPU!');
-                    self.GPU.Value = 0;
+                    notification_dialog(app, "error", gpu_note, 'Error Selecting GPU!');
+                    app.GPU.Value = 0;
                 end
             end
         end
 
-        function memory_note = check_memory(self, event, n_pixels, n_frames, bytesize)
+        function memory_note = check_memory(app, event, n_pixels, n_frames, bytesize)
             % Check the amount of system memory available, estimate the
             % required memory, compare and warn if incompatible. 
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    n_pixels ([int int]): number of pixels in Diffraction space
             %    n_frames ([int int]): number of probe positions in Real space
             %    bytesize (int): size of the data type in bytes
@@ -1514,65 +1514,65 @@ classdef Quant4D < matlab.apps.AppBase
             %    memory_note (str) : report on memory usage for the user
 
             % Display estimated size in green if matches actual size, brown if smaller, red if larger
-            if self.tmp_variables.EstSize == self.tmp_variables.FileSize
-                self.ImportEstimatedFilesize.FontColor = [0 0.5 0];
-            elseif self.tmp_variables.EstSize < self.tmp_variables.FileSize
-                self.ImportEstimatedFilesize.FontColor = [0.5 0.5 0];
+            if app.tmp_variables.EstSize == app.tmp_variables.FileSize
+                app.ImportEstimatedFilesize.FontColor = [0 0.5 0];
+            elseif app.tmp_variables.EstSize < app.tmp_variables.FileSize
+                app.ImportEstimatedFilesize.FontColor = [0.5 0.5 0];
             else
-                self.ImportEstimatedFilesize.FontColor = "r";
+                app.ImportEstimatedFilesize.FontColor = "r";
             end
             
             % Estimate the amount of memory needed to hold the largest arrays in memory
             % Estimate of the distance to the far corner of the diffraction pattern
-            est_mem = prod([n_pixels n_frames]) ...                                   % self.data
-                + prod(n_frames)*size(0:0.5:floor(sqrt(sum((n_pixels/2).^2))),2) ...  % self.images.annular_images
-                + prod(n_frames)*10 + prod(n_pixels)*2  ...                           % self.images
-                + prod(n_pixels)*10;                                                  % self.masks
+            est_mem = prod([n_pixels n_frames]) ...                                   % app.data
+                + prod(n_frames)*size(0:0.5:floor(sqrt(sum((n_pixels/2).^2))),2) ...  % app.images.annular_images
+                + prod(n_frames)*10 + prod(n_pixels)*2  ...                           % app.images
+                + prod(n_pixels)*10;                                                  % app.masks
             
-            self.tmp_variables.estimated_memory = est_mem*bytesize;
+            app.tmp_variables.estimated_memory = est_mem*bytesize;
             
             % check if there is an appropriate GPU to use
-            if event.Source ~= self.GPU
-                if any([self.sys_constants.gpu.memory]>=self.tmp_variables.estimated_memory)
-                    [~,gpu_index] = max([self.sys_constants.gpu.memory]);
-                    self.GPU.Value = gpu_index;
+            if event.Source ~= app.GPU
+                if any([app.sys_constants.gpu.memory]>=app.tmp_variables.estimated_memory)
+                    [~,gpu_index] = max([app.sys_constants.gpu.memory]);
+                    app.GPU.Value = gpu_index;
                 else
-                    self.GPU.Value = 0;
+                    app.GPU.Value = 0;
                 end
             end
             
-            memory_note = sprintf("Estimated memory usage: %.3f GiB.",self.tmp_variables.estimated_memory/1024^3);
-            if self.tmp_variables.estimated_memory > self.sys_constants.total_memory
+            memory_note = sprintf("Estimated memory usage: %.3f GiB.",app.tmp_variables.estimated_memory/1024^3);
+            if app.tmp_variables.estimated_memory > app.sys_constants.total_memory
                 msg = sprintf("WARNING: Size of dataset is larger than the system memory!");
-                notification_dialog(self, "error", msg, 'Size Exceeds System Memory!');
+                notification_dialog(app, "error", msg, 'Size Exceeds System Memory!');
                 memory_note = memory_note+"\n"+msg;
             end
-            memory_note = memory_note+"\nSystem byte order: "+self.sys_constants.endian_text.(self.sys_constants.system_endianness)+".";
+            memory_note = memory_note+"\nSystem byte order: "+app.sys_constants.endian_text.(app.sys_constants.system_endianness)+".";
         end
 
-        function guess_frames_from_dim3(self, dim3)
+        function guess_frames_from_dim3(app, dim3)
             % Guess number of real space frames in X and Y when a dataset is read
             % in as 3D, rather than 4D. 
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    dim3 (int): Total number of real-space frames in a 4D dataset that has been read in as 3D.
             %
             % Returns:
             %    None
         
-            self.ImportFramesX.Value = round(sqrt(dim3));
-            self.ImportFramesY.Value = round(dim3/self.ImportFramesX.Value);
+            app.ImportFramesX.Value = round(sqrt(dim3));
+            app.ImportFramesY.Value = round(dim3/app.ImportFramesX.Value);
         end
 
-        function get_dims_from_name(self, filename)
+        function get_dims_from_name(app, filename)
             % Guess dataset size from `filename` if it contains certain
             % regular expressions. Where A, B, C, D are integers. (A,B) = #
             % pixels in Diffraction space. (C,D) = # probe positions in
             % Real space.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    filename (str) : 'prefixAxBxCxDbar' or 'scan_xC_yD.raw'
             %
             % Returns:
@@ -1582,51 +1582,51 @@ classdef Quant4D < matlab.apps.AppBase
                 
                 if ~isempty(s{1})
                     % "scan_xC_yD.raw" file name, assume EMPAD file format
-                    set([self.ImportPixelsX, ...
-                         self.ImportPixelsY, ...
-                         self.ImportFramesX, ...
-                         self.ImportFramesY], ...
+                    set([app.ImportPixelsX, ...
+                         app.ImportPixelsY, ...
+                         app.ImportFramesX, ...
+                         app.ImportFramesY], ...
                         {"Value"}, ...
                         num2cell([128, 128, str2double(s{1}{1})])')
                 
                 elseif ~isempty(s{2})
                     % "AxBxCxD" found in file name, assume (kx, ky, rx, ry)
-                    set([self.ImportPixelsX, ...
-                         self.ImportPixelsY, ...
-                         self.ImportFramesX, ...
-                         self.ImportFramesY], ...
+                    set([app.ImportPixelsX, ...
+                         app.ImportPixelsY, ...
+                         app.ImportFramesX, ...
+                         app.ImportFramesY], ...
                         {"Value"}, ...
                         num2cell(str2double(s{2}{1}))')
                 end
                     end
 
-        function guess_frames_from_size(self)
+        function guess_frames_from_size(app)
             % Make an initial guess at the dataset dimensions assuming a roughly
             % square field of view (ImportFramesX≈ImportFramesY). Sets the
             % estimated values in their respective numeric fields in the Import UI
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
 
-            if self.ImportPixelsX.Value > 1 && self.ImportPixelsY.Value > 1
-                x = sqrt((self.tmp_variables.FileSize-self.DataOffset.Value-self.tmp_variables.fileTail) ...
-                    /(self.ImportPixelsX.Value*self.ImportPixelsY.Value*self.byte_size.(self.ImportDataType.Value)+self.FrameHeader.Value+self.FrameFooter.Value));
+            if app.ImportPixelsX.Value > 1 && app.ImportPixelsY.Value > 1
+                x = sqrt((app.tmp_variables.FileSize-app.DataOffset.Value-app.tmp_variables.fileTail) ...
+                    /(app.ImportPixelsX.Value*app.ImportPixelsY.Value*app.byte_size.(app.ImportDataType.Value)+app.FrameHeader.Value+app.FrameFooter.Value));
 
-                set([self.ImportFramesX, ...
-                    self.ImportFramesY], ...
+                set([app.ImportFramesX, ...
+                    app.ImportFramesY], ...
                     "Value",max(floor(x),1))
             end
         end
 
-        function import_data(self, event)
+        function import_data(app, event)
             % Function to prepare for dataset import, read the file, and
             % switch the UI to `Alignment` mode
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -1635,68 +1635,68 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_time = tic;
 
-            if ~isfile(self.dataset_parameters.file_path)
-                notification_dialog(self, "warn", "File: '"+self.dataset_parameters.file_path+"' is not found!",'File Unfound!');
+            if ~isfile(app.dataset_parameters.file_path)
+                notification_dialog(app, "warn", "File: '"+app.dataset_parameters.file_path+"' is not found!",'File Unfound!');
                 return
             end
 
             % Set save/export filenames etc.
-            self.Quant4D_Fig.Name = "Quant4D: " + self.dataset_parameters.file_name + self.dataset_parameters.file_extension;
-            self.SaveDirectoryPath.Value = self.dataset_parameters.file_directory;
-            self.SaveImagePrefix.Value = self.dataset_parameters.file_name + "_";
-            self.ExportFilename.Value = self.dataset_parameters.file_name + "_export";
+            app.Quant4D_Fig.Name = "Quant4D: " + app.dataset_parameters.file_name + app.dataset_parameters.file_extension;
+            app.SaveDirectoryPath.Value = app.dataset_parameters.file_directory;
+            app.SaveImagePrefix.Value = app.dataset_parameters.file_name + "_";
+            app.ExportFilename.Value = app.dataset_parameters.file_name + "_export";
 
             % Start file reading here
             try
-                err = read_file(self, event);
+                err = read_file(app, event);
             catch ME
                 % Kill the reading progress update timer
-                try stop(self.tmp_variables.tmr), delete(self.tmp_variables.tmr); catch; end
-                try delete(self.tmp_variables.progress_dialog); catch; end
-                try unload_data(self); catch; end
+                try stop(app.tmp_variables.tmr), delete(app.tmp_variables.tmr); catch; end
+                try delete(app.tmp_variables.progress_dialog); catch; end
+                try unload_data(app); catch; end
                 stk = "";
                 for i = 1:numel(ME.stack)
                     stk = sprintf("%s\n%s, Line: %d", stk, ME.stack(i).name, ME.stack(i).line);
                 end
-                notification_dialog(self, ...
+                notification_dialog(app, ...
                     "error", ...
                     sprintf('%s\n%s\n%s%s', ME.identifier, ME.message, ME.Correction, stk), ...
                     "Error during Import!");
-                enable_windows(self,true)
+                enable_windows(app,true)
                 rethrow(ME)
             end
-            % If aborted or errors occurred during file reading, reset self like just opened without import
+            % If aborted or errors occurred during file reading, reset app like just opened without import
             if err == -1
-                reset_Quant4D(self, event);
+                reset_Quant4D(app, event);
                 return;
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
 
             % Prepare imported data
-            if self.dataset_parameters.keep_parameters
+            if app.dataset_parameters.keep_parameters
                 % Enter alignment mode
-                self.Mode.Value = "Alignment";
+                app.Mode.Value = "Alignment";
 
                 % Not re-initializing and just to update all images if "swap data"
-                mock_UI_callbacks(self, self.UpdateImages)
-                mock_UI_callbacks(self, self.Mode)
+                mock_UI_callbacks(app, app.UpdateImages)
+                mock_UI_callbacks(app, app.Mode)
 
                 % Swap byte check
-                dataset_options_callbacks(self, event)
+                dataset_options_callbacks(app, event)
 
             else
-                prepare_data(self, event)
+                prepare_data(app, event)
 
             end
 
         end
 
-        function err = read_file(self, event)
+        function err = read_file(app, event)
             % Function to read the dataset from file
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -1706,26 +1706,26 @@ classdef Quant4D < matlab.apps.AppBase
             err = false;
 
             % Use local variables, which is faster
-            offs = self.dataset_parameters.offset;
-            hdr = self.dataset_parameters.frame_header;
-            ftr = self.dataset_parameters.frame_footer;
-            order = self.dataset_parameters.byte_orer;
-            dtype = self.dataset_parameters.data_type;
-            bsize = self.dataset_parameters.byte_size;
-            dnpx = self.dataset_parameters.n_pixels_file(1);
-            dnpy = self.dataset_parameters.n_pixels_file(1);
-            pd = self.dataset_parameters.pixels_binning;
-            dnfx = self.dataset_parameters.n_frames_file(1);
-            dnfy = self.dataset_parameters.n_frames_file(2);
-            fd = self.dataset_parameters.frames_sampling;
-            px1 = self.dataset_parameters.pixels_start(1);
-            py1 = self.dataset_parameters.pixels_start(2);
-            npx = self.dataset_parameters.n_pixels(1);
-            npy = self.dataset_parameters.n_pixels(2);
-            fx1 = self.dataset_parameters.frames_start(1);
-            fy1 = self.dataset_parameters.frames_start(2);
-            nfx = self.dataset_parameters.n_frames(1);
-            nfy = self.dataset_parameters.n_frames(2);
+            offs = app.dataset_parameters.offset;
+            hdr = app.dataset_parameters.frame_header;
+            ftr = app.dataset_parameters.frame_footer;
+            order = app.dataset_parameters.byte_orer;
+            dtype = app.dataset_parameters.data_type;
+            bsize = app.dataset_parameters.byte_size;
+            dnpx = app.dataset_parameters.n_pixels_file(1);
+            dnpy = app.dataset_parameters.n_pixels_file(1);
+            pd = app.dataset_parameters.pixels_binning;
+            dnfx = app.dataset_parameters.n_frames_file(1);
+            dnfy = app.dataset_parameters.n_frames_file(2);
+            fd = app.dataset_parameters.frames_sampling;
+            px1 = app.dataset_parameters.pixels_start(1);
+            py1 = app.dataset_parameters.pixels_start(2);
+            npx = app.dataset_parameters.n_pixels(1);
+            npy = app.dataset_parameters.n_pixels(2);
+            fx1 = app.dataset_parameters.frames_start(1);
+            fy1 = app.dataset_parameters.frames_start(2);
+            nfx = app.dataset_parameters.n_frames(1);
+            nfy = app.dataset_parameters.n_frames(2);
             frame_size = npx*npy*pd^2*bsize;
 
             % convert to single/double if int/uint
@@ -1738,17 +1738,17 @@ classdef Quant4D < matlab.apps.AppBase
                     dtype1 = "single";
                     bsize1 = 4;
                 end
-                self.dataset_parameters.data_type = dtype1;
-                self.dataset_parameters.byte_size = bsize1;
+                app.dataset_parameters.data_type = dtype1;
+                app.dataset_parameters.byte_size = bsize1;
             end
 
-            [self.tmp_variables.progress_dialog, self.tmp_variables.tmr] = import_export_progress(self, "Import", prod(self.dataset_parameters.n_frames), frame_size);
+            [app.tmp_variables.progress_dialog, app.tmp_variables.tmr] = import_export_progress(app, "Import", prod(app.dataset_parameters.n_frames), frame_size);
 
-            if ~isempty(self.dataset_parameters.h5ds) % HDF5 import
+            if ~isempty(app.dataset_parameters.h5ds) % HDF5 import
                 % Preallocate array
                 data_tmp = zeros(npx, npy, nfx, nfy, dtype1);
-                fid = H5F.open(self.dataset_parameters.file_path);
-                dset_id = H5D.open(fid, self.dataset_parameters.h5ds);
+                fid = H5F.open(app.dataset_parameters.file_path);
+                dset_id = H5D.open(fid, app.dataset_parameters.h5ds);
                 file_space_id = H5S.create_simple(4, [dnfy dnfx dnpy dnpx], []);
                 mem_space_id = H5S.create_simple(2, [npy*pd npx*pd], []);
 
@@ -1759,13 +1759,13 @@ classdef Quant4D < matlab.apps.AppBase
                 for ify = 1:nfy
                     for ifx = 1:nfx
                         % Cancel if progress window closed
-                        if ~isvalid(self.tmp_variables.progress_dialog)
+                        if ~isvalid(app.tmp_variables.progress_dialog)
                             err = -1;
                             break;
                         end
 
                         % Update processed Frame Number for progress update
-                        self.tmp_variables.frame_number(1) = (ify-1)*nfx + ifx;
+                        app.tmp_variables.frame_number(1) = (ify-1)*nfx + ifx;
 
                         % Read 1 frame at a time; C-like array indices for H5 low-level APIs
                         H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', [fy1+(ify-1)*fd, fx1+(ifx-1)*fd, py1, px1]-1, [],[], [1 1 npy*pd npx*pd]);
@@ -1794,9 +1794,9 @@ classdef Quant4D < matlab.apps.AppBase
                 H5F.close(fid);
 
                 % Make dataset a 2D array
-                self.data = reshape(data_tmp, prod(self.dataset_parameters.n_pixels), prod(self.dataset_parameters.n_frames));
+                app.data = reshape(data_tmp, prod(app.dataset_parameters.n_pixels), prod(app.dataset_parameters.n_frames));
 
-            elseif self.dataset_parameters.memory_type== "Physical Memory"
+            elseif app.dataset_parameters.memory_type== "Physical Memory"
                 % General reading method; read data into physical memory
 
                 % Pre-allocate array
@@ -1806,18 +1806,18 @@ classdef Quant4D < matlab.apps.AppBase
                 dfrSize = hdr+dnpx*dnpy*bsize+ftr;
 
                 % file id
-                fid = fopen(self.dataset_parameters.file_path,"r");
+                fid = fopen(app.dataset_parameters.file_path,"r");
 
                 for ify = 1:nfy
                     for ifx = 1:nfx
                         % Cancel if progress window closed
-                        if ~isvalid(self.tmp_variables.progress_dialog)
+                        if ~isvalid(app.tmp_variables.progress_dialog)
                             err = -1;
                             break;
                         end
 
                         % Update processed Frame Number for progress update
-                        self.tmp_variables.frame_number(1) = (ify-1)*nfx + ifx;
+                        app.tmp_variables.frame_number(1) = (ify-1)*nfx + ifx;
 
                         % Read 1 frame at a time; move cursor to "frame offset" + "pixel Y offset" in file dataset
                         % Frame indices in dataset file
@@ -1852,22 +1852,22 @@ classdef Quant4D < matlab.apps.AppBase
                 fclose(fid);
 
                 % Make dataset a 2D array
-                self.data = reshape(data_tmp,prod(self.dataset_parameters.n_pixels),prod(self.dataset_parameters.n_frames));
+                app.data = reshape(data_tmp,prod(app.dataset_parameters.n_pixels),prod(app.dataset_parameters.n_frames));
 
-            elseif self.dataset_parameters.memory_type== "Virtual Mapping"
+            elseif app.dataset_parameters.memory_type== "Virtual Mapping"
                 % Virtual memory mapping
 
                 % Create a memory mapped file, rather than reading the file directly into memory
-                if ~strcmp(self.sys_constants.system_endianness, order)
+                if ~strcmp(app.sys_constants.system_endianness, order)
                     error("Dataset's endianness is different to that of the system!")
                 end
 
                 if hdr == 0 && ftr == 0
-                    self.memfile = memmapfile(self.dataset_parameters.file_path, ...
+                    app.memfile = memmapfile(app.dataset_parameters.file_path, ...
                         'Offset',offs, ...
-                        'Format',{dtype1,[prod(self.dataset_parameters.n_pixels), prod(self.dataset_parameters.n_frames)],'data'}, ...
+                        'Format',{dtype1,[prod(app.dataset_parameters.n_pixels), prod(app.dataset_parameters.n_frames)],'data'}, ...
                         'Repeat',1);
-                    self.data = self.memfile.Data.data;
+                    app.data = app.memfile.Data.data;
                 else
                     error("Virtual memory with header/footer > 0 not supported yet.")
                 end
@@ -1877,52 +1877,52 @@ classdef Quant4D < matlab.apps.AppBase
             clear data_tmp
 
             % Delete the interruptible progress window
-            delete(self.tmp_variables.progress_dialog)
+            delete(app.tmp_variables.progress_dialog)
 
             % Move to GPU if enabled
-            if self.dataset_parameters.gpu > 0 && err == 0
-                self.tmp_variables.progress_dialog = progress_dialog(self, "Moving dataset to GPU memory ...", "GPU Transfer");
-                self.data = gpuArray(self.data);
-                delete(self.tmp_variables.progress_dialog)
+            if app.dataset_parameters.gpu > 0 && err == 0
+                app.tmp_variables.progress_dialog = progress_dialog(app, "Moving dataset to GPU memory ...", "GPU Transfer");
+                app.data = gpuArray(app.data);
+                delete(app.tmp_variables.progress_dialog)
             end
 
             % Check data NaN/Inf, without asking to sway byte-order
-            selection = check_NaN(self, self.data(:), true);
+            selection = check_NaN(app, app.data(:), true);
             if strcmp(selection,'Set NaNs to 0')
-                self.data(isnan(self.data(:)))=0;
+                app.data(isnan(app.data(:)))=0;
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
-        function prepare_data(self, event)
-            % Initialize GUI/Image/self.common_parameters defaults based
+        function prepare_data(app, event)
+            % Initialize GUI/Image/app.common_parameters defaults based
             % on the specifics of the imported dataset.
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
-            self.tmp_variables.progress_dialog = progress_dialog(self, 'Preparing data ...', "Data Preparation");
+            app.tmp_variables.progress_dialog = progress_dialog(app, 'Preparing data ...', "Data Preparation");
 
             % Detector controls
 
             % Reset alignments
-            self.common_parameters.scan_direction_initialized = false;
+            app.common_parameters.scan_direction_initialized = false;
 
             % Prepare to enter alignment mode
-            self.Mode.Value = "Alignment";
-            self.AnnularRadiusLink.Value = false;
+            app.Mode.Value = "Alignment";
+            app.AnnularRadiusLink.Value = false;
 
-            set([self.NSeg, ...
-                self.NRung, ...
-                self.DetectorRotationSlider, ...
-                self.DetectorRotationSpinner, ...
-                self.ScanDirectionSlider, ...
-                self.ScanDirectionSpinner], ...
+            set([app.NSeg, ...
+                app.NRung, ...
+                app.DetectorRotationSlider, ...
+                app.DetectorRotationSpinner, ...
+                app.ScanDirectionSlider, ...
+                app.ScanDirectionSpinner], ...
                 {"Value"}, ...
                 {4; ...
                 1; ...
@@ -1931,10 +1931,10 @@ classdef Quant4D < matlab.apps.AppBase
                 0; ...
                 0})
 
-            set([self.VirtualApertureSymmetry, ...
-                self.VirtualApertureInvert, ...
-                self.VirtualApertureMirror, ...
-                self.VirtualApertureMirrorRotation], ...
+            set([app.VirtualApertureSymmetry, ...
+                app.VirtualApertureInvert, ...
+                app.VirtualApertureMirror, ...
+                app.VirtualApertureMirrorRotation], ...
                 {"Value"}, ...
                 {1; ...
                 0; ...
@@ -1944,73 +1944,73 @@ classdef Quant4D < matlab.apps.AppBase
             % Alignments
 
             % Exact center of the Diffraction image
-            self.common_parameters.diffraction_center = self.dataset_parameters.n_pixels/2 + 0.5;
+            app.common_parameters.diffraction_center = app.dataset_parameters.n_pixels/2 + 0.5;
 
             % Exact center of the Real-space image
-            self.common_parameters.real_space_center = self.dataset_parameters.n_frames/2 + 0.5;
+            app.common_parameters.real_space_center = app.dataset_parameters.n_frames/2 + 0.5;
 
             % Convergence angle default = 1
-            self.Alpha.Value = 1;
+            app.Alpha.Value = 1;
 
             % Set virtual aperture (x,y) default location to diffraction center
-            self.common_parameters.virtual_aperture_center = self.common_parameters.diffraction_center;
+            app.common_parameters.virtual_aperture_center = app.common_parameters.diffraction_center;
 
             % Axes limits, restrict to avoid rounding to pixels outside the image
-            self.common_parameters.diffraction_axes_limit = [0.51, self.dataset_parameters.n_pixels(1) + .49, 0.51, self.dataset_parameters.n_pixels(2) + .49];
-            self.common_parameters.real_axes_limit = [0.51, self.dataset_parameters.n_frames(1) + .49, 0.51, self.dataset_parameters.n_frames(2) + .49];
-            set(self.ui_groups.diffraction_axes, ...
-                "XLim" , self.common_parameters.diffraction_axes_limit(1:2), ...
-                "YLim",self.common_parameters.diffraction_axes_limit(3:4));
-            set(self.ui_groups.real_axes, ...
-                "XLim", self.common_parameters.real_axes_limit(1:2), ...
-                "YLim",self.common_parameters.real_axes_limit(3:4));
+            app.common_parameters.diffraction_axes_limit = [0.51, app.dataset_parameters.n_pixels(1) + .49, 0.51, app.dataset_parameters.n_pixels(2) + .49];
+            app.common_parameters.real_axes_limit = [0.51, app.dataset_parameters.n_frames(1) + .49, 0.51, app.dataset_parameters.n_frames(2) + .49];
+            set(app.ui_groups.diffraction_axes, ...
+                "XLim" , app.common_parameters.diffraction_axes_limit(1:2), ...
+                "YLim",app.common_parameters.diffraction_axes_limit(3:4));
+            set(app.ui_groups.real_axes, ...
+                "XLim", app.common_parameters.real_axes_limit(1:2), ...
+                "YLim",app.common_parameters.real_axes_limit(3:4));
 
             % Transmitted Beam controls
-            if event.Source ~= self.SwapRealXY
+            if event.Source ~= app.SwapRealXY
                 % Keep transmitted beam alignment if swapping Real-space X/Y
-                self.common_parameters.transmitted_beam_init = false;
+                app.common_parameters.transmitted_beam_init = false;
 
                 % set transmitted beam radius, x, y limits and values
-                set([self.TransBeamR; ...
-                    self.TransBeamX; ...
-                    self.TransBeamXSpinner; ...
-                    self.TransBeamY; ...
-                    self.TransBeamYSpinner], ...
+                set([app.TransBeamR; ...
+                    app.TransBeamX; ...
+                    app.TransBeamXSpinner; ...
+                    app.TransBeamY; ...
+                    app.TransBeamYSpinner], ...
                     {"Limits"}, ...
-                    {[eps(), max(self.dataset_parameters.n_pixels)]; ...
-                    [0, self.dataset_parameters.n_pixels(1)]; ...
-                    [0, self.dataset_parameters.n_pixels(1)]; ...
-                    [0, self.dataset_parameters.n_pixels(2)]; ...
-                    [0, self.dataset_parameters.n_pixels(2)]}, ...
+                    {[eps(), max(app.dataset_parameters.n_pixels)]; ...
+                    [0, app.dataset_parameters.n_pixels(1)]; ...
+                    [0, app.dataset_parameters.n_pixels(1)]; ...
+                    [0, app.dataset_parameters.n_pixels(2)]; ...
+                    [0, app.dataset_parameters.n_pixels(2)]}, ...
                     {"Value"}, ...
-                    {min(self.dataset_parameters.n_pixels)/10; ...
-                    self.common_parameters.diffraction_center(1); ...
-                    self.common_parameters.diffraction_center(1); ...
-                    self.common_parameters.diffraction_center(2); ...
-                    self.common_parameters.diffraction_center(2)});
+                    {min(app.dataset_parameters.n_pixels)/10; ...
+                    app.common_parameters.diffraction_center(1); ...
+                    app.common_parameters.diffraction_center(1); ...
+                    app.common_parameters.diffraction_center(2); ...
+                    app.common_parameters.diffraction_center(2)});
 
                 % Update Transmitted Beam dependent variables
-                transmitted_beam_callbacks(self, event)
+                transmitted_beam_callbacks(app, event)
             end
 
             % Real-space ROI controls
-            set([self.RealROIFrameX; ...
-                self.RealROIFrameY], ...
+            set([app.RealROIFrameX; ...
+                app.RealROIFrameY], ...
                 {"Limits"}, ...
-                {[0 self.dataset_parameters.n_frames(1)]; ...
-                [0 self.dataset_parameters.n_frames(2)]}, ...
+                {[0 app.dataset_parameters.n_frames(1)]; ...
+                [0 app.dataset_parameters.n_frames(2)]}, ...
                 {"Value"}, ...
-                {self.common_parameters.real_space_center(1); ...
-                self.common_parameters.real_space_center(2)})
-            self.RealROIInvert.Value = false;
-            self.RealROIShape.Value = "full";
+                {app.common_parameters.real_space_center(1); ...
+                app.common_parameters.real_space_center(2)})
+            app.RealROIInvert.Value = false;
+            app.RealROIShape.Value = "full";
 
             % Export controls
-            export_callbacks(self, struct("Source", self.ExportPartialPixels, "EventName", [], "Value", 0))
-            export_callbacks(self, struct("Source", self.ExportPartialFrames, "EventName", [], "Value", 0))
+            export_callbacks(app, struct("Source", app.ExportPartialPixels, "EventName", [], "Value", 0))
+            export_callbacks(app, struct("Source", app.ExportPartialFrames, "EventName", [], "Value", 0))
 
             % Image display contrasts and vector field
-            for ax = self.ui_groups.image_axes'
+            for ax = app.ui_groups.image_axes'
                 ax.UserData.brightness = 50;
                 ax.UserData.contrast = 50;
                 ax.UserData.gamma = 1;
@@ -2019,84 +2019,84 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Update all images
-            mock_UI_callbacks(self, self.UpdateImages)
+            mock_UI_callbacks(app, app.UpdateImages)
 
             % Close progress bar and Enable panel objects
-            delete(self.tmp_variables.progress_dialog);
+            delete(app.tmp_variables.progress_dialog);
 
             % Enter initializing alignment
-            mock_UI_callbacks(self, self.Mode)
-            self.SettingsTabGroup.SelectedTab = self.DisplayTab;
+            mock_UI_callbacks(app, app.Mode)
+            app.SettingsTabGroup.SelectedTab = app.DisplayTab;
 
             % Show the brightness/contrast/gamma controls
-            figure(self.Quant4D_Fig)
-            figure(self.figures.Settings)
+            figure(app.Quant4D_Fig)
+            figure(app.figures.Settings)
 
             % alert user to the need to calibrate the transmitted beam
-            flash_background(self, [self.DiffractionCalibrationGrid self.TransBeamAlignGrid])
+            flash_background(app, [app.DiffractionCalibrationGrid app.TransBeamAlignGrid])
         end
 
-        function d = gather_import_options(self, preview)
+        function d = gather_import_options(app, preview)
             % Collects all import parameters from the Import UI into a
             % structure, `d`.
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    preview (bool) : true = Preview mode, false = Import mode
             %
             % Returns:
             %    d (struct) : dataset parameters from Import UI
 
             % get file location
-            d.file_path = self.ImportFilePath.Value;
+            d.file_path = app.ImportFilePath.Value;
             [d.file_directory, d.file_name, d.file_extension] = fileparts(d.file_path);
             d.file_directory = strcat(d.file_directory, filesep);
-            d.subimage = self.SubDataset.Value;
+            d.subimage = app.SubDataset.Value;
 
             % BYTES offset of: 1) the dataset from the beginning of file, 2) before and 3) after each frame
-            d.offset = self.DataOffset.Value;
-            d.frame_header = self.FrameHeader.Value;
-            d.frame_footer = self.FrameFooter.Value;
+            d.offset = app.DataOffset.Value;
+            d.frame_header = app.FrameHeader.Value;
+            d.frame_footer = app.FrameFooter.Value;
 
             % Endianness (big "b" or little "l"), Data type of the dataset and Size in bytes of the data type
-            d.byte_orer = self.ImportByteOrder.Value;
-            d.data_type = self.ImportDataType.Value;
-            d.byte_size = self.byte_size.(d.data_type);
+            d.byte_orer = app.ImportByteOrder.Value;
+            d.data_type = app.ImportDataType.Value;
+            d.byte_size = app.byte_size.(d.data_type);
 
             % Physical or virtual memory loading
-            d.memory_type= self.MemoryType.Value;
+            d.memory_type= app.MemoryType.Value;
 
             % Select GPU if acceleration is enabled AND not in Import Preview Mode
-            d.gpu = self.GPU.Value;
+            d.gpu = app.GPU.Value;
             if ~preview && d.gpu
                 gpuDevice(d.gpu);
             end
 
             % Dimensions of pixels/frames in file and import binning/sampling distance
-            d.n_pixels_file = [self.ImportPixelsX.Value, self.ImportPixelsY.Value];
-            d.n_frames_file = [self.ImportFramesX.Value, self.ImportFramesY.Value];
-            d.pixels_binning= self.DiffractionPartialImportPixelsDist.Value;
-            d.frames_sampling = self.RealPartialImportFramesDist.Value;
+            d.n_pixels_file = [app.ImportPixelsX.Value, app.ImportPixelsY.Value];
+            d.n_frames_file = [app.ImportFramesX.Value, app.ImportFramesY.Value];
+            d.pixels_binning= app.DiffractionPartialImportPixelsDist.Value;
+            d.frames_sampling = app.RealPartialImportFramesDist.Value;
 
             % Starting points and Number of pixels/frames after binning/sampling to import
-            d.pixels_start = [self.DiffractionPartialImportXStart.Value, self.DiffractionPartialImportYStart.Value];
-            d.frames_start = [self.RealPartialImportXStart.Value, self.RealPartialImportYStart.Value];
-            d.n_pixels = [self.DiffractionPartialImportX.Value, self.DiffractionPartialImportY.Value];
-            d.n_frames = [self.RealPartialImportX.Value, self.RealPartialImportY.Value];
+            d.pixels_start = [app.DiffractionPartialImportXStart.Value, app.DiffractionPartialImportYStart.Value];
+            d.frames_start = [app.RealPartialImportXStart.Value, app.RealPartialImportYStart.Value];
+            d.n_pixels = [app.DiffractionPartialImportX.Value, app.DiffractionPartialImportY.Value];
+            d.n_frames = [app.RealPartialImportX.Value, app.RealPartialImportY.Value];
 
             % Estimated memory usage for current dataset
-            d.estimated_memory = self.tmp_variables.estimated_memory;
+            d.estimated_memory = app.tmp_variables.estimated_memory;
 
-            % Swap dataset option+self.ImportSummary.Value;
-            d.keep_parameters = self.SwapDataset.Value;
+            % Swap dataset option+app.ImportSummary.Value;
+            d.keep_parameters = app.SwapDataset.Value;
 
             % Notes at import
-            d.file_metadata = self.ImportFileMetadata.Value;
-            d.import_options = self.ImportSummary.Value;
+            d.file_metadata = app.ImportFileMetadata.Value;
+            d.import_options = app.ImportSummary.Value;
 
             % H5 dataset path within the H5 file; if not set empty, the H5 library API will be called when importing
             d.h5ds = [];
-            if self.HDF5.Value && d.memory_type== "Physical Memory"
+            if app.HDF5.Value && d.memory_type== "Physical Memory"
                 d.h5ds = d.subimage;
             end
         end
@@ -2105,7 +2105,7 @@ classdef Quant4D < matlab.apps.AppBase
         % Wrapper function for MATLAB's `OnOffSwitchState()`
         %
         % Parameters:
-        %    self (Quant4D) : ignored
+        %    app (Quant4D) : ignored
         %    status (int | bool) : 0 or false = off; 1 or true = on
         %
         % Returns:
@@ -2114,11 +2114,11 @@ classdef Quant4D < matlab.apps.AppBase
             output = string(matlab.lang.OnOffSwitchState(status));
         end
 
-        function set_external_source(self, event, object, varargin)
+        function set_external_source(app, event, object, varargin)
             % Set properties of objects that are not `source` if it is a changing event
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %    object: UI component, annotation, list of objects with a common property
             %    varargin : property/value pair(s) (i.e. "Value", 1)
@@ -2130,7 +2130,7 @@ classdef Quant4D < matlab.apps.AppBase
             source = event.Source;
 
             % If not a changing event, set source as well
-            if is_static_event(self, event) || isempty(source)
+            if is_static_event(app, event) || isempty(source)
                 source = {[]};
             end
 
@@ -2164,7 +2164,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Rotation matrix, for degree input
             %
             % Parameters:
-            %    self (Quant4D) : ignored
+            %    app (Quant4D) : ignored
             %    degrees (double) : angle in degrees
             %
             % Returns:
@@ -2180,7 +2180,7 @@ classdef Quant4D < matlab.apps.AppBase
             % to reduce computational load, especially on image refresh.
             %
             % Parameters:
-            %    self (Quant4D) : ignored
+            %    app (Quant4D) : ignored
             %    event (event.EventData)
             %
             % Returns:
@@ -2197,8 +2197,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Return all h5 Datasets with some key info
             %
             % Parameters:
-            %    self (Quant4D) : ignored
-            %    file (str) : file path from self.ImportFilePath.Value
+            %    app (Quant4D) : ignored
+            %    file (str) : file path from app.ImportFilePath.Value
             %
             % Returns:
             %    h (struct) : h5 Dataset information, including Name, Dataspace, Datatype, offset, size, byte_ordering, and type.
@@ -2291,11 +2291,11 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        function debug_toc(self, event, notes, tic_start)
+        function debug_toc(app, event, notes, tic_start)
             % Function to debug and time functions
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %    notes (str) : debugging information
             %    tic_start (uint64) : stopwatch timer start
@@ -2303,16 +2303,16 @@ classdef Quant4D < matlab.apps.AppBase
             % Returns:
             %    None
 
-            if self.debug
+            if app.debug
                 source_name = "";
                 event_name = "";
 
                 if ~isempty(event)
-                    % Find name of the source field_name` by comparing the source with fieldnames of `self`
+                    % Find name of the source field_name` by comparing the source with fieldnames of `app`
                     if (isfield(event, "Source") || isprop(event, "Source")) && ~isempty(event.Source)
-                        field_name = fieldnames(self);
+                        field_name = fieldnames(app);
                         for i = 1:length(field_name)
-                            if ~isa(self.(field_name{i}), 'gpuArray') && isequal(self.(field_name{i}), event.Source)
+                            if ~isa(app.(field_name{i}), 'gpuArray') && isequal(app.(field_name{i}), event.Source)
                                 source_name = field_name{i};
                                 break;
                             end
@@ -2341,7 +2341,7 @@ classdef Quant4D < matlab.apps.AppBase
             % program during flashing
             %
             % Parameters:
-            %    self (Quant4D) : ignored
+            %    app (Quant4D) : ignored
             %    target : UI component
             %
             % Returns:
@@ -2367,162 +2367,162 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        function change_icon_background(self, source)
+        function change_icon_background(app, source)
             % state button background color change to highlight when it
             % is/isn't enabled
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    source (matlab.ui.control.Button) : UI State Button
             %
             % Returns:
             %    None
 
             if source.Value
-                source.BackgroundColor = self.sys_constants.highlight_color;
+                source.BackgroundColor = app.sys_constants.highlight_color;
             else
-                source.BackgroundColor = self.sys_constants.background_color + 0.02;
+                source.BackgroundColor = app.sys_constants.background_color + 0.02;
             end
         end
 
-        function get_GPU(self)
+        function get_GPU(app)
             % Function to get all available GPUs
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
 
             % initialize items
-            self.GPU.Items = {''};
-            self.GPU.ItemsData = 0;
-            self.sys_constants.nGPU = -1;
+            app.GPU.Items = {''};
+            app.GPU.ItemsData = 0;
+            app.sys_constants.nGPU = -1;
 
             % Check if parallel computing toolbox is installed for GPU acceleration
             if any(strcmpi("Parallel Computing Toolbox", {ver().Name}))
-                try self.sys_constants.nGPU = gpuDeviceCount(); catch; end
+                try app.sys_constants.nGPU = gpuDeviceCount(); catch; end
             end
 
             % Find GPU devices and turn on/off GPU support;
-            % `self.GPU.Value` == `0` always means "GPU off"
-            switch self.sys_constants.nGPU
+            % `app.GPU.Value` == `0` always means "GPU off"
+            switch app.sys_constants.nGPU
                 case -1
-                    self.GPU.Items = {'Parallel Computing Toolbox missing. GPU acceleration disabled.'};
-                    self.GPU.Value = 0;
+                    app.GPU.Items = {'Parallel Computing Toolbox missing. GPU acceleration disabled.'};
+                    app.GPU.Value = 0;
                 
                 case 0 % no GPU devices
-                    self.GPU.Items = {'No GPU found.'};
-                    self.GPU.ItemsData = 0;
-                    self.GPU.Value = 0;
+                    app.GPU.Items = {'No GPU found.'};
+                    app.GPU.ItemsData = 0;
+                    app.GPU.Value = 0;
                 
                 otherwise % 1 or more devices found
                     maxmem = 0;
-                    for i = 1:self.sys_constants.nGPU
+                    for i = 1:app.sys_constants.nGPU
                         try
                             tmp = parallel.gpu.GPUDevice.getDevice(i);
-                            self.sys_constants.gpu(i).memory = tmp.TotalMemory;
-                            self.sys_constants.gpu(i).name = tmp.Name;
-                            self.GPU.Items{i} = sprintf('%d. %s %.1f GiB', i, self.sys_constants.gpu(i).name, self.sys_constants.gpu(i).memory/1024^3);
-                            self.GPU.ItemsData(i) = i;
+                            app.sys_constants.gpu(i).memory = tmp.TotalMemory;
+                            app.sys_constants.gpu(i).name = tmp.Name;
+                            app.GPU.Items{i} = sprintf('%d. %s %.1f GiB', i, app.sys_constants.gpu(i).name, app.sys_constants.gpu(i).memory/1024^3);
+                            app.GPU.ItemsData(i) = i;
                             
                             % Default to GPU with the most memory
-                            if self.sys_constants.gpu(i).memory > maxmem
-                                maxmem = self.sys_constants.gpu(i).memory;
-                                self.GPU.Value = i;
+                            if app.sys_constants.gpu(i).memory > maxmem
+                                maxmem = app.sys_constants.gpu(i).memory;
+                                app.GPU.Value = i;
                             end
                         catch
                         end
                     end
-                    self.GPU.Items{end + 1} = 'GPU off';
-                    self.GPU.ItemsData(end + 1) = 0;
+                    app.GPU.Items{end + 1} = 'GPU off';
+                    app.GPU.ItemsData(end + 1) = 0;
             end
         end
 
-        function get_memory(self)
+        function get_memory(app)
             % Function to Check usable system memory and make sure the
             % file will fit
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
 
             if ispc
                 [~,tmp] = memory;
-                self.sys_constants.total_memory = tmp.PhysicalMemory.Total;
-                self.sys_constants.free_memory = tmp.PhysicalMemory.Available;
+                app.sys_constants.total_memory = tmp.PhysicalMemory.Total;
+                app.sys_constants.free_memory = tmp.PhysicalMemory.Available;
 
             elseif ismac
-                [~,self.sys_constants.total_memory] = system('sysctl -n hw.memsize');
-                self.sys_constants.total_memory = str2double(self.sys_constants.total_memory);
+                [~,app.sys_constants.total_memory] = system('sysctl -n hw.memsize');
+                app.sys_constants.total_memory = str2double(app.sys_constants.total_memory);
                 [~,page_memory_size] = system("vm_stat | grep 'page size' | awk '{print $8}'");
                 page_memory_size = str2double(page_memory_size);
                 [~,wired_memory] = system("vm_stat | grep 'wired' | awk '{print $4}'");
                 wired_memory = str2double(wired_memory)*page_memory_size;
-                self.sys_constants.free_memory = self.sys_constants.total_memory - wired_memory;
+                app.sys_constants.free_memory = app.sys_constants.total_memory - wired_memory;
             
             elseif isunix % memory output is in kB => multiply by 1024 for consistency 
-                [~,self.sys_constants.total_memory] = system("cat /proc/meminfo | grep MemTotal: | awk '{print $2}'");
-                self.sys_constants.total_memory = str2double(self.sys_constants.total_memory)*1024; 
-                [~,self.sys_constants.free_memory] = system("cat /proc/meminfo | grep MemAvailable: | awk '{print $2}'");
-                self.sys_constants.free_memory = str2double(self.sys_constants.free_memory)*1024;
+                [~,app.sys_constants.total_memory] = system("cat /proc/meminfo | grep MemTotal: | awk '{print $2}'");
+                app.sys_constants.total_memory = str2double(app.sys_constants.total_memory)*1024; 
+                [~,app.sys_constants.free_memory] = system("cat /proc/meminfo | grep MemAvailable: | awk '{print $2}'");
+                app.sys_constants.free_memory = str2double(app.sys_constants.free_memory)*1024;
             end
         end
 
         % *********************** UI components ***********************
         % Import/export binning/sampling distances:
-        %   self.DiffractionPartialImportPixelsDist
-        %   self.RealPartialImportFramesDist
-        %   self.DiffractionPartialExportPixelsDist
-        %   self.RealPartialExportFramesDist
+        %   app.DiffractionPartialImportPixelsDist
+        %   app.RealPartialImportFramesDist
+        %   app.DiffractionPartialExportPixelsDist
+        %   app.RealPartialExportFramesDist
         %
         % DATASET DIMENSIONS IN FILE ON DISK:
-        %   self.ImportPixelsX
-        %   self.ImportPixelsY
-        %   self.ImportFramesX
-        %   self.ImportFramesY
+        %   app.ImportPixelsX
+        %   app.ImportPixelsY
+        %   app.ImportFramesX
+        %   app.ImportFramesY
         %
         % IMPORT/EXPORT DIMENSIONS (AFTER BINNING/SAMPLING/CROPPING):
-        %   self.DiffractionPartialImportX
-        %   self.DiffractionPartialImportY
-        %   self.RealPartialImportX
-        %   self.RealPartialImportY
-        %   self.DiffractionPartialExportX
-        %   self.DiffractionPartialExportY
-        %   self.RealPartialExportX
-        %   self.RealPartialExportY
+        %   app.DiffractionPartialImportX
+        %   app.DiffractionPartialImportY
+        %   app.RealPartialImportX
+        %   app.RealPartialImportY
+        %   app.DiffractionPartialExportX
+        %   app.DiffractionPartialExportY
+        %   app.RealPartialExportX
+        %   app.RealPartialExportY
         %
         % IMPORT/EXPORT START POSITIONS (CROPPING):
-        %   self.DiffractionPartialImportXStart
-        %   self.DiffractionPartialImportYStart
-        %   self.RealPartialImportXStart
-        %   self.RealPartialImportYStart
-        %   self.DiffractionPartialExportXStart
-        %   self.DiffractionPartialExportYStart
-        %   self.RealPartialExportXStart
-        %   self.RealPartialExportYStart
+        %   app.DiffractionPartialImportXStart
+        %   app.DiffractionPartialImportYStart
+        %   app.RealPartialImportXStart
+        %   app.RealPartialImportYStart
+        %   app.DiffractionPartialExportXStart
+        %   app.DiffractionPartialExportYStart
+        %   app.RealPartialExportXStart
+        %   app.RealPartialExportYStart
         %
         %
-        % ******************** self.dataset parameters *********************
+        % ******************** app.dataset parameters *********************
         %
         % DATASET DIMENSIONS IN FILE ON DISK:
-        %   self.dataset_parameters.n_pixels_file
-        %   self.dataset_parameters.n_frames_file
+        %   app.dataset_parameters.n_pixels_file
+        %   app.dataset_parameters.n_frames_file
         %
         % IMPORT DIMENSIONS (AFTER BINNING/SAMPLING/CROPPING):
-        %   self.dataset_parameters.n_pixels
-        %   self.dataset_parameters.n_frames
+        %   app.dataset_parameters.n_pixels
+        %   app.dataset_parameters.n_frames
         %
         % IMPORT START POSITIONS (CROPPING):
-        %   self.dataset_parameters.pixels_start
-        %   self.dataset_parameters.frames_start
-        function [notes, binning, xy_start, n_points, xy_end] = range_import_export(self, event)
+        %   app.dataset_parameters.pixels_start
+        %   app.dataset_parameters.frames_start
+        function [notes, binning, xy_start, n_points, xy_end] = range_import_export(app, event)
             % Function to calculate import/export range for pixels/frames
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -2556,16 +2556,16 @@ classdef Quant4D < matlab.apps.AppBase
             % `action`: "Import" or "Export"
             if contains(source.Tag, "Import")
                 action = "Import";
-                % Raw dataset dimensions, e.g. self.ImportPixelsX.Value
-                data_size = [self.(action+unit+"X").Value, self.(action+unit+"Y").Value];
+                % Raw dataset dimensions, e.g. app.ImportPixelsX.Value
+                data_size = [app.(action+unit+"X").Value, app.(action+unit+"Y").Value];
             else
                 action = "Export";
                 % Loaded dataset dimensions
-                data_size = self.dataset_parameters.("n_"+lower(unit));
+                data_size = app.dataset_parameters.("n_"+lower(unit));
             end
 
-            % Binning/Sampling (self.DiffractionPartialImportPixelsDist, self.DiffractionPartialExportPixelsDist, self.RealPartialImportFramesDist or self.RealPartialExportFramesDist)
-            binning = self.(space+"Partial"+action+unit+"Dist").Value;
+            % Binning/Sampling (app.DiffractionPartialImportPixelsDist, app.DiffractionPartialExportPixelsDist, app.RealPartialImportFramesDist or app.RealPartialExportFramesDist)
+            binning = app.(space+"Partial"+action+unit+"Dist").Value;
             
             % Get values from UI
             switch source.Tag
@@ -2578,43 +2578,43 @@ classdef Quant4D < matlab.apps.AppBase
                     n_points = floor(position(3:4)/binning)+1;
                 
                 otherwise % From other sources
-                    % self.DiffractionPartialImportXStart, self.RealPartialExportXStart etc, (X/Y)Start UIs
-                    xy_start = [self.(space+"Partial"+action+"XStart").Value self.(space+"Partial"+action+"YStart").Value];
+                    % app.DiffractionPartialImportXStart, app.RealPartialExportXStart etc, (X/Y)Start UIs
+                    xy_start = [app.(space+"Partial"+action+"XStart").Value app.(space+"Partial"+action+"YStart").Value];
                     
-                    % self.DiffractionPartialImportX, self.RealPartialExportX etc, n_points X & Y UIs
-                    n_points = [self.(space+"Partial"+action+"X").Value self.(space+"Partial"+action+"Y").Value];
+                    % app.DiffractionPartialImportX, app.RealPartialExportX etc, n_points X & Y UIs
+                    n_points = [app.(space+"Partial"+action+"X").Value app.(space+"Partial"+action+"Y").Value];
             end
             
             % Replace value with current event value
             switch source
-                case self.(space+"Partial"+action+unit+"Dist")
+                case app.(space+"Partial"+action+unit+"Dist")
                     % Binning/Sampling UI
                     binning = value;
                 
-                case self.(space+"Partial"+action+"XStart")
+                case app.(space+"Partial"+action+"XStart")
                     % XStart UI
                     xy_start(1) = value;
                 
-                case self.(space+"Partial"+action+"YStart")
+                case app.(space+"Partial"+action+"YStart")
                     % YStart UI
                     xy_start(2) = value;
                 
-                case self.(space+"Partial"+action+"X")
+                case app.(space+"Partial"+action+"X")
                     % n_points X UI
                     n_points(1) = value;
                 
-                case self.(space+"Partial"+action+"Y")
+                case app.(space+"Partial"+action+"Y")
                     % n_points Y UI
                     n_points(2) = value;
                 
-                case {self.("Import"+unit+"X") self.("Import"+unit+"Y") self.(action+"Partial"+unit)}
+                case {app.("Import"+unit+"X") app.("Import"+unit+"Y") app.(action+"Partial"+unit)}
                     % Reset range options if dataset raw dimension changes OR partial selection enables/disables
                     % Update binning/sampling UI limits
-                    self.(space+"Partial"+action+unit+"Dist").Limits(2) = min(data_size);
+                    app.(space+"Partial"+action+unit+"Dist").Limits(2) = min(data_size);
                     
                     % Update preview frame limits
                     if action == "Import" && unit == "Frames"
-                        set([self.PreviewFrameX, self.PreviewFrameY], ...
+                        set([app.PreviewFrameX, app.PreviewFrameY], ...
                             {"Limits"}, ...
                             {[0 data_size(1)];[0 data_size(2)]}, ...
                             {"Value"}, ...
@@ -2627,7 +2627,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             % In general, n_points are determined by (X/Y)Start and Binning/Sampling, unless n_points are the source
             % Whether n_points X or Y are not the source
-            source_index = [self.(space+"Partial"+action+"X") self.(space+"Partial"+action+"Y")] ~= source;
+            source_index = [app.(space+"Partial"+action+"X") app.(space+"Partial"+action+"Y")] ~= source;
             if unit == "Pixels"
                 % Determine n_points X/Y if not source
                 n_points(source_index) = max(1, min(n_points(source_index), ...
@@ -2670,11 +2670,11 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Set (X/Y)Start, n_points X & Y and Binning/Sampling UIs
-            set([self.(space+"Partial"+action+"XStart"); ...
-                 self.(space+"Partial"+action+"YStart"); ...
-                 self.(space+"Partial"+action+"X"); ...
-                 self.(space+"Partial"+action+"Y"); ...
-                 self.(space+"Partial"+action+unit+"Dist")], ...
+            set([app.(space+"Partial"+action+"XStart"); ...
+                 app.(space+"Partial"+action+"YStart"); ...
+                 app.(space+"Partial"+action+"X"); ...
+                 app.(space+"Partial"+action+"Y"); ...
+                 app.(space+"Partial"+action+unit+"Dist")], ...
                 {"Limits"}, ...
                 num2cell([xy_start_limit n_points_limit min(data_size)]'.*[0 1],2), ...
                 {"Value"}, ...
@@ -2682,7 +2682,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Try to update Export ROIs
             if action == "Export"
-                set(findobj(self.ui_groups.(lower(space)+"_axes"), "Tag", "Export "+space+" ROI"), "Position", position)
+                set(findobj(app.ui_groups.(lower(space)+"_axes"), "Tag", "Export "+space+" ROI"), "Position", position)
             end
             
             points_text = n_points + unit_abbreviation;
@@ -2705,11 +2705,11 @@ classdef Quant4D < matlab.apps.AppBase
             notes = sprintf("%s:\n  X = %s–%s (%s)\n  Y = %s–%s (%s)\n", notes, ["" + xy_start; "" + xy_end; points_text]);
         end
 
-        function [wait_bar, tmr] = import_export_progress(self, process, n_frames, frame_size)
+        function [wait_bar, tmr] = import_export_progress(app, process, n_frames, frame_size)
             % Function for progress bar of data import/export, with a `timer()` to update its progress per second
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    process (str) : "Import", "Export"
             %    n_frames (int) : total number of Real space frames (i.e. rx*ry)
             %    frame_size (int) : frame size in bytes
@@ -2720,15 +2720,15 @@ classdef Quant4D < matlab.apps.AppBase
 
 
             % `process` will be 'Import'/'Export', and used for texts like "Import/Export" + "ing/ed"
-            wait_bar = progress_dialog(self, sprintf("\n%sing ...\n",process), "Data "+process, true);
+            wait_bar = progress_dialog(app, sprintf("\n%sing ...\n",process), "Data "+process, true);
             
             % Total time and global variable for processed frames of
             % [this second, last second]
             total_time = tic;
-            self.tmp_variables.frame_number = [0 0];
+            app.tmp_variables.frame_number = [0 0];
             
             % `timer()` to run the sub function per second
-            tmr = timer("TimerFcn", @(~,~)update_waitbar(self, wait_bar), ...
+            tmr = timer("TimerFcn", @(~,~)update_waitbar(app, wait_bar), ...
                         "ExecutionMode", "fixedDelay", ...
                         "Name", process);
             
@@ -2736,14 +2736,14 @@ classdef Quant4D < matlab.apps.AppBase
             tmr.start();
             
             % Kill the timer when progress windows closes
-            wait_bar.DeleteFcn = {@(~,~,t) kill_timer(self,t), tmr};
+            wait_bar.DeleteFcn = {@(~,~,t) kill_timer(app,t), tmr};
 
-            function update_waitbar(self, wait_bar)
+            function update_waitbar(app, wait_bar)
                 % Update progress per second
 
                 % Current  and previous frame number
-                current_frame = self.tmp_variables.frame_number(1);
-                previous_frame = self.tmp_variables.frame_number(2);
+                current_frame = app.tmp_variables.frame_number(1);
+                previous_frame = app.tmp_variables.frame_number(2);
 
                 % Estimate remaining time based on fraction of frames
                 % processed since timer executes @ 1 Hz
@@ -2765,24 +2765,24 @@ classdef Quant4D < matlab.apps.AppBase
                          );
                 
                 % move current frame number to previous frame number slot
-                self.tmp_variables.frame_number(2) = current_frame;
+                app.tmp_variables.frame_number(2) = current_frame;
             end
 
-            function kill_timer(self, tmr)
+            function kill_timer(app, tmr)
                 % Function to kill the timer and keep windows disabled when
                 % progress windows is closed
 
                 stop(tmr);
                 delete(tmr);
-                self.enable_windows(false)
+                app.enable_windows(false)
             end
         end
 
-        function mask = import_mask(self, space)
+        function mask = import_mask(app, space)
             % Function to import mask for given (diffraction/real) space
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    space (str) : "Real", "Diffraction"
             %
             % Returns:
@@ -2792,10 +2792,10 @@ classdef Quant4D < matlab.apps.AppBase
             % get `data_size` from `space`: "n_pixels" or "n_frames"
             if space == "Real"
                 space_name = "Real-space";
-                data_size = self.dataset_parameters.n_frames;
+                data_size = app.dataset_parameters.n_frames;
             else % "Diffraction"
                 space_name = "Diffraction";
-                data_size = self.dataset_parameters.n_pixels;
+                data_size = app.dataset_parameters.n_pixels;
             end
 
             mask = [];
@@ -2832,7 +2832,7 @@ classdef Quant4D < matlab.apps.AppBase
                             message = message + ...
                                 sprintf("Image size [%d,%d] transposed to fit data's %s size [%d,%d].\n", mask_size, space_name, data_size);
                         else
-                            notification_dialog(self, "warn", sprintf("Image size [%d,%d] does not fit data's %s size [%d,%d]!", ...
+                            notification_dialog(app, "warn", sprintf("Image size [%d,%d] does not fit data's %s size [%d,%d]!", ...
                                 mask_size, space_name, data_size),"Dimension Mismatch");
                             return
                         end
@@ -2845,7 +2845,7 @@ classdef Quant4D < matlab.apps.AppBase
                     return
                 
                 otherwise
-                    notification_dialog(self, "warn", "File type '*"+extension+"' currently not supported!", "Import Failed");
+                    notification_dialog(app, "warn", "File type '*"+extension+"' currently not supported!", "Import Failed");
                     return
             end
 
@@ -2872,15 +2872,15 @@ classdef Quant4D < matlab.apps.AppBase
             if message ~= ""
                 message = "Please note:\n"+message+"\n";
             end
-            notification_dialog(self, "help", sprintf(message+"Please check the "+space_name+" Mask image."),'Mask Imported');
-            figure(self.figures.(space+"Mask"))
+            notification_dialog(app, "help", sprintf(message+"Please check the "+space_name+" Mask image."),'Mask Imported');
+            figure(app.figures.(space+"Mask"))
         end
 
-        function plot_all_patterns(self, event)
+        function plot_all_patterns(app, event)
             % Wrapper function for (re)plotting all images
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -2890,25 +2890,25 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Update images if visible OR not in changing event;
             % include CoMs if in the modes
-            for id = self.ui_groups.image_id(contains(self.ui_groups.image_type, ["Primary";"Mask"]) | ...
-                                            (ismember(self.Mode.Value, ["CoM" "DPC"]) & ...
-                                             self.ui_groups.image_type == "CoM" & ...
-                                             self.ui_groups.image_id ~= "ColorWheel"))'
+            for id = app.ui_groups.image_id(contains(app.ui_groups.image_type, ["Primary";"Mask"]) | ...
+                                            (ismember(app.Mode.Value, ["CoM" "DPC"]) & ...
+                                             app.ui_groups.image_type == "CoM" & ...
+                                             app.ui_groups.image_id ~= "ColorWheel"))'
                 
-                if is_static_event(self, event) || self.figures.(id).Visible
-                    plot_image(self, event, id)
+                if is_static_event(app, event) || app.figures.(id).Visible
+                    plot_image(app, event, id)
                 end
 
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
-        function plot_image(self, event, id)
+        function plot_image(app, event, id)
             % Generic function for plotting an image on a given axis with brightness/contrast/gamma values
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %    id (str) : image identification string
             %
@@ -2921,40 +2921,40 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % get axis and user_data
-            ax = self.image_axes.(id);
+            ax = app.image_axes.(id);
             user_data = ax.UserData;
 
             % clear old `image` on `ax`
             delete(findobj(ax, "Tag", "Image "+user_data.space+" "+user_data.type));
             
             % Abort if image not yet ready
-            if ~isfield(self.images, id) || isempty(self.images.(id)) %|| isempty(self.masks)
-                if isequal(id, self.DisplayImage.Value)
-                    self.ImageStatistics.Value = ax.UserData.name;
+            if ~isfield(app.images, id) || isempty(app.images.(id)) %|| isempty(app.masks)
+                if isequal(id, app.DisplayImage.Value)
+                    app.ImageStatistics.Value = ax.UserData.name;
                 end
                 return;
             end
 
             % Raw array is column-major; transposed to row-major `im`
-            im = self.images.(id)';
+            im = app.images.(id)';
 
             % special case for color mixing custom masks
-            if strcmp(self.Mode.Value, "Custom") && strcmp(self.CustomDetectorInterMask.Value, "Color Mix")
+            if strcmp(app.Mode.Value, "Custom") && strcmp(app.CustomDetectorInterMask.Value, "Color Mix")
                 % otherwise take over the image with a color mix
                 switch id
                     case "Real"
                         % Zeros if no masks yet
-                        if ~isfield(self.masks,'CustomColorMix')
-                            im = zeros(self.dataset_parameters.n_frames, self.dataset_parameters.data_type);
+                        if ~isfield(app.masks,'CustomColorMix')
+                            im = zeros(app.dataset_parameters.n_frames, app.dataset_parameters.data_type);
                         else
-                            im = self.images.RealColorMix;
+                            im = app.images.RealColorMix;
                         end
                     case "DiffractionMask"
                         % Zeros if no masks yet
-                        if ~isfield(self.masks,'CustomColorMix')
-                            im = zeros(self.dataset_parameters.n_pixels, self.dataset_parameters.data_type);
+                        if ~isfield(app.masks,'CustomColorMix')
+                            im = zeros(app.dataset_parameters.n_pixels, app.dataset_parameters.data_type);
                         else
-                            im = self.masks.CustomColorMix;
+                            im = app.masks.CustomColorMix;
                         end
                 end
             end
@@ -3012,27 +3012,27 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Plot mask opacity on non-mask/non-preview image
             if ~ismember(user_data.type, ["Mask" "Preview"])
-                mask = self.images.(user_data.space+"Mask")';
+                mask = app.images.(user_data.space+"Mask")';
                 im_display.AlphaData = (1-user_data.mask_opacity/100)*(1-logical(mask))+logical(mask);
             end
             
             % Shade CoM/DPC Phase with Magnitude
             if id == "CoMPhMag"
-                im_display.AlphaData = im_display.AlphaData.*self.images.CoMMagNorm';
+                im_display.AlphaData = im_display.AlphaData.*app.images.CoMMagNorm';
             end
             
             % Move the `image` to the bottom level of the axis children
             ax.Children = [setdiff(ax.Children,[im_display; background],'stable'); im_display; background];
             
             % Assign the `im_display` `background` to global handles
-            self.image_displays.(id) = im_display;
-            self.image_displays.(id+"Background") = background;
+            app.image_displays.(id) = im_display;
+            app.image_displays.(id+"Background") = background;
 
             % Plot vector field, if selected
             plot_vector_field();
             
             % Only update statistics if not in changing Event AND it is the "selected" image
-            if isequal(id, self.DisplayImage.Value) && is_static_event(self, event)
+            if isequal(id, app.DisplayImage.Value) && is_static_event(app, event)
                 update_display_image_stats();
             end
 
@@ -3042,10 +3042,10 @@ classdef Quant4D < matlab.apps.AppBase
                 debug_time = tic;
                 
                 % Get Histogram axis
-                hist_ax = self.HistogramAxes;
+                hist_ax = app.HistogramAxes;
 
                 % Update histogram; skip if image unchanged
-                if is_different_to_previous(self, 'image_stats', image_stats)
+                if is_different_to_previous(app, 'image_stats', image_stats)
                     
                     % Warn if NaNs/Infs are present
                     if numel(im) ~= numel(image_stats)
@@ -3055,7 +3055,7 @@ classdef Quant4D < matlab.apps.AppBase
                     end
 
                     % Update ImageStatistics display panel text
-                    self.ImageStatistics.Value = ...
+                    app.ImageStatistics.Value = ...
                         sprintf('min:% -14.7g std:% -14.7g\nmax:% -14.7g sum:% -14.7g\navg:% -14.7g %s', ...
                         image_min, std(image_stats,0, "all"), image_max, sum(image_stats, "all",'omitnan'), mean(image_stats, "all"), nanwarn);
 
@@ -3081,44 +3081,44 @@ classdef Quant4D < matlab.apps.AppBase
                 end
 
                 % Update histogram annotations; skip if values unchanged
-                if is_different_to_previous(self, 'hist', {ax image_max image_min image_range image_high image_low user_data.gamma self.HistogramLog.Value})
+                if is_different_to_previous(app, 'hist', {ax image_max image_min image_range image_high image_low user_data.gamma app.HistogramLog.Value})
                     % Update ROIs
                     % Draw ROI of range if not yet
                     if isempty(findobj(hist_ax, "Tag", "HistROI"))
-                        self.annotations.hist.Box = drawrectangle(hist_ax, ...
+                        app.annotations.hist.Box = drawrectangle(hist_ax, ...
                                                                  "Position", [1 1 1 1], ...
                                                                  "LineWidth", 1, ...
                                                                  "MarkerSize", eps(), ...
                                                                  "FaceAlpha", 0.1, ...
                                                                  "InteractionsAllowed", "translate");
 
-                        self.annotations.hist.Hi = drawpoint(hist_ax, "Position",[1 1]);
-                        self.annotations.hist.Lo = drawpoint(hist_ax, "Position",[1 1]);
+                        app.annotations.hist.Hi = drawpoint(hist_ax, "Position",[1 1]);
+                        app.annotations.hist.Lo = drawpoint(hist_ax, "Position",[1 1]);
                         
                         % add listeners
-                        addlistener([self.annotations.hist.Box, ...
-                                     self.annotations.hist.Lo, ...
-                                     self.annotations.hist.Hi], ...
+                        addlistener([app.annotations.hist.Box, ...
+                                     app.annotations.hist.Lo, ...
+                                     app.annotations.hist.Hi], ...
                                     "MovingROI", @move_histogram_high_low);
-                        user_data.Move = addlistener([self.annotations.hist.Box, ...
-                                                      self.annotations.hist.Lo, ...
-                                                      self.annotations.hist.Hi], ...
+                        user_data.Move = addlistener([app.annotations.hist.Box, ...
+                                                      app.annotations.hist.Lo, ...
+                                                      app.annotations.hist.Hi], ...
                                                      "ROIMoved", @move_histogram_high_low);
                         
                         % set parameters
-                        set([self.annotations.hist.Box, ...
-                             self.annotations.hist.Lo, ...
-                             self.annotations.hist.Hi], ...
+                        set([app.annotations.hist.Box, ...
+                             app.annotations.hist.Lo, ...
+                             app.annotations.hist.Hi], ...
                             "Deletable", false, ...
                             "UserData", user_data, ...
                             "Tag", "HistROI")
                     end
 
                     % Save current display limits to ROIs
-                    self.annotations.hist.Box.UserData = {ax image_max image_min image_range image_high image_low};
+                    app.annotations.hist.Box.UserData = {ax image_max image_min image_range image_high image_low};
 
                     % Update ROIs if not called from them
-                    if ~ismember(event.Source, [self.annotations.hist.Box self.annotations.hist.Lo self.annotations.hist.Hi])
+                    if ~ismember(event.Source, [app.annotations.hist.Box app.annotations.hist.Lo app.annotations.hist.Hi])
                         move_histogram_high_low(event.Source, event);
                     end
 
@@ -3128,13 +3128,13 @@ classdef Quant4D < matlab.apps.AppBase
                     % Gamma line
                     x = linspace(image_low,image_high,100);
                     y = ((x-image_low)/(image_high-image_low)).^user_data.gamma.*range(hist_ax.YLim) + hist_ax.YLim(1);
-                    self.annotations.hist.gamCrv = plot(hist_ax, ...
+                    app.annotations.hist.gamCrv = plot(hist_ax, ...
                                                        x, y, ...
                                                        "Color", "k", ...
                                                        "Tag", "HistAnnot");
                     
                     % Print display limits on the histogram
-                    self.annotations.hist.note = text(hist_ax, ...
+                    app.annotations.hist.note = text(hist_ax, ...
                                                      0.02, 0.96, ...
                                                      sprintf('Hi:% -.3g\nLo:% -.3g', image_high, image_low), ...
                                                      "VerticalAlignment", "top", ...
@@ -3144,10 +3144,10 @@ classdef Quant4D < matlab.apps.AppBase
                                                      "FontWeight", "bold", ...
                                                      "FontSize", 11, ...
                                                      "Tag", "HistAnnot");
-                    self.annotations.hist.note.BackgroundColor(4) = 0.7;
+                    app.annotations.hist.note.BackgroundColor(4) = 0.7;
                 end
 
-                debug_toc(self, event, "", debug_time)
+                debug_toc(app, event, "", debug_time)
 
                 % Sub function for ROI update
                 function move_histogram_high_low(source, event)
@@ -3156,8 +3156,8 @@ classdef Quant4D < matlab.apps.AppBase
                     end
                     
                     % Get preset values
-                    hist_annotation = self.annotations.hist;
-                    hist_ax = self.HistogramAxes;
+                    hist_annotation = app.annotations.hist;
+                    hist_ax = app.HistogramAxes;
                     [i_ax, i_max, i_min, i_range, i_hi, i_lo] = deal(hist_annotation.Box.UserData{:});
                     y_lim = hist_ax.YLim;
 
@@ -3178,7 +3178,7 @@ classdef Quant4D < matlab.apps.AppBase
                     i_lo = min(i_lo,i_hi);
                     
                     % Find mid-height of the histogram, log- or linear-scale
-                    if self.HistogramLog.Value
+                    if app.HistogramLog.Value
                         ymid = sqrt(prod(y_lim));
                     else
                         ymid = mean(y_lim);
@@ -3204,13 +3204,13 @@ classdef Quant4D < matlab.apps.AppBase
                          hist_annotation.Hi, ...
                          hist_annotation.Lo], ...
                         "DrawingArea", drawing_area, ...
-                        "Visible", self.DisplayContrast.Enable)
+                        "Visible", app.DisplayContrast.Enable)
                     
                     % Update UI and image if called from ROIs
                     if ismember(source,[hist_annotation.Box, hist_annotation.Hi, hist_annotation.Lo])
                         i_ax.UserData.brightness = clip(double(50+(i_max+i_min-i_hi-i_lo)/2/i_range*100),0,100);
                         i_ax.UserData.contrast = clip(double(2^((i_max-i_min-i_hi+i_lo)/2/i_range*2)*50),0,100);
-                        display_callbacks(self, event);
+                        display_callbacks(app, event);
                     end
                 end
             end
@@ -3220,16 +3220,16 @@ classdef Quant4D < matlab.apps.AppBase
                 delete(findobj(ax, "Tag", "VectorField"))
                 vec = user_data.vector_field;
                 
-                if ~vec || ~ismember(self.Mode.Value, ["CoM", "DPC"])
+                if ~vec || ~ismember(app.Mode.Value, ["CoM", "DPC"])
                     return;
                 end
                 
                 % Plot vector arrows over the selected image
-                self.annotations.vector_field.(id) = quiver(ax, ...
-                                                           1:vec:self.dataset_parameters.n_frames(1), ...    % x location
-                                                           1:vec:self.dataset_parameters.n_frames(2), ...    % y location
-                                                           self.images.CoMX(1:vec:end, 1:vec:end)'./vec, ... % u component
-                                                           self.images.CoMY(1:vec:end, 1:vec:end)'./vec, ... % v component
+                app.annotations.vector_field.(id) = quiver(ax, ...
+                                                           1:vec:app.dataset_parameters.n_frames(1), ...    % x location
+                                                           1:vec:app.dataset_parameters.n_frames(2), ...    % y location
+                                                           app.images.CoMX(1:vec:end, 1:vec:end)'./vec, ... % u component
+                                                           app.images.CoMY(1:vec:end, 1:vec:end)'./vec, ... % v component
                                                            1, ...                                           % scale
                                                            "Color", user_data.vector_color, ...
                                                            "LineWidth", 1.5, ...
@@ -3239,7 +3239,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to plot color wheel
             function plot_colorwheel()
                 % clear the axis
-                cla(self.image_axes.ColorWheel)
+                cla(app.image_axes.ColorWheel)
                 
                 % Make ColorWheel for DPC/CoM imaging - this color
                 % scheme will stay constant for all DPC/CoM images
@@ -3254,61 +3254,61 @@ classdef Quant4D < matlab.apps.AppBase
                 colorwheel = atan2d(ygrid, xgrid);
                 
                 % shift the negative values of atan() up by 360
-                self.images.ColorWheel = (colorwheel) .* (colorwheel >= 0) + ...
+                app.images.ColorWheel = (colorwheel) .* (colorwheel >= 0) + ...
                                         (colorwheel + 360) .* (colorwheel < 0);
 
                 % mask the color wheel to make it a circle
-                self.images.ColorWheelMask = xgrid.^2 + ygrid.^2 < r^2;
-                axis(self.image_axes.ColorWheel,[0, width+1, 0, width+1]);
-                self.image_axes.ColorWheel.UserData.mask_opacity = 100;
+                app.images.ColorWheelMask = xgrid.^2 + ygrid.^2 < r^2;
+                axis(app.image_axes.ColorWheel,[0, width+1, 0, width+1]);
+                app.image_axes.ColorWheel.UserData.mask_opacity = 100;
             end
         end
 
-        function status = is_different_to_previous(self, name, value)
+        function status = is_different_to_previous(app, name, value)
             % Function to check whether the given name value is changed
             % compared to the previous value, and store the new value
             %
             % Parameters:
-            %    self (Quant4D)
-            %    name (str) : field name in self.previous_values
-            %    value : value of self.previous_values.(name) to be tested for update
+            %    app (Quant4D)
+            %    name (str) : field name in app.previous_values
+            %    value : value of app.previous_values.(name) to be tested for update
             %
             % Returns:
-            %    status (bool) : Whether self.previous_values.(name) ~= value
+            %    status (bool) : Whether app.previous_values.(name) ~= value
 
-            status = ~isfield(self.previous_values, name) || ...
-                     ~isequal(self.previous_values.(name), value);
+            status = ~isfield(app.previous_values, name) || ...
+                     ~isequal(app.previous_values.(name), value);
             if status
-                self.previous_values.(name) = value;
+                app.previous_values.(name) = value;
             end
         end
 
-        function to_update = to_update_image(self, event)
+        function to_update = to_update_image(app, event)
             % Function to determine whether to update images. Return
-            % true if any: 1) `self.CalculationPolicy.Value` is 2
-            % (active update) OR 2) `self.CalculationPolicy.Value` is 1
+            % true if any: 1) `app.CalculationPolicy.Value` is 2
+            % (active update) OR 2) `app.CalculationPolicy.Value` is 1
             % (reduced) and not when changing OR 3) is a manual update
             % (from update buttons or detector mode change)
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
-            %    to_update (bool) : Whether or not image(s) should be updated at the time of calling based on self.CalculationPolicy and current user interactions
+            %    to_update (bool) : Whether or not image(s) should be updated at the time of calling based on app.CalculationPolicy and current user interactions
 
-            calc = self.CalculationPolicy.Value;
+            calc = app.CalculationPolicy.Value;
             to_update = calc == 2 || ...
-                        (calc && is_static_event(self, event)) || ...
-                        event.Source == self.UpdateImages || ...
-                        event.Source == self.Mode;
+                        (calc && is_static_event(app, event)) || ...
+                        event.Source == app.UpdateImages || ...
+                        event.Source == app.Mode;
         end
 
-        function mock_UI_callbacks(self, source, value)
+        function mock_UI_callbacks(app, source, value)
             % Function to mock UI callbacks.
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    source : UI elements
             %    value (str) : additional information to be passed along to further function calls
             %
@@ -3316,7 +3316,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    None
 
             arguments
-                self {mustBeA(self, "Quant4D")}
+                app {mustBeA(app, "Quant4D")}
                 source
                 value {mustBeText} = "";
             end
@@ -3327,65 +3327,65 @@ classdef Quant4D < matlab.apps.AppBase
             end
             
             switch source
-                case self.UpdateImages
+                case app.UpdateImages
                     % Update all images
-                    update_images(self, struct("Source", source, "EventName", "ButtonPushed"))
+                    update_images(app, struct("Source", source, "EventName", "ButtonPushed"))
 
-                case self.DisplayImage
+                case app.DisplayImage
                     % Update Display UI or Select current image
-                    display_callbacks(self, struct("Source", source, "EventName", "ValueChanged"))
+                    display_callbacks(app, struct("Source", source, "EventName", "ValueChanged"))
 
-                case self.SaveImagePrefix
+                case app.SaveImagePrefix
                     % Update image saving prefix
-                    save_callbacks(self, struct("Source", source, "EventName", "ValueChanged"))
+                    save_callbacks(app, struct("Source", source, "EventName", "ValueChanged"))
 
-                case {self.ShowDiffractionAxes, self.ShowRealAxes}
+                case {app.ShowDiffractionAxes, app.ShowRealAxes}
                     % Update axes annotations
-                    axis_direction_callbacks(self, struct("Source", source,"EventName", "ButtonPushed"))
+                    axis_direction_callbacks(app, struct("Source", source,"EventName", "ButtonPushed"))
 
-                case self.RealROIShape
+                case app.RealROIShape
                     % Update real-space controls
-                    realspace_ROI_callbacks(self, struct("Source", source, "EventName", "ValueChanged"));
+                    realspace_ROI_callbacks(app, struct("Source", source, "EventName", "ValueChanged"));
 
-                case self.CustomDetectorTable
+                case app.CustomDetectorTable
                     % Update Custom Detectors for Main Table selection change
-                    custom_detector_callbacks(self, struct("Source", source,"EventName", "SelectionChanged"))
+                    custom_detector_callbacks(app, struct("Source", source,"EventName", "SelectionChanged"))
 
-                case self.CustomDetectorDetailsTable
+                case app.CustomDetectorDetailsTable
                     % Mock Custom Detector Detail Table edit to update ROI/images
-                    custom_detector_callbacks(self,struct("Source", source, "EventName", "CellEdit"))
+                    custom_detector_callbacks(app,struct("Source", source, "EventName", "CellEdit"))
 
-                case self.SaveTabGroup
+                case app.SaveTabGroup
                     % Mock changing Save/Export tabs in Save window
-                    export_callbacks(self, struct("Source", source, "EventName", "SelectionChanged"))
+                    export_callbacks(app, struct("Source", source, "EventName", "SelectionChanged"))
 
-                case self.ImportFileSelect
+                case app.ImportFileSelect
                     % Mock import file select button
-                    import_select_file(self,struct("Source", source, "EventName", "ButtonPushed"));
+                    import_select_file(app,struct("Source", source, "EventName", "ButtonPushed"));
 
-                case self.ShowImportWindow
+                case app.ShowImportWindow
                     % Mock user clicking "Import" button on main UI
-                    import_callbacks(self,struct("Source", source, "EventName", "ButtonPushed"));
+                    import_callbacks(app,struct("Source", source, "EventName", "ButtonPushed"));
 
-                case self.Mode
+                case app.Mode
                     % Mock detector mode changed
-                    detector_mode_callbacks(self, struct("Source", source, "EventName", "ValueChanged"));
+                    detector_mode_callbacks(app, struct("Source", source, "EventName", "ValueChanged"));
 
-                case self.PreviewButton
+                case app.PreviewButton
                     % Mock "Import Preview" button
-                    preview_callbacks(self, struct("Source", source,"EventName", "ButtonPushed"))
+                    preview_callbacks(app, struct("Source", source,"EventName", "ButtonPushed"))
 
-                case self.ShowSaveWindow
+                case app.ShowSaveWindow
                     % Mock user clicking "Save" button on main UI
-                    save_callbacks(self, struct("Source", source, "EventName", "ButtonPushed"));
+                    save_callbacks(app, struct("Source", source, "EventName", "ButtonPushed"));
             end
         end
 
-        function selection = notification_dialog(self, icon, msg, title_name, option)
+        function selection = notification_dialog(app, icon, msg, title_name, option)
             % Wrapper for notification dialog; use `sprintf()` before calling this function to process "\n" in `message`
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    icon (str) : "quest", "list", "help", "warn", "error", "none", ""
             %    msg (str) : dialog message
             %    title_name (str) : dialog title
@@ -3395,7 +3395,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    selection (str | int) : user response
 
             arguments
-                self; 
+                app; 
                 icon {mustBeText, mustBeMember(icon,{"quest", "list", "help", "warn", "error", "none", ""})} = "";
                 msg {mustBeText} = "";
                 title_name {mustBeText} = "";
@@ -3442,14 +3442,14 @@ classdef Quant4D < matlab.apps.AppBase
                     msg = "\fontsize{" + font_size + "}" + regexprep(msg, "([\\^_{}])", "\\$1");
 
                     % Disable windows because `msgbox()` cannot block `uifigure()` windows
-                    enable_windows(self,false)
+                    enable_windows(app,false)
                     f = msgbox(msg, ...
                                title_name, ...
                                icon, ...
                                struct('WindowStyle','modal','Interpreter','tex'));
 
                     % Enable windows when the notification is gone
-                    f.DeleteFcn = {@(~,~) enable_windows(self,true)};
+                    f.DeleteFcn = {@(~,~) enable_windows(app,true)};
 
                     % ensure the message is brought to the front
                     figure(f)
@@ -3462,11 +3462,11 @@ classdef Quant4D < matlab.apps.AppBase
             set(0, "DefaultUIControlFontSize", default_font_size)
         end
 
-        function wait_bar = progress_dialog(self, msg, title_name, interruptible)
+        function wait_bar = progress_dialog(app, msg, title_name, interruptible)
             % Wrapper for `waitbar`
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    msg (str) : dialog message
             %    title_name (str) : dialog title
             %    interruptible (bool) : can the dialog be interrupted
@@ -3475,17 +3475,17 @@ classdef Quant4D < matlab.apps.AppBase
             %    wait_bar (matlab.ui.Figure) – waitbar to display progress
             
             arguments
-                self;
+                app;
                 msg {mustBeText} = "";
                 title_name {mustBeText} = ""; 
                 interruptible (1,1) {mustBeNumericOrLogical} = false;
             end
 
             % Disable all windows
-            enable_windows(self,false)
+            enable_windows(app,false)
 
             % Set mouse cursor to "busy"
-            set(self.ui_groups.all_figures, "Pointer", "watch")
+            set(app.ui_groups.all_figures, "Pointer", "watch")
 
             if ~interruptible
                 title_name = "(Uninterruptible) "+title_name;
@@ -3505,114 +3505,114 @@ classdef Quant4D < matlab.apps.AppBase
                 wait_bar.CloseRequestFcn = [];
                 
                 % Enable windows and reset mouse pointer when the progress windows is gone
-                wait_bar.DeleteFcn = @(~,~) enable_windows(self,true);
+                wait_bar.DeleteFcn = @(~,~) enable_windows(app,true);
             end
         end
 
-        function unload_data(self, swap_data)
+        function unload_data(app, swap_data)
             % Function to unload data and clean all images; swap_data
             % keeps all previous parameters and simply swaps out data
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    swap_data (bool) : swap dataset (true), unload all data (false)
             %
             % Returns:
             %    None
 
             arguments
-                self
+                app
                 swap_data (1,:) {mustBeNumericOrLogical} = false;
             end
 
             % Disable windows for the data unload process
-            enable_windows(self,false)
+            enable_windows(app,false)
 
             % reset main UI title
-            self.Quant4D_Fig.Name = 'Quant4D';
+            app.Quant4D_Fig.Name = 'Quant4D';
 
             % Whether or not to swap dataset only, without changing
             % any existing parameters
             if ~swap_data
                 % Clear all Axes
-                arrayfun(@(x) cla(x), self.ui_groups.image_axes);
-                cla(self.HistogramAxes);
+                arrayfun(@(x) cla(x), app.ui_groups.image_axes);
+                cla(app.HistogramAxes);
                 
                 % Clear all parameters, data structures, etc. 
-                self.common_parameters = []; 
-                self.annotations = [];
-                self.images = [];
-                self.masks = [];
-                self.image_displays = [];
-                self.CustomDetectorTable.Data(:,:) = [];
+                app.common_parameters = []; 
+                app.annotations = [];
+                app.images = [];
+                app.masks = [];
+                app.image_displays = [];
+                app.CustomDetectorTable.Data(:,:) = [];
             end
 
             % Remove all data from GPU if in use
             try
-                if self.dataset_parameters.gpu > 0
-                    reset(parallel.gpu.GPUDevice.getDevice(self.dataset_parameters.gpu));
+                if app.dataset_parameters.gpu > 0
+                    reset(parallel.gpu.GPUDevice.getDevice(app.dataset_parameters.gpu));
                     gpuDevice([]);
                 end
             catch
             end
 
             % Clear data, parameters and Axes
-            self.data = [];
-            self.memfile = [];
-            self.dataset_parameters = [];
-            self.previous_values = [];
+            app.data = [];
+            app.memfile = [];
+            app.dataset_parameters = [];
+            app.previous_values = [];
         end
 
-        function enable_windows(self, state)
+        function enable_windows(app, state)
             % Function to enable/disable windows/UI; disable is only
             % for notification/progress bar/busy background, etc.
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    state (bool) : enable (true) or disable (false) all windows
             %
             % Returns:
             %    None
             
             arguments
-                self
+                app
                 state (1,1) {mustBeNumericOrLogical} = true;
             end
 
             % Preview mode or not
-            preview_mode = self.Mode.Value == "Preview";
+            preview_mode = app.Mode.Value == "Preview";
 
             % Detector Mode UI, keep disabled in Import Preview Mode unless a dataset is loaded
-            set(self.ModeGrid.Children, ...
+            set(app.ModeGrid.Children, ...
                 "Enable", ...
-                switch_on_off(self, state && (~preview_mode || ~isempty(self.dataset_parameters))))
+                switch_on_off(app, state && (~preview_mode || ~isempty(app.dataset_parameters))))
 
             % Real-space ROI controls, keep disabled in Import Preview Mode
-            set(self.RealPanel, "Enable",switch_on_off(self, state && ~preview_mode))
+            set(app.RealPanel, "Enable",switch_on_off(app, state && ~preview_mode))
 
             % Other UIs can be enabled in Import Preview Mode
-            set([self.ShortcutButtonGrid.Children; ...
-                 self.ModePanel; ...
-                 self.SettingsPanel; ...
-                 self.SavePanel; ...
-                 self.ImportPanel], ...
+            set([app.ShortcutButtonGrid.Children; ...
+                 app.ModePanel; ...
+                 app.SettingsPanel; ...
+                 app.SavePanel; ...
+                 app.ImportPanel], ...
                 "Enable", ...
-                switch_on_off(self, state))
+                switch_on_off(app, state))
 
             % Disable all images when not "on"; visible means disable
-            set(self.ui_groups.image_grayout, "Visible", ~state)
+            set(app.ui_groups.image_grayout, "Visible", ~state)
             
             % Also reset all windows' mouse pointer when enabling UIs
             if state
-                set(self.ui_groups.all_figures,'Pointer','arrow');
+                set(app.ui_groups.all_figures,'Pointer','arrow');
             end
         end
 
-        function create_other_windows(self)
+        function create_other_windows(app)
             % Function to create other UI windows and Image figures
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %
             % Returns:
             %    None
@@ -3620,51 +3620,51 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
 
             % Set window position without using `movegui()`, to avoid its implicit `drawnow`
-            title_height = self.sys_constants.title_height;
-            decor_width = self.sys_constants.decor_width;
+            title_height = app.sys_constants.title_height;
+            decor_width = app.sys_constants.decor_width;
             
             % Available sizes of width/height/left/bottom/right/top
-            screen_width = self.sys_constants.screen_avail(3);
-            screen_height = self.sys_constants.screen_avail(4);
-            screen_left = self.sys_constants.screen_avail(1)+decor_width/2;
-            screen_bottom = self.sys_constants.screen_avail(2);
+            screen_width = app.sys_constants.screen_avail(3);
+            screen_height = app.sys_constants.screen_avail(4);
+            screen_left = app.sys_constants.screen_avail(1)+decor_width/2;
+            screen_bottom = app.sys_constants.screen_avail(2);
             screen_right = screen_left+screen_width-decor_width;
             screen_top = screen_bottom+screen_height-title_height; % top excluding title bar
             horizontal_center = (screen_left+screen_right)/2;
             vertical_center = (screen_bottom+screen_top)/2;
-            image_size = self.Quant4D_Fig.Position(4);
+            image_size = app.Quant4D_Fig.Position(4);
 
             % Create other UI Windows
-            self.figures.Settings = move_UI_to_new_figure('Settings', self.SettingsPanel);
-            self.figures.Import = move_UI_to_new_figure('Import Data', self.ImportPanel);
-            self.figures.Import.Position(1:2) = ([horizontal_center vertical_center]-self.figures.Import.Position(3:4)/2); % Move to center
+            app.figures.Settings = move_UI_to_new_figure('Settings', app.SettingsPanel);
+            app.figures.Import = move_UI_to_new_figure('Import Data', app.ImportPanel);
+            app.figures.Import.Position(1:2) = ([horizontal_center vertical_center]-app.figures.Import.Position(3:4)/2); % Move to center
             
-            % Set `self.Fig.Import` window close as "pushing `self.CancelImport"
-            self.figures.Import.CloseRequestFcn = @(~,~)import_callbacks(self, struct("Source", self.CancelImport, "EventName",'ButtonPushed'));
+            % Set `app.Fig.Import` window close as "pushing `app.CancelImport"
+            app.figures.Import.CloseRequestFcn = @(~,~)import_callbacks(app, struct("Source", app.CancelImport, "EventName",'ButtonPushed'));
             
             % Move to Save UI to the center
-            self.figures.Save = move_UI_to_new_figure('Save/Export', self.SavePanel);
-            self.figures.Save.Position(1:2) = ([horizontal_center vertical_center] - self.figures.Save.Position(3:4))/2;
+            app.figures.Save = move_UI_to_new_figure('Save/Export', app.SavePanel);
+            app.figures.Save.Position(1:2) = ([horizontal_center vertical_center] - app.figures.Save.Position(3:4))/2;
             
-            % Set `self.Fig.Save` window close as "pushing `self.SaveCloseButton`"
-            self.figures.Save.CloseRequestFcn = @(~,~)export_callbacks(self, struct("Source", self.SaveCloseButton, "EventName",'ButtonPushed'));
+            % Set `app.Fig.Save` window close as "pushing `app.SaveCloseButton`"
+            app.figures.Save.CloseRequestFcn = @(~,~)export_callbacks(app, struct("Source", app.SaveCloseButton, "EventName",'ButtonPushed'));
             
-            % Set main windows `self.Quant4D_Fig` other properties and move to top left
-            self.Quant4D_Fig.Position(1:2) = [1, self.sys_constants.screen_size(4) - self.Quant4D_Fig.Position(4) - self.sys_constants.title_height];
-            self.Quant4D_Fig.SizeChangedFcn = [];
-            self.Quant4D_Fig.KeyPressFcn = @key_press;
+            % Set main windows `app.Quant4D_Fig` other properties and move to top left
+            app.Quant4D_Fig.Position(1:2) = [1, app.sys_constants.screen_size(4) - app.Quant4D_Fig.Position(4) - app.sys_constants.title_height];
+            app.Quant4D_Fig.SizeChangedFcn = [];
+            app.Quant4D_Fig.KeyPressFcn = @key_press;
 
-            % When delete the main window `self.Quant4D_Fig` (e.g. closing), also delete other windows
-            self.Quant4D_Fig.DeleteFcn = {@(~,~,figs) delete(figs), structfun(@(x) x, self.figures)};
+            % When delete the main window `app.Quant4D_Fig` (e.g. closing), also delete other windows
+            app.Quant4D_Fig.DeleteFcn = {@(~,~,figs) delete(figs), structfun(@(x) x, app.figures)};
 
             % Move Settings UI next to main window
-            self.figures.Settings.Position(1:2) = [sum(self.Quant4D_Fig.Position([1,3]))+1, self.Quant4D_Fig.Position(2)];
+            app.figures.Settings.Position(1:2) = [sum(app.Quant4D_Fig.Position([1,3]))+1, app.Quant4D_Fig.Position(2)];
 
             % Set limits/values for image window resize options in settings window
-            set([self.SetDiffractionWindowWidth, ...
-                 self.SetDiffractionWindowHeight, ...
-                 self.SetRealWindowWidth, ...
-                 self.SetRealWindowHeight], ...
+            set([app.SetDiffractionWindowWidth, ...
+                 app.SetDiffractionWindowHeight, ...
+                 app.SetRealWindowWidth, ...
+                 app.SetRealWindowHeight], ...
                 {"Limits"}, ...
                 {[1 screen_width]; ...
                  [1 screen_height]; ...
@@ -3687,28 +3687,28 @@ classdef Quant4D < matlab.apps.AppBase
                                "CoM", ...
                                "hsv", ...
                                [horizontal_center 1 200 200]);
-            axtoolbar(self.image_axes.ColorWheel, {"datacursor"});
+            axtoolbar(app.image_axes.ColorWheel, {"datacursor"});
 
             create_axes_figure("Diffraction", ...
                                "Diffraction", ...
                                "Diffraction", ...
                                "Primary", ...
                                "gray", ...
-                               [sum(self.figures.Settings.Position([1,3]))+1 self.Quant4D_Fig.Position(2) image_size image_size]); % next to Settings UI
+                               [sum(app.figures.Settings.Position([1,3]))+1 app.Quant4D_Fig.Position(2) image_size image_size]); % next to Settings UI
                               %[horizontal_center-image_size/2 screen_top-image_size image_size image_size]); % Top-center
                               
              % add dropdown to diffraction figure to control how
              % patterns are combined (sum, mean, max, std)
-             self.diffraction_dropdown.Parent = self.figures.Diffraction;
-             self.diffraction_dropdown.ValueChangedFcn = @self.move_real_ROI;
-             self.diffraction_dropdown.Position = [0, self.figures.Diffraction.Position(4) - self.diffraction_dropdown.Position(4), 65, 22];
+             app.diffraction_dropdown.Parent = app.figures.Diffraction;
+             app.diffraction_dropdown.ValueChangedFcn = @app.move_real_ROI;
+             app.diffraction_dropdown.Position = [0, app.figures.Diffraction.Position(4) - app.diffraction_dropdown.Position(4), 65, 22];
 
             create_axes_figure("DiffractionMask", ...
                                "Diffraction Mask", ...
                                "Diffraction", ...
                                "Mask", ...
                                "gray", ...
-                               [sum(self.figures.Settings.Position([1,3]))+1 1 image_size image_size]); % Below Diffraction
+                               [sum(app.figures.Settings.Position([1,3]))+1 1 image_size image_size]); % Below Diffraction
                                %[horizontal_center-image_size/2 1 image_size image_size]); % Bottom-center
 
             % Diffraction preview image for import
@@ -3717,11 +3717,11 @@ classdef Quant4D < matlab.apps.AppBase
                                "Preview", ...
                                "Preview", ...
                                "gray", ...
-                               self.figures.Diffraction.Position);
+                               app.figures.Diffraction.Position);
             
             % Place Real-space images on the right, from top to bottom
-            image_left = sum(self.figures.Diffraction.Position([1,3]))+1;
-            image_bottom = self.Quant4D_Fig.Position(2);
+            image_left = sum(app.figures.Diffraction.Position([1,3]))+1;
+            image_bottom = app.Quant4D_Fig.Position(2);
             image_bottom_offset = image_bottom/8;
             
             ids = ["Real"; "CoMPhMag"; "CoMPh"; "CoMMag"; "CoMX"; "CoMY"; "dCoM"; "iCoM"; "RealMask"];
@@ -3743,7 +3743,7 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Debugging figures
-            if self.debug
+            if app.debug
                 create_axes_figure("tDiffraction",...
                                    "Test Diffraction", ...
                                    "Diffraction", ...
@@ -3760,44 +3760,44 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Variable names, image names and image types (tag) for all patterns'/images' figures/axes/images
-            self.ui_groups.image_id = string(fieldnames(self.image_axes));                            % ID/fieldnames under `self.image_axes` `self.figures` `self.images` `self.image_dispays` etc
-            self.ui_groups.image_space = string(structfun(@(x) x.UserData.space, self.image_axes));   % Spaces ("Real"/"Diffraction")
-            self.ui_groups.image_type = string(structfun(@(x) x.UserData.type, self.image_axes));     % Types ("Primary", "CoM" related, "Mask", "Test")
-            self.ui_groups.image_name = string(structfun(@(x) x.UserData.name, self.image_axes));     % Names/Titles
+            app.ui_groups.image_id = string(fieldnames(app.image_axes));                            % ID/fieldnames under `app.image_axes` `app.figures` `app.images` `app.image_dispays` etc
+            app.ui_groups.image_space = string(structfun(@(x) x.UserData.space, app.image_axes));   % Spaces ("Real"/"Diffraction")
+            app.ui_groups.image_type = string(structfun(@(x) x.UserData.type, app.image_axes));     % Types ("Primary", "CoM" related, "Mask", "Test")
+            app.ui_groups.image_name = string(structfun(@(x) x.UserData.name, app.image_axes));     % Names/Titles
             
             % AND their Axes/Figure objects, as well as the gray overlay to disable them
-            self.ui_groups.image_axes = arrayfun(@(x) self.image_axes.(x), self.ui_groups.image_id);
-            self.ui_groups.image_figures = arrayfun(@(x) self.figures.(x), self.ui_groups.image_id);
-            self.ui_groups.image_grayout = arrayfun(@(x) self.figures.(x).UserData.grayout, self.ui_groups.image_id); % Set them visible to disable the axes
+            app.ui_groups.image_axes = arrayfun(@(x) app.image_axes.(x), app.ui_groups.image_id);
+            app.ui_groups.image_figures = arrayfun(@(x) app.figures.(x), app.ui_groups.image_id);
+            app.ui_groups.image_grayout = arrayfun(@(x) app.figures.(x).UserData.grayout, app.ui_groups.image_id); % Set them visible to disable the axes
             
             % Variable names for all diffraction-sized figures/axes/images AND THEN their Axes objects
-            self.ui_groups.diffraction_id = self.ui_groups.image_id(self.ui_groups.image_space == "Diffraction");
-            self.ui_groups.diffraction_axes = arrayfun(@(x) self.image_axes.(x), self.ui_groups.diffraction_id);
+            app.ui_groups.diffraction_id = app.ui_groups.image_id(app.ui_groups.image_space == "Diffraction");
+            app.ui_groups.diffraction_axes = arrayfun(@(x) app.image_axes.(x), app.ui_groups.diffraction_id);
             
             % Variable names for all real-space-sized figures/axes/images AND THEN their Axes objects
-            self.ui_groups.real_id = self.ui_groups.image_id(self.ui_groups.image_space == "Real");
-            self.ui_groups.real_axes = arrayfun(@(x) self.image_axes.(x), self.ui_groups.real_id);
+            app.ui_groups.real_id = app.ui_groups.image_id(app.ui_groups.image_space == "Real");
+            app.ui_groups.real_axes = arrayfun(@(x) app.image_axes.(x), app.ui_groups.real_id);
             
             % Group all "Show ... Window" buttons related to CoM/DPC
-            self.ui_groups.CoM_buttons = [findobj(self.ShowImageWindowsGrid,'-regexp', "Tag",'CoM'); ...
-                                         self.ShowColorWheelWindow; ...
-                                         self.ShowColorWheelWindow2];
+            app.ui_groups.CoM_buttons = [findobj(app.ShowImageWindowsGrid,'-regexp', "Tag",'CoM'); ...
+                                         app.ShowColorWheelWindow; ...
+                                         app.ShowColorWheelWindow2];
             
             % Group all diffraction detector panels
-            self.ui_groups.detector_ui = [self.PreviewGrid; ...
-                                         self.AlignmentGrid; ...
-                                         self.AnnularDetectorGrid; ...
-                                         self.VirtualApertureGrid; ...
-                                         self.CustomDetectorGrid];
+            app.ui_groups.detector_ui = [app.PreviewGrid; ...
+                                         app.AlignmentGrid; ...
+                                         app.AnnularDetectorGrid; ...
+                                         app.VirtualApertureGrid; ...
+                                         app.CustomDetectorGrid];
 
             % Transfer all detector panels to main window, then delete their old container
-            set(flip(self.ui_groups.detector_ui), 'Parent', self.ModePanel);
-            delete(self.ModeTabGroup)
+            set(flip(app.ui_groups.detector_ui), 'Parent', app.ModePanel);
+            delete(app.ModeTabGroup)
             
             % Group all window `figure` `uifigure`
-            self.ui_groups.all_figures = [self.Quant4D_Fig; structfun(@(f) f, self.figures)];
+            app.ui_groups.all_figures = [app.Quant4D_Fig; structfun(@(f) f, app.figures)];
 
-            debug_toc(self, [], "", debug_time)
+            debug_toc(app, [], "", debug_time)
 
 
             %%% Sub functions of `otherFigures()`
@@ -3807,24 +3807,24 @@ classdef Quant4D < matlab.apps.AppBase
                 switch event.Key
                     case 'f5'
                         % update with the F5 key
-                        if self.UpdateImages.Enable
-                            mock_UI_callbacks(self, self.UpdateImages);
+                        if app.UpdateImages.Enable
+                            mock_UI_callbacks(app, app.UpdateImages);
                         end
                     case {'o', 'O'}
                         if ismember('control',event.Modifier)
-                            mock_UI_callbacks(self, self.ShowImportWindow)
+                            mock_UI_callbacks(app, app.ShowImportWindow)
                         end
                     case {'s', 'S'}
                         if ismember('control',event.Modifier)
-                            mock_UI_callbacks(self, self.ShowSaveWindow)
+                            mock_UI_callbacks(app, app.ShowSaveWindow)
                         end
                 end
-                debug_toc(self, event, "", debug_time)
+                debug_toc(app, event, "", debug_time)
             end
 
             % Hide window instead of closing it
             function hide_window(source, ~)
-                if isvalid(self)
+                if isvalid(app)
                     source.Visible = "off";
                 else
                     delete(source);
@@ -3853,7 +3853,7 @@ classdef Quant4D < matlab.apps.AppBase
                                "MenuBar", "none", ...
                                "NumberTitle", "off", ...
                                "IntegerHandle", "off", ...
-                               "Color", self.sys_constants.background_color, ...
+                               "Color", app.sys_constants.background_color, ...
                                "WindowButtonDownFcn", @clicked_window, ...
                                "WindowScrollWheelFcn", @scroll_figure, ...
                                "CloseRequestFcn", @hide_window, ...
@@ -3926,22 +3926,22 @@ classdef Quant4D < matlab.apps.AppBase
                                       "grayout", grayout);
 
                 % add references to fig and ax to their respective lists
-                self.figures.(id) = fig;
-                self.image_axes.(id) = ax;
+                app.figures.(id) = fig;
+                app.image_axes.(id) = ax;
 
                 %% Sub sub functions
                 % "restoreview" goes back to the limits of the actual image, nothing more/less.
                 function restore_view(~, event)
-                    axis(event.Axes, self.common_parameters.(lower(event.Axes.UserData.space)+"_axes_limit"))
+                    axis(event.Axes, app.common_parameters.(lower(event.Axes.UserData.space)+"_axes_limit"))
                     event.Axes.Position = [0 0 1 1];
-                    self.diffraction_dropdown.Position = [0, self.figures.Diffraction.Position(4) - self.diffraction_dropdown.Position(4), 65, 22];
+                    app.diffraction_dropdown.Position = [0, app.figures.Diffraction.Position(4) - app.diffraction_dropdown.Position(4), 65, 22];
                 end
 
-                % Modify Data Tips to show the raw value from `self.images.(...)`
+                % Modify Data Tips to show the raw value from `app.images.(...)`
                 function data_tip = show_value(~, event)
                     x = event.Position(1);
                     y = event.Position(2);
-                    value = strtrim(sprintf('%14.7g',self.images.(event.Target.Parent.UserData.id)(x,y)));
+                    value = strtrim(sprintf('%14.7g',app.images.(event.Target.Parent.UserData.id)(x,y)));
                     data_tip = sprintf('Value: \\bf%s\n\\rmX: \\bf%g\\rm, Y: \\bf%g', value, x, y);
                 end
 
@@ -3951,8 +3951,8 @@ classdef Quant4D < matlab.apps.AppBase
                 % change as a detector or ROI moves
                 function clicked_window(source, ~)
                     id = string(source.UserData.id);
-                    if ~self.DisplayLock.Value && self.DisplayImage.Value ~= id && ismember(id, self.DisplayImage.ItemsData)
-                        mock_UI_callbacks(self, self.DisplayImage, id)
+                    if ~app.DisplayLock.Value && app.DisplayImage.Value ~= id && ismember(id, app.DisplayImage.ItemsData)
+                        mock_UI_callbacks(app, app.DisplayImage, id)
                     end
                 end
 
@@ -3960,8 +3960,8 @@ classdef Quant4D < matlab.apps.AppBase
                 % upper left corner of the diffraction figure/axis during
                 % resizing
                 function resize_figure(source, ~)
-                    if source == self.figures.Diffraction
-                        self.diffraction_dropdown.Position = [0, self.figures.Diffraction.Position(4) - self.diffraction_dropdown.Position(4), 65, 22];
+                    if source == app.figures.Diffraction
+                        app.diffraction_dropdown.Position = [0, app.figures.Diffraction.Position(4) - app.diffraction_dropdown.Position(4), 65, 22];
                     end
                 end
 
@@ -3980,9 +3980,9 @@ classdef Quant4D < matlab.apps.AppBase
 
                     % get axis limits for the given space
                     if contains(source.Tag, "Real")
-                        lim = self.common_parameters.real_axes_limit;
+                        lim = app.common_parameters.real_axes_limit;
                     elseif contains(source.Tag, "Diffraction")
-                        lim = self.common_parameters.diffraction_axes_limit;
+                        lim = app.common_parameters.diffraction_axes_limit;
                     end
 
                     % make sure we don't zoom out too far
@@ -3992,11 +3992,11 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        function selection = check_NaN(self, image, preview)
+        function selection = check_NaN(app, image, preview)
             % Function to check NaN/Inf in data/image
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    image (array) : image to be checked for the presence of NaNs
             %    preview (bool) : 
             %
@@ -4004,7 +4004,7 @@ classdef Quant4D < matlab.apps.AppBase
             %    selection
 
             arguments
-                self
+                app
                 image {mustBeNumericOrLogical} = 0;
                 preview (1,1) {mustBeNumericOrLogical} = true;
             end
@@ -4020,108 +4020,129 @@ classdef Quant4D < matlab.apps.AppBase
 
                 % For preview only
                 if preview
-                    selection = notification_dialog(self, ...
+                    selection = notification_dialog(app, ...
                                                     'quest', ...
                                                     sprintf(message), ...
                                                     title_text, ...
                                                     ["Continue", "Set NaNs to 0"]);
 
-                elseif self.dataset_parameters.pixel_binning > 1 || (self.dataset_parameters.frame_footer + self.dataset_parameters.frame_header) > 0
-                    selection = notification_dialog(self, ...
+                elseif app.dataset_parameters.pixel_binning > 1 || (app.dataset_parameters.frame_footer + app.dataset_parameters.frame_header) > 0
+                    selection = notification_dialog(app, ...
                                                     'quest', ...
                                                     sprintf(message+"\n\nRe-importing with corrected configuration is suggested."), ...
                                                     title_text, ...
                                                     ["Continue", "Set NaNs to 0"]);
                 
                 else
-                    selection = notification_dialog(self, ...
+                    selection = notification_dialog(app, ...
                                                     'quest', ...
                                                     sprintf(message+"\n\nDo you want to swap the byte-order?"), ...
                                                     title_text, ...
                                                     ["Yes, try to swap the byte-order", "No"]);
                     
                     % Select the Data Info tab and bring Settings to the front
-                    self.SettingsTabGroup.SelectedTab = self.InfoTab;
-                    figure(self.Quant4D_Fig)
-                    figure(self.figures.Settings) 
+                    app.SettingsTabGroup.SelectedTab = app.InfoTab;
+                    figure(app.Quant4D_Fig)
+                    figure(app.figures.Settings) 
                     
                     % Execute the swap byte order callbacks
                     if startsWith(selection, "Yes")
-                        dataset_options_callbacks(self,struct("Source",self.SwapByteOrder,"EventName", "ButtonPushed"))
+                        dataset_options_callbacks(app,struct("Source",app.SwapByteOrder,"EventName", "ButtonPushed"))
                     end
                 end
             end
         end
 
-        % Function to check the size of various screen attributes
-        function get_screen_info(self)
+        function get_screen_info(app)
+            % Function to check the size of various screen attributes.
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+
             % Get main screen size (MATLAB "pixels")
-            self.sys_constants.screen_size = get(0, 'ScreenSize');
+            app.sys_constants.screen_size = get(0, 'ScreenSize');
 
             % Get all monitor position/size
-            self.sys_constants.monitor_positions = get(0,'MonitorPositions');
+            app.sys_constants.monitor_positions = get(0,'MonitorPositions');
             
             % Scale for MATLAB "pixels" vs actual pixels, for high DPI
-            self.sys_constants.screen_pixel_scale = self.sys_constants.screen_size(4)/java.awt.Toolkit.getDefaultToolkit.getScreenSize.height;
+            app.sys_constants.screen_pixel_scale = app.sys_constants.screen_size(4)/java.awt.Toolkit.getDefaultToolkit.getScreenSize.height;
             
             % A Java window to measure window decorations like "title bar"/"border width"
             jf = javax.swing.JFrame('Test');
             jf.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
             jf.pack();
             insets = jf.getInsets();   % Not accurate for Windows OS, due to the transparent shadow
-            self.sys_constants.title_height = insets.top*self.sys_constants.screen_pixel_scale;
-            self.sys_constants.decor_height = self.sys_constants.title_height + insets.bottom*self.sys_constants.screen_pixel_scale;
-            self.sys_constants.decor_width = (insets.left + insets.right)*self.sys_constants.screen_pixel_scale;
+            app.sys_constants.title_height = insets.top*app.sys_constants.screen_pixel_scale;
+            app.sys_constants.decor_height = app.sys_constants.title_height + insets.bottom*app.sys_constants.screen_pixel_scale;
+            app.sys_constants.decor_width = (insets.left + insets.right)*app.sys_constants.screen_pixel_scale;
             jf.dispose()
             
             % Actual available main screen size excluding taskbar etc
             insets = java.awt.Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration(javax.swing.JFrame));
-            insets = [insets.left, insets.bottom, insets.right+insets.left, insets.top+insets.bottom] * self.sys_constants.screen_pixel_scale;
-            self.sys_constants.screen_avail = [insets(1:2)+1, self.sys_constants.screen_size(3:4)-insets(3:4)];
+            insets = [insets.left, insets.bottom, insets.right+insets.left, insets.top+insets.bottom] * app.sys_constants.screen_pixel_scale;
+            app.sys_constants.screen_avail = [insets(1:2)+1, app.sys_constants.screen_size(3:4)-insets(3:4)];
         end
 
-        % Function to get/set system constants 
-        function get_sys_constants(self)
-            % Default self background color
-            self.sys_constants.background_color = self.Quant4D_Fig.Color;
+        function get_sys_constants(app)
+            % Function to get/set system constants 
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+
+            % Default app background color
+            app.sys_constants.background_color = app.Quant4D_Fig.Color;
 
             % highlight state buttons when enabled
-            self.sys_constants.highlight_color = [0.702, 1.00, 0.702];
+            app.sys_constants.highlight_color = [0.702, 1.00, 0.702];
             
             % Warning color
-            self.sys_constants.warning_color = [1.00, 0.65, 0.00];
+            app.sys_constants.warning_color = [1.00, 0.65, 0.00];
             
             % Get native endianness
             [~,~,endian] = computer();
-            self.sys_constants.system_endianness = lower(endian);
-            self.sys_constants.endian_text = struct("l",'Little Endian',"b",'Big Endian');
+            app.sys_constants.system_endianness = lower(endian);
+            app.sys_constants.endian_text = struct("l",'Little Endian',"b",'Big Endian');
         end
 
-        % Function to save vector field images
-        function save_vector_field(self)
+        function save_vector_field(app)
+            % Function to save vector field images.
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+
                 % Create temporary figure with axes
                 fig = figure("Visible", "on");
                 ax = axes(fig);
                 ax.NextPlot = "replace";
-                imagesc(ax, self.images.CoMPh, "AlphaData", self.images.CoMMagNorm);
+                imagesc(ax, app.images.CoMPh, "AlphaData", app.images.CoMMagNorm);
                 set(ax, ...
                     "DataAspectRatio", [1 1 1], ...
                     "XTick", [], ...
                     "YTick", [], ...
                     "YDir", "reverse", ...
                     "Color", "k");
-                axis(ax, self.common_parameters.real_axes_limit);
+                axis(ax, app.common_parameters.real_axes_limit);
                 colormap(ax, hsv);
 
                 % get the vector field sampling (1:1, 1:2, etc)
-                vec = self.image_axes.CoMPhMag.UserData.vector_field;
+                vec = app.image_axes.CoMPhMag.UserData.vector_field;
 
                 set(ax, "NextPlot", "add");
                 quiver(ax, ...
-                       1:vec:self.dataset_parameters.n_frames(1),...
-                       1:vec:self.dataset_parameters.n_frames(2),...
-                       -self.images.CoMX(1:vec:end,1:vec:end)./vec,...
-                       -self.images.CoMY(1:vec:end,1:vec:end)./vec,...
+                       1:vec:app.dataset_parameters.n_frames(1),...
+                       1:vec:app.dataset_parameters.n_frames(2),...
+                       -app.images.CoMX(1:vec:end,1:vec:end)./vec,...
+                       -app.images.CoMY(1:vec:end,1:vec:end)./vec,...
                        1/vec,"w");
                 set(ax, ...
                     "DataAspectRatio", [1 1 1], ...
@@ -4129,46 +4150,68 @@ classdef Quant4D < matlab.apps.AppBase
                     "YTick", [], ...
                     "YDir", "reverse", ...
                     "NextPlot", "replace");
-                axis(ax, self.common_parameters.real_axes_limit);
+                axis(ax, app.common_parameters.real_axes_limit);
 
                 % Save as a .png, .fig, and .pdf (vector image, not pixelated)
                 %fig.InvertHardcopy = "off";
-                exportgraphics(fig,strcat(self.SaveImagePrefix.Value, "VectField.png"), "Resolution", 1000, "BackgroundColor", "k");
-                saveas(fig,strcat(self.SaveImagePrefix.Value, "VectField.fig"));
+                exportgraphics(fig,strcat(app.SaveImagePrefix.Value, "VectField.png"), "Resolution", 1000, "BackgroundColor", "k");
+                saveas(fig,strcat(app.SaveImagePrefix.Value, "VectField.fig"));
                 exportgraphics(fig,"VectField_vector.pdf", 'ContentType', 'vector', "BackgroundColor","K")
                 fig.Visible = "off";
 
                 % write vector field to a comma-separated text file
-                writematrix([-self.images.CoMX(1:vec:end,1:vec:end)./vec ...
-                             -self.images.CoMY(1:vec:end,1:vec:end)./vec], ...
-                             strcat(self.SaveImagePrefix.Value, "vector_field.txt"));
+                writematrix([-app.images.CoMX(1:vec:end,1:vec:end)./vec ...
+                             -app.images.CoMY(1:vec:end,1:vec:end)./vec], ...
+                             strcat(app.SaveImagePrefix.Value, "vector_field.txt"));
                 
                 close(fig);
         end
 
-        % Function to delete plotted detectors if they exist
-        function clear_detectors(self)
+        function clear_detectors(app)
+            % Function to delete plotted detectors if they exist.
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %
+            % Returns:
+            %    None
+
             % Transmitted Beam alignment
-            delete(findobj(self.image_axes.Diffraction, "Tag","TransBeamAnnot"))
+            delete(findobj(app.image_axes.Diffraction, "Tag","TransBeamAnnot"))
 
             % Annular/Round detectors and Segmented detectors
-            delete(findobj(self.image_axes.Diffraction, '-regexp', "Tag", "AnnDetrAnnot"))
-            delete(findobj(self.image_axes.Diffraction, "Tag", "SegDetrAnnot"))
+            delete(findobj(app.image_axes.Diffraction, '-regexp', "Tag", "AnnDetrAnnot"))
+            delete(findobj(app.image_axes.Diffraction, "Tag", "SegDetrAnnot"))
 
             % Virtual apertures
-            delete(findobj(self.image_axes.Diffraction, "Tag", "VrApertAnnot"))
+            delete(findobj(app.image_axes.Diffraction, "Tag", "VrApertAnnot"))
 
             % Custom detectors - hide Custom ROIs only
-            set(findobj(self.image_axes.Diffraction.Children, '-regexp', "Tag", "Custom "), "Visible", false);
+            set(findobj(app.image_axes.Diffraction.Children, '-regexp', "Tag", "Custom "), "Visible", false);
 
             % Scan direction alignment
-            delete(findobj(self.image_axes.Diffraction, "Tag", "ScanDirAnnot"))
+            delete(findobj(app.image_axes.Diffraction, "Tag", "ScanDirAnnot"))
         end
 
-        % Function to draw Real-space ROI of various shapes on real space image(s)
-        function draw_real_ROI(self, event, roi_type)
+        function draw_real_ROI(app, event, roi_type)
+            % Function to draw Real-space ROI of various shapes on real space image(s)
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %    roi_type (str) : "full", "point", "ellipse", "rectangle", "poly", "file"
+            %
+            % Returns:
+            %    None
+
+            arguments
+                app
+                event
+                roi_type {mustBeText, mustBeMember(roi_type,{"full", "point", "ellipse", "rectangle", "poly", "file"})} = "full";
+            end
+
             % Delete all previous ROIs
-            delete(findobj(self.ui_groups.real_axes, "Tag",'Real-space ROI'))
+            delete(findobj(app.ui_groups.real_axes, "Tag",'Real-space ROI'))
 
             % set roi polygon color
             color = [1 0.5 0.5];
@@ -4176,34 +4219,34 @@ classdef Quant4D < matlab.apps.AppBase
             % Special case for drawing polygon ROI
             if roi_type == "poly"
                 % List for available real-space images
-                real_sace_images = self.ui_groups.image_space == "Real" & ...
-                                   self.ui_groups.image_type ~= "Mask" & ...
-                                   ismember(self.ui_groups.image_id,self.DisplayImage.ItemsData);
+                real_sace_images = app.ui_groups.image_space == "Real" & ...
+                                   app.ui_groups.image_type ~= "Mask" & ...
+                                   ismember(app.ui_groups.image_id,app.DisplayImage.ItemsData);
 
-                selection = notification_dialog(self, ...
+                selection = notification_dialog(app, ...
                                           'list', ...
                                           sprintf("Select a Real-space Image to draw a polygon ROI.\n\n" + ...
                                             "Press 'Esc' to cancel during drawing. Please refer to MATLAB's 'drawpolygon' for more tips.\n"), ...
                                           "Draw Polygon ROI", ...
-                                          self.ui_groups.image_name(real_sace_images));
+                                          app.ui_groups.image_name(real_sace_images));
                 
                 % Revert to "full" is canceled
                 if isempty(selection)
-                    mock_UI_callbacks(self, self.RealROIShape, "full");
+                    mock_UI_callbacks(app, app.RealROIShape, "full");
                     return;
                 end
                 
                 % Bring selected image window to front
-                options = self.ui_groups.image_id(real_sace_images);
+                options = app.ui_groups.image_id(real_sace_images);
                 selection_index = options(selection);
-                ax = self.image_axes.(selection_index);
-                figure(self.figures.(selection_index))
+                ax = app.image_axes.(selection_index);
+                figure(app.figures.(selection_index))
                 
                 % Disable UIs until drawing finishes
-                enable_windows(self, false)
+                enable_windows(app, false)
                 
                 % Enable the selected image only
-                self.figures.(selection_index).UserData.grayout.Visible = "off";
+                app.figures.(selection_index).UserData.grayout.Visible = "off";
                 
                 % Draw temporary polygon for positions
                 tmp_polygon = drawpolygon(ax, "Color", color);
@@ -4211,57 +4254,57 @@ classdef Quant4D < matlab.apps.AppBase
                 delete(tmp_polygon)
 
                 % Re-enable all windows
-                enable_windows(self,true)
+                enable_windows(app,true)
                 
                 % Revert to "full" is canceled
                 if isempty(polygon_position)
-                    mock_UI_callbacks(self, self.RealROIShape, "full");
+                    mock_UI_callbacks(app, app.RealROIShape, "full");
                     return;
                 end
             end
             
             % Draw ROIs on Real-space images, except the mask image
-            real_space_limits = range([self.image_axes.Real.XLim; self.image_axes.Real.YLim]'); 
-            pos = [self.RealROIFrameX.Value self.RealROIFrameY.Value];
+            real_space_limits = range([app.image_axes.Real.XLim; app.image_axes.Real.YLim]'); 
+            pos = [app.RealROIFrameX.Value app.RealROIFrameY.Value];
 
-            for selection_index = self.ui_groups.image_id(self.ui_groups.image_space == "Real" & self.ui_groups.image_type ~= "Mask")'
+            for selection_index = app.ui_groups.image_id(app.ui_groups.image_space == "Real" & app.ui_groups.image_type ~= "Mask")'
                 switch roi_type
                     case "full"
-                        roi = drawrectangle(self.image_axes.(selection_index), ...
+                        roi = drawrectangle(app.image_axes.(selection_index), ...
                                             "Position", [1 1 real_space_limits], ...
                                             "Visible", 0, ...
                                             "EdgeAlpha", 0, ...
                                             "FaceAlpha", 0);
                     
-                    case 'point'
-                        roi = drawpoint(self.image_axes.(selection_index), ...
+                    case "point"
+                        roi = drawpoint(app.image_axes.(selection_index), ...
                                         "Position",pos);
                     
-                    case 'ellipse'
-                        roi = drawellipse(self.image_axes.(selection_index), ...
+                    case "ellipse"
+                        roi = drawellipse(app.image_axes.(selection_index), ...
                                           "Center", pos, ...
                                           "SemiAxes", min(0.1*real_space_limits)*[1 1], ...
                                           "FaceAlpha", 0);
                     
-                    case 'rectangle'
-                        roi = drawrectangle(self.image_axes.(selection_index), ...
+                    case "rectangle"
+                        roi = drawrectangle(app.image_axes.(selection_index), ...
                                             "Position", [pos-0.1*real_space_limits, 0.2*real_space_limits], ...
                                             "Rotatable", true, ...
                                             "FaceAlpha",0);
                     
-                    case 'poly'
-                        roi = drawpolygon(self.image_axes.(selection_index), ...
+                    case "poly"
+                        roi = drawpolygon(app.image_axes.(selection_index), ...
                                           "Position", polygon_position, ...
                                           "FaceAlpha", 0);
                     
                     case "file"
-                        roi = drawrectangle(self.image_axes.(selection_index), ...
+                        roi = drawrectangle(app.image_axes.(selection_index), ...
                                             "Position", [1 1 real_space_limits], ...
                                             "Visible", 0, ...
                                             "EdgeAlpha", 0, ...
                                             "FaceAlpha",0);
-                        bw = visboundaries(self.image_axes.(selection_index), ...
-                                           bwboundaries(self.images.RealROIFile'), ...
+                        bw = visboundaries(app.image_axes.(selection_index), ...
+                                           bwboundaries(app.images.RealROIFile'), ...
                                            "Color",color, ...
                                            "EnhanceVisibility",0);
                         bw.Tag = 'Real-space ROI';
@@ -4272,37 +4315,46 @@ classdef Quant4D < matlab.apps.AppBase
                     "Color", color, ...
                     "Tag", "Real-space ROI");
 
-                roi.UserData.Move = addlistener(roi, "MovingROI", @self.move_real_ROI);
-                addlistener(roi, "ROIMoved", @self.move_real_ROI);
-                self.annotations.RealROI.(selection_index) = roi;
+                roi.UserData.Move = addlistener(roi, "MovingROI", @app.move_real_ROI);
+                addlistener(roi, "ROIMoved", @app.move_real_ROI);
+                app.annotations.RealROI.(selection_index) = roi;
             end
 
-            move_real_ROI(self, self.annotations.RealROI.Real, event)
+            move_real_ROI(app, app.annotations.RealROI.Real, event)
         end
 
-        % Function to move Real-space ROIs on real space image(s)
-        function move_real_ROI(self, source, event)
+        function move_real_ROI(app, source, event)
+            % Function to move Real-space ROIs on real space image(s)
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    source (images.roi.Rectangle | images.roi.Point | images.roi.Ellipse | images.roi.Polygon) : Real-space ROIs
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    None
+
             debug_time = tic;
             
             % Update panel values for individual probe positions
-            roi = self.annotations.RealROI.Real;
-            x = self.RealROIFrameX.Value;
-            y = self.RealROIFrameY.Value;
+            roi = app.annotations.RealROI.Real;
+            x = app.RealROIFrameX.Value;
+            y = app.RealROIFrameY.Value;
             
             switch source
-                case self.RealROIFrameX
+                case app.RealROIFrameX
                     % Force X >= 1
                     x = max(1, event.Value);
                 
-                case self.RealROIFrameY
+                case app.RealROIFrameY
                     % Force Y >= 1
                     y = max(1, event.Value);
 
-                case self.diffraction_dropdown
+                case app.diffraction_dropdown
                 
                 otherwise % E.g. ROIs
                     roi = source;
-                    switch self.RealROIShape.Value
+                    switch app.RealROIShape.Value
                         case {'rectangle', 'full', 'file'}
                             position = source.Position(1:2) + source.Position(3:4)/2;
                             x = position(1);
@@ -4328,95 +4380,106 @@ classdef Quant4D < matlab.apps.AppBase
             x = round(x);
             y = round(y);
 
-            % Set current ROI position if called from `self.RealROIFrameX` or `self.RealROIFrameY`, and it's a point ROI
-            if ismember(source, [self.RealROIFrameX, self.RealROIFrameY]) && self.RealROIShape.Value == "point"
+            % Set current ROI position if called from `app.RealROIFrameX` or `app.RealROIFrameY`, and it's a point ROI
+            if ismember(source, [app.RealROIFrameX, app.RealROIFrameY]) && app.RealROIShape.Value == "point"
                 roi.Position = [x y];
             end
             
             % Update UI
-            set_external_source(self, event,[self.RealROIFrameX, self.RealROIFrameY],{"Value"},{x;y})
+            set_external_source(app, event,[app.RealROIFrameX, app.RealROIFrameY],{"Value"},{x;y})
             
             % Only update ROIs on other visible figures; update all when not in "changing" Event
-            roi_struct = structfun(@(i) i, self.annotations.RealROI);
-            roi_struct = roi_struct(arrayfun(@(i) ancestor(i,'figure').Visible, roi_struct) | is_static_event(self, event));
+            roi_struct = structfun(@(i) i, app.annotations.RealROI);
+            roi_struct = roi_struct(arrayfun(@(i) ancestor(i,'figure').Visible, roi_struct) | is_static_event(app, event));
             
             % Sync existing properties of positions etc.
             for prop = ["Position" "Center" "SemiAxes" "RotationAngle"]
                 if isprop(roi, prop)
-                    set_external_source(self, event, roi_struct, prop, roi.(prop));
+                    set_external_source(app, event, roi_struct, prop, roi.(prop));
                 end
             end
 
             % Update images
-            if to_update_image(self, event)
+            if to_update_image(app, event)
                 % generate a mask for displaying diffraction pattern
-                switch self.RealROIShape.Value
+                switch app.RealROIShape.Value
                     case "full"
-                        mask_real = true(self.dataset_parameters.n_frames);
+                        mask_real = true(app.dataset_parameters.n_frames);
                     
                     case 'point'
-                        mask_real = false(self.dataset_parameters.n_frames);
+                        mask_real = false(app.dataset_parameters.n_frames);
                         mask_real(x, y) = true;
                     
                     case 'file'
-                        mask_real = self.images.RealROIFile;
+                        mask_real = app.images.RealROIFile;
                     
                     otherwise
-                        mask_real = createMask(self.annotations.RealROI.Real, self.image_displays.Real)';
+                        mask_real = createMask(app.annotations.RealROI.Real, app.image_displays.Real)';
                 end
 
                 % Convert to single/double
-                mask_real = cast(mask_real,self.dataset_parameters.data_type);
+                mask_real = cast(mask_real,app.dataset_parameters.data_type);
 
                 % Invert mask?
-                if self.RealROIInvert.Value
+                if app.RealROIInvert.Value
                     mask_real = max(mask_real,[], "all") - mask_real;
                 end
 
                 % Store the mask for plotting/saving
-                self.images.RealMask = mask_real;
-                self.masks.real = mask_real;
+                app.images.RealMask = mask_real;
+                app.masks.real = mask_real;
 
                 % Update diffraction pattern for the specified ROI; special
                 % case to speed up `point` as it does not require the
                 % entire dataset to be multiplied
-                if strcmp(self.RealROIShape.Value, "point")
-                    self.images.Diffraction = gather(reshape(self.data(:,mask_real==1), self.dataset_parameters.n_pixels));
+                if strcmp(app.RealROIShape.Value, "point")
+                    app.images.Diffraction = gather(reshape(app.data(:,mask_real==1), app.dataset_parameters.n_pixels));
                 else
-                    switch self.diffraction_dropdown.Value
+                    switch app.diffraction_dropdown.Value
                         case 'max'
-                            self.images.Diffraction = gather(reshape(max(self.data.*reshape(mask_real, 1, []), [],2), self.dataset_parameters.n_pixels));
+                            app.images.Diffraction = gather(reshape(max(app.data.*reshape(mask_real, 1, []), [],2), app.dataset_parameters.n_pixels));
 
                         case 'std'
-                            self.images.Diffraction = gather(reshape(std(self.data.*reshape(mask_real, 1, []), [],2), self.dataset_parameters.n_pixels));
+                            app.images.Diffraction = gather(reshape(std(app.data.*reshape(mask_real, 1, []), [],2), app.dataset_parameters.n_pixels));
 
                         otherwise % sum, mean, sqrt, ln, log10
-                            self.images.Diffraction = gather(reshape(self.data*reshape(mask_real, [], 1), self.dataset_parameters.n_pixels));
+                            app.images.Diffraction = gather(reshape(app.data*reshape(mask_real, [], 1), app.dataset_parameters.n_pixels));
                     end
                 end
                 
                 % add operation on top of summed data
-                switch self.diffraction_dropdown.Value
+                switch app.diffraction_dropdown.Value
                     case 'mean'
-                        self.images.Diffraction = self.images.Diffraction / sum(mask_real, "all");
+                        app.images.Diffraction = app.images.Diffraction / sum(mask_real, "all");
 
                     case 'sqrt'
-                        self.images.Diffraction = real(sqrt(self.images.Diffraction));
+                        app.images.Diffraction = real(sqrt(app.images.Diffraction));
                     
                     case 'ln'
-                        self.images.Diffraction = clip(real(log(self.images.Diffraction)),0,Inf);
+                        app.images.Diffraction = clip(real(log(app.images.Diffraction)),0,Inf);
                     
                     case 'log10'
-                        self.images.Diffraction = clip(real(log10(self.images.Diffraction)),0,Inf);
+                        app.images.Diffraction = clip(real(log10(app.images.Diffraction)),0,Inf);
                 end
 
-                plot_all_patterns(self, event)
+                plot_all_patterns(app, event)
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
-        function get_fields(self, tree_node, variable_struct)
+        function get_fields(app, tree_node, variable_struct)
+            % Function to recursively get all fields on a TreeNode so the
+            % user can view important internal variables and values
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    tree_node (TreeNode) : matlab.ui.container.TreeNode
+            %    variable_struct (struct) : structure containing variables or parameters
+            %
+            % Returns:
+            %    None
+
             if ~isstruct(variable_struct)
                 return
             end
@@ -4435,7 +4498,7 @@ classdef Quant4D < matlab.apps.AppBase
                     if isempty(parent) || ~isvalid(parent)
                         parent = uitreenode(tree_node, "Text", field_name);
                     end
-                    get_fields(self, parent, item)
+                    get_fields(app, parent, item)
                 end
 
                 % only add uitreenode if it doesn't already exists
@@ -4453,11 +4516,11 @@ classdef Quant4D < matlab.apps.AppBase
     methods (Access = private)
 
         % Code that executes after component creation
-        function startup_function(self, debug)
+        function startup_function(app, debug)
             % Code that executes after component creation
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    debug: Boolean to enable/disable debug timings
             %
             % Returns:
@@ -4465,154 +4528,154 @@ classdef Quant4D < matlab.apps.AppBase
             %    parameters, and data 
             
             arguments
-                self;
+                app;
                 debug (1,1) {mustBeNumericOrLogical} = false;
             end
 
             debug_time = tic;
 
             % Non-0 values if debugging
-            self.debug = debug;
+            app.debug = debug;
 
             % Hide until startup process is ready
-            self.Quant4D_Fig.Visible = "off"; 
+            app.Quant4D_Fig.Visible = "off"; 
 
             % get/set system info
-            get_screen_info(self)
-            get_sys_constants(self)
-            get_memory(self);
-            get_GPU(self);
+            get_screen_info(app)
+            get_sys_constants(app)
+            get_memory(app);
+            get_GPU(app);
 
             % Disable histogram interactions
-            self.HistogramAxes.Interactions = [];
+            app.HistogramAxes.Interactions = [];
             
             % Setup "Custom Detector" tables
-            set(self.CustomDetectorTable, ...
+            set(app.CustomDetectorTable, ...
                 'SelectionType','row', ...
                 'Multiselect',0, ...
                 'Data',table('Size',[0 6], ...
                              'VariableTypes',{'string','string','string','logical','logical','double'}, ...
                              'VariableNames',{'ID','Type','Label', 'Enable','Show','Weight'}));
-            self.CustomDetectorDetailsTable.ColumnFormat = {'bank','bank','bank'};
+            app.CustomDetectorDetailsTable.ColumnFormat = {'bank','bank','bank'};
             
             % Create Other Panel and Image Windows
-            create_other_windows(self)
+            create_other_windows(app)
 
             % Keep UIs disabled
-            enable_windows(self,false)
+            enable_windows(app,false)
 
-            % Reset self UI and data, which enters Import Preview Mode
-            reset_Quant4D(self, struct("Source", "startup_function", "EventName",[]))
+            % Reset app UI and data, which enters Import Preview Mode
+            reset_Quant4D(app, struct("Source", "startup_function", "EventName",[]))
 
-            % make main self UI visible
-            self.Quant4D_Fig.Visible = "on";
+            % make main app UI visible
+            app.Quant4D_Fig.Visible = "on";
 
             % Plot axes display directions
-            mock_UI_callbacks(self, self.ShowDiffractionAxes);
-            mock_UI_callbacks(self, self.ShowRealAxes)
+            mock_UI_callbacks(app, app.ShowDiffractionAxes);
+            mock_UI_callbacks(app, app.ShowRealAxes)
             
             % Link Axes limits for zooming, `drawnow` implied
-            linkaxes(self.ui_groups.real_axes);
-            linkaxes(self.ui_groups.diffraction_axes);
+            linkaxes(app.ui_groups.real_axes);
+            linkaxes(app.ui_groups.diffraction_axes);
 
             % populate variable viewer 
-            variable_viewer(self, struct())
+            variable_viewer(app, struct())
 
-            debug_toc(self, [], "`startup_function` finished", debug_time)
+            debug_toc(app, [], "`startup_function` finished", debug_time)
         end
 
         % Callback function: CancelImport, ImportData, ReimportMenu, 
         % ...and 1 other component
-        function import_callbacks(self, event)
+        function import_callbacks(app, event)
             % Function called when the user clicks ImportData,
             % CancelImport, or ShowImportWindow (on the main UI). 
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             switch event.Source
-                case self.ShowImportWindow
-                    figure(self.figures.Import)
+                case app.ShowImportWindow
+                    figure(app.figures.Import)
                     
                     % Enter Import Preview Mode
-                    if self.Mode.Value ~= "Preview"
-                        mock_UI_callbacks(self, self.Mode, "Preview");
+                    if app.Mode.Value ~= "Preview"
+                        mock_UI_callbacks(app, app.Mode, "Preview");
                     end
 
-                case self.CancelImport
+                case app.CancelImport
                     % Hide window when closing
-                    self.figures.Import.Visible = "off";
+                    app.figures.Import.Visible = "off";
                     
                     % Try to re-enter previous detector mode from Import Preview Mode
-                    if self.Mode.Value == "Preview" && isfield(self.common_parameters,'detector_mode')
-                        mock_UI_callbacks(self, self.Mode, self.common_parameters.detector_mode);
+                    if app.Mode.Value == "Preview" && isfield(app.common_parameters,'detector_mode')
+                        mock_UI_callbacks(app, app.Mode, app.common_parameters.detector_mode);
                     end
 
-                case self.ReimportMenu
+                case app.ReimportMenu
                     % Re-import the current dataset, mostly for debugging
-                    if ~isfield(self.tmp_variables,'prev_D')
+                    if ~isfield(app.tmp_variables,'prev_D')
                         return;
                     end
                     
-                    unload_data(self)
-                    self.dataset_parameters = self.tmp_variables.prev_D;
-                    import_data(self, event)
+                    unload_data(app)
+                    app.dataset_parameters = app.tmp_variables.prev_D;
+                    import_data(app, event)
 
-                case {self.ImportData self.PreviewButton}
+                case {app.ImportData app.PreviewButton}
                     % When the "Import Data" or "Preview" button is pressed
-                    self.tmp_variables.Preview = [];
+                    app.tmp_variables.Preview = [];
 
-                    if ~isfile(self.ImportFilePath.Value)
-                        notification_dialog(self, ...
+                    if ~isfile(app.ImportFilePath.Value)
+                        notification_dialog(app, ...
                                             "warn", ...
                                             'The entered file path is invalid!', ...
                                             'Invalid File!');
                     
-                    elseif self.ImportDataType.Value == "unknown"
-                        notification_dialog(self, ...
+                    elseif app.ImportDataType.Value == "unknown"
+                        notification_dialog(app, ...
                                             "warn", ...
                                             'Select the correct data type!', ...
                                             'Select Data Type!');
                     
                     else
-                        if event.Source == self.ImportData
+                        if event.Source == app.ImportData
                             % Import data
-                            self.figures.Import.Visible = "off";
+                            app.figures.Import.Visible = "off";
                             
                             % unload data unless `SwapDataset` is ticked
-                            unload_data(self, self.SwapDataset.Value)
+                            unload_data(app, app.SwapDataset.Value)
                             
                             % gather all options from the Import UI, preview mode = false
-                            self.dataset_parameters = gather_import_options(self, false);
+                            app.dataset_parameters = gather_import_options(app, false);
                             
-                            % Backup current `self.D`
-                            self.tmp_variables.prev_D = self.dataset_parameters;
-                            import_data(self, event)
+                            % Backup current `app.D`
+                            app.tmp_variables.prev_D = app.dataset_parameters;
+                            import_data(app, event)
                         else
                             % gather all options from the Import UI, preview mode = true
-                            self.tmp_variables.Preview = gather_import_options(self, true);
+                            app.tmp_variables.Preview = gather_import_options(app, true);
                         end
                     end
 
-                case {self.SwapDiffractionXY self.SwapRealXY}
+                case {app.SwapDiffractionXY app.SwapRealXY}
                     % Refresh axes settings etc when dimensions swapped
-                    prepare_data(self, event)
+                    prepare_data(app, event)
 
             end
         end
 
         % Callback function: ImportFilePath, ImportFileSelect
-        function import_select_file(self, event)
+        function import_select_file(app, event)
             % Function called when the user clicks Select or updates
             % the file path on the Import UI (`ImportFileSelect` and
             % `ImportFilePath`, respectively)
             %
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -4620,76 +4683,76 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_time = tic;
 
-            if event.Source == self.ImportFileSelect
+            if event.Source == app.ImportFileSelect
                 % Get user to select a file
                 [fileName, fileDir] = uigetfile({'*.raw;*.mib;*.mrc;*.dm3;*.dm4;*.npy;*.h5;*.hdf5;*.hspy','Supported Formats'; ...
                                                  '*.*','All Files'}, ...
                                                  'Select 4DSTEM Dataset');
                 
                 % Force to show
-                set(self.figures.Import,"Visible", "off","Visible", "on");
+                set(app.figures.Import,"Visible", "off","Visible", "on");
                 
                 if fileName
-                    self.ImportFilePath.Value = fullfile(fileDir, fileName);
+                    app.ImportFilePath.Value = fullfile(fileDir, fileName);
                 end
             end
 
-            if isfile(self.ImportFilePath.Value)
+            if isfile(app.ImportFilePath.Value)
                 % get file directory and extension
-                [fileDir, ~, fileExt] = fileparts(self.ImportFilePath.Value);
+                [fileDir, ~, fileExt] = fileparts(app.ImportFilePath.Value);
 
                 % change to directory containing dataset for future saving
                 cd(fileDir)
 
                 % get file size in bytes
-                self.tmp_variables.FileSize = dir(self.ImportFilePath.Value).bytes;
+                app.tmp_variables.FileSize = dir(app.ImportFilePath.Value).bytes;
                 
                 % Display actual file size in bytes and GiB
-                self.ImportActualFilesize.Text = sprintf('%d bytes, %.1f GiB',self.tmp_variables.FileSize,self.tmp_variables.FileSize/1024^3);
+                app.ImportActualFilesize.Text = sprintf('%d bytes, %.1f GiB',app.tmp_variables.FileSize,app.tmp_variables.FileSize/1024^3);
 
                 switch lower(fileExt)
                     case ".mib"
                         % Medipix data
-                        self.Medipix.Value = true;
+                        app.Medipix.Value = true;
                     
                     case ".mrc"
                         % MRC data
-                        self.MRC.Value = true;
+                        app.MRC.Value = true;
                     
                     case {".dm3"; ".dm4"}
                         % Gatan K2/K3 data
-                        self.DM34.Value = true;
+                        app.DM34.Value = true;
                     
                     case {".h5"; ".hdf5"; ".hspy"}
-                        self.HDF5.Value = true;
+                        app.HDF5.Value = true;
                     
                     case {".raw"}
-                        self.EMPAD.Value = true;
+                        app.EMPAD.Value = true;
                     
                     otherwise
-                        self.Custom.Value = true;
+                        app.Custom.Value = true;
                 end
             
             else
                 % if the file doesn't exist, revert to starting point
-                self.ImportActualFilesize.Text = "";
-                self.tmp_variables.FileSize = 0;
+                app.ImportActualFilesize.Text = "";
+                app.tmp_variables.FileSize = 0;
                 
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
 
             % Further file info
-            import_file_type(self, event)
+            import_file_type(app, event)
         end
 
         % Callback function: FileTypeButtonGroup, SubDataset
-        function import_file_type(self, event)
+        function import_file_type(app, event)
             % Function called when the user selects a new file type
             % category (`FileTypeButtonGroup`) or selects a new `SubDataset`
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -4705,7 +4768,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             notes = "";
             err = 0;
-            self.ImportDataType.Items = {'Select Data Type';
+            app.ImportDataType.Items = {'Select Data Type';
                                         '8-bit Signed';
                                         '8-bit Unsigned';
                                         '16-bit Signed';
@@ -4717,7 +4780,7 @@ classdef Quant4D < matlab.apps.AppBase
                                         '64-bit Signed';
                                         '64-bit Unsigned'};
 
-            self.ImportDataType.ItemsData = {'unknown';
+            app.ImportDataType.ItemsData = {'unknown';
                                             'int8';
                                             'uint8';
                                             'int16';
@@ -4729,58 +4792,58 @@ classdef Quant4D < matlab.apps.AppBase
                                             'int64';
                                             'uint64'};
 
-            self.tmp_variables.dm = [];
-            self.tmp_variables.h5 = [];
-            set([self.DataOffset self.FrameHeader self.FrameFooter], "Value",0)
-            self.tmp_variables.fileTail = 0;
-            self.ImportByteOrder.Value = "l";
-            self.ImportDataType.Value = "unknown";
+            app.tmp_variables.dm = [];
+            app.tmp_variables.h5 = [];
+            set([app.DataOffset app.FrameHeader app.FrameFooter], "Value",0)
+            app.tmp_variables.fileTail = 0;
+            app.ImportByteOrder.Value = "l";
+            app.ImportDataType.Value = "unknown";
             
-            if event.Source == self.ImportFileSelect
-                set(self.SubDataset, "Items",{}, "Enable", "off")
+            if event.Source == app.ImportFileSelect
+                set(app.SubDataset, "Items",{}, "Enable", "off")
             end
             
-            if isfile(self.ImportFilePath.Value)
-                switch self.FileTypeButtonGroup.SelectedObject
-                    case self.EMPAD
-                        self.FrameFooter.Value = 1024;
-                        self.ImportDataType.Value = "single";
-                        self.ImportPixelsX.Value = 128;
-                        self.ImportPixelsY.Value = 128;
+            if isfile(app.ImportFilePath.Value)
+                switch app.FileTypeButtonGroup.SelectedObject
+                    case app.EMPAD
+                        app.FrameFooter.Value = 1024;
+                        app.ImportDataType.Value = "single";
+                        app.ImportPixelsX.Value = 128;
+                        app.ImportPixelsY.Value = 128;
                         notes = sprintf('Pixels:\t128x128\n32-bit Real\n** EMPAD data have 1024-byte frame footers');
-                        guess_frames_from_size(self);
-                        get_dims_from_name(self, self.ImportFilePath.Value)
+                        guess_frames_from_size(app);
+                        get_dims_from_name(app, app.ImportFilePath.Value)
 
                         % check if file size matches (i.e. likely an EMPAD
                         % file), or if it suits better to set FrameHeader,
                         % FrameFoot, and DataOffset to 0 (i.e. a .raw
                         % binary file from simulation or other)
-                        file_size = self.DataOffset.Value ...
-                                    + (self.FrameHeader.Value...
-                                       + self.ImportPixelsX.Value ...
-                                       * self.ImportPixelsY.Value ...
-                                       * self.byte_size.(self.ImportDataType.Value) ...
-                                       + self.FrameFooter.Value ...
+                        file_size = app.DataOffset.Value ...
+                                    + (app.FrameHeader.Value...
+                                       + app.ImportPixelsX.Value ...
+                                       * app.ImportPixelsY.Value ...
+                                       * app.byte_size.(app.ImportDataType.Value) ...
+                                       + app.FrameFooter.Value ...
                                        ) ...
-                                    * (self.ImportFramesX.Value* self.ImportFramesX.Value);
-                        if file_size > dir(self.ImportFilePath.Value).bytes
-                            test_size = self.ImportPixelsX.Value * ...
-                                        self.ImportPixelsY.Value * ...
-                                        self.ImportFramesX.Value * ...
-                                        self.ImportFramesX.Value * ...
-                                        self.byte_size.(self.ImportDataType.Value);
-                            if test_size == dir(self.ImportFilePath.Value).bytes
-                                self.Custom.Value = 1;
-                                self.FrameFooter.Value = 0;
-                                self.FrameHeader.Value = 0;
-                                self.DataOffset.Value = 0;
+                                    * (app.ImportFramesX.Value* app.ImportFramesX.Value);
+                        if file_size > dir(app.ImportFilePath.Value).bytes
+                            test_size = app.ImportPixelsX.Value * ...
+                                        app.ImportPixelsY.Value * ...
+                                        app.ImportFramesX.Value * ...
+                                        app.ImportFramesX.Value * ...
+                                        app.byte_size.(app.ImportDataType.Value);
+                            if test_size == dir(app.ImportFilePath.Value).bytes
+                                app.Custom.Value = 1;
+                                app.FrameFooter.Value = 0;
+                                app.FrameHeader.Value = 0;
+                                app.DataOffset.Value = 0;
                             end
                         end
 
-                    case self.Medipix
-                        self.ImportDataType.Items = ["Select Data Type"; ["1 or 6";"12";"24"]+"-bit Padded Unsigned"];
-                        self.ImportDataType.ItemsData = {"unknown";"uint8";"uint16";"uint32"};
-                        fid = fopen(self.ImportFilePath.Value,"r");
+                    case app.Medipix
+                        app.ImportDataType.Items = ["Select Data Type"; ["1 or 6";"12";"24"]+"-bit Padded Unsigned"];
+                        app.ImportDataType.ItemsData = {"unknown";"uint8";"uint16";"uint32"};
+                        fid = fopen(app.ImportFilePath.Value,"r");
                         fmeta = strsplit(fread(fid, 128, 'uint8=>char')', ',');
                         
                         % Signature character in header
@@ -4794,20 +4857,20 @@ classdef Quant4D < matlab.apps.AppBase
                             
                             if dtype(1) == 'u'
                                 switch bitsize
-                                    case {1; 6}, self.ImportDataType.Value = "uint8";
-                                    case 12, self.ImportDataType.Value = "uint16";
-                                    case 24, self.ImportDataType.Value = "uint32";
+                                    case {1; 6}, app.ImportDataType.Value = "uint8";
+                                    case 12, app.ImportDataType.Value = "uint16";
+                                    case 24, app.ImportDataType.Value = "uint32";
                                 end
                             end
                             
-                            self.FrameHeader.Value = str2double(fmeta{3});
-                            self.ImportByteOrder.Value = "b";
-                            self.ImportPixelsX.Value = str2double(fmeta{5});
-                            self.ImportPixelsY.Value = str2double(fmeta{6});
+                            app.FrameHeader.Value = str2double(fmeta{3});
+                            app.ImportByteOrder.Value = "b";
+                            app.ImportPixelsX.Value = str2double(fmeta{5});
+                            app.ImportPixelsY.Value = str2double(fmeta{6});
                             notes = sprintf(['Dim: X = %s, Y = %s\nData type: %s\nPixel depth: %d bit\n' ...
                                              'Frame header: %s bytes\nBig endian'], fmeta{5}, fmeta{6}, fmeta{7}, bitsize, fmeta{3});
-                            guess_frames_from_size(self);
-                            get_dims_from_name(self, self.ImportFilePath.Value)
+                            guess_frames_from_size(app);
+                            get_dims_from_name(app, app.ImportFilePath.Value)
                         
                         else
                             notes = 'Unrecognizable as a Medipix/.mib file.';
@@ -4815,9 +4878,9 @@ classdef Quant4D < matlab.apps.AppBase
                         end
                         fclose(fid);
 
-                    case self.MRC
+                    case app.MRC
                         % Read in MRC header - first 1024 bytes
-                        fid = fopen(self.ImportFilePath.Value,"r");
+                        fid = fopen(app.ImportFilePath.Value,"r");
                         fseek(fid,208,'bof');
                         map = fread(fid, [1, 4], 'uint8=>char');
                         
@@ -4827,11 +4890,11 @@ classdef Quant4D < matlab.apps.AppBase
                             e = fread(fid, 2, "uint8");
                             
                             if e(1) == 68 && ismember(e(2), [65, 68])
-                                self.ImportByteOrder.Value = "l";
+                                app.ImportByteOrder.Value = "l";
                                 bo = 'Little Endian';
                             
                             elseif e(1) == 17 && e(2) == 17
-                                self.ImportByteOrder.Value = "b";
+                                app.ImportByteOrder.Value = "b";
                                 bo = 'Big Endian';
                             
                             else
@@ -4844,26 +4907,26 @@ classdef Quant4D < matlab.apps.AppBase
                             % X, Y and Z, only 3D
                             dim = fread(fid,3,"uint32");
                             
-                            self.ImportPixelsX.Value = dim(1);
-                            self.ImportPixelsY.Value = dim(2);
-                            self.ImportFramesX.Value = dim(3);
+                            app.ImportPixelsX.Value = dim(1);
+                            app.ImportPixelsY.Value = dim(2);
+                            app.ImportFramesX.Value = dim(3);
                             
                             guessFramesFromDimZ(dim(3))
-                            get_dims_from_name(self, self.ImportFilePath.Value)
+                            get_dims_from_name(app, app.ImportFilePath.Value)
 
                             dtype = fread(fid,1,"uint32");
                             
                             switch dtype
                                 case 0
-                                    self.ImportDataType.Value = "int8";
+                                    app.ImportDataType.Value = "int8";
                                     tnote = "8-bit Signed Integer";
                                 
                                 case 1
-                                    self.ImportDataType.Value = "int16";
+                                    app.ImportDataType.Value = "int16";
                                     tnote = "16-bit Signed Integer";
                                 
                                 case 2
-                                    self.ImportDataType.Value = "single";
+                                    app.ImportDataType.Value = "single";
                                     tnote = "32-bit Real Float";
                                 
                                 case 3
@@ -4873,14 +4936,14 @@ classdef Quant4D < matlab.apps.AppBase
                                     tnote = "32-bit Complex Float, unsupported";
                                 
                                 case 6
-                                    self.ImportDataType.Value = "uint16";
+                                    app.ImportDataType.Value = "uint16";
                                     tnote = "16-bit Unsigned Integer";
                                 
                                 otherwise
                                     tnote = "Uknown data type";
                             end
 
-                            self.DataOffset.Value = 1024;
+                            app.DataOffset.Value = 1024;
                             notes = sprintf('Dim: X = %d, Y = %d, Z = %d\n%s, %s\n** MRC files have a 1024-byte data offset', ...
                                 dim, tnote, bo);
                         else
@@ -4889,30 +4952,30 @@ classdef Quant4D < matlab.apps.AppBase
                         end
                         fclose(fid);
 
-                    case self.DM34
+                    case app.DM34
                         % Read .dm3/4 tag values
-                        try self.tmp_variables.dm = dmInfo(self.ImportFilePath.Value);catch;end
+                        try app.tmp_variables.dm = dmInfo(app.ImportFilePath.Value);catch;end
                         
-                        if iscell(self.tmp_variables.dm) && numel(self.tmp_variables.dm) > 1
-                            % List all images' names in `self.SubDataset`
-                            pdim = zeros(numel(self.tmp_variables.dm)-1, 1);
-                            self.SubDataset.Enable = "on";
+                        if iscell(app.tmp_variables.dm) && numel(app.tmp_variables.dm) > 1
+                            % List all images' names in `app.SubDataset`
+                            pdim = zeros(numel(app.tmp_variables.dm)-1, 1);
+                            app.SubDataset.Enable = "on";
                             for i = 1:numel(pdim)
-                                self.SubDataset.Items{i} = char(self.tmp_variables.dm{i}.Name);
-                                pdim(i) = prod(cell2mat(self.tmp_variables.dm{i}.Dimensions));
+                                app.SubDataset.Items{i} = char(app.tmp_variables.dm{i}.Name);
+                                pdim(i) = prod(cell2mat(app.tmp_variables.dm{i}.Dimensions));
                             end
                             
                             % Select sub-image with the largest dimension; unless manual selected
-                            if event.Source == self.SubDataset
-                                self.SubDataset.Value = event.Value;
+                            if event.Source == app.SubDataset
+                                app.SubDataset.Value = event.Value;
                             else
                                 [~, i] = max(pdim);
-                                self.SubDataset.Value = self.SubDataset.Items{i};
+                                app.SubDataset.Value = app.SubDataset.Items{i};
                             end
                             
                             % Info of selected sub-image
-                            dm = self.tmp_variables.dm{[strcmp(self.SubDataset.Items, self.SubDataset.Value), false]};
-                            finfo = self.tmp_variables.dm{end};
+                            dm = app.tmp_variables.dm{[strcmp(app.SubDataset.Items, app.SubDataset.Value), false]};
+                            finfo = app.tmp_variables.dm{end};
                             
                             % Read dimensions
                             dims = dm.Dimensions;
@@ -4924,28 +4987,28 @@ classdef Quant4D < matlab.apps.AppBase
                                 end
                             end
 
-                            set([self.ImportPixelsX, ...
-                                 self.ImportPixelsY, ...
-                                 self.ImportFramesX, ...
-                                 self.ImportFramesY], ...
+                            set([app.ImportPixelsX, ...
+                                 app.ImportPixelsY, ...
+                                 app.ImportFramesX, ...
+                                 app.ImportFramesY], ...
                                 {"Value"}, dims)
                             
                             % Find offset, file tail, data type, byte-order of dataset
-                            self.DataOffset.Value = dm.Data.offset;
-                            try self.ImportDataType.Value = dm.Data.dataType; catch;end
-                            self.tmp_variables.fileTail = finfo.fileSize - dm.Data.offset - dm.Data.size;
+                            app.DataOffset.Value = dm.Data.offset;
+                            try app.ImportDataType.Value = dm.Data.dataType; catch;end
+                            app.tmp_variables.fileTail = finfo.fileSize - dm.Data.offset - dm.Data.size;
                             
                             % If pixels are not scalars (e.g. complex image)
                             if dm.ImageDataType.pixel ~= "scalar"
-                                self.ImportDataType.Value = "unknown";
+                                app.ImportDataType.Value = "unknown";
                             end
 
                             % Is it little endian?
                             if finfo.liEndian
-                                self.ImportByteOrder.Value = "l";
+                                app.ImportByteOrder.Value = "l";
                                 bo = 'Little Endian';
                             else
-                                self.ImportByteOrder.Value = "b";
+                                app.ImportByteOrder.Value = "b";
                                 bo = 'Big Endian';
                             end
 
@@ -4958,34 +5021,34 @@ classdef Quant4D < matlab.apps.AppBase
                             end
 
                         else
-                            notes = "Read DM file error: " + self.tmp_variables.dm;
+                            notes = "Read DM file error: " + app.tmp_variables.dm;
                             err = -1;
                         end
 
-                    case self.HDF5
+                    case app.HDF5
                         try
-                            self.tmp_variables.h5 = h5_datasets(self, self.ImportFilePath.Value);
+                            app.tmp_variables.h5 = h5_datasets(app, app.ImportFilePath.Value);
                         catch
                             notes = 'Read HDF5 file error';
                             err = -1;
                         end
 
                         if ~err
-                            self.SubDataset.Enable = "on";
+                            app.SubDataset.Enable = "on";
                             % Select sub-image with the 1st largest dimension; unless manual selected
-                            if event.Source ~= self.SubDataset
-                                % List all images' names in `self.SubDataset`
-                                pdim = zeros(numel(self.tmp_variables.h5)-1, 1);
+                            if event.Source ~= app.SubDataset
+                                % List all images' names in `app.SubDataset`
+                                pdim = zeros(numel(app.tmp_variables.h5)-1, 1);
                                 for i = 1:numel(pdim)
-                                    self.SubDataset.Items{i} = char(self.tmp_variables.h5(i).Name);
-                                    pdim(i) = prod(self.tmp_variables.h5(i).Dataspace.Size);
+                                    app.SubDataset.Items{i} = char(app.tmp_variables.h5(i).Name);
+                                    pdim(i) = prod(app.tmp_variables.h5(i).Dataspace.Size);
                                 end
                                 [~, i] = max(pdim);
-                                self.SubDataset.Value = self.SubDataset.Items{i};
+                                app.SubDataset.Value = app.SubDataset.Items{i};
                             end
                             
                             % Info of selected sub-image
-                            h5i = self.tmp_variables.h5([strcmp(self.SubDataset.Items, self.SubDataset.Value), false]);
+                            h5i = app.tmp_variables.h5([strcmp(app.SubDataset.Items, app.SubDataset.Value), false]);
                             
                             % Read dimensions
                             dims = h5i.Dataspace.Size;
@@ -4998,33 +5061,33 @@ classdef Quant4D < matlab.apps.AppBase
                             end
 
                             % set Import UI values
-                            set([self.ImportPixelsX; ...
-                                 self.ImportPixelsY; ...
-                                 self.ImportFramesX; ...
-                                 self.ImportFramesY], ...
+                            set([app.ImportPixelsX; ...
+                                 app.ImportPixelsY; ...
+                                 app.ImportFramesX; ...
+                                 app.ImportFramesY], ...
                                 {"Value"},num2cell(dims)')
                             
                             % Find offset, file tail, data type, byte-order of dataset
                             if h5i.offset == -1
-                                self.DataOffset.Value = 0;
+                                app.DataOffset.Value = 0;
                                 noteoffs = 'This dataset is not "contiguous", thus data offset is unknown.';
                             else
-                                self.DataOffset.Value = h5i.offset;
+                                app.DataOffset.Value = h5i.offset;
                                 noteoffs = "Selected dataset's offset is "+h5i.offset+" bytes.";
                             end
 
-                            self.tmp_variables.fileTail = self.tmp_variables.h5(end).size - self.DataOffset.Value - h5i.size;
+                            app.tmp_variables.fileTail = app.tmp_variables.h5(end).size - app.DataOffset.Value - h5i.size;
                             
                             % If data type is unknown
                             if ~isempty(h5i.type)
-                                self.ImportDataType.Value = h5i.type;
+                                app.ImportDataType.Value = h5i.type;
                             end
 
                             if endsWith(h5i.byte_order, "_BE")
-                                self.ImportByteOrder.Value = "b";
+                                app.ImportByteOrder.Value = "b";
                                 bo = 'Big Endian';
                             else
-                                self.ImportByteOrder.Value = "l";
+                                app.ImportByteOrder.Value = "l";
                                 bo = 'Little Endian';
                             end
 
@@ -5035,9 +5098,9 @@ classdef Quant4D < matlab.apps.AppBase
                             end
                         end
 
-                    otherwise %case self.Custom
-                        get_dims_from_name(self, self.ImportFilePath.Value)
-                        self.ImportDataType.Value = "single";
+                    otherwise %case app.Custom
+                        get_dims_from_name(app, app.ImportFilePath.Value)
+                        app.ImportDataType.Value = "single";
                         notes = "Custom import";
 
                 end
@@ -5046,30 +5109,30 @@ classdef Quant4D < matlab.apps.AppBase
                 err = -1;
             end
 
-            self.ImportFileMetadata.Value = notes;
+            app.ImportFileMetadata.Value = notes;
 
-            if self.ImportDataType.Value == "unknown" &&  err ~= -1
-                notification_dialog(self, ...
+            if app.ImportDataType.Value == "unknown" &&  err ~= -1
+                notification_dialog(app, ...
                                     "warn", ...
                                     "The data type indicated in the file's metadata is not supported/recognized.", ...
                                     "Invalid Data Type!");
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
 
             % Reset import range selections
-            range_import_export(self, struct("Source", self.ImportPixelsX, "EventName", []));
-            range_import_export(self, struct("Source", self.ImportFramesX, "EventName", []));
-            import_box_input(self, event)
+            range_import_export(app, struct("Source", app.ImportPixelsX, "EventName", []));
+            range_import_export(app, struct("Source", app.ImportFramesX, "EventName", []));
+            import_box_input(app, event)
         end
 
         % Value changed function: DataOffset, 
         % ...and 22 other components
-        function import_box_input(self, event)
+        function import_box_input(app, event)
             % Function called when the user interacts with the Import UI
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5078,89 +5141,89 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
             
             % initialize parameters
-            self.ImportEstimatedFilesize.Text = "";
+            app.ImportEstimatedFilesize.Text = "";
             notes = "";
             diffraction_event = event;
             real_event = event;
 
-            if isfile(self.ImportFilePath.Value)
+            if isfile(app.ImportFilePath.Value)
                 % Update Diffraction and Real-space import ranges; use dummy event if source is not a range UI
                 if ~contains(event.Source.Tag, "Diffraction")
-                    diffraction_event = struct("Source",self.DiffractionPartialImportPixelsDist, "Value",self.DiffractionPartialImportPixelsDist.Value);
+                    diffraction_event = struct("Source",app.DiffractionPartialImportPixelsDist, "Value",app.DiffractionPartialImportPixelsDist.Value);
                 end
                 if ~contains(event.Source.Tag, "Real")
-                    real_event = struct("Source",self.RealPartialImportFramesDist, "Value",self.RealPartialImportFramesDist.Value);
+                    real_event = struct("Source",app.RealPartialImportFramesDist, "Value",app.RealPartialImportFramesDist.Value);
                 end
 
-                [diffraction_note, ~, ~, n_pixels, ~] = range_import_export(self, diffraction_event);
-                [real_note, ~, ~, n_frames, ~] = range_import_export(self, real_event);
+                [diffraction_note, ~, ~, n_pixels, ~] = range_import_export(app, diffraction_event);
+                [real_note, ~, ~, n_frames, ~] = range_import_export(app, real_event);
                 notes = diffraction_note + real_note;
                 
                 % Enable/Disable Range UIs
-                set(self.DiffractionPartialImportGrid.Children, "Enable", self.ImportPartialPixels.Value)
-                set(self.RealPartialImportGrid.Children, "Enable", self.ImportPartialFrames.Value)
+                set(app.DiffractionPartialImportGrid.Children, "Enable", app.ImportPartialPixels.Value)
+                set(app.RealPartialImportGrid.Children, "Enable", app.ImportPartialFrames.Value)
                 
                 % Current dataset dimensions
                 irng = [n_pixels n_frames];
                 
                 % Allow for virtual memory mapping in some situations
-                if self.FrameHeader.Value == 0 && self.FrameFooter.Value == 0 ...
-                        && (~self.HDF5.Value || self.DataOffset.Value) ...
-                        && self.ImportByteOrder.Value == self.sys_constants.system_endianness && ~contains(self.ImportDataType.Value,'int') ...
-                        && isequal([self.ImportPixelsX.Value self.ImportPixelsY.Value self.ImportFramesX.Value self.ImportFramesY.Value], irng)
-                    self.MemoryType.Enable = "on";
+                if app.FrameHeader.Value == 0 && app.FrameFooter.Value == 0 ...
+                        && (~app.HDF5.Value || app.DataOffset.Value) ...
+                        && app.ImportByteOrder.Value == app.sys_constants.system_endianness && ~contains(app.ImportDataType.Value,'int') ...
+                        && isequal([app.ImportPixelsX.Value app.ImportPixelsY.Value app.ImportFramesX.Value app.ImportFramesY.Value], irng)
+                    app.MemoryType.Enable = "on";
                 else
-                    self.MemoryType.Enable = "off";
-                    self.MemoryType.Value = "Physical Memory";
+                    app.MemoryType.Enable = "off";
+                    app.MemoryType.Value = "Physical Memory";
                 end
 
                 % Calculate dataset size and memory usage
-                if self.ImportDataType.Value ~= "unknown"
-                    bytesize = self.byte_size.(self.ImportDataType.Value);
-                    self.tmp_variables.EstSize = self.DataOffset.Value + self.tmp_variables.fileTail ...
-                        + (self.FrameHeader.Value+self.ImportPixelsX.Value*self.ImportPixelsY.Value*bytesize+self.FrameFooter.Value) ...
-                        * self.ImportFramesX.Value*self.ImportFramesY.Value;
-                    self.ImportEstimatedFilesize.Text = sprintf('%d bytes, %.1f GiB',self.tmp_variables.EstSize,self.tmp_variables.EstSize/1024^3);
+                if app.ImportDataType.Value ~= "unknown"
+                    bytesize = app.byte_size.(app.ImportDataType.Value);
+                    app.tmp_variables.EstSize = app.DataOffset.Value + app.tmp_variables.fileTail ...
+                        + (app.FrameHeader.Value+app.ImportPixelsX.Value*app.ImportPixelsY.Value*bytesize+app.FrameFooter.Value) ...
+                        * app.ImportFramesX.Value*app.ImportFramesY.Value;
+                    app.ImportEstimatedFilesize.Text = sprintf('%d bytes, %.1f GiB',app.tmp_variables.EstSize,app.tmp_variables.EstSize/1024^3);
 
-                    if contains(self.ImportDataType.Value,'int')
+                    if contains(app.ImportDataType.Value,'int')
                         if bytesize > 4
                             f = "double";
                         else
                             f = "single";
                         end
-                        bytesize = self.byte_size.(f);
+                        bytesize = app.byte_size.(f);
                         notes = notes+"\nDataset will be converted into "+bytesize*8+"-bit Real.";
                     end
-                    notes = notes+"\nImport by "+self.MemoryType.Value+"\n"+check_memory(self, event, n_pixels, n_frames, bytesize);
-                    notes = notes+"\n\n"+check_GPU_memory(self, n_pixels, n_frames);
+                    notes = notes+"\nImport by "+app.MemoryType.Value+"\n"+check_memory(app, event, n_pixels, n_frames, bytesize);
+                    notes = notes+"\n\n"+check_GPU_memory(app, n_pixels, n_frames);
                 end
                 
                 % Allow to swap dataset/keep parameters if the dimensions are identical
-                self.SwapDataset.Enable = ~isempty(self.dataset_parameters) && isequal(irng, [self.dataset_parameters.n_pixels(1) self.dataset_parameters.n_pixels(2) self.dataset_parameters.n_frames(1) self.dataset_parameters.n_frames(2)]);
-                if ~self.SwapDataset.Enable
-                    self.SwapDataset.Value = false;
+                app.SwapDataset.Enable = ~isempty(app.dataset_parameters) && isequal(irng, [app.dataset_parameters.n_pixels(1) app.dataset_parameters.n_pixels(2) app.dataset_parameters.n_frames(1) app.dataset_parameters.n_frames(2)]);
+                if ~app.SwapDataset.Enable
+                    app.SwapDataset.Value = false;
                 end
                 
-                if self.SwapDataset.Value
+                if app.SwapDataset.Value
                     notes = notes+"\n\nSwapping dataset - keep current setups/alignments etc.";
                 end
             else
                 % default to GPU off when no file path is present
-                self.GPU.Value = 0;
+                app.GPU.Value = 0;
             end
 
-            self.ImportSummary.Value = sprintf(notes);
+            app.ImportSummary.Value = sprintf(notes);
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Callback function: AutoSaveImage, SaveDirectoryButton, 
         % ...and 12 other components
-        function save_callbacks(self, event)
+        function save_callbacks(app, event)
             % Function called when the user interacts with the Save/Export UI
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5169,75 +5232,75 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
             
             % Try to update image name prefix
-            update_prefix(self, event)
+            update_prefix(app, event)
 
             switch event.Source
-                case self.ShowSaveWindow
-                    figure(self.figures.Save)
-                    % Trigger tab change callbacks defined in `@self.export_callbacks()`
-                    mock_UI_callbacks(self, self.SaveTabGroup);
+                case app.ShowSaveWindow
+                    figure(app.figures.Save)
+                    % Trigger tab change callbacks defined in `@app.export_callbacks()`
+                    mock_UI_callbacks(app, app.SaveTabGroup);
                 
-                case self.SaveDirectoryButton
-                    directory = uigetdir(self.SaveDirectoryPath.Value, 'Select Directory to Save Images');
+                case app.SaveDirectoryButton
+                    directory = uigetdir(app.SaveDirectoryPath.Value, 'Select Directory to Save Images');
                     drawnow
-                    figure(self.figures.Save)
+                    figure(app.figures.Save)
                     if directory
-                        self.SaveDirectoryPath.Value = directory;
+                        app.SaveDirectoryPath.Value = directory;
                     end
 
-                case self.SaveDirectoryPath
+                case app.SaveDirectoryPath
                 
-                case {self.SaveImagePrefix self.SavePrefixAngleInner self.SavePrefixAngleOuter}
+                case {app.SaveImagePrefix app.SavePrefixAngleInner app.SavePrefixAngleOuter}
                 
-                case self.SaveImageList % Save image list selection change
+                case app.SaveImageList % Save image list selection change
                     % If user selects all of the images in the list, tick the "Save All" checkbox
-                    self.SaveImageSelectAll.Value = numel(self.SaveImageList.Value) == numel(self.SaveImageList.Items);
+                    app.SaveImageSelectAll.Value = numel(app.SaveImageList.Value) == numel(app.SaveImageList.Items);
                 
-                case {self.AutoSaveImage self.SaveExport} % Save images/Auto-save images or Export data
-                    if self.SaveDirectoryPath.Value == "" || isempty(self.SaveDirectoryPath.Value)
-                        notification_dialog(self, "warn",sprintf("Please specify the directory!"),'Directory Missing');
+                case {app.AutoSaveImage app.SaveExport} % Save images/Auto-save images or Export data
+                    if app.SaveDirectoryPath.Value == "" || isempty(app.SaveDirectoryPath.Value)
+                        notification_dialog(app, "warn",sprintf("Please specify the directory!"),'Directory Missing');
                     else
                         % Create directory if not exists
-                        [success, error_message] = mkdir(self.SaveDirectoryPath.Value);
+                        [success, error_message] = mkdir(app.SaveDirectoryPath.Value);
                         if ~success
-                            notification_dialog(self, "warn",sprintf("Failed to create directory!\n\n"+error_message),'Directory Error');
+                            notification_dialog(app, "warn",sprintf("Failed to create directory!\n\n"+error_message),'Directory Error');
                         else
-                            % Save images if called from `self.AutoSaveImage` or currently the `self.SaveImagesTab` is selected
-                            if self.SaveTabGroup.SelectedTab == self.SaveImagesTab || event.Source == self.AutoSaveImage
+                            % Save images if called from `app.AutoSaveImage` or currently the `app.SaveImagesTab` is selected
+                            if app.SaveTabGroup.SelectedTab == app.SaveImagesTab || event.Source == app.AutoSaveImage
                                 % Save images
-                                save_images(self);
+                                save_images(app);
                             else
                                 % Export data
-                                export_callbacks(self, event)
+                                export_callbacks(app, event)
                             end
                         end
                     end
                 
-                case self.SaveImageSelectAll % Select all/none
+                case app.SaveImageSelectAll % Select all/none
                     if event.Value
-                        self.SaveImageList.Value = self.SaveImageList.ItemsData;
+                        app.SaveImageList.Value = app.SaveImageList.ItemsData;
                     else
-                        self.SaveImageList.Value = {};
+                        app.SaveImageList.Value = {};
                     end
                 
-                case {self.SaveImagePNG self.SaveImageAnnotations}
+                case {app.SaveImagePNG app.SaveImageAnnotations}
                     % Enable/Disable PNG options
-                    self.SaveImageAnnotations.Enable = self.SaveImagePNG.Value;
-                    set([self.SaveImageDPI self.SaveImgAnnotDPILabel], ...
+                    app.SaveImageAnnotations.Enable = app.SaveImagePNG.Value;
+                    set([app.SaveImageDPI app.SaveImgAnnotDPILabel], ...
                         "Enable", ...
-                        self.SaveImageAnnotations.Value && self.SaveImagePNG.Value)
+                        app.SaveImageAnnotations.Value && app.SaveImagePNG.Value)
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Callback function: DiffractionPartialExportPixelsDist, 
         % ...and 27 other components
-        function export_callbacks(self, event)
+        function export_callbacks(app, event)
             % Function called when the user interacts with the Save/Export UI
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5246,105 +5309,105 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
 
             switch event.Source
-                case self.SaveCloseButton % Close button on Save/Export Window
+                case app.SaveCloseButton % Close button on Save/Export Window
                      % Try to remove Export ROIs
-                    delete(findobj(self.ui_groups.image_axes,'-regexp', "Tag",'Export .... ROI'))
+                    delete(findobj(app.ui_groups.image_axes,'-regexp', "Tag",'Export .... ROI'))
                     
                     % Reset button color
-                    self.SaveCloseButton.BackgroundColor = self.sys_constants.background_color;
+                    app.SaveCloseButton.BackgroundColor = app.sys_constants.background_color;
 
                     % hide save window
-                    self.figures.Save.Visible = "off";
+                    app.figures.Save.Visible = "off";
 
-                case {self.SaveTabGroup self.ExportPartialPixels self.ExportPartialFrames} % Tab change or enable/disable partial export
+                case {app.SaveTabGroup app.ExportPartialPixels app.ExportPartialFrames} % Tab change or enable/disable partial export
                      % Try to delete old ROIs
-                    delete(findobj(self.ui_groups.image_axes,'-regexp', "Tag",'Export .... ROI'))
+                    delete(findobj(app.ui_groups.image_axes,'-regexp', "Tag",'Export .... ROI'))
 
                     % Try to update export range
-                    if ~isempty(self.dataset_parameters)
-                        update_export_range(self, event);
+                    if ~isempty(app.dataset_parameters)
+                        update_export_range(app, event);
                     end
                     
-                    if self.SaveTabGroup.SelectedTab == self.ExportDatasetTab && self.figures.Save.Visible
+                    if app.SaveTabGroup.SelectedTab == app.ExportDatasetTab && app.figures.Save.Visible
                         % To start Export Data Mode
-                        self.SaveExport.Text = "Export Data";
+                        app.SaveExport.Text = "Export Data";
 
                         % Draw ROIs & add listening functions for live updates on all Real and Diffraction space images
-                        for id = self.ui_groups.image_id(self.ui_groups.image_space ~= "ColorWheel" & self.ui_groups.image_type ~= "Mask")
-                            self.annotations.Export.(id) = drawrectangle(self.image_axes.(id), ...
+                        for id = app.ui_groups.image_id(app.ui_groups.image_space ~= "ColorWheel" & app.ui_groups.image_type ~= "Mask")
+                            app.annotations.Export.(id) = drawrectangle(app.image_axes.(id), ...
                                                                         "Position", [1 1 0 0], ...
                                                                         "Color", "y", ...
                                                                         "Deletable", 0, ...
                                                                         'FaceAlpha', 0, ...
                                                                         'FaceSelectable', 0);
-                            self.annotations.Export.(id).Tag = "Export " + self.image_axes.(id).UserData.space + " ROI";
+                            app.annotations.Export.(id).Tag = "Export " + app.image_axes.(id).UserData.space + " ROI";
                             
                             % add listeners for ROI annotation movement
-                            self.annotations.Export.(id).UserData.Move = addlistener(self.annotations.Export.(id), "MovingROI", @move_export_annotation);
-                            addlistener(self.annotations.Export.(id), "ROIMoved", @move_export_annotation);
+                            app.annotations.Export.(id).UserData.Move = addlistener(app.annotations.Export.(id), "MovingROI", @move_export_annotation);
+                            addlistener(app.annotations.Export.(id), "ROIMoved", @move_export_annotation);
                         end
 
                         % Force ROIs to update
-                        export_callbacks(self, struct("Source", self.DiffractionPartialExportXStart, ...
+                        export_callbacks(app, struct("Source", app.DiffractionPartialExportXStart, ...
                                                      "EventName", "ValueChanged", ...
-                                                     "Value", self.DiffractionPartialExportXStart.Value))
+                                                     "Value", app.DiffractionPartialExportXStart.Value))
 
-                        export_callbacks(self, struct("Source", self.RealPartialExportXStart, ...
+                        export_callbacks(app, struct("Source", app.RealPartialExportXStart, ...
                                                      "EventName", "ValueChanged", ...
-                                                     "Value", self.RealPartialExportXStart.Value))
+                                                     "Value", app.RealPartialExportXStart.Value))
                         
                         % Show/Hide ROIs and enable/disable UIs if (not) selecting whole ranges
-                        set(findobj(self.ui_groups.diffraction_axes, "Tag",'Export Diffraction ROI'), "Visible", self.ExportPartialPixels.Value)
-                        set(findobj(self.ui_groups.real_axes, "Tag",'Export Real ROI'), "Visible", self.ExportPartialFrames.Value)
-                        set(self.RealPartialExportGrid.Children, "Enable", self.ExportPartialFrames.Value)
-                        set(self.DiffractionPartialExportGrid.Children, "Enable", self.ExportPartialPixels.Value)
+                        set(findobj(app.ui_groups.diffraction_axes, "Tag",'Export Diffraction ROI'), "Visible", app.ExportPartialPixels.Value)
+                        set(findobj(app.ui_groups.real_axes, "Tag",'Export Real ROI'), "Visible", app.ExportPartialFrames.Value)
+                        set(app.RealPartialExportGrid.Children, "Enable", app.ExportPartialFrames.Value)
+                        set(app.DiffractionPartialExportGrid.Children, "Enable", app.ExportPartialPixels.Value)
                         
                         % Set close button color to hint/link with the ROIs
-                        if self.ExportPartialPixels.Value || self.ExportPartialFrames.Value
+                        if app.ExportPartialPixels.Value || app.ExportPartialFrames.Value
                             c = 'y';
                         else
-                            c = self.sys_constants.background_color;
+                            c = app.sys_constants.background_color;
                         end
                     
                     else % For "Save Images"
-                        self.SaveExport.Text = "Save Images";
-                        c = self.sys_constants.background_color;
+                        app.SaveExport.Text = "Save Images";
+                        c = app.sys_constants.background_color;
                     end
 
                     % Color the close button to hint/link with the ROIs
-                    self.SaveCloseButton.BackgroundColor = c;
+                    app.SaveCloseButton.BackgroundColor = c;
 
-                case {self.ExportDimensionSuffix self.ExportDataType self.ExportByteOrder}
-                    update_export_range(self, event);
+                case {app.ExportDimensionSuffix app.ExportDataType app.ExportByteOrder}
+                    update_export_range(app, event);
                 
-                case self.SaveExport % Export Button
+                case app.SaveExport % Export Button
                     try
-                        export_data(self, event);
+                        export_data(app, event);
                     catch ME
                         % delete the progress dialog and export file
-                        try delete(self.tmp_variables.progress_dialog); catch; end
-                        try delete(self.tmp_variables.efile); catch; end
+                        try delete(app.tmp_variables.progress_dialog); catch; end
+                        try delete(app.tmp_variables.efile); catch; end
                         
                         % Reshape dataset to 2D
-                        try self.data = reshape(self.data, prod(self.dataset_parameters.n_pixels), []);  catch; end
-                        enable_windows(self,true)
+                        try app.data = reshape(app.data, prod(app.dataset_parameters.n_pixels), []);  catch; end
+                        enable_windows(app,true)
 
                         % pass along error message
                         rethrow(ME)
                     end
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Value changed function: ReverseDiffractionX, 
         % ...and 7 other components
-        function axis_direction_callbacks(self, event)
+        function axis_direction_callbacks(app, event)
             % Function called when the user modifies the axis orientation
             % in diffraction or real space
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5360,31 +5423,31 @@ classdef Quant4D < matlab.apps.AppBase
             axis_direction = ["normal" "reverse"];
             
             % Get X/Y-axis direction and rotation options of diffraction/real-space
-            reverse_x = struct('Diffraction', self.ReverseDiffractionX.Value, 'Real', self.ReverseRealX.Value);
-            reverse_y = struct('Diffraction', self.ReverseDiffractionY.Value, 'Real', self.ReverseRealY.Value);
-            rotate_view = struct('Diffraction', self.RotateDiffraction.Value, 'Real', self.RotateReal.Value);
+            reverse_x = struct('Diffraction', app.ReverseDiffractionX.Value, 'Real', app.ReverseRealX.Value);
+            reverse_y = struct('Diffraction', app.ReverseDiffractionY.Value, 'Real', app.ReverseRealY.Value);
+            rotate_view = struct('Diffraction', app.RotateDiffraction.Value, 'Real', app.RotateReal.Value);
             
             % Set axis directions and rotations of either diffraction or real-space images
-            set(self.ui_groups.(lower(space)+"_axes"), ...
+            set(app.ui_groups.(lower(space)+"_axes"), ...
                 "XDir", axis_direction(reverse_x.(space)+1), ...
                 "YDir", axis_direction(reverse_y.(space)+1), ...
                 'View', [rotate_view.(space), 90])
 
             % set state button icon color based on value
-            for state_button = [self.ReverseDiffractionY, ...
-                                self.ReverseDiffractionX, ...
-                                self.ShowDiffractionAxes, ...
-                                self.ReverseRealY, ...
-                                self.ReverseRealX, ...
-                                self.ShowRealAxes]
-                change_icon_background(self, state_button)
+            for state_button = [app.ReverseDiffractionY, ...
+                                app.ReverseDiffractionX, ...
+                                app.ShowDiffractionAxes, ...
+                                app.ReverseRealY, ...
+                                app.ReverseRealX, ...
+                                app.ShowRealAxes]
+                change_icon_background(app, state_button)
             end
 
             % Sync ColorWheel with real-space axes direction
             if space == "Real"
-                set(self.image_axes.ColorWheel, ...
+                set(app.image_axes.ColorWheel, ...
                     {"XDir" "YDir" 'View'}, ...
-                    get(self.image_axes.Real,{"XDir" "YDir" 'View'}));
+                    get(app.image_axes.Real,{"XDir" "YDir" 'View'}));
             end
             
             % X/Y labels of axis annotations
@@ -5392,24 +5455,24 @@ classdef Quant4D < matlab.apps.AppBase
                             'y', struct('Diffraction', "ky",'Real', "ry"));
             
             % Update axis annotations
-            arrayfun(@(x) draw_axis_direction(self, x, space), self.ui_groups.(lower(space)+"_id"));
+            arrayfun(@(x) draw_axis_direction(app, x, space), app.ui_groups.(lower(space)+"_id"));
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
 
-            function draw_axis_direction(self, id, space)
+            function draw_axis_direction(app, id, space)
                 % Internal function to draw the axis annotations; relies on
                 % global variables (`labels`, `reverse_x`, `reverse_y`, and
                 % `rotate_view`) from `axis_direction_callbacks`
                 %
                 % Parameters:
-                %    self (Quant4D)
+                %    app (Quant4D)
                 %    id (str): figure/axes/image id
                 %    space (str): "Diffraction" or "Real" for the given `id`
                 %
                 % Returns:
                 %    None
             
-                fig = self.figures.(id);
+                fig = app.figures.(id);
                 
                 % Colors of X/Y axes
                 color_x = "r";
@@ -5422,7 +5485,7 @@ classdef Quant4D < matlab.apps.AppBase
                 
                     % Draw scan directions on Diffraction images
                     if space == "Diffraction"
-                        draw_axis_direction(self, id, "Real");
+                        draw_axis_direction(app, id, "Real");
                     end
                 
                     x_arrow = annotation(fig, "arrow");
@@ -5466,23 +5529,23 @@ classdef Quant4D < matlab.apps.AppBase
                 xy_flip = 1 - [reverse_x.(space), reverse_y.(space)]*2;
                 
                 % Axes rotation (clockwise)
-                R = rotation_matrix(self, -rotate_view.(space));
+                R = rotation_matrix(app, -rotate_view.(space));
                 
                 update_annotation_positions(fig.UserData.axis_annotation(1:4), offset*[1 1], xy.*xy_flip*R)
-                set(fig.UserData.axis_annotation(1:4), "Visible",self.("Show"+space+"Axes").Value)
+                set(fig.UserData.axis_annotation(1:4), "Visible",app.("Show"+space+"Axes").Value)
                 
                 % Set scan directions on Diffraction patterns
                 if space == "Diffraction"
                     l = 1;
                     t = 9;
                     xy = [-t -t; l -t; -t l; t -t; -t t];
-                    Rscan = rotation_matrix(self, self.ScanDirectionSlider.Value);
-                    scan_flip_y = 1 - 2*[0 self.FlipScanDirectionY.Value];
+                    Rscan = rotation_matrix(app, app.ScanDirectionSlider.Value);
+                    scan_flip_y = 1 - 2*[0 app.FlipScanDirectionY.Value];
                     update_annotation_positions(fig.UserData.axis_annotation(5:end), offset*[2.8 1], xy.*scan_flip_y*Rscan.*xy_flip*R)
                 
                     % Warning color if scan directions not aligned
-                    if ~isfield(self.common_parameters,'scan_direction_initialized') || ~self.common_parameters.scan_direction_initialized
-                        color_x = self.sys_constants.warning_color;
+                    if ~isfield(app.common_parameters,'scan_direction_initialized') || ~app.common_parameters.scan_direction_initialized
+                        color_x = app.sys_constants.warning_color;
                         color_y = color_x;
                     end
                 
@@ -5492,9 +5555,9 @@ classdef Quant4D < matlab.apps.AppBase
                     % 3) in CoM/DPC modes
                     set(fig.UserData.axis_annotation(5:8), ...
                         {"Color"}, {color_x;color_y;color_x;color_y}, ...
-                        "Visible", self.ShowDiffractionAxes.Value && ...
-                        ~self.ScanDirectionLock.Value && ...
-                        any(self.Mode.Value == ["CoM" "DPC"]))
+                        "Visible", app.ShowDiffractionAxes.Value && ...
+                        ~app.ScanDirectionLock.Value && ...
+                        any(app.Mode.Value == ["CoM" "DPC"]))
                 end
             
                 function update_annotation_positions(annotation_group, annot_offset, annot_xy)
@@ -5530,13 +5593,13 @@ classdef Quant4D < matlab.apps.AppBase
 
         % Callback function: DispColorMap, DispColorMapInvert, 
         % ...and 24 other components
-        function display_callbacks(self, event)
+        function display_callbacks(app, event)
             % Function to update all aspects of the image display,
             % including brightness, contrast, gamma, colormap, histogram,
             % vector field, and mask opacity.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5544,8 +5607,8 @@ classdef Quant4D < matlab.apps.AppBase
             
             debug_time = tic;
             
-            id = self.DisplayImage.Value;
-            user_data = self.image_axes.(id).UserData;
+            id = app.DisplayImage.Value;
+            user_data = app.image_axes.(id).UserData;
             source = event.Source;
 
             % Initial contrast will be set as the total range of min:max
@@ -5555,28 +5618,28 @@ classdef Quant4D < matlab.apps.AppBase
             % Initial gamma is set to 1
             % A change in gamma will result in a power law change in contrast I' = I^gamma
             switch source
-                case self.HistogramLog 
+                case app.HistogramLog 
                     % set state button icon color based on value
-                    change_icon_background(self, self.HistogramLog)
+                    change_icon_background(app, app.HistogramLog)
 
                     % Log-scale option of histogram
-                    if self.HistogramLog.Value
-                        self.HistogramAxes.YScale = 'log';
+                    if app.HistogramLog.Value
+                        app.HistogramAxes.YScale = 'log';
                     else
-                        self.HistogramAxes.YScale = 'linear';
+                        app.HistogramAxes.YScale = 'linear';
                     end
 
-                case self.DisplayLock
+                case app.DisplayLock
                     % Lock "current" image
                     % set state button icon color based on value
-                    change_icon_background(self, self.DisplayLock)
-                    self.DisplayImage.BackgroundColor = self.DisplayTab.BackgroundColor;
+                    change_icon_background(app, app.DisplayLock)
+                    app.DisplayImage.BackgroundColor = app.DisplayTab.BackgroundColor;
 
-                case self.DisplayVectorField
+                case app.DisplayVectorField
                     % Vector field
                     user_data.vector_field = event.Value;
 
-                case self.DisplayVectorColor
+                case app.DisplayVectorColor
                     % Vector field color
                     color = uisetcolor(user_data.vector_color);
 
@@ -5586,7 +5649,7 @@ classdef Quant4D < matlab.apps.AppBase
                     end
                     user_data.vector_color = color;
 
-                case self.DispColorMap
+                case app.DispColorMap
                     % Colormap
                     user_data.colormap = event.Value;
                     cmap = str2func(user_data.colormap);
@@ -5596,11 +5659,11 @@ classdef Quant4D < matlab.apps.AppBase
                     if user_data.invert
                         cm = flipud(cmap());
                     end
-                    colormap(self.image_axes.(id), cm)
+                    colormap(app.image_axes.(id), cm)
                 
-                case self.DispColorMapInvert
+                case app.DispColorMapInvert
                     % set state button icon color based on value
-                    change_icon_background(self, self.DispColorMapInvert)
+                    change_icon_background(app, app.DispColorMapInvert)
 
                     % Invert colormap
                     user_data.invert = event.Value;
@@ -5611,93 +5674,93 @@ classdef Quant4D < matlab.apps.AppBase
                     if user_data.invert
                         cm = flipud(cmap());
                     end
-                    colormap(self.image_axes.(id), cm)
+                    colormap(app.image_axes.(id), cm)
                 
-                case self.DisplayBrightnessReset
+                case app.DisplayBrightnessReset
                     % Reset brightness
                     user_data.brightness = 50;
                 
-                case self.DisplayContrastReset
+                case app.DisplayContrastReset
                     % Reset contrast
                     user_data.contrast = 50;
                 
-                case self.DisplayGammaReset
+                case app.DisplayGammaReset
                     % Reset gamma
                     user_data.gamma = 1;
                 
-                case {self.DisplayBrightnessSpinner, self.DisplayBrightness}
+                case {app.DisplayBrightnessSpinner, app.DisplayBrightness}
                     % Brightness
                     user_data.brightness = event.Value;
                 
-                case {self.DisplayContrastSpinner, self.DisplayContrast}
+                case {app.DisplayContrastSpinner, app.DisplayContrast}
                     % Contrast
                     user_data.contrast = event.Value;
                 
-                case {self.DisplayGamma, self.DisplayGammaSpinner}
+                case {app.DisplayGamma, app.DisplayGammaSpinner}
                     % Gamma
                     user_data.gamma = event.Value;
                 
-                case {self.DisplayMaskOpacitySlider, self.DisplayMaskOpacitySpinner}
+                case {app.DisplayMaskOpacitySlider, app.DisplayMaskOpacitySpinner}
                     % Mask opacity
                     user_data.mask_opacity = event.Value;
                 
-                otherwise   % e.g. self.DisplayImage
+                otherwise   % e.g. app.DisplayImage
                     % Bring selected image to front
-                    figure(self.figures.(id))
+                    figure(app.figures.(id))
                     
-                    % Update GUIs by values stored in `self.image_axes.(id).UserData` for the current selected image
-                    set([self.DisplayVectorField; ...
-                         self.DispColorMap; ...
-                         self.DispColorMapInvert], ...
+                    % Update GUIs by values stored in `app.image_axes.(id).UserData` for the current selected image
+                    set([app.DisplayVectorField; ...
+                         app.DispColorMap; ...
+                         app.DispColorMapInvert], ...
                         {"Value"}, ...
                         {user_data.vector_field; ...
                          user_data.colormap; ...
                          user_data.invert})
 
-                    self.DisplayVectorColor.BackgroundColor = user_data.vector_color;
+                    app.DisplayVectorColor.BackgroundColor = user_data.vector_color;
                     
                     % Enable vector field UIs if: 1) in CoM/DPC mode AND 2) real-space image selected
-                    set([self.DisplayVectorField; ...
-                         self.DispVecFieldLabel; ...
-                         self.DisplayVectorColor], ...
-                        "Enable", ismember(self.Mode.Value, ["CoM" "DPC"]) && user_data.space == "Real")
+                    set([app.DisplayVectorField; ...
+                         app.DispVecFieldLabel; ...
+                         app.DisplayVectorColor], ...
+                        "Enable", ismember(app.Mode.Value, ["CoM" "DPC"]) && user_data.space == "Real")
                     
                     % Disable brightness/contrast/colormap UIs if: (CoM/DPC) "Phase" and "ColorWheel for Phase" images
-                    set([findobj(self.DispContrastsGrid.Children,'-not',"type",'uibutton'); ...
-                         self.DispColorMap;self.DispColorMapInvert], ...
+                    set([findobj(app.DispContrastsGrid.Children,'-not',"type",'uibutton'); ...
+                         app.DispColorMap;app.DispColorMapInvert], ...
                         "Enable", ~contains(user_data.name, "Phase"));
                     
                     % Disable mask opacity UIs if: ColorWheel/Mask/Preview images selected
-                    set([self.ShowMaskWindow; ...
-                         self.DisplayMaskOpacitySpinner; ...
-                         self.DisplayMaskOpacitySlider], ...
+                    set([app.ShowMaskWindow; ...
+                         app.DisplayMaskOpacitySpinner; ...
+                         app.DisplayMaskOpacitySlider], ...
                         "Enable", user_data.space ~= "ColorWheel" && ~ismember(user_data.type, ["Mask" "Preview"]))
             end
 
             % Update UI
-            set_external_source(self, event,[self.DisplayBrightnessSpinner, self.DisplayBrightness], "Value",user_data.brightness)
-            set_external_source(self, event,[self.DisplayContrastSpinner, self.DisplayContrast], "Value",user_data.contrast)
-            set_external_source(self, event,[self.DisplayGammaSpinner, self.DisplayGamma], "Value",user_data.gamma)
-            set_external_source(self, event,[self.DisplayMaskOpacitySpinner, self.DisplayMaskOpacitySlider], "Value",user_data.mask_opacity)
+            set_external_source(app, event,[app.DisplayBrightnessSpinner, app.DisplayBrightness], "Value",user_data.brightness)
+            set_external_source(app, event,[app.DisplayContrastSpinner, app.DisplayContrast], "Value",user_data.contrast)
+            set_external_source(app, event,[app.DisplayGammaSpinner, app.DisplayGamma], "Value",user_data.gamma)
+            set_external_source(app, event,[app.DisplayMaskOpacitySpinner, app.DisplayMaskOpacitySlider], "Value",user_data.mask_opacity)
 
             % Update properties stored by the `axes`
-            self.image_axes.(id).UserData = user_data;
+            app.image_axes.(id).UserData = user_data;
             
             % Re-plot image
-            plot_image(self, event, id);
+            plot_image(app, event, id);
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Callback function: RealROIFrameX, RealROIFrameX, RealROIFrameY, 
         % ...and 3 other components
-        function realspace_ROI_callbacks(self, event)
+        function realspace_ROI_callbacks(app, event)
             % Function to update the real space ROI based on the selected
             % type and location from the main UI, as well as to update the
             % diffraction pattern accordingly. 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5706,259 +5769,259 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
 
             switch event.Source
-                case self.UpdateImages
+                case app.UpdateImages
                     % Draw ROI if doesn't yet exist and update
                     % diffraction image
-                    if isempty(findobj(self.ui_groups.real_axes, "Tag","Real-space ROI"))
-                        mock_UI_callbacks(self, self.RealROIShape)
+                    if isempty(findobj(app.ui_groups.real_axes, "Tag","Real-space ROI"))
+                        mock_UI_callbacks(app, app.RealROIShape)
                     else
-                        move_real_ROI(self, self.annotations.RealROI.Real, event)
+                        move_real_ROI(app, app.annotations.RealROI.Real, event)
                     end
                 
-                case self.RealROIShape
-                    roi_type = self.RealROIShape.Value;
+                case app.RealROIShape
+                    roi_type = app.RealROIShape.Value;
                     if roi_type == "file"
-                        self.images.RealROIFile = import_mask(self, "Real");
+                        app.images.RealROIFile = import_mask(app, "Real");
                         
                         % if ROI import from file is canceled, revert 
-                        if isempty(self.images.RealROIFile)
+                        if isempty(app.images.RealROIFile)
                             roi_type = "full";
                         end
                     end
 
                     % Update GUI if changed programmatically
-                    self.RealROIShape.Value = roi_type;
+                    app.RealROIShape.Value = roi_type;
 
                     % Panel enable/disable
-                    set([self.RealROIGrid.Children; ...
-                         self.RealROIFrameLabel], ...
+                    set([app.RealROIGrid.Children; ...
+                         app.RealROIFrameLabel], ...
                         "Enable", roi_type == "point")
 
                     % Allow for inversion of the ROI if not full field
-                    self.RealROIInvert.Enable = roi_type ~= "full";
+                    app.RealROIInvert.Enable = roi_type ~= "full";
                     
                     % If disabled, then set to off
-                    self.RealROIInvert.Value = self.RealROIInvert.Value && ...
-                                              self.RealROIInvert.Enable;
+                    app.RealROIInvert.Value = app.RealROIInvert.Value && ...
+                                              app.RealROIInvert.Enable;
                     
                     % Draw ROIs
-                    draw_real_ROI(self, event, roi_type);
+                    draw_real_ROI(app, event, roi_type);
                 
-                case {self.RealROIFrameX, self.RealROIFrameY}
+                case {app.RealROIFrameX, app.RealROIFrameY}
                     % move the real space ROI according to user input
                     % on frame (x,y) spinners
-                    move_real_ROI(self, event.Source, event)
+                    move_real_ROI(app, event.Source, event)
                 
                 otherwise
 
                     % set state button icon color based on value
-                    change_icon_background(self, self.RealROIInvert)
+                    change_icon_background(app, app.RealROIInvert)
                         
                     % run the listener to update any/all other ROIs and
                     % the diffraction pattern
-                    move_real_ROI(self, self.annotations.RealROI.Real, event)
+                    move_real_ROI(app, app.annotations.RealROI.Real, event)
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Value changed function: Mode
-        function detector_mode_callbacks(self, event)
+        function detector_mode_callbacks(app, event)
             % Function called when the mode changes, either by the user or
             % programmatically (i.e. Preview -> Alignment, or between any
             % of the available imaging modes). 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             debug_time = tic;
-            dmod = self.Mode.Value;
+            dmod = app.Mode.Value;
 
             % Enable windows
-            enable_windows(self,false)
+            enable_windows(app,false)
             
             % Clear ROIs on Diffraction
-            clear_detectors(self);
+            clear_detectors(app);
 
             % Clear Real-space images if not switching to alignment or preview
             if ~ismember(dmod, ["Alignment" "Preview"])
-                delete(findobj(self.ui_groups.real_axes(~contains({self.ui_groups.real_axes.Tag}, "Mask")),'Type','image'));
+                delete(findobj(app.ui_groups.real_axes(~contains({app.ui_groups.real_axes.Tag}, "Mask")),'Type','image'));
             end
 
             % Enable/Disable CoM/DPC related UI/images/buttons
-            set(self.ui_groups.CoM_buttons, ...
+            set(app.ui_groups.CoM_buttons, ...
                 "Enable", any(dmod == ["CoM" "DPC"]));
             
             if ismember(dmod, ["CoM" "DPC"])
-                self.DisplayImage.Items = self.ui_groups.image_name;
-                self.DisplayImage.ItemsData = self.ui_groups.image_id;
+                app.DisplayImage.Items = app.ui_groups.image_name;
+                app.DisplayImage.ItemsData = app.ui_groups.image_id;
 
                 % Substitute "CoM"/"DPC" in image names, window titles and
                 % button texts
                 mode_prefix = dmod(1:3);
-                self.DisplayImage.Items = replace(self.ui_groups.image_name, ["CoM" "DPC"], mode_prefix);
-                set(self.ui_groups.image_figures, {"Name"},cellstr(self.DisplayImage.Items)')
-                set(self.ui_groups.CoM_buttons, {"Text"}, cellstr(replace(get(self.ui_groups.CoM_buttons, "Text"), ["CoM" "DPC"], mode_prefix)))
+                app.DisplayImage.Items = replace(app.ui_groups.image_name, ["CoM" "DPC"], mode_prefix);
+                set(app.ui_groups.image_figures, {"Name"},cellstr(app.DisplayImage.Items)')
+                set(app.ui_groups.CoM_buttons, {"Text"}, cellstr(replace(get(app.ui_groups.CoM_buttons, "Text"), ["CoM" "DPC"], mode_prefix)))
             
                 % show Windows tab in the Settings UI when in DPC/CoM
-                self.SettingsTabGroup.SelectedTab = self.WindowsTab;
+                app.SettingsTabGroup.SelectedTab = app.WindowsTab;
                 
             else
                 % Image dropdown texts
-                self.DisplayImage.Items = self.ui_groups.image_name(self.ui_groups.image_type ~= "CoM");
+                app.DisplayImage.Items = app.ui_groups.image_name(app.ui_groups.image_type ~= "CoM");
                 
                 % Image dropdown values
-                self.DisplayImage.ItemsData = self.ui_groups.image_id(self.ui_groups.image_type ~= "CoM");
+                app.DisplayImage.ItemsData = app.ui_groups.image_id(app.ui_groups.image_type ~= "CoM");
                 
                 % Image windows
-                set(self.ui_groups.image_figures(self.ui_groups.image_type == "CoM"), "Visible", "off")
+                set(app.ui_groups.image_figures(app.ui_groups.image_type == "CoM"), "Visible", "off")
 
                 % show Display tab in the Settings UI when not in DPC/CoM
-                self.SettingsTabGroup.SelectedTab = self.DisplayTab;
+                app.SettingsTabGroup.SelectedTab = app.DisplayTab;
             end
 
             % Show primary diffraction/real-space image when mode changes unless in Preview mode
-            set([self.figures.Diffraction; self.figures.Real], "Visible", dmod ~= "Preview")
+            set([app.figures.Diffraction; app.figures.Real], "Visible", dmod ~= "Preview")
             
             % Special case for Import Preview Mode
             if dmod == "Preview"
                 % Keep only "Preview" image
-                self.DisplayImage.Items = "Preview";
-                self.DisplayImage.ItemsData = "Preview";
+                app.DisplayImage.Items = "Preview";
+                app.DisplayImage.ItemsData = "Preview";
                 
                 % Hide other UIs
-                set([self.MiscTab, ...
-                     self.InfoTab, ...
-                     self.ExportDatasetTab], ...
+                set([app.MiscTab, ...
+                     app.InfoTab, ...
+                     app.ExportDatasetTab], ...
                     "Parent", [])
 
-                set([self.figures.Import, ...
-                     self.figures.Preview, ...
-                     self.figures.Settings], ...
+                set([app.figures.Import, ...
+                     app.figures.Preview, ...
+                     app.figures.Settings], ...
                     "Visible", "on")
             else
                 % Note current mode
-                self.common_parameters.detector_mode = self.Mode.Value;
+                app.common_parameters.detector_mode = app.Mode.Value;
                 
                 % Remove "Preview" image
-                preview_index = self.DisplayImage.ItemsData == "Preview";
-                self.DisplayImage.Items(preview_index) = [];
-                self.DisplayImage.ItemsData(preview_index) = [];
-                self.figures.Preview.Visible = "off";
+                preview_index = app.DisplayImage.ItemsData == "Preview";
+                app.DisplayImage.Items(preview_index) = [];
+                app.DisplayImage.ItemsData(preview_index) = [];
+                app.figures.Preview.Visible = "off";
                 
                 % Show all UIs
-                set([self.MiscTab, ...
-                     self.InfoTab], ...
-                    "Parent", self.SettingsTabGroup)
+                set([app.MiscTab, ...
+                     app.InfoTab], ...
+                    "Parent", app.SettingsTabGroup)
 
-                set(self.ExportDatasetTab, "Parent", self.SaveTabGroup)
+                set(app.ExportDatasetTab, "Parent", app.SaveTabGroup)
             end
 
             % Define images in the saving list
-            self.SaveImageList.Items = self.DisplayImage.ItemsData;
-            self.SaveImageList.ItemsData = self.SaveImageList.Items;
+            app.SaveImageList.Items = app.DisplayImage.ItemsData;
+            app.SaveImageList.ItemsData = app.SaveImageList.Items;
             
             % Update Image saving prefix
-            mock_UI_callbacks(self, self.SaveImagePrefix)
+            mock_UI_callbacks(app, app.SaveImagePrefix)
             
             % Update diffraction axis annotations
-            mock_UI_callbacks(self, self.ShowDiffractionAxes)
+            mock_UI_callbacks(app, app.ShowDiffractionAxes)
 
             % Set detector size when transmitted beam is aligned the first time
-            if isfield(self.common_parameters,'transmitted_beam_init') && ...
-               ~self.common_parameters.transmitted_beam_init && ...
+            if isfield(app.common_parameters,'transmitted_beam_init') && ...
+               ~app.common_parameters.transmitted_beam_init && ...
                dmod ~= "Alignment"
-                set([self.InnerAnnularRadius; ...
-                     self.OuterAnnularRadius; ...
-                     self.VirtualApertureR], ...
+                set([app.InnerAnnularRadius; ...
+                     app.OuterAnnularRadius; ...
+                     app.VirtualApertureR], ...
                     {"Value"}, ...
-                    {self.TransBeamR.Value; ...
-                     (self.TransBeamR.Value + self.common_parameters.max_radius)/3; ...
-                     self.TransBeamR.Value})
-                self.common_parameters.virtual_aperture_center = self.center;
-                self.common_parameters.transmitted_beam_init = true;
+                    {app.TransBeamR.Value; ...
+                     (app.TransBeamR.Value + app.common_parameters.max_radius)/3; ...
+                     app.TransBeamR.Value})
+                app.common_parameters.virtual_aperture_center = app.center;
+                app.common_parameters.transmitted_beam_init = true;
             end
 
             % Diffraction detector UI
-            set(self.ui_groups.detector_ui, "Visible", "off");
+            set(app.ui_groups.detector_ui, "Visible", "off");
             
             % Hide Math Tab
-            self.MathTab.Parent = [];
-            self.RealPanel.Visible = "on";
+            app.MathTab.Parent = [];
+            app.RealPanel.Visible = "on";
             
             switch dmod
                 case "Preview"
-                    self.PreviewGrid.Visible = "on";
-                    self.RealPanel.Visible = "off";
-                    preview_callbacks(self, event)
+                    app.PreviewGrid.Visible = "on";
+                    app.RealPanel.Visible = "off";
+                    preview_callbacks(app, event)
                 
                 case "Alignment"
-                    self.AlignmentGrid.Visible = "on";
-                    transmitted_beam_callbacks(self, event)
+                    app.AlignmentGrid.Visible = "on";
+                    transmitted_beam_callbacks(app, event)
                 
                 case {"Annular", "CoM", "DPC"}
-                    self.AnnularDetectorGrid.Visible = "on";
-                    annular_detector_callbacks(self, event)
+                    app.AnnularDetectorGrid.Visible = "on";
+                    annular_detector_callbacks(app, event)
                     if dmod ~= "Annular" % 'CoM' OR 'DPC'
                         % show scan direction panel
-                        self.ScanDirectionPanel.Visible = "on";
+                        app.ScanDirectionPanel.Visible = "on";
 
                         % if DPC show segmented detector panel, else hide
                         if dmod == "DPC"
-                            self.SegmentedDetectorPanel.Visible = "on";
+                            app.SegmentedDetectorPanel.Visible = "on";
                         else
-                            self.SegmentedDetectorPanel.Visible = "off";
+                            app.SegmentedDetectorPanel.Visible = "off";
                         end
 
                         % Plot ColorWheel
-                        plot_image(self, event, "ColorWheel")
+                        plot_image(app, event, "ColorWheel")
                         
                         % bring ColorWheel and CoM Phase Magnitude to the
                         % front
-                        figure(self.figures.CoMPhMag);
-                        figure(self.figures.ColorWheel)
+                        figure(app.figures.CoMPhMag);
+                        figure(app.figures.ColorWheel)
                         
                         % Flashing to align scan direction
-                        if ~self.common_parameters.scan_direction_initialized
-                            flash_background(self, self.ScanDirectionGrid);
+                        if ~app.common_parameters.scan_direction_initialized
+                            flash_background(app, app.ScanDirectionGrid);
                         end
                     
                     else
                         % Hide segmented detector and scan direction panels
                         % if not in DPC or CoM
-                        self.SegmentedDetectorPanel.Visible = "off";
-                        self.ScanDirectionPanel.Visible = "off";
+                        app.SegmentedDetectorPanel.Visible = "off";
+                        app.ScanDirectionPanel.Visible = "off";
                     
                     end
                 
                 case "Virtual"
                     % Show Virtual aperture panel
-                    self.VirtualApertureGrid.Visible = "on";
-                    virtual_aperture_callbacks(self, event);
+                    app.VirtualApertureGrid.Visible = "on";
+                    virtual_aperture_callbacks(app, event);
                 
                 case "Custom"
                     % Show custom detector panel
-                    self.CustomDetectorGrid.Visible = "on";
+                    app.CustomDetectorGrid.Visible = "on";
 
                     % Add Math tab to the Settings UI
-                    self.MathTab.Parent = self.SettingsTabGroup;
+                    app.MathTab.Parent = app.SettingsTabGroup;
 
-                    custom_detector_callbacks(self, event)
+                    custom_detector_callbacks(app, event)
                     
                     % Bring the diffraction mask to the front
-                    figure(self.figures.DiffractionMask)
+                    figure(app.figures.DiffractionMask)
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Value changed function: AnnularStep, DetectorCoordinatePosition, 
         % ...and 2 other components
-        function detector_coordinates_callbacks(self, event)
+        function detector_coordinates_callbacks(app, event)
             % Function called when the users selects a different coordinate
             % system ("Polar" or "Cartesian"), positioning system
             % ("Relative" or "Absolute"), or unit ("mrad" or "pixels"); as
@@ -5966,7 +6029,7 @@ classdef Quant4D < matlab.apps.AppBase
             % size.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -5974,147 +6037,147 @@ classdef Quant4D < matlab.apps.AppBase
 
             % "Polar" necessitates "Relative"
             switch event.Source
-                case self.DetectorCoordinateSystem
-                    if self.DetectorCoordinateSystem.Value == "Polar"
-                        self.DetectorCoordinatePosition.Value = "Relative";
+                case app.DetectorCoordinateSystem
+                    if app.DetectorCoordinateSystem.Value == "Polar"
+                        app.DetectorCoordinatePosition.Value = "Relative";
                     end
                 
-                case self.DetectorCoordinatePosition
-                    if self.DetectorCoordinatePosition.Value == "Absolute"
-                        self.DetectorCoordinateSystem.Value = "Cartesian";
+                case app.DetectorCoordinatePosition
+                    if app.DetectorCoordinatePosition.Value == "Absolute"
+                        app.DetectorCoordinateSystem.Value = "Cartesian";
                     end
             end
 
             % Set diffraction scale based on coordinates used
-            if self.DetectorCoordinateUnit.Value == "mrad"
-                self.diff_scale = self.mradPx.Value;
+            if app.DetectorCoordinateUnit.Value == "mrad"
+                app.diff_scale = app.mradPx.Value;
             else
                 % "pixels" are 1:1
-                self.diff_scale = 1;
+                app.diff_scale = 1;
             end
             
             % Set relative center of the diffraction pattern
-            if self.DetectorCoordinatePosition.Value == "Relative"
-                self.center_rel = self.center;
+            if app.DetectorCoordinatePosition.Value == "Relative"
+                app.center_rel = app.center;
             else
                 % "Absolute" is relative to 
-                self.center_rel = [0 0];
+                app.center_rel = [0 0];
             end
             
-            if event.Source == self.AnnularStep
-                annular_detector_callbacks(self, event)
+            if event.Source == app.AnnularStep
+                annular_detector_callbacks(app, event)
                 
             end
 
             % Update UI
-            mock_event = struct("Source", self.DetectorCoordinateSystem, ...
+            mock_event = struct("Source", app.DetectorCoordinateSystem, ...
                                 "EventName", "UpdateCoord");
 
-            switch self.Mode.Value
+            switch app.Mode.Value
                 case {'Annular' 'DPC' 'CoM'}
-                    annular_detector_callbacks(self, mock_event)
+                    annular_detector_callbacks(app, mock_event)
                 
                 case "Virtual"
-                    virtual_aperture_callbacks(self, mock_event)
+                    virtual_aperture_callbacks(app, mock_event)
                 
                 case "Custom"
-                    custom_detector_callbacks(self, mock_event)
+                    custom_detector_callbacks(app, mock_event)
             end
         end
 
         % Button pushed function: SwapByteOrder, SwapDiffractionXY, 
         % ...and 1 other component
-        function dataset_options_callbacks(self, event)
+        function dataset_options_callbacks(app, event)
             % Function called when the user request a swap of data byte
             % ordering (i.e. big endian -> little endian), real space x,y
             % (i.e. [kx, ky, rx, ry] -> [kx, ky, ry, rx]), or diffraction
             % space x,y (i.e. [kx, ky, rx, ry] -> [ky, kx, rx, ry]).
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             switch event.Source
-                case self.SwapByteOrder % Swap byte-order
+                case app.SwapByteOrder % Swap byte-order
                     message = "Swapping byte order ...";
-                    self.tmp_variables.progress_dialog = progress_dialog(self, sprintf("\n%s\n",message), "Byte Order Swap");
+                    app.tmp_variables.progress_dialog = progress_dialog(app, sprintf("\n%s\n",message), "Byte Order Swap");
 
                     try
-                        self.data = swapbytes(self.data);
+                        app.data = swapbytes(app.data);
                     catch
-                        if self.dataset_parameters.gpu
-                            waitbar(0,self.tmp_variables.progress_dialog,message+sprintf("\nIt seems GPU has not enough memory.\nUsing CPU for this process ..."))
-                            self.data = gather(self.data);
-                            self.data = swapbytes(self.data);
-                            self.data = gpuArray(self.data);
+                        if app.dataset_parameters.gpu
+                            waitbar(0,app.tmp_variables.progress_dialog,message+sprintf("\nIt seems GPU has not enough memory.\nUsing CPU for this process ..."))
+                            app.data = gather(app.data);
+                            app.data = swapbytes(app.data);
+                            app.data = gpuArray(app.data);
                         else
-                            delete(self.tmp_variables.progress_dialog)
-                            notification_dialog(self, "error", "It seems the system has not enough memory for this process! " + ...
+                            delete(app.tmp_variables.progress_dialog)
+                            notification_dialog(app, "error", "It seems the system has not enough memory for this process! " + ...
                                 "Maybe try to increase system's virtual memory.", "Out of Memory")
                             return
                         end
                     end
                     
-                    % update data info at `self.dataset_parameters.byte_orer`
+                    % update data info at `app.dataset_parameters.byte_orer`
                     bo = struct("l", "b", "b", "l");
-                    self.dataset_parameters.byte_orer = bo.(self.dataset_parameters.byte_orer);
+                    app.dataset_parameters.byte_orer = bo.(app.dataset_parameters.byte_orer);
                     
-                    self.DatasetInfo.Value = get_import_info(self);
+                    app.DatasetInfo.Value = get_import_info(app);
                     
-                    mock_UI_callbacks(self, self.UpdateImages)
+                    mock_UI_callbacks(app, app.UpdateImages)
                     
-                    delete(self.tmp_variables.progress_dialog)
-                    selection = notification_dialog(self,'quest', "Is the current byte-order correct?",'Byte Order Swap',["Yes", "No. Revert"]);
+                    delete(app.tmp_variables.progress_dialog)
+                    selection = notification_dialog(app,'quest', "Is the current byte-order correct?",'Byte Order Swap',["Yes", "No. Revert"]);
                     
                     % Run the process again if selected "No ....."
                     if startsWith(selection, "No")
-                        dataset_options_callbacks(self,struct("Source",self.SwapByteOrder,"EventName", ""))
+                        dataset_options_callbacks(app,struct("Source",app.SwapByteOrder,"EventName", ""))
                     end
 
-                case {self.SwapDiffractionXY self.SwapRealXY}
+                case {app.SwapDiffractionXY app.SwapRealXY}
                     % Diffraction or real-space
                     if event.Source.Tag == "Diffraction"
                         unit = "pixels";
                     else
                         % Delete all Real-space ROIs;
                         unit = "frames";
-                        delete(findobj(self.ui_groups.real_axes, "Tag",'Real-space ROI'));
-                        self.common_parameters.transmitted_beam_init = true;
+                        delete(findobj(app.ui_groups.real_axes, "Tag",'Real-space ROI'));
+                        app.common_parameters.transmitted_beam_init = true;
                     end
 
                     % Swap X/Y dimensions
                     
                     % n_pixels_file or n_frames_file
-                    self.dataset_parameters.("n_"+unit+"_file") = fliplr(self.dataset_parameters.("n_"+unit+"_file"));
+                    app.dataset_parameters.("n_"+unit+"_file") = fliplr(app.dataset_parameters.("n_"+unit+"_file"));
                     
                     % n_pixels or n_frames
-                    self.dataset_parameters.("n_"+unit) = fliplr(self.dataset_parameters.("n_"+unit));
+                    app.dataset_parameters.("n_"+unit) = fliplr(app.dataset_parameters.("n_"+unit));
                     
                     % pixels_start or frames_start
-                    self.dataset_parameters.(unit+"_start") = fliplr(self.dataset_parameters.(unit+"_start"));
+                    app.dataset_parameters.(unit+"_start") = fliplr(app.dataset_parameters.(unit+"_start"));
                     
                     % Re-prepare the imported data
-                    import_callbacks(self, event)
-                    self.DatasetInfo.Value = get_import_info(self);
+                    import_callbacks(app, event)
+                    app.DatasetInfo.Value = get_import_info(app);
 
-                case self.PreviewButton
+                case app.PreviewButton
                     % Check data NaN/Inf, without asking to sway byte-order
-                    selection = check_NaN(self, self.images.Preview, true);
+                    selection = check_NaN(app, app.images.Preview, true);
 
                     if strcmp(selection,'Set NaNs to 0')
-                        self.data(isnan(self.data(:)))=0;
+                        app.data(isnan(app.data(:)))=0;
                     end
 
                 otherwise
-                    self.DatasetInfo.Value = get_import_info(self);
+                    app.DatasetInfo.Value = get_import_info(app);
                     
                     % Check data NaN/Inf, ask whether to sway byte-order
-                    selection = check_NaN(self, self.images.Diffraction, false);
+                    selection = check_NaN(app, app.images.Diffraction, false);
                     if strcmp(selection,'Set NaNs to 0')
-                        self.data(isnan(self.data(:)))=0;
+                        app.data(isnan(app.data(:)))=0;
                     end
 
             end
@@ -6122,65 +6185,65 @@ classdef Quant4D < matlab.apps.AppBase
 
         % Callback function: PreviewButton, PreviewFrameX, PreviewFrameY, 
         % ...and 9 other components
-        function preview_callbacks(self, event)
+        function preview_callbacks(app, event)
             % Function called when the user request to preview a
             % diffraction pattern before importing.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             switch event.Source
-                case self.Mode % Entering mode
-                    cla(self.image_axes.Preview);
+                case app.Mode % Entering mode
+                    cla(app.image_axes.Preview);
                     
                     % Clear previous preview
-                    self.images.Preview = [];
+                    app.images.Preview = [];
                     
                     % Enable windows
-                    enable_windows(self,true)
+                    enable_windows(app,true)
 
-                case self.UpdateImages % Update image
+                case app.UpdateImages % Update image
                     % Preview
-                    mock_UI_callbacks(self, self.PreviewButton)
+                    mock_UI_callbacks(app, app.PreviewButton)
 
-                case {self.PreviewFrameX self.PreviewFrameY} % Preview Frame X/Y
+                case {app.PreviewFrameX app.PreviewFrameY} % Preview Frame X/Y
                     % Force Frame X/Y minimum as 1
                     event.Source.Value = max(event.Value, 1);
                     
                     % Preview
-                    mock_UI_callbacks(self, self.PreviewButton)
+                    mock_UI_callbacks(app, app.PreviewButton)
 
-                case {self.PreviewFrame_1_1;  self.PreviewFrame_X2_1;  self.PreviewFrame_X_1; % Preview location buttons
-                      self.PreviewFrame_1_Y2; self.PreviewFrame_X2_Y2; self.PreviewFrame_X_Y2;
-                      self.PreviewFrame_1_Y;  self.PreviewFrame_X2_Y;  self.PreviewFrame_X_Y}
+                case {app.PreviewFrame_1_1;  app.PreviewFrame_X2_1;  app.PreviewFrame_X_1; % Preview location buttons
+                      app.PreviewFrame_1_Y2; app.PreviewFrame_X2_Y2; app.PreviewFrame_X_Y2;
+                      app.PreviewFrame_1_Y;  app.PreviewFrame_X2_Y;  app.PreviewFrame_X_Y}
                     
                     % Get limits from Frame X/Y UIs
-                    X = self.PreviewFrameX.Limits(2);
-                    Y = self.PreviewFrameY.Limits(2);
+                    X = app.PreviewFrameX.Limits(2);
+                    Y = app.PreviewFrameY.Limits(2);
 
                     % Evaluate the text on buttons (i.e. [X/2, Y])
                     xy = min(ceil(eval(event.Source.Text)), [X Y]);
                     
                     % Set values of Frame X/Y UIs
-                    set([self.PreviewFrameX, self.PreviewFrameY], ...
+                    set([app.PreviewFrameX, app.PreviewFrameY], ...
                         {"Value"}, ...
                         {xy(1); xy(2)});
                     
                     % Preview
-                    mock_UI_callbacks(self, self.PreviewButton)
+                    mock_UI_callbacks(app, app.PreviewButton)
 
-                case self.PreviewButton
-                    cla(self.image_axes.Preview);
+                case app.PreviewButton
+                    cla(app.image_axes.Preview);
                     
                     % Get parameters
-                    import_callbacks(self, event);
-                    params = self.tmp_variables.Preview;
-                    frame_x = self.PreviewFrameX.Value-1;
-                    frame_y = self.PreviewFrameY.Value-1;
+                    import_callbacks(app, event);
+                    params = app.tmp_variables.Preview;
+                    frame_x = app.PreviewFrameX.Value-1;
+                    frame_y = app.PreviewFrameY.Value-1;
 
                     if ~isempty(params)
                         n_pixels_x = params.n_pixels_file(1);
@@ -6188,10 +6251,10 @@ classdef Quant4D < matlab.apps.AppBase
                         n_frames_x = params.n_frames_file(1);
                         n_frames_y = params.n_frames_file(2);
 
-                        self.common_parameters.PreviewAxLim = [0.51, n_pixels_x + .49, 0.51, n_pixels_y + .49];
-                        set(self.image_axes.Preview, ...
-                            "XLim", self.common_parameters.PreviewAxLim(1:2), ...
-                            "YLim", self.common_parameters.PreviewAxLim(3:4));
+                        app.common_parameters.PreviewAxLim = [0.51, n_pixels_x + .49, 0.51, n_pixels_y + .49];
+                        set(app.image_axes.Preview, ...
+                            "XLim", app.common_parameters.PreviewAxLim(1:2), ...
+                            "YLim", app.common_parameters.PreviewAxLim(3:4));
 
                         try
                             if ~isempty(params.h5ds) % Preview HDF5
@@ -6219,16 +6282,16 @@ classdef Quant4D < matlab.apps.AppBase
                                 frame = fread(file_id, [n_pixels_x, n_pixels_y], params.data_type, 0, params.byte_orer);
                             end
 
-                            self.images.Preview = frame;
+                            app.images.Preview = frame;
                             
                             % Plot image
-                            plot_image(self, event, "Preview")
+                            plot_image(app, event, "Preview")
                             
                             % Check NaN
-                            dataset_options_callbacks(self, event)
+                            dataset_options_callbacks(app, event)
                         
                         catch
-                            notification_dialog(self, ...
+                            notification_dialog(app, ...
                                                 "error", ...
                                                 "Errors occurred during preview! Maybe reached end-of-file.", ...
                                                 "Error during Preview!");
@@ -6253,13 +6316,13 @@ classdef Quant4D < matlab.apps.AppBase
 
         % Callback function: Alpha, TBAutoAlign, TBCrossAlign, TransBeamR, 
         % ...and 12 other components
-        function transmitted_beam_callbacks(self, event)
+        function transmitted_beam_callbacks(app, event)
             % Function called when the user interacts with UI elements on
             % the `Alignment` tab of the main UI (i.e. convergence angle,
             % transmitted beam x/y/radius, AutoAlign, etc.)
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -6267,62 +6330,62 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_time = tic;
             switch event.Source
-                case self.Mode % Entering mode
+                case app.Mode % Entering mode
                     % Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
-                    self.annotations.TransBeam = drawcircle(self.image_axes.Diffraction, ...
-                                                           "Center", self.center, ...
-                                                           "Radius", self.TransBeamR.Value, ...
+                    app.annotations.TransBeam = drawcircle(app.image_axes.Diffraction, ...
+                                                           "Center", app.center, ...
+                                                           "Radius", app.TransBeamR.Value, ...
                                                            "Color", "b",...
                                                            "DrawingArea", "unlimited", ...
                                                            "Deletable", false, ...
                                                            "EdgeAlpha", 0.7, ...
                                                            "FaceAlpha", 0, ...
                                                            "Tag", "TransBeamAnnot");
-                    self.annotations.TransBeam.UserData.Move = addlistener(self.annotations.TransBeam, "MovingROI", @self.move_transmitted_beam);
-                    addlistener(self.annotations.TransBeam, "ROIMoved", @self.move_transmitted_beam);
+                    app.annotations.TransBeam.UserData.Move = addlistener(app.annotations.TransBeam, "MovingROI", @app.move_transmitted_beam);
+                    addlistener(app.annotations.TransBeam, "ROIMoved", @app.move_transmitted_beam);
                     
                     % Select `Diffraction` image
-                    mock_UI_callbacks(self, self.DisplayImage, "Diffraction");
+                    mock_UI_callbacks(app, app.DisplayImage, "Diffraction");
                     
                     % If this is the initializing alignment, then do swap byte check and auto-align
-                    if ~self.common_parameters.transmitted_beam_init
-                        dataset_options_callbacks(self, event);
-                        auto_align(self);
+                    if ~app.common_parameters.transmitted_beam_init
+                        dataset_options_callbacks(app, event);
+                        auto_align(app);
                     end
 
                     % Enable windows
-                    enable_windows(self,true)
+                    enable_windows(app,true)
                 
-                case self.UpdateImages
+                case app.UpdateImages
                     % Update images
                     % Create a summed image of all diffraction patterns simply for alignment and calibration
-                    self.images.DiffractionMask = ones(self.dataset_parameters.n_pixels, self.dataset_parameters.data_type);
-                    self.images.Real = gather(reshape(reshape(self.images.DiffractionMask,1,[])*self.data, self.dataset_parameters.n_frames));
+                    app.images.DiffractionMask = ones(app.dataset_parameters.n_pixels, app.dataset_parameters.data_type);
+                    app.images.Real = gather(reshape(reshape(app.images.DiffractionMask,1,[])*app.data, app.dataset_parameters.n_frames));
                 
-                case self.TBAutoAlign
+                case app.TBAutoAlign
                     % Auto-align
-                    auto_align(self);
+                    auto_align(app);
                 
-                case self.TBCrossAlign
+                case app.TBCrossAlign
                     % Align transmitted beam via two crossed lines
-                    cross_align(self);
+                    cross_align(app);
             end
             % Update dependent variables
-            move_transmitted_beam(self, event.Source, event);
+            move_transmitted_beam(app, event.Source, event);
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Callback function: AnnularRadiusLink, AutoCurl, 
         % ...and 20 other components
-        function annular_detector_callbacks(self, event)
+        function annular_detector_callbacks(app, event)
             % Function called when the user interacts with UI elements on
             % the `Annular/Round`, `Segmented (DPC)`, and `Center of Mass`
             % tabs of the main UI (i.e. inner/outer annular angles,
             % segmented detector controls, scan direction alignment, etc.)
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -6332,26 +6395,26 @@ classdef Quant4D < matlab.apps.AppBase
             
             % Absolute pixel coordinates of central beam; only changes in
             % `transmitted_beam_callbacks()`
-            transmitted_beam_center = self.center;
+            transmitted_beam_center = app.center;
             
             % Detector mode; when changed this callback will be called
-            dmod = self.Mode.Value;
+            dmod = app.Mode.Value;
 
             % set state button icon color based on value
-            change_icon_background(self, self.FlipScanDirectionY)
-            change_icon_background(self, self.AnnularRadiusLink)
+            change_icon_background(app, app.FlipScanDirectionY)
+            change_icon_background(app, app.AnnularRadiusLink)
 
             switch event.Source
-                case self.DetectorCoordinateSystem % Change coordinate options
+                case app.DetectorCoordinateSystem % Change coordinate options
                     % set UI limits
                     limitAnnUI()
 
-                case {self.Mode, self.AnnularStep} % Entering current mode
+                case {app.Mode, app.AnnularStep} % Entering current mode
                     % set UI limits
                     limitAnnUI()
 
                     % Lock scan directions first upon entering annular modes
-                    self.ScanDirectionLock.Value = false;
+                    app.ScanDirectionLock.Value = false;
                     
                     % UI enable/disable
                     enableAnnUI()
@@ -6371,44 +6434,44 @@ classdef Quant4D < matlab.apps.AppBase
                     move_annular_detector(event.Source, event)
                     
                     % Enable windows
-                    enable_windows(self,true)
+                    enable_windows(app,true)
 
-                case {self.InnerAnnularRadius self.InnerAnnularRadiusSpinner ...
-                      self.OuterAnnularRadius self.OuterAnnularRadiusSpinner ...
-                      self.DetectorRotationSlider self.DetectorRotationSpinner ...
-                      self.ScanDirectionSlider self.ScanDirectionSpinner ...
-                      self.AnnularRadiusLink self.NSeg self.NRung ...
-                      self.FlipScanDirectionY self.UpdateImages}
+                case {app.InnerAnnularRadius app.InnerAnnularRadiusSpinner ...
+                      app.OuterAnnularRadius app.OuterAnnularRadiusSpinner ...
+                      app.DetectorRotationSlider app.DetectorRotationSpinner ...
+                      app.ScanDirectionSlider app.ScanDirectionSpinner ...
+                      app.AnnularRadiusLink app.NSeg app.NRung ...
+                      app.FlipScanDirectionY app.UpdateImages}
                     % Update UI/ROIs
                     move_annular_detector(event.Source, event)
 
-                case self.ScanDirectionLock
-                    if self.ScanDirectionLock.Value
-                        self.ScanDirectionLock.Icon = 'unlock.png'; 
+                case app.ScanDirectionLock
+                    if app.ScanDirectionLock.Value
+                        app.ScanDirectionLock.Icon = 'unlock.png'; 
                     else
-                        self.ScanDirectionLock.Icon = 'lock.png';
+                        app.ScanDirectionLock.Icon = 'lock.png';
                     end
 
                     % Flag scan directions as aligned
-                    self.common_parameters.scan_direction_initialized = true;
+                    app.common_parameters.scan_direction_initialized = true;
                     
                     % Enable/Disable GUI elements
                     enableAnnUI()
                     
                     % Try to remove existing scan direction ROIs
-                    delete(findobj(self.image_axes.Diffraction, "Tag",'ScanDirAnnot'));
+                    delete(findobj(app.image_axes.Diffraction, "Tag",'ScanDirAnnot'));
                     
                     % Draw annotations
-                    if self.ScanDirectionLock.Value
+                    if app.ScanDirectionLock.Value
                         draw_scan_direction();
                     end
 
                     % Update diffraction axes annotations
-                    mock_UI_callbacks(self, self.ShowDiffractionAxes)
+                    mock_UI_callbacks(app, app.ShowDiffractionAxes)
 
-                case self.AutoCurl
+                case app.AutoCurl
                     % display a progress dialog for user
-                    self.tmp_variables.progress_dialog = progress_dialog(self, sprintf('Automatically estimating scan \norientation my minimizing curl...'), "Auto scan orientation");
+                    app.tmp_variables.progress_dialog = progress_dialog(app, sprintf('Automatically estimating scan \norientation my minimizing curl...'), "Auto scan orientation");
                     
                     % minimize curl and update UI/ROIs twice for precision
                     for ii=1:2
@@ -6417,14 +6480,14 @@ classdef Quant4D < matlab.apps.AppBase
                     end
                     
                     % automatically close out the scan direction routine
-                    self.ScanDirectionLock.Value = false;
-                    annular_detector_callbacks(self, struct("Source",self.ScanDirectionLock, "EventName", "ValueChanged", "Value", false, "PreviousValue", true))
+                    app.ScanDirectionLock.Value = false;
+                    annular_detector_callbacks(app, struct("Source",app.ScanDirectionLock, "EventName", "ValueChanged", "Value", false, "PreviousValue", true))
 
                     % Close progress bar and Enable panel objects
-                    delete(self.tmp_variables.progress_dialog);
+                    delete(app.tmp_variables.progress_dialog);
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
 
 
             %% Sub functions
@@ -6433,12 +6496,12 @@ classdef Quant4D < matlab.apps.AppBase
             % curl
             function minimize_curl()
                 % find the curl for all angles
-                CoM = zeros([2,fliplr(self.dataset_parameters.n_frames)]);
-                CoM(1,:,:) = self.images.CoMX';
-                CoM(2,:,:) = self.images.CoMY';
+                CoM = zeros([2,fliplr(app.dataset_parameters.n_frames)]);
+                CoM(1,:,:) = app.images.CoMX';
+                CoM(2,:,:) = app.images.CoMY';
 
                 if all(isnan(CoM(:)))
-                    notification_dialog(self, ...
+                    notification_dialog(app, ...
                                         "warn", ...
                                         "CoM is all NaNs! This caused " + ...
                                         "minimize_curl() to fail. Try " + ...
@@ -6449,9 +6512,9 @@ classdef Quant4D < matlab.apps.AppBase
                 end
 
                 % set up angles
-                theta = reshape(0:359,[1,1,360]) + self.ScanDirectionSlider.Value;
-                R_applied = [cosd(-self.ScanDirectionSpinner.Value) -sind(-self.ScanDirectionSpinner.Value);
-                             sind(-self.ScanDirectionSpinner.Value)  cosd(-self.ScanDirectionSpinner.Value)];
+                theta = reshape(0:359,[1,1,360]) + app.ScanDirectionSlider.Value;
+                R_applied = [cosd(-app.ScanDirectionSpinner.Value) -sind(-app.ScanDirectionSpinner.Value);
+                             sind(-app.ScanDirectionSpinner.Value)  cosd(-app.ScanDirectionSpinner.Value)];
                 R = permute([cosd(theta) -sind(theta); ...
                              sind(theta)  cosd(theta)],[3,1,2]);
                 
@@ -6479,7 +6542,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                 [thetaIdx,transVal] = ind2sub(size(cav),thetaIdx);
                 transVal = transVal - 1;
-                thetaCoarse = theta(thetaIdx)-self.ScanDirectionSlider.Value;
+                thetaCoarse = theta(thetaIdx)-app.ScanDirectionSlider.Value;
                 theta = reshape(thetaCoarse-1:0.1:thetaCoarse+1,[1,1,21]);
                 R = permute([cosd(theta) -sind(theta);sind(theta) cosd(theta)],[3,1,2]);
                 rotCoM = tensorprod(R,CoM,3,1);
@@ -6494,69 +6557,69 @@ classdef Quant4D < matlab.apps.AppBase
                 end
                 
                 cav = squeeze(mean(abs(0.5*(dFy_dx-dFx_dy)),[1,2]));
-                thetaVal = theta(cav==min(cav)) + self.ScanDirectionSlider.Value;
+                thetaVal = theta(cav==min(cav)) + app.ScanDirectionSlider.Value;
                 
-                self.ScanDirectionSlider.Value = wrapTo180(thetaVal);
-                self.ScanDirectionSpinner.Value = wrapTo180(thetaVal);
-                self.FlipScanDirectionY.Value = xor(self.FlipScanDirectionY.Value,transVal);
+                app.ScanDirectionSlider.Value = wrapTo180(thetaVal);
+                app.ScanDirectionSpinner.Value = wrapTo180(thetaVal);
+                app.FlipScanDirectionY.Value = xor(app.FlipScanDirectionY.Value,transVal);
             end
 
             % Function to update Annular detector UI limits/labels when coordinate options change
             function limitAnnUI()
-                set([self.AnnRi_NFLabel self.AnnRo_NFLabel], ...
+                set([app.AnnRi_NFLabel app.AnnRo_NFLabel], ...
                     'Text', ...
-                    self.DetectorCoordinateUnit.Value)
-                set([self.InnerAnnularRadiusSpinner; ...
-                     self.OuterAnnularRadiusSpinner], ...
+                    app.DetectorCoordinateUnit.Value)
+                set([app.InnerAnnularRadiusSpinner; ...
+                     app.OuterAnnularRadiusSpinner], ...
                     "Limits", ...
-                    [0 self.common_parameters.max_radius*self.diff_scale], ...
+                    [0 app.common_parameters.max_radius*app.diff_scale], ...
                     'Step', ...
-                    self.AnnularStep.Value)
-                inner_radius = clip(round(self.InnerAnnularRadius.Value*self.mradPx.Value/self.AnnularStep.Value)*self.AnnularStep.Value, 0, self.InnerAnnularRadius.Limits(2));
-                outer_radius = clip(round(self.OuterAnnularRadius.Value*self.mradPx.Value/self.AnnularStep.Value)*self.AnnularStep.Value, 0, self.OuterAnnularRadius.Limits(2));
-                set_external_source(self, event, ...
-                                    [self.InnerAnnularRadiusSpinner; ...
-                                     self.OuterAnnularRadiusSpinner; ...
-                                     self.InnerAnnularRadius; ...
-                                     self.OuterAnnularRadius], ...
+                    app.AnnularStep.Value)
+                inner_radius = clip(round(app.InnerAnnularRadius.Value*app.mradPx.Value/app.AnnularStep.Value)*app.AnnularStep.Value, 0, app.InnerAnnularRadius.Limits(2));
+                outer_radius = clip(round(app.OuterAnnularRadius.Value*app.mradPx.Value/app.AnnularStep.Value)*app.AnnularStep.Value, 0, app.OuterAnnularRadius.Limits(2));
+                set_external_source(app, event, ...
+                                    [app.InnerAnnularRadiusSpinner; ...
+                                     app.OuterAnnularRadiusSpinner; ...
+                                     app.InnerAnnularRadius; ...
+                                     app.OuterAnnularRadius], ...
                                     {"Value"}, ...
                                     {inner_radius; ...
                                      outer_radius; ...
-                                     min(inner_radius/self.mradPx.Value, self.common_parameters.max_radius); ...
-                                     min(outer_radius/self.mradPx.Value, self.common_parameters.max_radius)}); 
+                                     min(inner_radius/app.mradPx.Value, app.common_parameters.max_radius); ...
+                                     min(outer_radius/app.mradPx.Value, app.common_parameters.max_radius)}); 
             end
 
             % Function to enable/disable UI
             function enableAnnUI()
                 % Enable segmented panel
-                set(self.SegmentedDetectorGrid.Children, "Enable",switch_on_off(self, dmod == "DPC"))
+                set(app.SegmentedDetectorGrid.Children, "Enable",switch_on_off(app, dmod == "DPC"))
 
-                % Change Enable state of scan direction UIs, except `self.ScanDirectionLock`
-                set(setdiff(self.ScanDirectionGrid.Children,self.ScanDirectionLock), ...
+                % Change Enable state of scan direction UIs, except `app.ScanDirectionLock`
+                set(setdiff(app.ScanDirectionGrid.Children,app.ScanDirectionLock), ...
                     "Enable", ...
-                    switch_on_off(self, self.ScanDirectionLock.Value))
+                    switch_on_off(app, app.ScanDirectionLock.Value))
 
                 % enable ScanDirectionLock if in CoM/DPC mode, else disable
-                self.ScanDirectionLock.Enable = ismember(dmod, ["CoM" "DPC"]);
+                app.ScanDirectionLock.Enable = ismember(dmod, ["CoM" "DPC"]);
                 
                 % Highlight to align Scanning Direction
-                if self.ScanDirectionLock.Enable && ~self.common_parameters.scan_direction_initialized
-                    background_color = self.sys_constants.warning_color;
+                if app.ScanDirectionLock.Enable && ~app.common_parameters.scan_direction_initialized
+                    background_color = app.sys_constants.warning_color;
                 else
-                    background_color = self.sys_constants.background_color;
+                    background_color = app.sys_constants.background_color;
                 end
                 
                 % Set scan direction panel color
-                self.ScanDirectionGrid.BackgroundColor = background_color;
+                app.ScanDirectionGrid.BackgroundColor = background_color;
             end
 
             % Function to live update annular/round/segmented detectors
             function move_annular_detector(source, event)
-                inner_radius = self.InnerAnnularRadius.Value;
-                outer_radius = self.OuterAnnularRadius.Value;
-                detector_rotation = self.DetectorRotationSlider.Value;
-                scan_direction = self.ScanDirectionSlider.Value;
-                flip_scan_y = 1-2*self.FlipScanDirectionY.Value;
+                inner_radius = app.InnerAnnularRadius.Value;
+                outer_radius = app.OuterAnnularRadius.Value;
+                detector_rotation = app.DetectorRotationSlider.Value;
+                scan_direction = app.ScanDirectionSlider.Value;
+                flip_scan_y = 1-2*app.FlipScanDirectionY.Value;
 
                 % Cases for different detectors
                 if contains(source.Tag,'AnnDetr')
@@ -6565,73 +6628,73 @@ classdef Quant4D < matlab.apps.AppBase
                     move_segmented_detector()
                 elseif contains(source.Tag,'ScanDir')
                     move_scan()
-                else % self.Mode self.UpdateImages
+                else % app.Mode app.UpdateImages
                     moveAnnR();
                     
                     % Update scan directions as well
-                    if self.ScanDirectionLock.Value
+                    if app.ScanDirectionLock.Value
                         move_scan();
                     end
                 end
 
                 % Whether to update images
-                if to_update_image(self, event)
-                    % Skip calculations of new BF/DF `self.images.Real` if
+                if to_update_image(app, event)
+                    % Skip calculations of new BF/DF `app.images.Real` if
                     % annular radii are not changed
-                    if is_different_to_previous(self,'AnnR',[inner_radius outer_radius]) || is_static_event(self, event)
+                    if is_different_to_previous(app,'AnnR',[inner_radius outer_radius]) || is_static_event(app, event)
                         % 2D matrix of distances from central beam, X/Y on the 1st/2nd dimensions
-                        mask_ann = sqrt( ((1:self.dataset_parameters.n_pixels(1))-transmitted_beam_center(1))'.^2 + ((1:self.dataset_parameters.n_pixels(2))-transmitted_beam_center(2)).^2 );
+                        mask_ann = sqrt( ((1:app.dataset_parameters.n_pixels(1))-transmitted_beam_center(1))'.^2 + ((1:app.dataset_parameters.n_pixels(2))-transmitted_beam_center(2)).^2 );
                         mask_ann = mask_ann >= inner_radius & mask_ann <= outer_radius;
-                        self.images.DiffractionMask = mask_ann;
-                        self.masks.annular = mask_ann;
+                        app.images.DiffractionMask = mask_ann;
+                        app.masks.annular = mask_ann;
                         
                         % The plus 1 is because the array begins at 0, but is 1-indexed.
-                        adf_inner = clip(round(inner_radius*self.mradPx.Value/self.AnnularStep.Value) + 1, 1, self.common_parameters.max_radius);
-                        adf_outer = clip(round(outer_radius*self.mradPx.Value/self.AnnularStep.Value) + 1, 1, self.common_parameters.max_radius);
-                        self.images.Real = gather(sum(self.images.annular_images(:, :,adf_inner:adf_outer), 3,'omitnan'));
+                        adf_inner = clip(round(inner_radius*app.mradPx.Value/app.AnnularStep.Value) + 1, 1, app.common_parameters.max_radius);
+                        adf_outer = clip(round(outer_radius*app.mradPx.Value/app.AnnularStep.Value) + 1, 1, app.common_parameters.max_radius);
+                        app.images.Real = gather(sum(app.images.annular_images(:, :,adf_inner:adf_outer), 3,'omitnan'));
                     end
 
                     % CoM/DPC calculations; skip if parameters unchanged
                     if ismember(dmod, ["CoM", "DPC"])
-                        if is_different_to_previous(self,'CoM_P',[inner_radius outer_radius scan_direction flip_scan_y detector_rotation]) || is_static_event(self, event)
+                        if is_different_to_previous(app,'CoM_P',[inner_radius outer_radius scan_direction flip_scan_y detector_rotation]) || is_static_event(app, event)
                             calculate_CoM();
                         end
                     end
                     % Update images
-                    plot_all_patterns(self, event)
+                    plot_all_patterns(app, event)
                 end
 
                 % Sub sub functions
                 % Sub sub function for annular radii
                 function moveAnnR()
-                    scale = self.diff_scale;
+                    scale = app.diff_scale;
                     
                     % given the AnnularStep (in mrad), round detector step
                     % size (in pixels)
-                    annular_pixel_step = self.AnnularStep.Value/self.mradPx.Value;
+                    annular_pixel_step = app.AnnularStep.Value/app.mradPx.Value;
 
                     switch source
-                        case self.annotations.inner_annulus
+                        case app.annotations.inner_annulus
                             inner_radius = round(event.CurrentRadius/annular_pixel_step) * annular_pixel_step;
-                        case self.annotations.outer_annulus
+                        case app.annotations.outer_annulus
                             outer_radius = round(event.CurrentRadius/annular_pixel_step) * annular_pixel_step;
-                        case self.InnerAnnularRadius
+                        case app.InnerAnnularRadius
                             inner_radius = round(event.Value/annular_pixel_step) * annular_pixel_step;
-                        case self.OuterAnnularRadius
+                        case app.OuterAnnularRadius
                             outer_radius = round(event.Value/annular_pixel_step) * annular_pixel_step;
-                        case self.InnerAnnularRadiusSpinner
-                            inner_radius = round(event.Value/self.AnnularStep.Value)*self.AnnularStep.Value/self.diff_scale;
-                        case self.OuterAnnularRadiusSpinner
-                            outer_radius = round(event.Value/self.AnnularStep.Value)*self.AnnularStep.Value/self.diff_scale;
-                        otherwise % {self.AnnularRadiusLink, self.Mode self.UpdateImages}
-                            self.common_parameters.detector_width = outer_radius - inner_radius;
+                        case app.InnerAnnularRadiusSpinner
+                            inner_radius = round(event.Value/app.AnnularStep.Value)*app.AnnularStep.Value/app.diff_scale;
+                        case app.OuterAnnularRadiusSpinner
+                            outer_radius = round(event.Value/app.AnnularStep.Value)*app.AnnularStep.Value/app.diff_scale;
+                        otherwise % {app.AnnularRadiusLink, app.Mode app.UpdateImages}
+                            app.common_parameters.detector_width = outer_radius - inner_radius;
                     end
 
                     % If inner/outer detector radii are linked
-                    if self.AnnularRadiusLink.Value
-                        detector_width = self.common_parameters.detector_width;
+                    if app.AnnularRadiusLink.Value
+                        detector_width = app.common_parameters.detector_width;
                         if contains(source.Tag,'RI')
-                            inner_radius = min(inner_radius, self.common_parameters.max_radius-detector_width);
+                            inner_radius = min(inner_radius, app.common_parameters.max_radius-detector_width);
                             outer_radius = inner_radius + detector_width;
                         elseif contains(source.Tag,'RO')
                             outer_radius = max(outer_radius, detector_width);
@@ -6643,28 +6706,28 @@ classdef Quant4D < matlab.apps.AppBase
                     if contains(source.Tag,'RI')
                         inner_radius = clip(inner_radius, 0, outer_radius);
                     elseif contains(source.Tag,'RO')
-                        outer_radius = clip(outer_radius, inner_radius, self.common_parameters.max_radius);
+                        outer_radius = clip(outer_radius, inner_radius, app.common_parameters.max_radius);
                     end
                     
                     % Update ROI
-                    set([self.annotations.inner_annulus;self.annotations.outer_annulus], ...
+                    set([app.annotations.inner_annulus;app.annotations.outer_annulus], ...
                         {'Radius'}, {inner_radius;outer_radius})
                     
                     % Update UI with Limits check
-                    set_external_source(self, event, ...
-                                        [self.InnerAnnularRadius; ...
-                                         self.OuterAnnularRadius; ...
-                                         self.InnerAnnularRadiusSpinner; ...
-                                         self.OuterAnnularRadiusSpinner], ...
+                    set_external_source(app, event, ...
+                                        [app.InnerAnnularRadius; ...
+                                         app.OuterAnnularRadius; ...
+                                         app.InnerAnnularRadiusSpinner; ...
+                                         app.OuterAnnularRadiusSpinner], ...
                                         {"Value"}, ...
                                         {inner_radius; ...
                                          outer_radius; ...
-                                         min(inner_radius*scale, self.common_parameters.max_radius*scale); ...
-                                         min(outer_radius*scale, self.common_parameters.max_radius*scale)});
+                                         min(inner_radius*scale, app.common_parameters.max_radius*scale); ...
+                                         min(outer_radius*scale, app.common_parameters.max_radius*scale)});
                     
                     % Update saving prefix
-                    if is_static_event(self, event)
-                        mock_UI_callbacks(self, self.SaveImagePrefix)
+                    if is_static_event(app, event)
+                        mock_UI_callbacks(app, app.SaveImagePrefix)
                     end
 
                     % Whether to update segments as well
@@ -6676,44 +6739,44 @@ classdef Quant4D < matlab.apps.AppBase
                 % Sub sub function for segmented detector
                 function move_segmented_detector()
                     switch source
-                        case {self.DetectorRotationSlider self.DetectorRotationSpinner}
+                        case {app.DetectorRotationSlider app.DetectorRotationSpinner}
                             detector_rotation = event.Value;
-                        case self.annotations.SegDetrP0
+                        case app.annotations.SegDetrP0
                             rxy = (event.CurrentPosition-transmitted_beam_center);
                             detector_rotation = atan2d(rxy(2), rxy(1));
-                        case {self.NSeg self.NRung}
+                        case {app.NSeg app.NRung}
                             draw_segmented_detector();
                     end
 
                     % Update UI
-                    set_external_source(self, event, [self.DetectorRotationSlider, self.DetectorRotationSpinner], "Value",detector_rotation)
+                    set_external_source(app, event, [app.DetectorRotationSlider, app.DetectorRotationSpinner], "Value",detector_rotation)
                     
                     % Update ROI
-                    pos0 = [inner_radius, 0; outer_radius, 0; (inner_radius+outer_radius)/2, 0]*rotation_matrix(self, detector_rotation)+transmitted_beam_center;
-                    set([self.annotations.SegDetrL0 self.annotations.SegDetrP0],{"Position"},{pos0(1:2,:);pos0(3,:)});
-                    set(self.annotations.segmented_detector_circle,{'Radius'}, num2cell((1:self.NRung.Value-1)'/self.NRung.Value*(outer_radius - inner_radius) + inner_radius))
+                    pos0 = [inner_radius, 0; outer_radius, 0; (inner_radius+outer_radius)/2, 0]*rotation_matrix(app, detector_rotation)+transmitted_beam_center;
+                    set([app.annotations.SegDetrL0 app.annotations.SegDetrP0],{"Position"},{pos0(1:2,:);pos0(3,:)});
+                    set(app.annotations.segmented_detector_circle,{'Radius'}, num2cell((1:app.NRung.Value-1)'/app.NRung.Value*(outer_radius - inner_radius) + inner_radius))
                     
                     % Use 3D matrix for positions, then put the 1st/2nd dimensions (2x2 array) in each cell for each segment
-                    t = detector_rotation+360*(reshape(1:self.NSeg.Value,1,1,[])-.5)/self.NSeg.Value;
-                    set(self.annotations.segmented_detector_line,{"Position"},squeeze(num2cell([inner_radius;outer_radius].*[cosd(t) sind(t)]+transmitted_beam_center, 1:2)))
+                    t = detector_rotation+360*(reshape(1:app.NSeg.Value,1,1,[])-.5)/app.NSeg.Value;
+                    set(app.annotations.segmented_detector_line,{"Position"},squeeze(num2cell([inner_radius;outer_radius].*[cosd(t) sind(t)]+transmitted_beam_center, 1:2)))
                 end
 
                 % Sub sub function for scan directions
                 function move_scan()
                     % Use polar relative pixel coordinates for calculation
-                    svx = self.annotations.ScanDir.xc.Center - transmitted_beam_center;
-                    svy = self.annotations.ScanDir.yc.Center - transmitted_beam_center;
+                    svx = app.annotations.ScanDir.xc.Center - transmitted_beam_center;
+                    svy = app.annotations.ScanDir.yc.Center - transmitted_beam_center;
 
                     switch source
-                        case self.annotations.ScanDir.xc
+                        case app.annotations.ScanDir.xc
                             svx = event.CurrentCenter - transmitted_beam_center;
                             scan_direction = atan2d(svx(2), svx(1));
-                        case self.annotations.ScanDir.yc
+                        case app.annotations.ScanDir.yc
                             svy = (event.CurrentCenter - transmitted_beam_center)*flip_scan_y;
                             scan_direction = -atan2d(svy(1), svy(2));
-                        case {self.ScanDirectionSlider self.ScanDirectionSpinner}
+                        case {app.ScanDirectionSlider app.ScanDirectionSpinner}
                             scan_direction = event.Value;
-                        case self.FlipScanDirectionY
+                        case app.FlipScanDirectionY
                     end
 
                     % Convert back to Cartesian absolute pixel coordinates for annotations
@@ -6723,40 +6786,40 @@ classdef Quant4D < matlab.apps.AppBase
                     sp2 = [x2 y2] + transmitted_beam_center;
                     
                     % Not limiting annotation positions
-                    set([self.annotations.ScanDir.xl self.annotations.ScanDir.yl],{"Position"},{[transmitted_beam_center;sp1];[transmitted_beam_center;sp2]})
-                    set_external_source(self, event, [self.annotations.ScanDir.xc, self.annotations.ScanDir.yc],{"Center"},{sp1;sp2})
-                    set_external_source(self, event, [self.ScanDirectionSlider, self.ScanDirectionSpinner], "Value",scan_direction)
+                    set([app.annotations.ScanDir.xl app.annotations.ScanDir.yl],{"Position"},{[transmitted_beam_center;sp1];[transmitted_beam_center;sp2]})
+                    set_external_source(app, event, [app.annotations.ScanDir.xc, app.annotations.ScanDir.yc],{"Center"},{sp1;sp2})
+                    set_external_source(app, event, [app.ScanDirectionSlider, app.ScanDirectionSpinner], "Value",scan_direction)
                 end
             end
 
             % Function to draw annular/round/segmented detectors
             function draw_annular_detector()
                 % delete any annular detector annotations
-                delete(findobj(self.image_axes.Diffraction,'-regexp', "Tag",'AnnDetrAnnot'))
+                delete(findobj(app.image_axes.Diffraction,'-regexp', "Tag",'AnnDetrAnnot'))
                 
                 % draw inner and outer circles
-                self.annotations.inner_annulus = drawcircle(self.image_axes.Diffraction, ...
+                app.annotations.inner_annulus = drawcircle(app.image_axes.Diffraction, ...
                                                            "Center", transmitted_beam_center, ...
                                                            "Radius", 1, ...
                                                            "Color", "r", ...
                                                            "Tag", "AnnDetrAnnot RI");
-                self.annotations.outer_annulus = drawcircle(self.image_axes.Diffraction, ...
+                app.annotations.outer_annulus = drawcircle(app.image_axes.Diffraction, ...
                                                            "Center", transmitted_beam_center, ...
                                                            "Radius", 2, ...
                                                            "Color", "m", ...
                                                            "Tag", "AnnDetrAnnot RO");
                 
                 % add listener for live update during user interaction
-                addlistener([self.annotations.inner_annulus, ...
-                             self.annotations.outer_annulus], ...
+                addlistener([app.annotations.inner_annulus, ...
+                             app.annotations.outer_annulus], ...
                             "MovingROI", @move_annular_detector);
                 
-                u.Move = addlistener([self.annotations.inner_annulus, ...
-                                      self.annotations.outer_annulus], ...
+                u.Move = addlistener([app.annotations.inner_annulus, ...
+                                      app.annotations.outer_annulus], ...
                                      "ROIMoved", @move_annular_detector);
 
                 % set properties for inner and out annulus annotations
-                set([self.annotations.inner_annulus self.annotations.outer_annulus], ...
+                set([app.annotations.inner_annulus app.annotations.outer_annulus], ...
                     "FaceAlpha", 0, ...
                     "FaceSelectable", 0, ...
                     "LineWidth", 4, ...
@@ -6769,20 +6832,20 @@ classdef Quant4D < matlab.apps.AppBase
             % Function to draw segmented annotations
             function draw_segmented_detector()
                 % delete any old segmented detector annotations
-                delete(findobj(self.image_axes.Diffraction, "Tag",'SegDetrAnnot'))
+                delete(findobj(app.image_axes.Diffraction, "Tag",'SegDetrAnnot'))
                 
-                self.annotations.segmented_detector_circle = gobjects(self.NRung.Value-1,1);
-                self.annotations.segmented_detector_line = gobjects(self.NSeg.Value,1);
+                app.annotations.segmented_detector_circle = gobjects(app.NRung.Value-1,1);
+                app.annotations.segmented_detector_line = gobjects(app.NSeg.Value,1);
 
                 % plot the lines between segments
-                for i = 1:self.NSeg.Value
-                    self.annotations.segmented_detector_line(i) = drawline(self.image_axes.Diffraction, ...
+                for i = 1:app.NSeg.Value
+                    app.annotations.segmented_detector_line(i) = drawline(app.image_axes.Diffraction, ...
                                                                           "Position", [0 1; 0 1] + transmitted_beam_center, ...
                                                                           "Color", "b", ...
                                                                           "LineWidth", 2);
                 end
                 % Zero-degree line
-                self.annotations.SegDetrL0 = drawline(self.image_axes.Diffraction, ...
+                app.annotations.SegDetrL0 = drawline(app.image_axes.Diffraction, ...
                                                      "Position", [transmitted_beam_center;transmitted_beam_center], ...
                                                      "Color", "w", ...
                                                      "StripeColor", "k", ...
@@ -6790,8 +6853,8 @@ classdef Quant4D < matlab.apps.AppBase
                                                      "EdgeAlpha", 0.7);
 
                 % plot the circles between rungs
-                for i = 1:self.NRung.Value - 1
-                    self.annotations.segmented_detector_circle(i) = drawcircle(self.image_axes.Diffraction, ...
+                for i = 1:app.NRung.Value - 1
+                    app.annotations.segmented_detector_circle(i) = drawcircle(app.image_axes.Diffraction, ...
                                                                               "Center", transmitted_beam_center, ...
                                                                               "Radius", 1, ...
                                                                               "Color", "y", ...
@@ -6801,7 +6864,7 @@ classdef Quant4D < matlab.apps.AppBase
                 end
                 
                 % Zero-degree point
-                self.annotations.SegDetrP0 = drawpoint(self.image_axes.Diffraction, ...
+                app.annotations.SegDetrP0 = drawpoint(app.image_axes.Diffraction, ...
                                                       "Position", transmitted_beam_center, ...
                                                       "Color", "w", ...
                                                       "LabelTextColor", "w", ...
@@ -6811,66 +6874,66 @@ classdef Quant4D < matlab.apps.AppBase
                                                       "Tag", "SegDetrAnnot");
                 
                 % add listeners to segment annotations
-                addlistener(self.annotations.SegDetrP0, "MovingROI", @move_annular_detector);
-                self.annotations.SegDetrP0.UserData.Move = addlistener(self.annotations.SegDetrP0, "ROIMoved", @move_annular_detector);
+                addlistener(app.annotations.SegDetrP0, "MovingROI", @move_annular_detector);
+                app.annotations.SegDetrP0.UserData.Move = addlistener(app.annotations.SegDetrP0, "ROIMoved", @move_annular_detector);
                 
                 % set segment annotation parameters
-                set([self.annotations.SegDetrL0; ...
-                     self.annotations.segmented_detector_circle; ...
-                     self.annotations.segmented_detector_line], ...
+                set([app.annotations.SegDetrL0; ...
+                     app.annotations.segmented_detector_circle; ...
+                     app.annotations.segmented_detector_line], ...
                     "InteractionsAllowed", "none", ...
                     "Tag", "SegDetrAnnot");
             end
 
             % Function to draw Scan Direction alignment annotations
             function draw_scan_direction()
-                p1 = transmitted_beam_center+[self.common_parameters.max_radius/2 0];
-                p2 = transmitted_beam_center+[0 self.common_parameters.max_radius/2];
+                p1 = transmitted_beam_center+[app.common_parameters.max_radius/2 0];
+                p2 = transmitted_beam_center+[0 app.common_parameters.max_radius/2];
                 
-                self.annotations.ScanDir.xl = drawline(self.image_axes.Diffraction, ...
+                app.annotations.ScanDir.xl = drawline(app.image_axes.Diffraction, ...
                                                       "Position", [transmitted_beam_center;p1], ...
                                                       "Color","r", ...
                                                       'LabelTextColor',"r", ...
                                                       'Label','Scan X');
 
-                self.annotations.ScanDir.yl = drawline(self.image_axes.Diffraction, ...
+                app.annotations.ScanDir.yl = drawline(app.image_axes.Diffraction, ...
                                                       "Position", [transmitted_beam_center;p2], ...
                                                       "Color", 'g', ...
                                                       'LabelTextColor', 'g', ...
                                                       'Label', 'Scan Y');
 
-                self.annotations.ScanDir.xc = drawcircle(self.image_axes.Diffraction, ...
+                app.annotations.ScanDir.xc = drawcircle(app.image_axes.Diffraction, ...
                                                         "Center", p1, ...
-                                                        'Radius', self.TransBeamR.Value);
+                                                        'Radius', app.TransBeamR.Value);
 
-                self.annotations.ScanDir.yc = drawcircle(self.image_axes.Diffraction, ...
+                app.annotations.ScanDir.yc = drawcircle(app.image_axes.Diffraction, ...
                                                         "Center", p2, ...
-                                                        'Radius', self.TransBeamR.Value);
+                                                        'Radius', app.TransBeamR.Value);
                 
                 % add listeners to scan direction annotations
-                addlistener([self.annotations.ScanDir.xc; ...
-                             self.annotations.ScanDir.yc], ...
+                addlistener([app.annotations.ScanDir.xc; ...
+                             app.annotations.ScanDir.yc], ...
                             "MovingROI", @move_annular_detector);
-                u.Move = addlistener([self.annotations.ScanDir.xc; ...
-                                      self.annotations.ScanDir.yc], ...
+                u.Move = addlistener([app.annotations.ScanDir.xc; ...
+                                      app.annotations.ScanDir.yc], ...
                                      "ROIMoved", @move_annular_detector);
 
                 % set scan direction annotation parameters
-                set([self.annotations.ScanDir.xc; ...
-                     self.annotations.ScanDir.yc], ...
+                set([app.annotations.ScanDir.xc; ...
+                     app.annotations.ScanDir.yc], ...
                     "Color", [0 0.5 1], ...
                     "FaceAlpha", 0, ...
                     "UserData",u)
-                set([self.annotations.ScanDir.xl; ...
-                     self.annotations.ScanDir.yl], ...
+                set([app.annotations.ScanDir.xl; ...
+                     app.annotations.ScanDir.yl], ...
                     "MarkerSize", 1, ...
                     "LineWidth",1, ...
                     "LabelAlpha",0, ...
                     "InteractionsAllowed", "none")
-                set([self.annotations.ScanDir.xc; ...
-                     self.annotations.ScanDir.yc; ...
-                     self.annotations.ScanDir.xl; ...
-                     self.annotations.ScanDir.yl], ...
+                set([app.annotations.ScanDir.xc; ...
+                     app.annotations.ScanDir.yc; ...
+                     app.annotations.ScanDir.xl; ...
+                     app.annotations.ScanDir.yl], ...
                     "Deletable", false, ...
                     "DrawingArea", "unlimited", ...
                     "Tag", "ScanDirAnnot")
@@ -6880,40 +6943,40 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Integrate the annular detector for the primary real-space
-            % pattern `self.Axes.Real` with step size self.AnnularStep.Value
+            % pattern `app.Axes.Real` with step size app.AnnularStep.Value
             function integrate_annular()
                 debug_time = tic;
                 
                 % Rerun the annular integration based on the newly aligned location of the transmitted disk
                 message = "Generating radial masks (takes a while) ...";
                 
-                if is_different_to_previous(self,'B0',self.center) || (event.Source == self.AnnularStep && ~strcmp(self.Mode.Value,'Alignment'))
-                    self.tmp_variables.progress_dialog = progress_dialog(self, sprintf("\n%s\n",message), "Annular Integration");
+                if is_different_to_previous(app,'B0',app.center) || (event.Source == app.AnnularStep && ~strcmp(app.Mode.Value,'Alignment'))
+                    app.tmp_variables.progress_dialog = progress_dialog(app, sprintf("\n%s\n",message), "Annular Integration");
                     
                     % Make pixel array for mask
-                    [ygrid, xgrid] = meshgrid(1:self.dataset_parameters.n_pixels(2), 1:self.dataset_parameters.n_pixels(1));
+                    [ygrid, xgrid] = meshgrid(1:app.dataset_parameters.n_pixels(2), 1:app.dataset_parameters.n_pixels(1));
                     
-                    % Integrate in self.AnnularStep (mrad) increments all the way out to the furthest corner; put these on the 3rd dimension
-                    dist = reshape(0:self.AnnularStep.Value/self.mradPx.Value:self.common_parameters.max_radius, 1, 1, []);
-                    mask_ann = sqrt((xgrid-self.center(1)).^2 + (ygrid-self.center(2)).^2);
-                    mask_ann = reshape(mask_ann >= dist & mask_ann < dist+self.AnnularStep.Value/self.mradPx.Value, [], numel(dist))';
-                    mask_ann = cast(mask_ann,self.dataset_parameters.data_type);
+                    % Integrate in app.AnnularStep (mrad) increments all the way out to the furthest corner; put these on the 3rd dimension
+                    dist = reshape(0:app.AnnularStep.Value/app.mradPx.Value:app.common_parameters.max_radius, 1, 1, []);
+                    mask_ann = sqrt((xgrid-app.center(1)).^2 + (ygrid-app.center(2)).^2);
+                    mask_ann = reshape(mask_ann >= dist & mask_ann < dist+app.AnnularStep.Value/app.mradPx.Value, [], numel(dist))';
+                    mask_ann = cast(mask_ann,app.dataset_parameters.data_type);
                     
                     % Multiply data by the annular masks
                     try
-                        self.images.annular_images = reshape((mask_ann*self.data)', self.dataset_parameters.n_frames(1), self.dataset_parameters.n_frames(2), []);
+                        app.images.annular_images = reshape((mask_ann*app.data)', app.dataset_parameters.n_frames(1), app.dataset_parameters.n_frames(2), []);
                     catch ME
-                        if self.dataset_parameters.gpu
-                            waitbar(0,self.tmp_variables.progress_dialog,message+sprintf("\nIt seems the GPU does not have enough memory.\nUsing CPU for this process ..."))
-                            self.images.annular_images = reshape((mask_ann*gather(self.data))', self.dataset_parameters.n_frames(1), self.dataset_parameters.n_frames(2), []);
+                        if app.dataset_parameters.gpu
+                            waitbar(0,app.tmp_variables.progress_dialog,message+sprintf("\nIt seems the GPU does not have enough memory.\nUsing CPU for this process ..."))
+                            app.images.annular_images = reshape((mask_ann*gather(app.data))', app.dataset_parameters.n_frames(1), app.dataset_parameters.n_frames(2), []);
                             try 
                                 % Move the integrated images to GPU
-                                self.images.annular_images = gpuArray(self.images.annular_images);
+                                app.images.annular_images = gpuArray(app.images.annular_images);
                             catch
                             end
                         else
-                            delete(self.tmp_variables.progress_dialog)
-                            notification_dialog(self, ...
+                            delete(app.tmp_variables.progress_dialog)
+                            notification_dialog(app, ...
                                                 "error", ...
                                                 "It seems the system has not enough memory for this process! " ...
                                                  + "Maybe try to increase system's virtual memory.", ...
@@ -6923,46 +6986,46 @@ classdef Quant4D < matlab.apps.AppBase
                     end
 
                     % Close progress window
-                    delete(self.tmp_variables.progress_dialog);
+                    delete(app.tmp_variables.progress_dialog);
                 end
 
-                debug_toc(self, [], "", debug_time)
+                debug_toc(app, [], "", debug_time)
             end
 
             % Calculate the CoM images
             function calculate_CoM()
                 debug_time = tic;
-                if ~isfield(self.masks, "annular")
+                if ~isfield(app.masks, "annular")
                     return;
                 end
 
-                inner_radius = self.InnerAnnularRadius.Value;
-                outer_radius = self.OuterAnnularRadius.Value;
-                scan_direction = self.ScanDirectionSlider.Value;
-                flip_scan_y = 1-2*self.FlipScanDirectionY.Value;
-                detector_rotation = self.DetectorRotationSlider.Value;
+                inner_radius = app.InnerAnnularRadius.Value;
+                outer_radius = app.OuterAnnularRadius.Value;
+                scan_direction = app.ScanDirectionSlider.Value;
+                flip_scan_y = 1-2*app.FlipScanDirectionY.Value;
+                detector_rotation = app.DetectorRotationSlider.Value;
 
                 [CoMX, CoMY] = integrate_CoM();
-                self.images.CoMX = CoMX;
-                self.images.CoMY = CoMY;
+                app.images.CoMX = CoMX;
+                app.images.CoMY = CoMY;
 
                 % CoM magnitude is the length of the vector -- in mrad
-                self.images.CoMMag = sqrt(CoMX.^2 + CoMY.^2);
-                self.images.CoMMagNorm = rescale(self.images.CoMMag);
+                app.images.CoMMag = sqrt(CoMX.^2 + CoMY.^2);
+                app.images.CoMMagNorm = rescale(app.images.CoMMag);
                 
                 % CoM angle was calculated from the arctangent of the difference images (CoMX and CoMY)
-                self.images.CoMPh = atan2(CoMY,CoMX);
+                app.images.CoMPh = atan2(CoMY,CoMX);
                 
                 % Adjust atan2 range from [-pi/2:pi/2) to [0:2pi)
-                self.images.CoMPh(self.images.CoMPh < 0) = self.images.CoMPh(self.images.CoMPh < 0) + 2*pi;
-                self.images.CoMPhMag = self.images.CoMPh;
+                app.images.CoMPh(app.images.CoMPh < 0) = app.images.CoMPh(app.images.CoMPh < 0) + 2*pi;
+                app.images.CoMPhMag = app.images.CoMPh;
 
                 % Make iCoM/iDPC and dCoM/dDPC images - based on maths from Lazic et al.,
                 % (https://doi.org/10.1016/j.ultramic.2015.10.011)
-                %         [ky, kx] = meshgrid(floor(-self.dataset_parameters.n_framesY/2):floor(-self.dataset_parameters.n_framesY/2)+self.dataset_parameters.n_framesY-1, ...
-                %           floor(-self.dataset_parameters.n_framesX/2):floor(-self.dataset_parameters.n_framesX/2)+self.dataset_parameters.n_framesX-1);
-                [ky, kx] = meshgrid((1:self.dataset_parameters.n_frames(2)) - self.common_parameters.real_space_center(2), ...
-                                    (1:self.dataset_parameters.n_frames(1)) - self.common_parameters.real_space_center(1));
+                %         [ky, kx] = meshgrid(floor(-app.dataset_parameters.n_framesY/2):floor(-app.dataset_parameters.n_framesY/2)+app.dataset_parameters.n_framesY-1, ...
+                %           floor(-app.dataset_parameters.n_framesX/2):floor(-app.dataset_parameters.n_framesX/2)+app.dataset_parameters.n_framesX-1);
+                [ky, kx] = meshgrid((1:app.dataset_parameters.n_frames(2)) - app.common_parameters.real_space_center(2), ...
+                                    (1:app.dataset_parameters.n_frames(1)) - app.common_parameters.real_space_center(1));
 
                 kr = sqrt(kx.^2+ky.^2);
                 
@@ -6975,45 +7038,45 @@ classdef Quant4D < matlab.apps.AppBase
                 kr = fftshift(kr);
 
                 % generate band-pass filter 
-                bandpass_filter = kr<=self.BandpassFilterHigh.Value & kr>=self.BandpassFilterLow.Value;
+                bandpass_filter = kr<=app.BandpassFilterHigh.Value & kr>=app.BandpassFilterLow.Value;
 
                 % integrated center of mass
-                self.images.iCoM = real(ifft2(kx.*fft2(CoMX)./(2*pi*1j*kr.^2).*bandpass_filter) + ...
+                app.images.iCoM = real(ifft2(kx.*fft2(CoMX)./(2*pi*1j*kr.^2).*bandpass_filter) + ...
                                        ifft2(ky.*fft2(CoMY)./(2*pi*1j*kr.^2).*bandpass_filter));
                 
                 % differential center of mass
-                self.images.dCoM = real(ifft2(2*pi*1i*kx.*fft2(CoMX).*bandpass_filter +...
+                app.images.dCoM = real(ifft2(2*pi*1i*kx.*fft2(CoMX).*bandpass_filter +...
                                              2*pi*1i*ky.*fft2(CoMY).*bandpass_filter));
 
-                debug_toc(self, [], "", debug_time)
+                debug_toc(app, [], "", debug_time)
 
                 %% Sub sub function
                 function [CoMX,CoMY] = integrate_CoM()
-                    R_scan = rotation_matrix(self, scan_direction);
-                    R_detector = rotation_matrix(self, detector_rotation);
+                    R_scan = rotation_matrix(app, scan_direction);
+                    R_detector = rotation_matrix(app, detector_rotation);
                     
                     % Make pixel array for masks
-                    [ygrid, xgrid] = meshgrid(((1:self.dataset_parameters.n_pixels(2))-transmitted_beam_center(2))*flip_scan_y, ...
-                                               (1:self.dataset_parameters.n_pixels(1))-transmitted_beam_center(1));
+                    [ygrid, xgrid] = meshgrid(((1:app.dataset_parameters.n_pixels(2))-transmitted_beam_center(2))*flip_scan_y, ...
+                                               (1:app.dataset_parameters.n_pixels(1))-transmitted_beam_center(1));
                     
-                    im_real = cast(reshape(self.masks.annular,1,[]),self.dataset_parameters.data_type)*self.data;
+                    im_real = cast(reshape(app.masks.annular,1,[]),app.dataset_parameters.data_type)*app.data;
 
                     % switch between detector types (except annular/round)
                     if dmod == "CoM"
                         % Mask off diffraction pattern: less than outer angle & greater than inner angle
-                        CoM = zeros(prod(self.dataset_parameters.n_frames), 2, 'like',self.data);
+                        CoM = zeros(prod(app.dataset_parameters.n_frames), 2, 'like',app.data);
                         
                         % Integrated mass of each diffraction pattern within the mask:
                         % Center of Mass adjusted to the center of the diffraction pattern
-                        CoM(:,1) = cast(reshape(xgrid.*self.masks.annular,1,[]), self.dataset_parameters.data_type) * self.data./im_real;
-                        CoM(:,2) = cast(reshape(ygrid.*self.masks.annular,1,[]), self.dataset_parameters.data_type) * self.data./im_real;
+                        CoM(:,1) = cast(reshape(xgrid.*app.masks.annular,1,[]), app.dataset_parameters.data_type) * app.data./im_real;
+                        CoM(:,2) = cast(reshape(ygrid.*app.masks.annular,1,[]), app.dataset_parameters.data_type) * app.data./im_real;
                         
                         % Adjust for scan rotation
                         CoM = CoM*R_scan;
                     
                     elseif dmod == "DPC"
-                        nrung = self.NRung.Value;
-                        nseg = self.NSeg.Value;
+                        nrung = app.NRung.Value;
+                        nseg = app.NSeg.Value;
                         rdist = ygrid.^2 + xgrid.^2;
 
                         % Calculate the atan of all pixel positions within the image
@@ -7031,8 +7094,8 @@ classdef Quant4D < matlab.apps.AppBase
                         
                         % Preallocate a DPC/CoM vector image that will be
                         % the sum of all segments (i.e. DPC_A, DPC_B, ...)
-                        CoM_length = zeros(nrung*nseg,2,self.dataset_parameters.data_type);
-                        self.masks.Seg = zeros(nrung*nseg,prod(self.dataset_parameters.n_pixels),'logical');
+                        CoM_length = zeros(nrung*nseg,2,app.dataset_parameters.data_type);
+                        app.masks.Seg = zeros(nrung*nseg,prod(app.dataset_parameters.n_pixels),'logical');
                         
                         for j = 1:nrung
                             for i = 1:nseg
@@ -7046,7 +7109,7 @@ classdef Quant4D < matlab.apps.AppBase
                                 % to inner angle & greater than the start
                                 % of the segment angle & less than the end
                                 % of the segment angle
-                                self.masks.Seg(nseg*(j-1)+i,:) = reshape( ...
+                                app.masks.Seg(nseg*(j-1)+i,:) = reshape( ...
                                     rdist < k2^2 & ...
                                     rdist >= k1^2 & ...
                                     a >= (i-1)*360/nseg & ...
@@ -7060,11 +7123,11 @@ classdef Quant4D < matlab.apps.AppBase
                         end
 
                         % integrated mass of each diffraction pattern within the mask:
-                        CoM = (self.masks.Seg*self.data./im_real)'*CoM_length;
+                        CoM = (app.masks.Seg*app.data./im_real)'*CoM_length;
                     end
 
                     % Convert to mrad and pull out x and y components of the CoM
-                    CoM = gather(reshape(CoM, [self.dataset_parameters.n_frames 2])*self.mradPx.Value);
+                    CoM = gather(reshape(CoM, [app.dataset_parameters.n_frames 2])*app.mradPx.Value);
                     CoMX = CoM(:,:,1);  CoMY = CoM(:,:,2);
                 end
 
@@ -7074,13 +7137,13 @@ classdef Quant4D < matlab.apps.AppBase
 
         % Callback function: VirtualApertureInvert, VirtualApertureMirror, 
         % ...and 21 other components
-        function virtual_aperture_callbacks(self, event)
+        function virtual_aperture_callbacks(app, event)
             % Function called to during all virtual aperture interactions,
             % including entering the `Virtual Aperture` mode, drawing
             % virtual aperture annotations, and updating UI elements.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -7089,118 +7152,118 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
 
             switch event.Source
-                case self.Mode % Entering mode
+                case app.Mode % Entering mode
                     % Update UI limits
-                    limit_virtual_aperture_UI(self)
+                    limit_virtual_aperture_UI(app)
                     
                     % Enable/Disable UIs
-                    enable_virtual_aperture_UI(self)
+                    enable_virtual_aperture_UI(app)
                     
                     % Draw ROIs
-                    draw_virtual_aperture_annotation(self)
+                    draw_virtual_aperture_annotation(app)
                     
                     % Update ROI/UI
-                    move_virtual_aperture(self, event.Source, event)
+                    move_virtual_aperture(app, event.Source, event)
                     
                     % Enable windows
-                    enable_windows(self,true)
+                    enable_windows(app,true)
                 
-                case self.VirtualApertureMirror % Mirror enable/disable
+                case app.VirtualApertureMirror % Mirror enable/disable
                     
                     % set state button icon color based on value
-                    change_icon_background(self, self.VirtualApertureMirror)
+                    change_icon_background(app, app.VirtualApertureMirror)
 
                     % Enable/Disable UIs
-                    enable_virtual_aperture_UI(self)
+                    enable_virtual_aperture_UI(app)
                     
                     % Draw ROIs
-                    draw_virtual_aperture_annotation(self)
+                    draw_virtual_aperture_annotation(app)
                     
                     % Update ROI/UI
-                    move_virtual_aperture(self, event.Source, event)
+                    move_virtual_aperture(app, event.Source, event)
                 
-                case self.VirtualApertureSymmetry % Symmetric option
+                case app.VirtualApertureSymmetry % Symmetric option
                     % Draw ROIs
-                    draw_virtual_aperture_annotation(self)
+                    draw_virtual_aperture_annotation(app)
                     
                     % Update ROI/UI
-                    move_virtual_aperture(self, event.Source, event)
+                    move_virtual_aperture(app, event.Source, event)
                 
-                case self.DetectorCoordinateSystem % Coordinate options
+                case app.DetectorCoordinateSystem % Coordinate options
                     % Update UI limits
-                    limit_virtual_aperture_UI(self)
+                    limit_virtual_aperture_UI(app)
                     
                     % Update UI coordinate values
-                    move_virtual_aperture(self, event.Source, event)
+                    move_virtual_aperture(app, event.Source, event)
                 
-                case {self.VirtualApertureReset; self.VirtualApertureInvert; ...
-                      self.VirtualApertureR; self.VirtualApertureRSpinner; ...
-                      self.VirtualApertureX; self.VirtualApertureXSpinner; ...
-                      self.VirtualApertureY; self.VirtualApertureYSpinner; ...
-                      self.VirtualApertureMirrorRotation; self.VirtualApertureMirrorRotationSpinner; ...
-                      self.VirtualApertureRotateCCW; self.VirtualApertureRotateCW; self.UpdateImages}
+                case {app.VirtualApertureReset; app.VirtualApertureInvert; ...
+                      app.VirtualApertureR; app.VirtualApertureRSpinner; ...
+                      app.VirtualApertureX; app.VirtualApertureXSpinner; ...
+                      app.VirtualApertureY; app.VirtualApertureYSpinner; ...
+                      app.VirtualApertureMirrorRotation; app.VirtualApertureMirrorRotationSpinner; ...
+                      app.VirtualApertureRotateCCW; app.VirtualApertureRotateCW; app.UpdateImages}
                     
                     % set state button icon color based on value
-                    change_icon_background(self, self.VirtualApertureInvert)
+                    change_icon_background(app, app.VirtualApertureInvert)
                     
                     % Update ROI/UI
-                    move_virtual_aperture(self, event.Source, event)
+                    move_virtual_aperture(app, event.Source, event)
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Callback function: CDDelResetMenu, CustomDetectorColor, 
         % ...and 22 other components
-        function custom_detector_callbacks(self, event)
+        function custom_detector_callbacks(app, event)
             % 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             % Central beam location
-            b0 = self.center;
+            b0 = app.center;
 
             % Current selected row in Main Table `sel`, and the ROI group `ROI`
-            if self.CustomDetectorTable.Selection > height(self.CustomDetectorTable.Data)
-                self.CustomDetectorTable.Selection = [];
+            if app.CustomDetectorTable.Selection > height(app.CustomDetectorTable.Data)
+                app.CustomDetectorTable.Selection = [];
             end
             
             % set state button icon color based on value
-            for state_button = [self.CustomDetectorInvert, ...
-                                self.CustomDetectorMirror, ...
-                                self.CustomDetectorFlipHorizontal, ...
-                                self.CustomDetectorFlipVertical, ...
-                                self.CustomDetectorTranspose]
-                change_icon_background(self, state_button)
+            for state_button = [app.CustomDetectorInvert, ...
+                                app.CustomDetectorMirror, ...
+                                app.CustomDetectorFlipHorizontal, ...
+                                app.CustomDetectorFlipVertical, ...
+                                app.CustomDetectorTranspose]
+                change_icon_background(app, state_button)
             end
 
-            sel = self.CustomDetectorTable.Data(self.CustomDetectorTable.Selection, :); 
+            sel = app.CustomDetectorTable.Data(app.CustomDetectorTable.Selection, :); 
             ROI = {[]};
             
             if ~isempty(sel)
-                ROI = self.annotations.Custom.(sel.ID);
+                ROI = app.annotations.Custom.(sel.ID);
             end
 
             switch event.Source
-                case self.DetectorCoordinateSystem % Coordinate options
+                case app.DetectorCoordinateSystem % Coordinate options
                     % Update UI coordinate systems
                     limit_custom_detector_UI()
                     
                     % Update ROI/mask/images
                     move_custom_ROI(ROI{1}, event);
 
-                case {self.UpdateImages self.CustomDetectorInterMask self.Evaluate}
+                case {app.UpdateImages app.CustomDetectorInterMask app.Evaluate}
                     % Update ROI/mask/images
                     move_custom_ROI(ROI{1}, event);
 
-                case self.Mode % Entering current mode
-                    if ~isfield(self.annotations,'Custom')
-                        self.annotations.Custom = [];
+                case app.Mode % Entering current mode
+                    if ~isfield(app.annotations,'Custom')
+                        app.annotations.Custom = [];
                     end
 
                     % Update UI coordinate systems
@@ -7211,13 +7274,13 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     % Update for selection change
                     if ~isempty(ROI)
-                        mock_UI_callbacks(self, self.CustomDetectorTable)
+                        mock_UI_callbacks(app, app.CustomDetectorTable)
                     end
                     
                     % Enable windows
-                    enable_windows(self,true)
+                    enable_windows(app,true)
 
-                case self.CustomDetectorTable % Main table
+                case app.CustomDetectorTable % Main table
                     % Update Enable/Show states of all ROI groups
                     if event.EventName == "CellEdit"
                         update_enable_show_ROI()
@@ -7229,75 +7292,75 @@ classdef Quant4D < matlab.apps.AppBase
                     move_custom_ROI(ROI{1}, event);
                     %end
 
-                case self.CustomDetectorDeleteMask % Delete selected mask
+                case app.CustomDetectorDeleteMask % Delete selected mask
                     % Early return if no mask selected
                     if isempty(sel)
                         return;
                     end
 
-                    % Delete Annotations, remove field from self.A.Custom and any mask associated with the detector
-                    delete(findobj(self.image_axes.Diffraction.Children, "Tag", "Custom " + sel.ID));
-                    self.annotations.Custom.(sel.ID) = [];
-                    self.annotations.Custom = rmfield(self.annotations.Custom,sel.ID);
-                    self.masks.Custom.(sel.ID) = [];
-                    self.masks.Custom = rmfield(self.masks.Custom,sel.ID);
-                    self.images.Custom.(sel.ID) = [];
-                    self.images.Custom = rmfield(self.images.Custom,sel.ID);
+                    % Delete Annotations, remove field from app.A.Custom and any mask associated with the detector
+                    delete(findobj(app.image_axes.Diffraction.Children, "Tag", "Custom " + sel.ID));
+                    app.annotations.Custom.(sel.ID) = [];
+                    app.annotations.Custom = rmfield(app.annotations.Custom,sel.ID);
+                    app.masks.Custom.(sel.ID) = [];
+                    app.masks.Custom = rmfield(app.masks.Custom,sel.ID);
+                    app.images.Custom.(sel.ID) = [];
+                    app.images.Custom = rmfield(app.images.Custom,sel.ID);
                     
                     % Remove item from main table
-                    self.CustomDetectorTable.Data(self.CustomDetectorTable.Selection,:) = [];
+                    app.CustomDetectorTable.Data(app.CustomDetectorTable.Selection,:) = [];
                     
                     % Update selection
-                    if isempty(self.CustomDetectorTable.Data)
+                    if isempty(app.CustomDetectorTable.Data)
                         % No selection if empty
-                        self.CustomDetectorTable.Selection = [];
+                        app.CustomDetectorTable.Selection = [];
                         ROI = {[]};
 
-                    elseif isempty(self.CustomDetectorTable.Selection)
-                        self.CustomDetectorTable.Selection = height(self.CustomDetectorTable.Data);
-                        ROI = self.annotations.Custom.(self.CustomDetectorTable.Data.ID(self.CustomDetectorTable.Selection));
+                    elseif isempty(app.CustomDetectorTable.Selection)
+                        app.CustomDetectorTable.Selection = height(app.CustomDetectorTable.Data);
+                        ROI = app.annotations.Custom.(app.CustomDetectorTable.Data.ID(app.CustomDetectorTable.Selection));
                     
                     else
                         % Select last if exceeds table
-                        self.CustomDetectorTable.Selection = min(self.CustomDetectorTable.Selection,height(self.CustomDetectorTable.Data));
-                        ROI = self.annotations.Custom.(self.CustomDetectorTable.Data.ID(self.CustomDetectorTable.Selection));
+                        app.CustomDetectorTable.Selection = min(app.CustomDetectorTable.Selection,height(app.CustomDetectorTable.Data));
+                        ROI = app.annotations.Custom.(app.CustomDetectorTable.Data.ID(app.CustomDetectorTable.Selection));
                     end
 
                     % Update for selection change
-                    mock_UI_callbacks(self, self.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
-                case self.CDDelResetMenu
+                case app.CDDelResetMenu
                     % Remove all masks; Reset
-                    delete(findobj(self.image_axes.Diffraction.Children,'-regexp', "Tag", "Custom "));
-                    self.CustomDetectorTable.Data(:,:) = [];
-                    self.annotations.Custom = [];
-                    self.masks.Custom = [];
-                    self.images.Custom = [];
+                    delete(findobj(app.image_axes.Diffraction.Children,'-regexp', "Tag", "Custom "));
+                    app.CustomDetectorTable.Data(:,:) = [];
+                    app.annotations.Custom = [];
+                    app.masks.Custom = [];
+                    app.images.Custom = [];
                     ROI = {[]};
-                    self.CustomDetectorTable.Selection = [];
+                    app.CustomDetectorTable.Selection = [];
                     
                     % Update for selection change
-                    mock_UI_callbacks(self, self.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
-                case {self.CustomDetectorNewCircle; % Create new mask
-                      self.CustomDetectorNewGrid;
-                      self.CustomDetectorNewGridNoCenter;
-                      self.CustomDetectorNewBandpass;
-                      self.CustomDetectorNewWedge;
-                      self.CustomDetectorNewPolygon;
-                      self.CustomDetectorNewFromFile;
-                      self.CustomDetectorNewMath}
+                case {app.CustomDetectorNewCircle; % Create new mask
+                      app.CustomDetectorNewGrid;
+                      app.CustomDetectorNewGridNoCenter;
+                      app.CustomDetectorNewBandpass;
+                      app.CustomDetectorNewWedge;
+                      app.CustomDetectorNewPolygon;
+                      app.CustomDetectorNewFromFile;
+                      app.CustomDetectorNewMath}
                     % Character before 'A'
                     idl = "@";
 
                     % Last ID characters
-                    if ~isempty(self.CustomDetectorTable.Data)
-                        idl = self.CustomDetectorTable.Data(end,:).ID;
+                    if ~isempty(app.CustomDetectorTable.Data)
+                        idl = app.CustomDetectorTable.Data(end,:).ID;
                     end 
                     
                     % warn on maximum number of custom detectors
                     if idl == "ZZ"
-                        notification_dialog(self, "warn", "Mask ID can not go beyond 'ZZ'!", "Maximum Custom Detectors Capacity Reached");
+                        notification_dialog(app, "warn", "Mask ID can not go beyond 'ZZ'!", "Maximum Custom Detectors Capacity Reached");
                         return
                     end
 
@@ -7311,39 +7374,39 @@ classdef Quant4D < matlab.apps.AppBase
                     id = replace(char([floor(nidl/26), rem(nidl, 26)+1]+64),'@',"");
                     
                     % Preset values
-                    self.CustomDetectorMirror.Value = 0;
-                    self.CustomDetectorInvert.Value = 0;
-                    self.CustomDetectorIntraMask.Value = "Union";
+                    app.CustomDetectorMirror.Value = 0;
+                    app.CustomDetectorInvert.Value = 0;
+                    app.CustomDetectorIntraMask.Value = "Union";
 
                     switch event.Source
-                        case self.CustomDetectorNewCircle
+                        case app.CustomDetectorNewCircle
                             roi_type = "Circle";
 
-                        case self.CustomDetectorNewGrid
+                        case app.CustomDetectorNewGrid
                             roi_type = "Grid";
 
-                        case self.CustomDetectorNewGridNoCenter
+                        case app.CustomDetectorNewGridNoCenter
                             roi_type = "GridNoCenter";
                         
-                        case self.CustomDetectorNewBandpass
+                        case app.CustomDetectorNewBandpass
                             roi_type = "Bandpass";
                         
-                        case self.CustomDetectorNewWedge
+                        case app.CustomDetectorNewWedge
                             roi_type = "Wedge";
-                            self.CustomDetectorMirror.Value = 1;
+                            app.CustomDetectorMirror.Value = 1;
                         
-                        case self.CustomDetectorNewPolygon
+                        case app.CustomDetectorNewPolygon
                             roi_type = "Polygon";
                         
-                        case self.CustomDetectorNewFromFile, roi_type = "File";
-                            mask = import_mask(self, "Diffraction");
+                        case app.CustomDetectorNewFromFile, roi_type = "File";
+                            mask = import_mask(app, "Diffraction");
                             % Early return if `[]` (failed/canceled)
                             if isempty(mask)
                                 return
                             end
-                            self.masks.Custom.(id) = mask;
+                            app.masks.Custom.(id) = mask;
                         
-                        case self.CustomDetectorNewMath
+                        case app.CustomDetectorNewMath
                             roi_type = "Math";
                     end
 
@@ -7355,34 +7418,34 @@ classdef Quant4D < matlab.apps.AppBase
                     end
                     
                     % Store the ROI group
-                    self.annotations.Custom.(id) = ROI;
+                    app.annotations.Custom.(id) = ROI;
                     
                     % Add row to Main Table
-                    self.CustomDetectorTable.Data(end + 1,:) = {id, roi_type, id, true, true, 1};
+                    app.CustomDetectorTable.Data(end + 1,:) = {id, roi_type, id, true, true, 1};
                     
                     % Select the last, just added row
-                    self.CustomDetectorTable.Selection = height(self.CustomDetectorTable.Data);
+                    app.CustomDetectorTable.Selection = height(app.CustomDetectorTable.Data);
                     
                     % Color the Label in Main Table
-                    color_custom_detector_table_label(self.CustomDetectorTable.Selection,self.annotations.Custom.(id){1}.UserData.Color);
+                    color_custom_detector_table_label(app.CustomDetectorTable.Selection,app.annotations.Custom.(id){1}.UserData.Color);
                     
                     % Update for selection change
-                    mock_UI_callbacks(self, self.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
-                case {self.CustomDetectorIntraMask, self.CustomDetectorInvert, self.CustomDetectorMirror} % Intra-mask, Invert Mask, Mirror Mask
+                case {app.CustomDetectorIntraMask, app.CustomDetectorInvert, app.CustomDetectorMirror} % Intra-mask, Invert Mask, Mirror Mask
                     % Update values in `UserData` for current mask
-                    ROI{1}.UserData.IntraMask = self.CustomDetectorIntraMask.Value;
-                    ROI{1}.UserData.Inverted = self.CustomDetectorInvert.Value;
-                    ROI{1}.UserData.Mirrored = self.CustomDetectorMirror.Value;
+                    ROI{1}.UserData.IntraMask = app.CustomDetectorIntraMask.Value;
+                    ROI{1}.UserData.Inverted = app.CustomDetectorInvert.Value;
+                    ROI{1}.UserData.Mirrored = app.CustomDetectorMirror.Value;
                     ROI = drawCDROI(sel.ID, sel.Type);
                     
                     % Re-drawn ROI
-                    self.annotations.Custom.(sel.ID) = ROI;
+                    app.annotations.Custom.(sel.ID) = ROI;
                     
                     % Update for selection change
-                    mock_UI_callbacks(self, self.CustomDetectorTable)
+                    mock_UI_callbacks(app, app.CustomDetectorTable)
 
-                case self.CustomDetectorColor  % Change the color of mask annotations
+                case app.CustomDetectorColor  % Change the color of mask annotations
                     % Open color selection palette
                     color = uisetcolor(ROI{1}.UserData.Color);
                     
@@ -7394,36 +7457,36 @@ classdef Quant4D < matlab.apps.AppBase
 
                     % make sure all overlays change color with main overlay
                     cellfun(@(r) set(findobj(r,"-property", "Color"), "Color", color),ROI);
-                    color_custom_detector_table_label(self.CustomDetectorTable.Selection, color);
+                    color_custom_detector_table_label(app.CustomDetectorTable.Selection, color);
                     
                     % Update UI
                     update_custom_detector_UI()
                     
                     % changing mask color in "Color Mix" mode requires images to be re-plotted to match
-                    if strcmp(self.CustomDetectorInterMask.Value, "Color Mix")
+                    if strcmp(app.CustomDetectorInterMask.Value, "Color Mix")
                         plot_custom_mask(event, "")
                     end
 
-                case {self.CustomDetectorFlipHorizontal self.CustomDetectorFlipVertical self.CustomDetectorTranspose} % Flip and Transpose
+                case {app.CustomDetectorFlipHorizontal app.CustomDetectorFlipVertical app.CustomDetectorTranspose} % Flip and Transpose
                     % Whether diffraction is rotated by +/-90°
-                    r90 = mod(self.RotateDiffraction.Value,180) == 90;
+                    r90 = mod(app.RotateDiffraction.Value,180) == 90;
 
                     if sel.Type == "File"
                         % Transform the imported image array, then update/create mask from the transformed image
                         switch event.Source
-                            case {self.CustomDetectorFlipHorizontal self.CustomDetectorFlipVertical}
+                            case {app.CustomDetectorFlipHorizontal app.CustomDetectorFlipVertical}
                                 % flip custom mask across horizontal/vertical axis
-                                if (r90 && event.Source == self.CustomDetectorFlipHorizontal) || (~r90 && event.Source == self.CustomDetectorFlipVertical)
+                                if (r90 && event.Source == app.CustomDetectorFlipHorizontal) || (~r90 && event.Source == app.CustomDetectorFlipVertical)
                                     % Visually Flip X
-                                    self.masks.Custom.(sel.ID) = flipud(self.masks.Custom.(sel.ID));
+                                    app.masks.Custom.(sel.ID) = flipud(app.masks.Custom.(sel.ID));
                                 else
                                     % Visually Flip Y
-                                    self.masks.Custom.(sel.ID) = fliplr(self.masks.Custom.(sel.ID));
+                                    app.masks.Custom.(sel.ID) = fliplr(app.masks.Custom.(sel.ID));
                                 end
 
-                            case self.CustomDetectorTranspose
+                            case app.CustomDetectorTranspose
                                 % transpose custom mask (only available if diffraction pattern is square)
-                                self.masks.Custom.(sel.ID) = self.masks.Custom.(sel.ID)';
+                                app.masks.Custom.(sel.ID) = app.masks.Custom.(sel.ID)';
                         end
 
                         % Update Images
@@ -7431,17 +7494,17 @@ classdef Quant4D < matlab.apps.AppBase
 
                     else
                         % Convert Detail Table positions to Cartesian relative (pixel or mrad)
-                        details_table = self.CustomDetectorDetailsTable.Data(:, 1:2);
-                        if self.DetectorCoordinateSystem.Value == "Cartesian"
-                            xycr = details_table - (self.center-self.center_rel)*self.diff_scale;
+                        details_table = app.CustomDetectorDetailsTable.Data(:, 1:2);
+                        if app.DetectorCoordinateSystem.Value == "Cartesian"
+                            xycr = details_table - (app.center-app.center_rel)*app.diff_scale;
                         else
                             xycr = details_table(:, 1).*[cosd(details_table(:, 2)) sind(details_table(:, 2))];
                         end
 
                         switch event.Source
-                            case {self.CustomDetectorFlipHorizontal self.CustomDetectorFlipVertical}
+                            case {app.CustomDetectorFlipHorizontal app.CustomDetectorFlipVertical}
                                 % flip custom mask across horizontal/vertical axis
-                                if (r90 && event.Source == self.CustomDetectorFlipHorizontal) || (~r90 && event.Source == self.CustomDetectorFlipVertical)
+                                if (r90 && event.Source == app.CustomDetectorFlipHorizontal) || (~r90 && event.Source == app.CustomDetectorFlipVertical)
                                     % Flip X
                                     xycr(:,1) = -xycr(:,1);
                                 else
@@ -7449,57 +7512,57 @@ classdef Quant4D < matlab.apps.AppBase
                                     xycr(:,2) = -xycr(:,2);
                                 end
                                 
-                            case self.CustomDetectorTranspose % transpose custom mask
+                            case app.CustomDetectorTranspose % transpose custom mask
                                 % Swap X/Y
                                 xycr = fliplr(xycr);
                         end
 
                         % Convert from Cartesian relative (pixel or mrad) back to whatever it should be
-                        if self.DetectorCoordinateSystem.Value == "Cartesian"
-                            self.CustomDetectorDetailsTable.Data(:, 1:2) = xycr + (self.center-self.center_rel)*self.diff_scale;
+                        if app.DetectorCoordinateSystem.Value == "Cartesian"
+                            app.CustomDetectorDetailsTable.Data(:, 1:2) = xycr + (app.center-app.center_rel)*app.diff_scale;
                         else
-                            self.CustomDetectorDetailsTable.Data(:, 1:2) = [sqrt(sum(xycr.^2,2)), atan2d(xycr(:,2), xycr(:,1))];
+                            app.CustomDetectorDetailsTable.Data(:, 1:2) = [sqrt(sum(xycr.^2,2)), atan2d(xycr(:,2), xycr(:,1))];
                         end
                         
                         % Trigger Detail Table editing callbacks
-                        mock_UI_callbacks(self, self.CustomDetectorDetailsTable)
+                        mock_UI_callbacks(app, app.CustomDetectorDetailsTable)
                     end
 
-                case {self.CustomDetectorRotateCCW, self.CustomDetectorRotateCW} % Rotate detector
+                case {app.CustomDetectorRotateCCW, app.CustomDetectorRotateCW} % Rotate detector
                     % Clockwise if odd numbers of "Reverse X" "Reverse Y" "Rotate Clockwise" are true
-                    rot = self.CustomDetectorRotationStep.Value*(1-2*rem(self.ReverseDiffractionX.Value+self.ReverseDiffractionY.Value+(event.Source == self.CustomDetectorRotateCW),2));
+                    rot = app.CustomDetectorRotationStep.Value*(1-2*rem(app.ReverseDiffractionX.Value+app.ReverseDiffractionY.Value+(event.Source == app.CustomDetectorRotateCW),2));
                     
                     if sel.Type == "File"
                         % Transform the imported image array, then update/create mask from the transformed image
-                        self.masks.Custom.(sel.ID) = rot90(self.masks.Custom.(sel.ID), rot/90);
+                        app.masks.Custom.(sel.ID) = rot90(app.masks.Custom.(sel.ID), rot/90);
                         
                         % Update Images
                         move_custom_ROI(ROI{1}, event);
                     
                     else
-                        % Edit coordinates in `self.CustomDetectorDetailsTable` and trigger its callbacks to rotate ROIs
-                        if self.DetectorCoordinateSystem.Value == "Cartesian"
+                        % Edit coordinates in `app.CustomDetectorDetailsTable` and trigger its callbacks to rotate ROIs
+                        if app.DetectorCoordinateSystem.Value == "Cartesian"
                             % If absolute then convert to relative then convert back, before/after rotation
-                            R = rotation_matrix(self, rot);
-                            rrb0 = (self.center-self.center_rel)*self.diff_scale;
-                            self.CustomDetectorDetailsTable.Data(:, 1:2) = ((self.CustomDetectorDetailsTable.Data(:, 1:2)-rrb0)*R + rrb0);
+                            R = rotation_matrix(app, rot);
+                            rrb0 = (app.center-app.center_rel)*app.diff_scale;
+                            app.CustomDetectorDetailsTable.Data(:, 1:2) = ((app.CustomDetectorDetailsTable.Data(:, 1:2)-rrb0)*R + rrb0);
                         else
-                            self.CustomDetectorDetailsTable.Data(:, 2) = mod(self.CustomDetectorDetailsTable.Data(:, 2)+rot, 360);
+                            app.CustomDetectorDetailsTable.Data(:, 2) = mod(app.CustomDetectorDetailsTable.Data(:, 2)+rot, 360);
                         end
                         
                         % Trigger Detail Table editing callbacks
-                        mock_UI_callbacks(self, self.CustomDetectorDetailsTable)
+                        mock_UI_callbacks(app, app.CustomDetectorDetailsTable)
                     end
 
-                case self.CustomDetectorDetailsTable % Detail Table
+                case app.CustomDetectorDetailsTable % Detail Table
                     % Determine Cartesian absolute pixel position from
                     % Detail Table (may be polar/relative/mrad)
-                    details_table = self.CustomDetectorDetailsTable.Data;
+                    details_table = app.CustomDetectorDetailsTable.Data;
 
-                    if self.DetectorCoordinateSystem.Value == "Cartesian"
-                        p = details_table(:, 1:2)/self.diff_scale + self.center_rel;
+                    if app.DetectorCoordinateSystem.Value == "Cartesian"
+                        p = details_table(:, 1:2)/app.diff_scale + app.center_rel;
                     else
-                        p = details_table(:, 1)/self.diff_scale.*[cosd(details_table(:, 2)) sind(details_table(:, 2))] + self.center_rel;
+                        p = details_table(:, 1)/app.diff_scale.*[cosd(details_table(:, 2)) sind(details_table(:, 2))] + app.center_rel;
                     end
 
                     % Sync ROIs positions with the edited Detail Table
@@ -7513,11 +7576,11 @@ classdef Quant4D < matlab.apps.AppBase
                             end
                             
                             ROI{1}.Center = p(1, :);
-                            ROI{1}.Radius = r/self.diff_scale;
+                            ROI{1}.Radius = r/app.diff_scale;
 
                             if height(p) > 1
                                 ROI{2}.Center = p(2, :);
-                                ROI{2}.Radius = r/self.diff_scale;
+                                ROI{2}.Radius = r/app.diff_scale;
                             end
 
                         case "Bandpass"
@@ -7530,9 +7593,9 @@ classdef Quant4D < matlab.apps.AppBase
                             end
 
                             ROI{1}.Center = color; 
-                            ROI{1}.Radius = details_table(1, 3)/self.diff_scale;
+                            ROI{1}.Radius = details_table(1, 3)/app.diff_scale;
                             ROI{2}.Center = color;
-                            ROI{2}.Radius = details_table(2, 3)/self.diff_scale;
+                            ROI{2}.Radius = details_table(2, 3)/app.diff_scale;
 
                         case "Wedge"
                             ROI{1}.Position = p(1, :);
@@ -7560,87 +7623,87 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Function to color Main Table
             function color_custom_detector_table_label(selection, color)
-                addStyle(self.CustomDetectorTable, ...
+                addStyle(app.CustomDetectorTable, ...
                          uistyle("BackgroundColor",color,'FontColor',font_color(color)), ...
                          'cell',[selection, 3])
             end
 
             % Function to update UI labels; actually Custom Detector UIs have no limits
             function limit_custom_detector_UI()
-                unit = " " + self.DetectorCoordinateUnit.Value;
+                unit = " " + app.DetectorCoordinateUnit.Value;
                 
-                if self.DetectorCoordinateSystem.Value == "Polar"
-                    self.CustomDetectorDetailsTable.ColumnName(1:3) = {"ρ"+unit, "θ °", "R"+unit};
+                if app.DetectorCoordinateSystem.Value == "Polar"
+                    app.CustomDetectorDetailsTable.ColumnName(1:3) = {"ρ"+unit, "θ °", "R"+unit};
                 else
-                    self.CustomDetectorDetailsTable.ColumnName(1:3) = {"X"+unit, "Y"+unit, "R"+unit};
+                    app.CustomDetectorDetailsTable.ColumnName(1:3) = {"X"+unit, "Y"+unit, "R"+unit};
                 end
             end
 
             % Function to update enable/show state of ROIs based on Main Table
             function update_enable_show_ROI()
-                for i = 1:height(self.CustomDetectorTable.Data)
-                    ri = self.CustomDetectorTable.Data(i, :);
+                for i = 1:height(app.CustomDetectorTable.Data)
+                    ri = app.CustomDetectorTable.Data(i, :);
                     cellfun(@(r) set(findobj(r,'-property',"Visible"),"Visible", ri.Show && ri.Enable), ...
-                        self.annotations.Custom.(ri.ID));
+                        app.annotations.Custom.(ri.ID));
                 end
             end
 
             % Function to update UI
             function update_custom_detector_UI()
                 % Try to resize columns
-                self.CustomDetectorDetailsTable.ColumnWidth = {"1x","1x","1x"};
-                self.CustomDetectorTable.ColumnWidth = {"fit", "fit", "1x", "fit", "fit", "fit"};
+                app.CustomDetectorDetailsTable.ColumnWidth = {"1x","1x","1x"};
+                app.CustomDetectorTable.ColumnWidth = {"fit", "fit", "1x", "fit", "fit", "fit"};
 
-                if ~isempty(self.CustomDetectorTable.Data)
-                    self.CustomDetectorTable.Data(end + 1,:) = self.CustomDetectorTable.Data(end,:);
-                    self.CustomDetectorTable.Data(end,:)=[];
+                if ~isempty(app.CustomDetectorTable.Data)
+                    app.CustomDetectorTable.Data(end + 1,:) = app.CustomDetectorTable.Data(end,:);
+                    app.CustomDetectorTable.Data(end,:)=[];
                 end
                 
                 % Disable Detail UI if no ROI selected
-                self.CustomDetectorDetailsPanel.Enable = switch_on_off(self, ~isempty(self.CustomDetectorTable.Selection));
+                app.CustomDetectorDetailsPanel.Enable = switch_on_off(app, ~isempty(app.CustomDetectorTable.Selection));
 
-                if isempty(self.CustomDetectorTable.Selection)
-                    self.CustomDetectorDetailsTable.Data = [];
-                    set([self.CustomDetectorDetailsGrid self.CustomDetectorRotationGrid], "BackgroundColor","w");
+                if isempty(app.CustomDetectorTable.Selection)
+                    app.CustomDetectorDetailsTable.Data = [];
+                    set([app.CustomDetectorDetailsGrid app.CustomDetectorRotationGrid], "BackgroundColor","w");
                 else
                     % Set component options based on current mask item
-                    user_data = self.annotations.Custom.(self.CustomDetectorTable.Data.ID(self.CustomDetectorTable.Selection)){1}.UserData;
-                    set([self.CustomDetectorInvert; ...
-                         self.CustomDetectorIntraMask; ...
-                         self.CustomDetectorMirror], ...
+                    user_data = app.annotations.Custom.(app.CustomDetectorTable.Data.ID(app.CustomDetectorTable.Selection)){1}.UserData;
+                    set([app.CustomDetectorInvert; ...
+                         app.CustomDetectorIntraMask; ...
+                         app.CustomDetectorMirror], ...
                         {"Value"}, ...
                         {user_data.Inverted; ...
                          user_data.IntraMask; ...
                          user_data.Mirrored})
                     
                     % Set Detail UI color; white font if darker background color
-                    set([self.CustomDetectorDetailsGrid; ...
-                         self.CustomDetectorRotationGrid; ...
-                         self.CustomDetectorDetailsTable], ...
+                    set([app.CustomDetectorDetailsGrid; ...
+                         app.CustomDetectorRotationGrid; ...
+                         app.CustomDetectorDetailsTable], ...
                         "BackgroundColor",user_data.Color)
 
-                    self.CDIntraCombLabel.FontColor = font_color(user_data.Color);
-                    self.CustomDetectorDetailsTable.ForegroundColor = font_color(user_data.Color);
+                    app.CDIntraCombLabel.FontColor = font_color(user_data.Color);
+                    app.CustomDetectorDetailsTable.ForegroundColor = font_color(user_data.Color);
                     
                     % Enable/Disable UI
-                    set([self.CustomDetectorMirror; ...
-                         self.CustomDetectorIntraMask; ...
-                         self.CustomDetectorRotationStep; ...
-                         self.CustomDetectorTranspose], ...
+                    set([app.CustomDetectorMirror; ...
+                         app.CustomDetectorIntraMask; ...
+                         app.CustomDetectorRotationStep; ...
+                         app.CustomDetectorTranspose], ...
                         {"Enable"},{0;0;1;1})
                     
                     equ = "";
                     
                     switch user_data.Type
                         case "Circle"
-                            self.CustomDetectorMirror.Enable = "on";
-                            self.CustomDetectorIntraMask.Enable = self.CustomDetectorMirror.Value;
+                            app.CustomDetectorMirror.Enable = "on";
+                            app.CustomDetectorIntraMask.Enable = app.CustomDetectorMirror.Value;
                         
                         case "Wedge"
-                            self.CustomDetectorMirror.Enable = "on";
+                            app.CustomDetectorMirror.Enable = "on";
                         
                         case {"Grid","GridNoCenter"}
-                            self.CustomDetectorIntraMask.Enable = "on";
+                            app.CustomDetectorIntraMask.Enable = "on";
                         
                         case "Bandpass"
                         
@@ -7649,9 +7712,9 @@ classdef Quant4D < matlab.apps.AppBase
                         case "File"
                             % Allow transpose/rotate 90° if diffraction
                             % image is square
-                            self.CustomDetectorTranspose.Enable = ~range(self.dataset_parameters.n_pixels);
-                            set(self.CustomDetectorRotationStep, ...
-                                "Value", 180 - ~range(self.dataset_parameters.n_pixels)*90, ...
+                            app.CustomDetectorTranspose.Enable = ~range(app.dataset_parameters.n_pixels);
+                            set(app.CustomDetectorRotationStep, ...
+                                "Value", 180 - ~range(app.dataset_parameters.n_pixels)*90, ...
                                 "Enable", "off");
                         
                         case "Math"
@@ -7659,18 +7722,18 @@ classdef Quant4D < matlab.apps.AppBase
                     end
                     
                     % Put formula on Math UI
-                    self.MathFormula.Value = equ;
+                    app.MathFormula.Value = equ;
                 end
             end
 
             % Function to draw annotations
             function ROI = drawCDROI(id, roi_type)
                 % parameters
-                r0 = self.TransBeamR.Value;
+                r0 = app.TransBeamR.Value;
                 xmin = 0;
-                xmax = self.dataset_parameters.n_pixels(1)+1;
+                xmax = app.dataset_parameters.n_pixels(1)+1;
                 ymin = 0;
-                ymax = self.dataset_parameters.n_pixels(2)+1;
+                ymax = app.dataset_parameters.n_pixels(2)+1;
 
                 % Initial values
                 p1 = [];
@@ -7680,13 +7743,13 @@ classdef Quant4D < matlab.apps.AppBase
                 user_data = struct("ID", id, ...
                                    "Type", roi_type, ...
                                    "Color", rand(1,3), ...
-                                   "Mirrored", self.CustomDetectorMirror.Value, ...
-                                   "IntraMask", self.CustomDetectorIntraMask.Value, ...
-                                   "Inverted", self.CustomDetectorInvert.Value);
+                                   "Mirrored", app.CustomDetectorMirror.Value, ...
+                                   "IntraMask", app.CustomDetectorIntraMask.Value, ...
+                                   "Inverted", app.CustomDetectorInvert.Value);
 
                 % If the ROIs already exist, get their current color/position/radius & UserData
-                if isfield(self.annotations.Custom, id)
-                    ROI = self.annotations.Custom.(id);
+                if isfield(app.annotations.Custom, id)
+                    ROI = app.annotations.Custom.(id);
                     user_data = ROI{1}.UserData;
 
                     if isprop(ROI{1}, "Position")
@@ -7724,13 +7787,13 @@ classdef Quant4D < matlab.apps.AppBase
                         end
                         
                         % draw main circle
-                        ROI{1} = drawcircle(self.image_axes.Diffraction, ...
+                        ROI{1} = drawcircle(app.image_axes.Diffraction, ...
                                             "Center", p1, ...
                                             "Radius", r1);
 
                         % draw mirrored circle if enabled by user
                         if user_data.Mirrored
-                            ROI{2} = drawcircle(self.image_axes.Diffraction, ...
+                            ROI{2} = drawcircle(app.image_axes.Diffraction, ...
                                                 "Center", -p1+2*b0, ...
                                                 "Radius", r1, ...
                                                 "InteractionsAllowed", "none");
@@ -7751,11 +7814,11 @@ classdef Quant4D < matlab.apps.AppBase
                         end
 
                         % draw two circles for basis vectors
-                        ROI{1} = drawcircle(self.image_axes.Diffraction, ...
+                        ROI{1} = drawcircle(app.image_axes.Diffraction, ...
                                             "Center", p1, ...
                                             "Radius", r1);
 
-                        ROI{2} = drawcircle(self.image_axes.Diffraction, ...
+                        ROI{2} = drawcircle(app.image_axes.Diffraction, ...
                                             "Center", p2, ...
                                             "Radius", r1);
 
@@ -7773,11 +7836,11 @@ classdef Quant4D < matlab.apps.AppBase
                         end
 
                         % draw inner and outer circles of the band-pass
-                        ROI{1} = drawcircle(self.image_axes.Diffraction, ...
+                        ROI{1} = drawcircle(app.image_axes.Diffraction, ...
                                             "Center", b0, ...
                                             "Radius",r1);
 
-                        ROI{2} = drawcircle(self.image_axes.Diffraction, ...
+                        ROI{2} = drawcircle(app.image_axes.Diffraction, ...
                                             "Center", b0, ...
                                             "Radius", r2);
 
@@ -7790,7 +7853,7 @@ classdef Quant4D < matlab.apps.AppBase
                         % draw a filled polygon between the two circles
                         % that the user cannot interact with, just for
                         % reference
-                        ROI{3} = drawpolygon(self.image_axes.Diffraction, ...
+                        ROI{3} = drawpolygon(app.image_axes.Diffraction, ...
                                              "Position", [ROI{1}.Vertices;ROI{2}.Vertices], ...
                                              "InteractionsAllowed", "none", ...
                                              "EdgeAlpha", 0, ...
@@ -7800,37 +7863,37 @@ classdef Quant4D < matlab.apps.AppBase
                         % give polygon temporary set of points, keep
                         % invisible. Points will be sorted in move_wedge()
                         if isempty(p2)
-                            l = min(self.dataset_parameters.n_pixels)/3;
+                            l = min(app.dataset_parameters.n_pixels)/3;
                             p1 = [l l];
                             p2 = [l 2*l];
                         end
 
                         % draw polygon wedge and a pair of points for user
                         % interaction
-                        ROI{3} = drawpolygon(self.image_axes.Diffraction, ...
+                        ROI{3} = drawpolygon(app.image_axes.Diffraction, ...
                                              "Position", [p1;p2;b0], ...
                                              "InteractionsAllowed", "none");
-                        ROI{1} = drawpoint(self.image_axes.Diffraction, "Position",p1);
-                        ROI{2} = drawpoint(self.image_axes.Diffraction, "Position",p2);
+                        ROI{1} = drawpoint(app.image_axes.Diffraction, "Position",p1);
+                        ROI{2} = drawpoint(app.image_axes.Diffraction, "Position",p2);
                     
                     case "Polygon"
                         if isempty(p1)
-                            notification_dialog(self, ...
+                            notification_dialog(app, ...
                                                 "help", ...
                                                 sprintf("Please draw a Polygon ROI on the Diffraction image!\n\n" ...
                                                         + "Press 'Esc' to cancel during drawing. Please refer to MATLAB's 'drawpolygon' for more tips."), ...
                                                 "Draw Polygon ROI");
                             
                             % Disable UIs until polygon is drawn
-                            enable_windows(self,false);
-                            figure(self.figures.Diffraction);
-                            self.figures.Diffraction.UserData.grayout.Visible = "off";
+                            enable_windows(app,false);
+                            figure(app.figures.Diffraction);
+                            app.figures.Diffraction.UserData.grayout.Visible = "off";
                             
                             % draw polygon and re-enable UIs
-                            ROI{1} = drawpolygon(self.image_axes.Diffraction, ...
+                            ROI{1} = drawpolygon(app.image_axes.Diffraction, ...
                                                  "Color", user_data.Color);
                             p1 = ROI{1}.Position;
-                            enable_windows(self,true)
+                            enable_windows(app,true)
                             
                             % Early return if polygon is not drawn
                             if isempty(p1)
@@ -7840,19 +7903,19 @@ classdef Quant4D < matlab.apps.AppBase
                             end
 
                         else
-                            ROI{1} = drawpolygon(self.image_axes.Diffraction, ...
+                            ROI{1} = drawpolygon(app.image_axes.Diffraction, ...
                                                  "Position",p1);
                         end
 
                         ROI{1}.FaceSelectable = false;
-                        ROI{2} = drawpolygon(self.image_axes.Diffraction, ...
+                        ROI{2} = drawpolygon(app.image_axes.Diffraction, ...
                                              "Position", p1, ...
                                              "EdgeAlpha", 0, ...
                                              "InteractionsAllowed", "none");
                     
                     case "File"
                         % Invisible ROI as placeholder
-                        ROI{1} = drawrectangle(self.image_axes.Diffraction, ...
+                        ROI{1} = drawrectangle(app.image_axes.Diffraction, ...
                                                "Position", [0 0 xmax+1 ymax+1], ...
                                                "InteractionsAllowed", "none", ...
                                                "EdgeAlpha", 0, ...
@@ -7860,19 +7923,19 @@ classdef Quant4D < matlab.apps.AppBase
                     
                     case "Math"
                         % Invisible ROI as placeholder
-                        ROI{1} = drawrectangle(self.image_axes.Diffraction, ...
+                        ROI{1} = drawrectangle(app.image_axes.Diffraction, ...
                                                "Position", [0 0 xmax+1 ymax+1], ...
                                                "InteractionsAllowed", "none", ...
                                                "EdgeAlpha", 0, ...
                                                "FaceAlpha",0);
 
                         % set defaults
-                        self.MathFormula.Value = "1";
+                        app.MathFormula.Value = "1";
                         user_data.Math = "1";
                         
                         % Show and select Math Tab
-                        figure(self.figures.Settings);
-                        self.SettingsTabGroup.SelectedTab = self.MathTab;
+                        figure(app.figures.Settings);
+                        app.SettingsTabGroup.SelectedTab = app.MathTab;
                 end
                 
                 % Try to set common properties for all ROI objects
@@ -7906,12 +7969,12 @@ classdef Quant4D < matlab.apps.AppBase
                 end
 
                 % Retrieve ROIs of the current interacted-with
-                ROI = self.annotations.Custom.(replace(source.Tag, "Custom ",""));
+                ROI = app.annotations.Custom.(replace(source.Tag, "Custom ",""));
                 user_data = ROI{1}.UserData;
 
                 % Change selected mask based on the one the user is interacting with
-                if self.CustomDetectorTable.Data.ID(self.CustomDetectorTable.Selection) ~= user_data.ID
-                    self.CustomDetectorTable.Selection = find(self.CustomDetectorTable.Data.ID == user_data.ID);
+                if app.CustomDetectorTable.Data.ID(app.CustomDetectorTable.Selection) ~= user_data.ID
+                    app.CustomDetectorTable.Selection = find(app.CustomDetectorTable.Data.ID == user_data.ID);
                     update_custom_detector_UI();
                 end
 
@@ -7945,7 +8008,7 @@ classdef Quant4D < matlab.apps.AppBase
                 end
 
                 % Update Detail Table with coordinate options, with maybe reduced calculation policy
-                if is_static_event(self, event) || self.CalculationPolicy.Value == 2
+                if is_static_event(app, event) || app.CalculationPolicy.Value == 2
                     if ~isempty(p1)
                         p1t = p1(:, 1:2);
                     end
@@ -7954,25 +8017,25 @@ classdef Quant4D < matlab.apps.AppBase
                         p2t = p2(:, 1:2);
                     end
 
-                    xyt = ([p1t; p2t] - self.center_rel)*self.diff_scale;
+                    xyt = ([p1t; p2t] - app.center_rel)*app.diff_scale;
 
-                    if self.DetectorCoordinateSystem.Value == "Polar"
+                    if app.DetectorCoordinateSystem.Value == "Polar"
                         xyt = [sqrt(sum(xyt.^2, 2)), mod(atan2d(xyt(:, 2), xyt(:, 1)), 360)];
                     end
 
-                    self.CustomDetectorDetailsTable.Data = [xyt, [r1;r2]*self.diff_scale];
+                    app.CustomDetectorDetailsTable.Data = [xyt, [r1;r2]*app.diff_scale];
                 end
 
                 % Diffraction image size limits
                 xmin = 0;
-                xmax = self.dataset_parameters.n_pixels(1)+1;
+                xmax = app.dataset_parameters.n_pixels(1)+1;
                 ymin = 0;
-                ymax = self.dataset_parameters.n_pixels(2)+1;
+                ymax = app.dataset_parameters.n_pixels(2)+1;
 
                 switch user_data.Type
                     case "Circle"
                         % Make mask from current detector objects
-                        mask = createMask(ROI{1}, self.image_displays.Diffraction)';
+                        mask = createMask(ROI{1}, app.image_displays.Diffraction)';
 
                         if user_data.Mirrored
                             % update circle{2} location
@@ -7980,7 +8043,7 @@ classdef Quant4D < matlab.apps.AppBase
                             ROI{2}.Radius = r1;
 
                             % Mask of mirrored circle
-                            mask2 = createMask(ROI{2}, self.image_displays.Diffraction)';
+                            mask2 = createMask(ROI{2}, app.image_displays.Diffraction)';
 
                             switch user_data.IntraMask
                                 case "Additive"
@@ -8032,7 +8095,7 @@ classdef Quant4D < matlab.apps.AppBase
                         
                         % Draw circles for grid
                         delete(ROI{3})
-                        ROI{3} = viscircles(self.image_axes.Diffraction, ...
+                        ROI{3} = viscircles(app.image_axes.Diffraction, ...
                                             reps, r1+reps(:,1)*0, ...
                                             "EnhanceVisibility", false, ...
                                             "Color", user_data.Color);
@@ -8042,8 +8105,8 @@ classdef Quant4D < matlab.apps.AppBase
                         ROI{3}.Visible = ROI{1}.Visible;
                         
                         % Make mask from current detector grid
-                        [ygrid,xgrid] = meshgrid(1:self.dataset_parameters.n_pixels(2), 1:self.dataset_parameters.n_pixels(1));
-                        mask = reshape(sum(sqrt((xgrid(:)-reps(:,1)').^2+(ygrid(:)-reps(:,2)').^2) <= r1, 2), self.dataset_parameters.n_pixels);
+                        [ygrid,xgrid] = meshgrid(1:app.dataset_parameters.n_pixels(2), 1:app.dataset_parameters.n_pixels(1));
+                        mask = reshape(sum(sqrt((xgrid(:)-reps(:,1)').^2+(ygrid(:)-reps(:,2)').^2) <= r1, 2), app.dataset_parameters.n_pixels);
 
                         switch user_data.IntraMask
                             case "Additive"
@@ -8059,13 +8122,13 @@ classdef Quant4D < matlab.apps.AppBase
                         % Sync centers if moved
                         if isprop(event, "CurrentCenter")
                             p1 = event.CurrentCenter;
-                            set_external_source(self, event,[ROI{1}, ROI{2}],"Center",p1)
+                            set_external_source(app, event,[ROI{1}, ROI{2}],"Center",p1)
                         end
 
                         % Generate mask
                         pos = [ROI{2}.Vertices; ROI{1}.Vertices];
                         ROI{3}.Position = pos;
-                        mask = createMask(ROI{3}, self.image_displays.Diffraction)';
+                        mask = createMask(ROI{3}, app.image_displays.Diffraction)';
                         
                         % Invert only ROI appearance here
                         if user_data.Inverted
@@ -8119,7 +8182,7 @@ classdef Quant4D < matlab.apps.AppBase
                         ROI{3}.Position = [0 0; 2*max(ymax,xmax).*[cosd(d) sind(d)]] + b0;
                         
                         % Generate mask
-                        mask = createMask(ROI{3}, self.image_displays.Diffraction)';
+                        mask = createMask(ROI{3}, app.image_displays.Diffraction)';
                         
                         % Extra inversion, because it'll be inverted universally at the end
                         if user_data.Inverted
@@ -8161,11 +8224,11 @@ classdef Quant4D < matlab.apps.AppBase
                         ROI{2}.Position = pos2;
                         
                         % generate mask
-                        mask = createMask(ROI{1}, self.image_displays.Diffraction)';
+                        mask = createMask(ROI{1}, app.image_displays.Diffraction)';
 
                     case "File"
                         % Only deal with visual here
-                        mask = self.masks.Custom.(user_data.ID);
+                        mask = app.masks.Custom.(user_data.ID);
                         
                         % Invert only ROI appearance here
                         if user_data.Inverted
@@ -8176,7 +8239,7 @@ classdef Quant4D < matlab.apps.AppBase
                         
                         % Draw boundaries of imported file mask
                         try
-                            visb = visboundaries(self.image_axes.Diffraction, ...
+                            visb = visboundaries(app.image_axes.Diffraction, ...
                                                  bwboundaries(mask'), ...
                                                  "Color", user_data.Color, ...
                                                  "EnhanceVisibility", 0);
@@ -8191,19 +8254,19 @@ classdef Quant4D < matlab.apps.AppBase
                         end
 
                         % Actual mask is already updated before
-                        self.masks.Custom.(user_data.ID) = mask;
+                        app.masks.Custom.(user_data.ID) = mask;
 
                     case "Math"
                         message = strings(0);
                         
                         % Get/Store formula
-                        equ0 = string(strjoin(self.MathFormula.Value));
+                        equ0 = string(strjoin(app.MathFormula.Value));
                         ROI{1}.UserData.Math = equ0;
                         
                         % Extract "A" "AB" etc
                         ms = unique(string(regexp(equ0, "\<[A-Z]+\>", "match")));
 
-                        ids = string(fieldnames(self.annotations.Custom));
+                        ids = string(fieldnames(app.annotations.Custom));
                         
                         % Existing IDs and Unknown IDs
                         unk = setdiff(ms,ids);
@@ -8219,11 +8282,11 @@ classdef Quant4D < matlab.apps.AppBase
                         
                         % Try to evaluate
                         if isempty(message)
-                            equ = regexprep(equ0, "\<" + ms + "\>", "self.masks.Custom." + ms); 
+                            equ = regexprep(equ0, "\<" + ms + "\>", "app.masks.Custom." + ms); 
                             mask_t = [];
                             try
                                 mask_t = eval(equ);
-                                mask = zeros(self.dataset_parameters.n_pixels) + mask_t;
+                                mask = zeros(app.dataset_parameters.n_pixels) + mask_t;
                             catch ME
                                 message(end + 1) = sprintf('%s\n%s\n%s', ME.identifier, ME.message, ME.Correction);
                                 % Check result size
@@ -8240,7 +8303,7 @@ classdef Quant4D < matlab.apps.AppBase
                         
                         % Early return if any error
                         if ~isempty(message)
-                            notification_dialog(self, ...
+                            notification_dialog(app, ...
                                                 "warn", ...
                                                 "Calculation failed!" + sprintf("\n%s",message), ...
                                                 "Evaluation Failed");
@@ -8251,7 +8314,7 @@ classdef Quant4D < matlab.apps.AppBase
                         
                         % Draw boundaries of calculated mask
                         try
-                            visb = visboundaries(self.image_axes.Diffraction, ...
+                            visb = visboundaries(app.image_axes.Diffraction, ...
                                                  bwboundaries(mask'), ...
                                                  "Color", user_data.Color, ...
                                                  "EnhanceVisibility",0);
@@ -8274,7 +8337,7 @@ classdef Quant4D < matlab.apps.AppBase
                 end
                 
                 % Assign the created ROIs back to the global handle
-                self.annotations.Custom.(user_data.ID) = ROI;
+                app.annotations.Custom.(user_data.ID) = ROI;
                 
                 % Invert mask
                 if user_data.Inverted
@@ -8282,46 +8345,46 @@ classdef Quant4D < matlab.apps.AppBase
                 end
                 
                 % Store mask
-                self.masks.Custom.(user_data.ID) = mask;
+                app.masks.Custom.(user_data.ID) = mask;
 
                 % Store color mix mask
-                if strcmp(self.CustomDetectorInterMask.Value, "Color Mix")
-                    self.masks.CustomColor.(user_data.ID) = mask.*reshape(self.annotations.Custom.(user_data.ID){1}.Color,[1 1 3]);
+                if strcmp(app.CustomDetectorInterMask.Value, "Color Mix")
+                    app.masks.CustomColor.(user_data.ID) = mask.*reshape(app.annotations.Custom.(user_data.ID){1}.Color,[1 1 3]);
                 end
 
                 plot_custom_mask(event, user_data.ID)
-                debug_toc(self, event, "", debug_time)
+                debug_toc(app, event, "", debug_time)
             end
 
             function plot_custom_mask(event, id)
                 debug_time = tic;
                 % Whether to update images
-                if to_update_image(self, event)
+                if to_update_image(app, event)
                     % start with a clear mask
-                    custom_mask = zeros(self.dataset_parameters.n_pixels, self.dataset_parameters.data_type);
+                    custom_mask = zeros(app.dataset_parameters.n_pixels, app.dataset_parameters.data_type);
                     
                     % Go through all enabled AND non-zero-weighting masks; add/intersect them accordingly
-                    cds = self.CustomDetectorTable.Data(self.CustomDetectorTable.Data.Enable & self.CustomDetectorTable.Data.Weight, :);
+                    cds = app.CustomDetectorTable.Data(app.CustomDetectorTable.Data.Enable & app.CustomDetectorTable.Data.Weight, :);
 
                     % exit if there are no custom masks
                     if isempty(cds)
-                        self.images.DiffractionMask = custom_mask;
-                        self.images.Real = zeros(self.dataset_parameters.n_frames, self.dataset_parameters.data_type);
-                        plot_all_patterns(self, event)
+                        app.images.DiffractionMask = custom_mask;
+                        app.images.Real = zeros(app.dataset_parameters.n_frames, app.dataset_parameters.data_type);
+                        plot_all_patterns(app, event)
                         return
                     end
 
                     % split masks by color if in "Color Mix" mode
-                    if strcmp(self.CustomDetectorInterMask.Value, "Color Mix")
-                        color_masks = zeros([height(cds),prod(self.dataset_parameters.n_pixels)],self.dataset_parameters.data_type);
-                        self.masks.CustomColorMix = zeros([prod(self.dataset_parameters.n_pixels) 3],self.dataset_parameters.data_type);
+                    if strcmp(app.CustomDetectorInterMask.Value, "Color Mix")
+                        color_masks = zeros([height(cds),prod(app.dataset_parameters.n_pixels)],app.dataset_parameters.data_type);
+                        app.masks.CustomColorMix = zeros([prod(app.dataset_parameters.n_pixels) 3],app.dataset_parameters.data_type);
                         color_mix_list = zeros([3 height(cds)]);
                     end
 
                     for i = 1:height(cds)
                         selection = cds(i, :);
-                        maski = self.masks.Custom.(selection.ID)*selection.Weight;
-                        switch self.CustomDetectorInterMask.Value
+                        maski = app.masks.Custom.(selection.ID)*selection.Weight;
+                        switch app.CustomDetectorInterMask.Value
                             case "Additive"
                                 custom_mask = custom_mask + maski;
 
@@ -8342,73 +8405,73 @@ classdef Quant4D < matlab.apps.AppBase
 
                             case "Color Mix"
                                 color_masks(i,:) = maski(:);
-                                color_mix_list(:,i) = self.annotations.Custom.(selection.ID){1}.UserData.Color;
+                                color_mix_list(:,i) = app.annotations.Custom.(selection.ID){1}.UserData.Color;
                                 custom_mask = custom_mask | maski;
                         end
                     end
 
                     % Update images if the mask actually changed OR not a changing event
-                    if ~isequal(self.images.DiffractionMask, custom_mask) || is_static_event(self, event)
-                        self.images.DiffractionMask = custom_mask;
-                        self.images.Real = gather(reshape(reshape(custom_mask,1,[])*self.data, self.dataset_parameters.n_frames));
+                    if ~isequal(app.images.DiffractionMask, custom_mask) || is_static_event(app, event)
+                        app.images.DiffractionMask = custom_mask;
+                        app.images.Real = gather(reshape(reshape(custom_mask,1,[])*app.data, app.dataset_parameters.n_frames));
                         
-                        if strcmp(self.CustomDetectorInterMask.Value, "Color Mix")
-                            self.masks.CustomColorMix = permute(reshape((color_mix_list*color_masks)',[self.dataset_parameters.n_pixels 3]),[2 1 3]);
-                            self.images.RealColorMix = gather(rescale(reshape((color_mix_list*color_masks*self.data)',[self.dataset_parameters.n_frames 3])));
+                        if strcmp(app.CustomDetectorInterMask.Value, "Color Mix")
+                            app.masks.CustomColorMix = permute(reshape((color_mix_list*color_masks)',[app.dataset_parameters.n_pixels 3]),[2 1 3]);
+                            app.images.RealColorMix = gather(rescale(reshape((color_mix_list*color_masks*app.data)',[app.dataset_parameters.n_frames 3])));
                         end
 
                     end
 
-                    plot_all_patterns(self, event)
+                    plot_all_patterns(app, event)
                 end
-                debug_toc(self, event, "", debug_time)
+                debug_toc(app, event, "", debug_time)
             end
 
         end
 
         % Callback function: BandpassFilter, BandpassFilter, 
         % ...and 5 other components
-        function first_moment(self, event)
+        function first_moment(app, event)
             % Function called when the user applies a filter to iDPC/dDPC
             % or iCoM/dCoM images, or saves a vector field image
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             switch event.Source
-                case self.SaveVecMenu
+                case app.SaveVecMenu
                     % save vector field as image and figure
-                    save_vector_field(self);
+                    save_vector_field(app);
                     
-                case {self.BandpassFilterLow, self.BandpassFilterHigh}
-                    % update self.BandpassFilter RangeSlider
-                    self.BandpassFilter.Value = sort([self.BandpassFilterLow.Value,self.BandpassFilterHigh.Value]);
-                    self.BandpassFilterLow.Value = min(self.BandpassFilter.Value);
-                    self.BandpassFilterHigh.Value = max(self.BandpassFilter.Value);
+                case {app.BandpassFilterLow, app.BandpassFilterHigh}
+                    % update app.BandpassFilter RangeSlider
+                    app.BandpassFilter.Value = sort([app.BandpassFilterLow.Value,app.BandpassFilterHigh.Value]);
+                    app.BandpassFilterLow.Value = min(app.BandpassFilter.Value);
+                    app.BandpassFilterHigh.Value = max(app.BandpassFilter.Value);
 
-                case self.BandpassFilter
-                    % update self.BandpassFilterLow and
-                    % self.BandpassFilterLow spinners
-                    self.BandpassFilterLow.Value = event.Value(1);
-                    self.BandpassFilterHigh.Value = event.Value(2);
+                case app.BandpassFilter
+                    % update app.BandpassFilterLow and
+                    % app.BandpassFilterLow spinners
+                    app.BandpassFilterLow.Value = event.Value(1);
+                    app.BandpassFilterHigh.Value = event.Value(2);
             end
 
             % update images
-            mock_UI_callbacks(self, self.UpdateImages)
+            mock_UI_callbacks(app, app.UpdateImages)
         end
 
         % Button pushed function: ShowCoMMagnitudeWindow, 
         % ...and 17 other components
-        function show_window(self, event)
+        function show_window(app, event)
             % Function called when the user presses any of the Show*Window
             % buttons
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -8416,46 +8479,46 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_time = tic;
 
-            id = self.DisplayImage.Value;
+            id = app.DisplayImage.Value;
             switch event.Source
-                case self.ShowImageWindow
+                case app.ShowImageWindow
                     % Show selected image
-                    figure(self.figures.(id));
-                    %movegui(self.figures.(id))
+                    figure(app.figures.(id));
+                    %movegui(app.figures.(id))
                 
-                case self.ShowMaskWindow
+                case app.ShowMaskWindow
                     % Show diffraction or Real `space` mask
                     % for the selected image
-                    id = self.image_axes.(id).UserData.space + "Mask";
-                    figure(self.figures.(id));
-                    %movegui(self.figures.(id))
+                    id = app.image_axes.(id).UserData.space + "Mask";
+                    figure(app.figures.(id));
+                    %movegui(app.figures.(id))
                 
                 otherwise
-                    % All other `self.Show***Window`
+                    % All other `app.Show***Window`
                     id = event.Source.Tag;
-                    figure(self.figures.(id))
-                    %movegui(self.figures.(id))
+                    figure(app.figures.(id))
+                    %movegui(app.figures.(id))
 
                     % If `id` is one of the available images, select it
-                    if ~self.DisplayLock.Value && ...
-                       ~strcmp(self.DisplayImage.Value, id) && ...
-                       ismember(id, self.DisplayImage.ItemsData)
-                        mock_UI_callbacks(self, self.DisplayImage, id)
+                    if ~app.DisplayLock.Value && ...
+                       ~strcmp(app.DisplayImage.Value, id) && ...
+                       ismember(id, app.DisplayImage.ItemsData)
+                        mock_UI_callbacks(app, app.DisplayImage, id)
                     end
             end
 
-            debug_toc(self, event, "", debug_time)
+            debug_toc(app, event, "", debug_time)
         end
 
         % Callback function: SetAllDiffractionWindows, SetAllRealWindows, 
         % ...and 6 other components
-        function resize_window(self, event)
+        function resize_window(app, event)
             % Function called when the user sets the size of one or more
             % windows from the `Window size and orientation` panel in the
             % `Windows` tab of the Settings UI. 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -8465,44 +8528,44 @@ classdef Quant4D < matlab.apps.AppBase
             space = event.Source.Tag;
             
             % user-defined window size from Settings UI window
-            window_size = [self.("Set" + space + "WindowWidth").Value ...
-                           self.("Set" + space + "WindowHeight").Value];
+            window_size = [app.("Set" + space + "WindowWidth").Value ...
+                           app.("Set" + space + "WindowHeight").Value];
 
             % ensure window size is in range [1, screen_avail]
-            window_size = clip(window_size, 1, self.sys_constants.screen_avail(3:4));
+            window_size = clip(window_size, 1, app.sys_constants.screen_avail(3:4));
 
             switch event.Source
-                case {self.SetDiffractionWindow, self.SetRealWindow}
+                case {app.SetDiffractionWindow, app.SetRealWindow}
                     % Only resize currently selected image window
-                    id = self.DisplayImage.Value;
+                    id = app.DisplayImage.Value;
 
                     % If the selected image is not of that space (i.e.
-                    % self.DisplayLock.Value = true), then resize the
+                    % app.DisplayLock.Value = true), then resize the
                     % primary image window for that space instead
-                    if self.image_axes.(id).UserData.space ~= space
+                    if app.image_axes.(id).UserData.space ~= space
                         id = space;
                     end
 
                     % get image axes position
-                    pos = self.image_axes.(id).Position;
+                    pos = app.image_axes.(id).Position;
 
                     % set window size
-                    self.figures.(id).Position(3:4) = window_size;
+                    app.figures.(id).Position(3:4) = window_size;
                     
                     % make sure figure window stays on the screen
-                    off_screen = self.figures.(id).Position(1:2) + window_size > self.sys_constants.screen_avail(3:4);
+                    off_screen = app.figures.(id).Position(1:2) + window_size > app.sys_constants.screen_avail(3:4);
                     if any(off_screen)
-                        shift = (self.sys_constants.screen_size(3:4) - (self.figures.(id).Position(1:2) + window_size + [0, self.sys_constants.title_height])).*(off_screen);
-                        self.figures.(id).Position(1:2) = self.figures.(id).Position(1:2) + shift;
+                        shift = (app.sys_constants.screen_size(3:4) - (app.figures.(id).Position(1:2) + window_size + [0, app.sys_constants.title_height])).*(off_screen);
+                        app.figures.(id).Position(1:2) = app.figures.(id).Position(1:2) + shift;
                     end
 
                     % make sure image axes position remains unchanged after
                     % window size change
-                    self.image_axes.(id).Position = pos;
+                    app.image_axes.(id).Position = pos;
                 
-                case {self.SetAllDiffractionWindows, self.SetAllRealWindows}
+                case {app.SetAllDiffractionWindows, app.SetAllRealWindows}
                     % Resize all image windows of the given space
-                    for fig = self.ui_groups.image_figures(self.ui_groups.image_space == space)'
+                    for fig = app.ui_groups.image_figures(app.ui_groups.image_space == space)'
                         % get image axes and position
                         ax = fig.CurrentAxes;
                         pos = ax.Position;
@@ -8511,9 +8574,9 @@ classdef Quant4D < matlab.apps.AppBase
                         fig.Position(3:4) = window_size;
                         
                         % make sure figure window stays on the screen
-                        off_screen = fig.Position(1:2) + window_size > self.sys_constants.screen_size(3:4);
+                        off_screen = fig.Position(1:2) + window_size > app.sys_constants.screen_size(3:4);
                         if off_screen
-                            shift = (self.sys_constants.screen_size(3:4) - (fig.Position(1:2) + window_size + [0, self.sys_constants.title_height])).*(off_screen);
+                            shift = (app.sys_constants.screen_size(3:4) - (fig.Position(1:2) + window_size + [0, app.sys_constants.title_height])).*(off_screen);
                             fig.Position(1:2) = fig.Position(1:2) + shift;
                         end
 
@@ -8525,125 +8588,125 @@ classdef Quant4D < matlab.apps.AppBase
 
             % always keep diffraction_dropdown in the upper right hand
             % corner of the diffraction figure
-            self.diffraction_dropdown.Position = [0, self.figures.Diffraction.Position(4) - self.diffraction_dropdown.Position(4), 65, 22];
+            app.diffraction_dropdown.Position = [0, app.figures.Diffraction.Position(4) - app.diffraction_dropdown.Position(4), 65, 22];
         end
 
         % Callback function: CalculationPolicy, UpdateImages
-        function update_images(self, event)
+        function update_images(app, event)
             % Function called when the user changes the CalculationPolicy
             % (`Active`, `Reduced` or `Passive`) or explicitly refreshes
             % the images (can also be called programmatically). 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             switch event.Source
-                case self.CalculationPolicy
+                case app.CalculationPolicy
                     % Update once if not passive
                     if event.Value
-                        mock_UI_callbacks(self, self.UpdateImages);
+                        mock_UI_callbacks(app, app.UpdateImages);
                     end
 
-                case self.UpdateImages
+                case app.UpdateImages
                     % Calculate and update all images by triggering
                     % detector callbacks
-                    switch self.Mode.Value
+                    switch app.Mode.Value
                         case "Preview"
-                            preview_callbacks(self, event)
+                            preview_callbacks(app, event)
 
                         case "Alignment"
-                            transmitted_beam_callbacks(self, event)
+                            transmitted_beam_callbacks(app, event)
                         
                         case {'Annular' 'CoM' 'DPC'}
-                            annular_detector_callbacks(self, event)
+                            annular_detector_callbacks(app, event)
                         
                         case "Virtual"
-                            virtual_aperture_callbacks(self, event)
+                            virtual_aperture_callbacks(app, event)
                         
                         case "Custom"
-                            custom_detector_callbacks(self, event)
+                            custom_detector_callbacks(app, event)
                     end
 
                     % Trigger real-space ROI callbacks
-                    if self.Mode.Value ~= "Preview"
-                        realspace_ROI_callbacks(self, event)
+                    if app.Mode.Value ~= "Preview"
+                        realspace_ROI_callbacks(app, event)
                     end
             end
         end
 
         % Menu selected function: ResetQuant4DMenu
-        function reset_Quant4D(self, event)
+        function reset_Quant4D(app, event)
             % Function to revert all UI properties to their initial state
             % and unload all data from RAM and the GPU, if used.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             % A state like just start-up without import
-            unload_data(self)
-            mock_UI_callbacks(self, self.Mode, "Preview")
+            unload_data(app)
+            mock_UI_callbacks(app, app.Mode, "Preview")
         end
 
         % Menu selected function: EnableallUIsMenu
-        function enable_all_UI(self, event)
+        function enable_all_UI(app, event)
             % Context menu item to re-enable all UI elements. Mostly used
             % for debugging. 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             % Try to delete any progress window
-            try delete(self.tmp_variables.progress_dialog); catch; end
+            try delete(app.tmp_variables.progress_dialog); catch; end
             
             % Enable all windows
-            enable_windows(self,true)
+            enable_windows(app,true)
         end
 
         % Menu selected function: Test1Menu
-        function test1(self, event)
+        function test1(app, event)
             % User editable function for debugging. 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             % places main window at top left of main screen, with settings, diffraction and real space windows immediately adjacent
-            self.Quant4D_Fig.Position(1:2) = [1,self.sys_constants.screen_size(4) - self.Quant4D_Fig.Position(4)-self.sys_constants.title_height];
+            app.Quant4D_Fig.Position(1:2) = [1,app.sys_constants.screen_size(4) - app.Quant4D_Fig.Position(4)-app.sys_constants.title_height];
             for ii=1:2 % running it twice makes it work better for some reason
-                self.figures.Settings.Position(1) = sum(self.Quant4D_Fig.Position([1,3])) + 1;
-                self.figures.Diffraction.Position(1) = sum(self.figures.Settings.Position([1,3])) + 1;
-                self.figures.Preview.Position(1) = sum(self.figures.Settings.Position([1,3])) + 1;
-                self.figures.Real.Position(1) = sum(self.figures.Diffraction.Position([1,3])) + 1;
-                self.figures.Import.Position(1) = sum(self.figures.Diffraction.Position([1,3])) + 1;
-                self.figures.Settings.Position(2:4) = self.Quant4D_Fig.Position(2:4);
-                self.figures.Diffraction.Position(2:4) = self.Quant4D_Fig.Position([2,4,4]);
-                self.figures.Preview.Position(2:4) = self.Quant4D_Fig.Position([2,4,4]);
-                self.figures.Real.Position(2:4) = self.Quant4D_Fig.Position([2,4,4]);
-                self.figures.Import.Position(2) = self.figures.Preview.Position(2)+self.figures.Preview.Position(4)-self.figures.Import.Position(4);
+                app.figures.Settings.Position(1) = sum(app.Quant4D_Fig.Position([1,3])) + 1;
+                app.figures.Diffraction.Position(1) = sum(app.figures.Settings.Position([1,3])) + 1;
+                app.figures.Preview.Position(1) = sum(app.figures.Settings.Position([1,3])) + 1;
+                app.figures.Real.Position(1) = sum(app.figures.Diffraction.Position([1,3])) + 1;
+                app.figures.Import.Position(1) = sum(app.figures.Diffraction.Position([1,3])) + 1;
+                app.figures.Settings.Position(2:4) = app.Quant4D_Fig.Position(2:4);
+                app.figures.Diffraction.Position(2:4) = app.Quant4D_Fig.Position([2,4,4]);
+                app.figures.Preview.Position(2:4) = app.Quant4D_Fig.Position([2,4,4]);
+                app.figures.Real.Position(2:4) = app.Quant4D_Fig.Position([2,4,4]);
+                app.figures.Import.Position(2) = app.figures.Preview.Position(2)+app.figures.Preview.Position(4)-app.figures.Import.Position(4);
             end
         end
 
         % Menu selected function: Test2Menu
-        function test2(self, event)
+        function test2(app, event)
             % User editable function for debugging. 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
@@ -8654,24 +8717,24 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         % Close request function: Quant4D_Fig
-        function close_function(self, event)
+        function close_function(app, event)
             % Function called to ensure that all figure windows and any
-            % progress dialogs are closed when the self exits.
+            % progress dialogs are closed when the app exits.
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
             % close the progress bar if its open
-            try delete(self.tmp_variables.progress_dialog);catch;end
+            try delete(app.tmp_variables.progress_dialog);catch;end
 
-            % make sure all figures are closed after the self is closed
+            % make sure all figures are closed after the app is closed
 
-            try figs = self.ui_groups.image_figures; catch; figs =[]; end
-            delete(self);
+            try figs = app.ui_groups.image_figures; catch; figs =[]; end
+            delete(app);
             
             for ii = 1:numel(figs)
                 try close(figs(ii)); catch; end
@@ -8680,28 +8743,28 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         % Callback function: ShowVariables, VariablesTree
-        function variable_viewer(self, event)
+        function variable_viewer(app, event)
             % Function used to display or hide the variable viewer treenode
             % in the Settings UI. 
             % 
             % Parameters:
-            %    self (Quant4D)
+            %    app (Quant4D)
             %    event (event.EventData)
             %
             % Returns:
             %    None
 
-            switch self.ShowVariables.Value
+            switch app.ShowVariables.Value
                 case true
-                    self.VariablesTab.Parent = self.SettingsTabGroup;
-                    self.ShowVariables.Text = "Hide all variables";
-                    self.SettingsTabGroup.SelectedTab = self.VariablesTab;
+                    app.VariablesTab.Parent = app.SettingsTabGroup;
+                    app.ShowVariables.Text = "Hide all variables";
+                    app.SettingsTabGroup.SelectedTab = app.VariablesTab;
                 case false
-                    self.VariablesTab.Parent = [];
-                    self.ShowVariables.Text = "Show all variables";
+                    app.VariablesTab.Parent = [];
+                    app.ShowVariables.Text = "Show all variables";
             end
             % Get currently selected node
-            selectedNode = self.VariablesTree.SelectedNodes;
+            selectedNode = app.VariablesTree.SelectedNodes;
 
             % Only show these variables/structures 
             group_names = {"dataset_parameters";
@@ -8719,18 +8782,18 @@ classdef Quant4D < matlab.apps.AppBase
                 group_name = group_names{i_group};
                 
                 % Add TreeNode if it doesn't already exist or is invalid
-                if ~isfield(self.variable_nodes,group_name) || ...
-                   ~isa(self.variable_nodes.(group_name),'matlab.ui.container.TreeNode') || ...
-                    ~isvalid(self.variable_nodes.(group_name))
+                if ~isfield(app.variable_nodes,group_name) || ...
+                   ~isa(app.variable_nodes.(group_name),'matlab.ui.container.TreeNode') || ...
+                    ~isvalid(app.variable_nodes.(group_name))
 
-                    self.variable_nodes.(group_name) = uitreenode(self.VariablesTree, "Text", group_name);
+                    app.variable_nodes.(group_name) = uitreenode(app.VariablesTree, "Text", group_name);
                 end
                 
                 % Populate the branches on the TreeNode
-                get_fields(self, self.variable_nodes.(group_name), self.(group_name))
+                get_fields(app, app.variable_nodes.(group_name), app.(group_name))
             end
 
-            % If node is selected, show variable data in self.VariablesTable
+            % If node is selected, show variable data in app.VariablesTable
             if ~isempty(selectedNode)
                 % get parent
                 parent = selectedNode.Parent;
@@ -8743,10 +8806,10 @@ classdef Quant4D < matlab.apps.AppBase
                 end
 
                 % Absolute path 
-                tree_path = ['self.', tree_path];
+                tree_path = ['app.', tree_path];
 
                 % Get variable in a suitable way for displaying
-                self.VariablesTable.Data = get_variable_display(tree_path);
+                app.VariablesTable.Data = get_variable_display(tree_path);
             end            
 
             function value = get_variable_display(variable_path)
@@ -8876,11 +8939,11 @@ classdef Quant4D < matlab.apps.AppBase
 
                 switch size(value,2)
                     case 2
-                        self.VariablesTable.ColumnName = {"Name", "Value"};
-                        self.VariablesTable.ColumnWidth = 'auto';
+                        app.VariablesTable.ColumnName = {"Name", "Value"};
+                        app.VariablesTable.ColumnWidth = 'auto';
                     otherwise
-                        self.VariablesTable.ColumnName = "Value";
-                        self.VariablesTable.ColumnWidth = '1x';
+                        app.VariablesTable.ColumnName = "Value";
+                        app.VariablesTable.ColumnWidth = '1x';
                 end
                 
             end
@@ -8891,3909 +8954,3909 @@ classdef Quant4D < matlab.apps.AppBase
     methods (Access = private)
 
         % Create UIFigure and components
-        function createComponents(self)
+        function createComponents(app)
 
             % Get the file path for locating images
             pathToMLAPP = fileparts(mfilename('fullpath'));
 
             % Create Quant4D_Fig and hide until all components are created
-            self.Quant4D_Fig = uifigure('Visible', 'off');
-            self.Quant4D_Fig.AutoResizeChildren = 'off';
-            self.Quant4D_Fig.Position = [1 1 262 472];
-            self.Quant4D_Fig.Name = 'Quant4D';
-            self.Quant4D_Fig.Resize = 'off';
-            self.Quant4D_Fig.CloseRequestFcn = createCallbackFcn(self, @close_function, true);
+            app.Quant4D_Fig = uifigure('Visible', 'off');
+            app.Quant4D_Fig.AutoResizeChildren = 'off';
+            app.Quant4D_Fig.Position = [1 1 262 472];
+            app.Quant4D_Fig.Name = 'Quant4D';
+            app.Quant4D_Fig.Resize = 'off';
+            app.Quant4D_Fig.CloseRequestFcn = createCallbackFcn(app, @close_function, true);
 
             % Create SavePanel
-            self.SavePanel = uipanel(self.Quant4D_Fig);
-            self.SavePanel.AutoResizeChildren = 'off';
-            self.SavePanel.BorderType = 'none';
-            self.SavePanel.FontWeight = 'bold';
-            self.SavePanel.Position = [-697 -35 424 500];
+            app.SavePanel = uipanel(app.Quant4D_Fig);
+            app.SavePanel.AutoResizeChildren = 'off';
+            app.SavePanel.BorderType = 'none';
+            app.SavePanel.FontWeight = 'bold';
+            app.SavePanel.Position = [-697 -35 424 500];
 
             % Create SaveGrid
-            self.SaveGrid = uigridlayout(self.SavePanel);
-            self.SaveGrid.ColumnWidth = {'1x'};
-            self.SaveGrid.RowHeight = {'fit', '1x', 'fit'};
-            self.SaveGrid.ColumnSpacing = 4;
-            self.SaveGrid.RowSpacing = 0;
-            self.SaveGrid.Padding = [0 0 0 0];
+            app.SaveGrid = uigridlayout(app.SavePanel);
+            app.SaveGrid.ColumnWidth = {'1x'};
+            app.SaveGrid.RowHeight = {'fit', '1x', 'fit'};
+            app.SaveGrid.ColumnSpacing = 4;
+            app.SaveGrid.RowSpacing = 0;
+            app.SaveGrid.Padding = [0 0 0 0];
 
             % Create SaveDirectoryGrid
-            self.SaveDirectoryGrid = uigridlayout(self.SaveGrid);
-            self.SaveDirectoryGrid.ColumnWidth = {'fit', '1x'};
-            self.SaveDirectoryGrid.RowHeight = {24};
-            self.SaveDirectoryGrid.ColumnSpacing = 4;
-            self.SaveDirectoryGrid.RowSpacing = 4;
-            self.SaveDirectoryGrid.Padding = [4 4 4 4];
-            self.SaveDirectoryGrid.Layout.Row = 1;
-            self.SaveDirectoryGrid.Layout.Column = 1;
+            app.SaveDirectoryGrid = uigridlayout(app.SaveGrid);
+            app.SaveDirectoryGrid.ColumnWidth = {'fit', '1x'};
+            app.SaveDirectoryGrid.RowHeight = {24};
+            app.SaveDirectoryGrid.ColumnSpacing = 4;
+            app.SaveDirectoryGrid.RowSpacing = 4;
+            app.SaveDirectoryGrid.Padding = [4 4 4 4];
+            app.SaveDirectoryGrid.Layout.Row = 1;
+            app.SaveDirectoryGrid.Layout.Column = 1;
 
             % Create SaveDirectoryButton
-            self.SaveDirectoryButton = uibutton(self.SaveDirectoryGrid, 'push');
-            self.SaveDirectoryButton.ButtonPushedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveDirectoryButton.BackgroundColor = [0.702 1 0.702];
-            self.SaveDirectoryButton.FontName = 'arial';
-            self.SaveDirectoryButton.FontWeight = 'bold';
-            self.SaveDirectoryButton.Tooltip = {'Select saving/export directory'};
-            self.SaveDirectoryButton.Layout.Row = 1;
-            self.SaveDirectoryButton.Layout.Column = 1;
-            self.SaveDirectoryButton.Text = 'Directory';
+            app.SaveDirectoryButton = uibutton(app.SaveDirectoryGrid, 'push');
+            app.SaveDirectoryButton.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveDirectoryButton.BackgroundColor = [0.702 1 0.702];
+            app.SaveDirectoryButton.FontName = 'arial';
+            app.SaveDirectoryButton.FontWeight = 'bold';
+            app.SaveDirectoryButton.Tooltip = {'Select saving/export directory'};
+            app.SaveDirectoryButton.Layout.Row = 1;
+            app.SaveDirectoryButton.Layout.Column = 1;
+            app.SaveDirectoryButton.Text = 'Directory';
 
             % Create SaveDirectoryPath
-            self.SaveDirectoryPath = uieditfield(self.SaveDirectoryGrid, 'text');
-            self.SaveDirectoryPath.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveDirectoryPath.Tooltip = {'Saving/Export directory'};
-            self.SaveDirectoryPath.Layout.Row = 1;
-            self.SaveDirectoryPath.Layout.Column = 2;
+            app.SaveDirectoryPath = uieditfield(app.SaveDirectoryGrid, 'text');
+            app.SaveDirectoryPath.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveDirectoryPath.Tooltip = {'Saving/Export directory'};
+            app.SaveDirectoryPath.Layout.Row = 1;
+            app.SaveDirectoryPath.Layout.Column = 2;
 
             % Create SaveTabGroup
-            self.SaveTabGroup = uitabgroup(self.SaveGrid);
-            self.SaveTabGroup.AutoResizeChildren = 'off';
-            self.SaveTabGroup.SelectionChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.SaveTabGroup.Layout.Row = 2;
-            self.SaveTabGroup.Layout.Column = 1;
+            app.SaveTabGroup = uitabgroup(app.SaveGrid);
+            app.SaveTabGroup.AutoResizeChildren = 'off';
+            app.SaveTabGroup.SelectionChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.SaveTabGroup.Layout.Row = 2;
+            app.SaveTabGroup.Layout.Column = 1;
 
             % Create SaveImagesTab
-            self.SaveImagesTab = uitab(self.SaveTabGroup);
-            self.SaveImagesTab.AutoResizeChildren = 'off';
-            self.SaveImagesTab.Title = 'Save Images';
+            app.SaveImagesTab = uitab(app.SaveTabGroup);
+            app.SaveImagesTab.AutoResizeChildren = 'off';
+            app.SaveImagesTab.Title = 'Save Images';
 
             % Create SaveImagesGrid
-            self.SaveImagesGrid = uigridlayout(self.SaveImagesTab);
-            self.SaveImagesGrid.ColumnWidth = {'1x'};
-            self.SaveImagesGrid.RowHeight = {'fit', 'fit', '1x', 'fit'};
-            self.SaveImagesGrid.ColumnSpacing = 4;
-            self.SaveImagesGrid.RowSpacing = 4;
-            self.SaveImagesGrid.Padding = [4 4 4 4];
+            app.SaveImagesGrid = uigridlayout(app.SaveImagesTab);
+            app.SaveImagesGrid.ColumnWidth = {'1x'};
+            app.SaveImagesGrid.RowHeight = {'fit', 'fit', '1x', 'fit'};
+            app.SaveImagesGrid.ColumnSpacing = 4;
+            app.SaveImagesGrid.RowSpacing = 4;
+            app.SaveImagesGrid.Padding = [4 4 4 4];
 
             % Create SaveImagePrefixGrid
-            self.SaveImagePrefixGrid = uigridlayout(self.SaveImagesGrid);
-            self.SaveImagePrefixGrid.ColumnWidth = {'fit', '1x'};
-            self.SaveImagePrefixGrid.RowHeight = {24};
-            self.SaveImagePrefixGrid.ColumnSpacing = 4;
-            self.SaveImagePrefixGrid.RowSpacing = 4;
-            self.SaveImagePrefixGrid.Padding = [0 0 0 0];
-            self.SaveImagePrefixGrid.Layout.Row = 1;
-            self.SaveImagePrefixGrid.Layout.Column = 1;
+            app.SaveImagePrefixGrid = uigridlayout(app.SaveImagesGrid);
+            app.SaveImagePrefixGrid.ColumnWidth = {'fit', '1x'};
+            app.SaveImagePrefixGrid.RowHeight = {24};
+            app.SaveImagePrefixGrid.ColumnSpacing = 4;
+            app.SaveImagePrefixGrid.RowSpacing = 4;
+            app.SaveImagePrefixGrid.Padding = [0 0 0 0];
+            app.SaveImagePrefixGrid.Layout.Row = 1;
+            app.SaveImagePrefixGrid.Layout.Column = 1;
 
             % Create FilenamePrefixLabel
-            self.FilenamePrefixLabel = uilabel(self.SaveImagePrefixGrid);
-            self.FilenamePrefixLabel.HorizontalAlignment = 'right';
-            self.FilenamePrefixLabel.Layout.Row = 1;
-            self.FilenamePrefixLabel.Layout.Column = 1;
-            self.FilenamePrefixLabel.Text = 'Filename Prefix';
+            app.FilenamePrefixLabel = uilabel(app.SaveImagePrefixGrid);
+            app.FilenamePrefixLabel.HorizontalAlignment = 'right';
+            app.FilenamePrefixLabel.Layout.Row = 1;
+            app.FilenamePrefixLabel.Layout.Column = 1;
+            app.FilenamePrefixLabel.Text = 'Filename Prefix';
 
             % Create SaveImagePrefix
-            self.SaveImagePrefix = uieditfield(self.SaveImagePrefixGrid, 'text');
-            self.SaveImagePrefix.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImagePrefix.Layout.Row = 1;
-            self.SaveImagePrefix.Layout.Column = 2;
+            app.SaveImagePrefix = uieditfield(app.SaveImagePrefixGrid, 'text');
+            app.SaveImagePrefix.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImagePrefix.Layout.Row = 1;
+            app.SaveImagePrefix.Layout.Column = 2;
 
             % Create SavePrefixAngleGrid
-            self.SavePrefixAngleGrid = uigridlayout(self.SaveImagesGrid);
-            self.SavePrefixAngleGrid.ColumnWidth = {'fit', 'fit', 'fit', '1x'};
-            self.SavePrefixAngleGrid.RowHeight = {'1x'};
-            self.SavePrefixAngleGrid.ColumnSpacing = 6;
-            self.SavePrefixAngleGrid.Padding = [0 0 0 0];
-            self.SavePrefixAngleGrid.Layout.Row = 2;
-            self.SavePrefixAngleGrid.Layout.Column = 1;
+            app.SavePrefixAngleGrid = uigridlayout(app.SaveImagesGrid);
+            app.SavePrefixAngleGrid.ColumnWidth = {'fit', 'fit', 'fit', '1x'};
+            app.SavePrefixAngleGrid.RowHeight = {'1x'};
+            app.SavePrefixAngleGrid.ColumnSpacing = 6;
+            app.SavePrefixAngleGrid.Padding = [0 0 0 0];
+            app.SavePrefixAngleGrid.Layout.Row = 2;
+            app.SavePrefixAngleGrid.Layout.Column = 1;
 
             % Create SavePrefixAngleLabel
-            self.SavePrefixAngleLabel = uilabel(self.SavePrefixAngleGrid);
-            self.SavePrefixAngleLabel.HorizontalAlignment = 'right';
-            self.SavePrefixAngleLabel.Layout.Row = 1;
-            self.SavePrefixAngleLabel.Layout.Column = 1;
-            self.SavePrefixAngleLabel.Text = 'Include Annular Detector Angles in Filename';
+            app.SavePrefixAngleLabel = uilabel(app.SavePrefixAngleGrid);
+            app.SavePrefixAngleLabel.HorizontalAlignment = 'right';
+            app.SavePrefixAngleLabel.Layout.Row = 1;
+            app.SavePrefixAngleLabel.Layout.Column = 1;
+            app.SavePrefixAngleLabel.Text = 'Include Annular Detector Angles in Filename';
 
             % Create SavePrefixAngleInner
-            self.SavePrefixAngleInner = uicheckbox(self.SavePrefixAngleGrid);
-            self.SavePrefixAngleInner.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SavePrefixAngleInner.Text = 'Inner';
-            self.SavePrefixAngleInner.Layout.Row = 1;
-            self.SavePrefixAngleInner.Layout.Column = 2;
+            app.SavePrefixAngleInner = uicheckbox(app.SavePrefixAngleGrid);
+            app.SavePrefixAngleInner.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SavePrefixAngleInner.Text = 'Inner';
+            app.SavePrefixAngleInner.Layout.Row = 1;
+            app.SavePrefixAngleInner.Layout.Column = 2;
 
             % Create SavePrefixAngleOuter
-            self.SavePrefixAngleOuter = uicheckbox(self.SavePrefixAngleGrid);
-            self.SavePrefixAngleOuter.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SavePrefixAngleOuter.Text = 'Outer';
-            self.SavePrefixAngleOuter.Layout.Row = 1;
-            self.SavePrefixAngleOuter.Layout.Column = 3;
+            app.SavePrefixAngleOuter = uicheckbox(app.SavePrefixAngleGrid);
+            app.SavePrefixAngleOuter.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SavePrefixAngleOuter.Text = 'Outer';
+            app.SavePrefixAngleOuter.Layout.Row = 1;
+            app.SavePrefixAngleOuter.Layout.Column = 3;
 
             % Create SaveImageListGrid
-            self.SaveImageListGrid = uigridlayout(self.SaveImagesGrid);
-            self.SaveImageListGrid.ColumnWidth = {'1x', 'fit'};
-            self.SaveImageListGrid.RowHeight = {'fit', '1x'};
-            self.SaveImageListGrid.ColumnSpacing = 4;
-            self.SaveImageListGrid.RowSpacing = 4;
-            self.SaveImageListGrid.Padding = [0 0 0 0];
-            self.SaveImageListGrid.Layout.Row = 3;
-            self.SaveImageListGrid.Layout.Column = 1;
+            app.SaveImageListGrid = uigridlayout(app.SaveImagesGrid);
+            app.SaveImageListGrid.ColumnWidth = {'1x', 'fit'};
+            app.SaveImageListGrid.RowHeight = {'fit', '1x'};
+            app.SaveImageListGrid.ColumnSpacing = 4;
+            app.SaveImageListGrid.RowSpacing = 4;
+            app.SaveImageListGrid.Padding = [0 0 0 0];
+            app.SaveImageListGrid.Layout.Row = 3;
+            app.SaveImageListGrid.Layout.Column = 1;
 
             % Create ImagestoSaveMultiselectwithCtrlShiftLabel
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel = uilabel(self.SaveImageListGrid);
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.HorizontalAlignment = 'center';
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.VerticalAlignment = 'bottom';
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.FontName = 'Arial';
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.FontWeight = 'bold';
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.Layout.Row = 1;
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.Layout.Column = [1 2];
-            self.ImagestoSaveMultiselectwithCtrlShiftLabel.Text = 'Images to Save (Multi-select with Ctrl/Shift)';
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel = uilabel(app.SaveImageListGrid);
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.HorizontalAlignment = 'center';
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.VerticalAlignment = 'bottom';
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.FontName = 'Arial';
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.FontWeight = 'bold';
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.Layout.Row = 1;
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.Layout.Column = [1 2];
+            app.ImagestoSaveMultiselectwithCtrlShiftLabel.Text = 'Images to Save (Multi-select with Ctrl/Shift)';
 
             % Create SaveImageSelectAll
-            self.SaveImageSelectAll = uicheckbox(self.SaveImageListGrid);
-            self.SaveImageSelectAll.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImageSelectAll.Text = 'Select All';
-            self.SaveImageSelectAll.Layout.Row = 1;
-            self.SaveImageSelectAll.Layout.Column = 2;
+            app.SaveImageSelectAll = uicheckbox(app.SaveImageListGrid);
+            app.SaveImageSelectAll.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImageSelectAll.Text = 'Select All';
+            app.SaveImageSelectAll.Layout.Row = 1;
+            app.SaveImageSelectAll.Layout.Column = 2;
 
             % Create SaveImageList
-            self.SaveImageList = uilistbox(self.SaveImageListGrid);
-            self.SaveImageList.Items = {};
-            self.SaveImageList.Multiselect = 'on';
-            self.SaveImageList.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImageList.FontName = 'Arial';
-            self.SaveImageList.Layout.Row = 2;
-            self.SaveImageList.Layout.Column = [1 2];
-            self.SaveImageList.Value = {};
+            app.SaveImageList = uilistbox(app.SaveImageListGrid);
+            app.SaveImageList.Items = {};
+            app.SaveImageList.Multiselect = 'on';
+            app.SaveImageList.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImageList.FontName = 'Arial';
+            app.SaveImageList.Layout.Row = 2;
+            app.SaveImageList.Layout.Column = [1 2];
+            app.SaveImageList.Value = {};
 
             % Create SaveImageFormatGrid
-            self.SaveImageFormatGrid = uigridlayout(self.SaveImagesGrid);
-            self.SaveImageFormatGrid.ColumnWidth = {'1x'};
-            self.SaveImageFormatGrid.RowHeight = {20, 20};
-            self.SaveImageFormatGrid.ColumnSpacing = 4;
-            self.SaveImageFormatGrid.RowSpacing = 2;
-            self.SaveImageFormatGrid.Padding = [0 0 0 0];
-            self.SaveImageFormatGrid.Layout.Row = 4;
-            self.SaveImageFormatGrid.Layout.Column = 1;
+            app.SaveImageFormatGrid = uigridlayout(app.SaveImagesGrid);
+            app.SaveImageFormatGrid.ColumnWidth = {'1x'};
+            app.SaveImageFormatGrid.RowHeight = {20, 20};
+            app.SaveImageFormatGrid.ColumnSpacing = 4;
+            app.SaveImageFormatGrid.RowSpacing = 2;
+            app.SaveImageFormatGrid.Padding = [0 0 0 0];
+            app.SaveImageFormatGrid.Layout.Row = 4;
+            app.SaveImageFormatGrid.Layout.Column = 1;
 
             % Create SaveImageTIFF
-            self.SaveImageTIFF = uicheckbox(self.SaveImageFormatGrid);
-            self.SaveImageTIFF.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImageTIFF.Text = 'Raw data (single-precision), TIFF';
-            self.SaveImageTIFF.Layout.Row = 1;
-            self.SaveImageTIFF.Layout.Column = 1;
-            self.SaveImageTIFF.Value = true;
+            app.SaveImageTIFF = uicheckbox(app.SaveImageFormatGrid);
+            app.SaveImageTIFF.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImageTIFF.Text = 'Raw data (single-precision), TIFF';
+            app.SaveImageTIFF.Layout.Row = 1;
+            app.SaveImageTIFF.Layout.Column = 1;
+            app.SaveImageTIFF.Value = true;
 
             % Create SaveImagePNGGrid
-            self.SaveImagePNGGrid = uigridlayout(self.SaveImageFormatGrid);
-            self.SaveImagePNGGrid.ColumnWidth = {'fit', 'fit', 'fit', 40, '1x'};
-            self.SaveImagePNGGrid.RowHeight = {'1x'};
-            self.SaveImagePNGGrid.ColumnSpacing = 0;
-            self.SaveImagePNGGrid.RowSpacing = 4;
-            self.SaveImagePNGGrid.Padding = [0 0 0 0];
-            self.SaveImagePNGGrid.Layout.Row = 2;
-            self.SaveImagePNGGrid.Layout.Column = 1;
+            app.SaveImagePNGGrid = uigridlayout(app.SaveImageFormatGrid);
+            app.SaveImagePNGGrid.ColumnWidth = {'fit', 'fit', 'fit', 40, '1x'};
+            app.SaveImagePNGGrid.RowHeight = {'1x'};
+            app.SaveImagePNGGrid.ColumnSpacing = 0;
+            app.SaveImagePNGGrid.RowSpacing = 4;
+            app.SaveImagePNGGrid.Padding = [0 0 0 0];
+            app.SaveImagePNGGrid.Layout.Row = 2;
+            app.SaveImagePNGGrid.Layout.Column = 1;
 
             % Create SaveImagePNG
-            self.SaveImagePNG = uicheckbox(self.SaveImagePNGGrid);
-            self.SaveImagePNG.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImagePNG.Text = 'As-displayed, PNG; ';
-            self.SaveImagePNG.Layout.Row = 1;
-            self.SaveImagePNG.Layout.Column = 1;
-            self.SaveImagePNG.Value = true;
+            app.SaveImagePNG = uicheckbox(app.SaveImagePNGGrid);
+            app.SaveImagePNG.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImagePNG.Text = 'As-displayed, PNG; ';
+            app.SaveImagePNG.Layout.Row = 1;
+            app.SaveImagePNG.Layout.Column = 1;
+            app.SaveImagePNG.Value = true;
 
             % Create SaveImageAnnotations
-            self.SaveImageAnnotations = uicheckbox(self.SaveImagePNGGrid);
-            self.SaveImageAnnotations.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImageAnnotations.Text = 'with annotations, e.g. ROIs,';
-            self.SaveImageAnnotations.Layout.Row = 1;
-            self.SaveImageAnnotations.Layout.Column = 2;
-            self.SaveImageAnnotations.Value = true;
+            app.SaveImageAnnotations = uicheckbox(app.SaveImagePNGGrid);
+            app.SaveImageAnnotations.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImageAnnotations.Text = 'with annotations, e.g. ROIs,';
+            app.SaveImageAnnotations.Layout.Row = 1;
+            app.SaveImageAnnotations.Layout.Column = 2;
+            app.SaveImageAnnotations.Value = true;
 
             % Create SaveImgAnnotDPILabel
-            self.SaveImgAnnotDPILabel = uilabel(self.SaveImagePNGGrid);
-            self.SaveImgAnnotDPILabel.Layout.Row = 1;
-            self.SaveImgAnnotDPILabel.Layout.Column = 3;
-            self.SaveImgAnnotDPILabel.Text = 'DPI';
+            app.SaveImgAnnotDPILabel = uilabel(app.SaveImagePNGGrid);
+            app.SaveImgAnnotDPILabel.Layout.Row = 1;
+            app.SaveImgAnnotDPILabel.Layout.Column = 3;
+            app.SaveImgAnnotDPILabel.Text = 'DPI';
 
             % Create SaveImageDPI
-            self.SaveImageDPI = uieditfield(self.SaveImagePNGGrid, 'numeric');
-            self.SaveImageDPI.Limits = [1 Inf];
-            self.SaveImageDPI.RoundFractionalValues = 'on';
-            self.SaveImageDPI.ValueDisplayFormat = '%d';
-            self.SaveImageDPI.ValueChangedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveImageDPI.Layout.Row = 1;
-            self.SaveImageDPI.Layout.Column = 4;
-            self.SaveImageDPI.Value = 72;
+            app.SaveImageDPI = uieditfield(app.SaveImagePNGGrid, 'numeric');
+            app.SaveImageDPI.Limits = [1 Inf];
+            app.SaveImageDPI.RoundFractionalValues = 'on';
+            app.SaveImageDPI.ValueDisplayFormat = '%d';
+            app.SaveImageDPI.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveImageDPI.Layout.Row = 1;
+            app.SaveImageDPI.Layout.Column = 4;
+            app.SaveImageDPI.Value = 72;
 
             % Create ExportDatasetTab
-            self.ExportDatasetTab = uitab(self.SaveTabGroup);
-            self.ExportDatasetTab.AutoResizeChildren = 'off';
-            self.ExportDatasetTab.Title = 'Export Dataset';
+            app.ExportDatasetTab = uitab(app.SaveTabGroup);
+            app.ExportDatasetTab.AutoResizeChildren = 'off';
+            app.ExportDatasetTab.Title = 'Export Dataset';
 
             % Create ExportGrid
-            self.ExportGrid = uigridlayout(self.ExportDatasetTab);
-            self.ExportGrid.RowHeight = {'fit', 24, 'fit', 'fit', 'fit', '1x'};
-            self.ExportGrid.ColumnSpacing = 6;
-            self.ExportGrid.RowSpacing = 4;
-            self.ExportGrid.Padding = [4 4 4 4];
+            app.ExportGrid = uigridlayout(app.ExportDatasetTab);
+            app.ExportGrid.RowHeight = {'fit', 24, 'fit', 'fit', 'fit', '1x'};
+            app.ExportGrid.ColumnSpacing = 6;
+            app.ExportGrid.RowSpacing = 4;
+            app.ExportGrid.Padding = [4 4 4 4];
 
             % Create ExportFileGrid
-            self.ExportFileGrid = uigridlayout(self.ExportGrid);
-            self.ExportFileGrid.ColumnWidth = {'fit', '1x', 'fit'};
-            self.ExportFileGrid.RowHeight = {24};
-            self.ExportFileGrid.ColumnSpacing = 4;
-            self.ExportFileGrid.RowSpacing = 4;
-            self.ExportFileGrid.Padding = [0 0 0 0];
-            self.ExportFileGrid.Layout.Row = 1;
-            self.ExportFileGrid.Layout.Column = [1 2];
+            app.ExportFileGrid = uigridlayout(app.ExportGrid);
+            app.ExportFileGrid.ColumnWidth = {'fit', '1x', 'fit'};
+            app.ExportFileGrid.RowHeight = {24};
+            app.ExportFileGrid.ColumnSpacing = 4;
+            app.ExportFileGrid.RowSpacing = 4;
+            app.ExportFileGrid.Padding = [0 0 0 0];
+            app.ExportFileGrid.Layout.Row = 1;
+            app.ExportFileGrid.Layout.Column = [1 2];
 
             % Create FilenameLabel
-            self.FilenameLabel = uilabel(self.ExportFileGrid);
-            self.FilenameLabel.HorizontalAlignment = 'right';
-            self.FilenameLabel.Layout.Row = 1;
-            self.FilenameLabel.Layout.Column = 1;
-            self.FilenameLabel.Text = 'Filename';
+            app.FilenameLabel = uilabel(app.ExportFileGrid);
+            app.FilenameLabel.HorizontalAlignment = 'right';
+            app.FilenameLabel.Layout.Row = 1;
+            app.FilenameLabel.Layout.Column = 1;
+            app.FilenameLabel.Text = 'Filename';
 
             % Create ExportFilename
-            self.ExportFilename = uieditfield(self.ExportFileGrid, 'text');
-            self.ExportFilename.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.ExportFilename.Layout.Row = 1;
-            self.ExportFilename.Layout.Column = 2;
+            app.ExportFilename = uieditfield(app.ExportFileGrid, 'text');
+            app.ExportFilename.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.ExportFilename.Layout.Row = 1;
+            app.ExportFilename.Layout.Column = 2;
 
             % Create ExportDimensionSuffix
-            self.ExportDimensionSuffix = uicheckbox(self.ExportFileGrid);
-            self.ExportDimensionSuffix.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.ExportDimensionSuffix.Tooltip = {'To suffix the filename with image stack''s dimensions'};
-            self.ExportDimensionSuffix.Text = 'Dimensions suffix';
-            self.ExportDimensionSuffix.Layout.Row = 1;
-            self.ExportDimensionSuffix.Layout.Column = 3;
+            app.ExportDimensionSuffix = uicheckbox(app.ExportFileGrid);
+            app.ExportDimensionSuffix.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.ExportDimensionSuffix.Tooltip = {'To suffix the filename with image stack''s dimensions'};
+            app.ExportDimensionSuffix.Text = 'Dimensions suffix';
+            app.ExportDimensionSuffix.Layout.Row = 1;
+            app.ExportDimensionSuffix.Layout.Column = 3;
 
             % Create ExportDataType
-            self.ExportDataType = uidropdown(self.ExportGrid);
-            self.ExportDataType.Items = {'HDF5 (*.h5)', 'Raw binary (*.raw)'};
-            self.ExportDataType.ItemsData = {'h5', 'raw'};
-            self.ExportDataType.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.ExportDataType.Layout.Row = 2;
-            self.ExportDataType.Layout.Column = 1;
-            self.ExportDataType.Value = 'h5';
+            app.ExportDataType = uidropdown(app.ExportGrid);
+            app.ExportDataType.Items = {'HDF5 (*.h5)', 'Raw binary (*.raw)'};
+            app.ExportDataType.ItemsData = {'h5', 'raw'};
+            app.ExportDataType.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.ExportDataType.Layout.Row = 2;
+            app.ExportDataType.Layout.Column = 1;
+            app.ExportDataType.Value = 'h5';
 
             % Create ExportByteOrder
-            self.ExportByteOrder = uidropdown(self.ExportGrid);
-            self.ExportByteOrder.Items = {'Little Endian', 'Big Endian'};
-            self.ExportByteOrder.ItemsData = {'l', 'b'};
-            self.ExportByteOrder.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.ExportByteOrder.Layout.Row = 2;
-            self.ExportByteOrder.Layout.Column = 2;
-            self.ExportByteOrder.Value = 'l';
+            app.ExportByteOrder = uidropdown(app.ExportGrid);
+            app.ExportByteOrder.Items = {'Little Endian', 'Big Endian'};
+            app.ExportByteOrder.ItemsData = {'l', 'b'};
+            app.ExportByteOrder.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.ExportByteOrder.Layout.Row = 2;
+            app.ExportByteOrder.Layout.Column = 2;
+            app.ExportByteOrder.Value = 'l';
 
             % Create ExportPartialPixels
-            self.ExportPartialPixels = uicheckbox(self.ExportGrid);
-            self.ExportPartialPixels.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.ExportPartialPixels.Tag = 'Export Diffraction';
-            self.ExportPartialPixels.Text = '    Diffraction Partial Export';
-            self.ExportPartialPixels.FontName = 'Arial';
-            self.ExportPartialPixels.FontWeight = 'bold';
-            self.ExportPartialPixels.Layout.Row = 3;
-            self.ExportPartialPixels.Layout.Column = 1;
+            app.ExportPartialPixels = uicheckbox(app.ExportGrid);
+            app.ExportPartialPixels.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.ExportPartialPixels.Tag = 'Export Diffraction';
+            app.ExportPartialPixels.Text = '    Diffraction Partial Export';
+            app.ExportPartialPixels.FontName = 'Arial';
+            app.ExportPartialPixels.FontWeight = 'bold';
+            app.ExportPartialPixels.Layout.Row = 3;
+            app.ExportPartialPixels.Layout.Column = 1;
 
             % Create DiffractionPartialExportGrid
-            self.DiffractionPartialExportGrid = uigridlayout(self.ExportGrid);
-            self.DiffractionPartialExportGrid.ColumnWidth = {'1x', 80, '1x', 80};
-            self.DiffractionPartialExportGrid.RowHeight = {24, 24, 24};
-            self.DiffractionPartialExportGrid.ColumnSpacing = 4;
-            self.DiffractionPartialExportGrid.RowSpacing = 2;
-            self.DiffractionPartialExportGrid.Padding = [0 0 0 0];
-            self.DiffractionPartialExportGrid.Layout.Row = 4;
-            self.DiffractionPartialExportGrid.Layout.Column = 1;
+            app.DiffractionPartialExportGrid = uigridlayout(app.ExportGrid);
+            app.DiffractionPartialExportGrid.ColumnWidth = {'1x', 80, '1x', 80};
+            app.DiffractionPartialExportGrid.RowHeight = {24, 24, 24};
+            app.DiffractionPartialExportGrid.ColumnSpacing = 4;
+            app.DiffractionPartialExportGrid.RowSpacing = 2;
+            app.DiffractionPartialExportGrid.Padding = [0 0 0 0];
+            app.DiffractionPartialExportGrid.Layout.Row = 4;
+            app.DiffractionPartialExportGrid.Layout.Column = 1;
 
             % Create BinningDistanceLabel_2
-            self.BinningDistanceLabel_2 = uilabel(self.DiffractionPartialExportGrid);
-            self.BinningDistanceLabel_2.HorizontalAlignment = 'right';
-            self.BinningDistanceLabel_2.Layout.Row = 1;
-            self.BinningDistanceLabel_2.Layout.Column = [1 3];
-            self.BinningDistanceLabel_2.Text = 'Binning Distance';
+            app.BinningDistanceLabel_2 = uilabel(app.DiffractionPartialExportGrid);
+            app.BinningDistanceLabel_2.HorizontalAlignment = 'right';
+            app.BinningDistanceLabel_2.Layout.Row = 1;
+            app.BinningDistanceLabel_2.Layout.Column = [1 3];
+            app.BinningDistanceLabel_2.Text = 'Binning Distance';
 
             % Create DiffractionPartialExportPixelsDist
-            self.DiffractionPartialExportPixelsDist = uispinner(self.DiffractionPartialExportGrid);
-            self.DiffractionPartialExportPixelsDist.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportPixelsDist.RoundFractionalValues = 'on';
-            self.DiffractionPartialExportPixelsDist.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialExportPixelsDist.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportPixelsDist.Tag = 'Export Diffraction';
-            self.DiffractionPartialExportPixelsDist.Tooltip = {'To bin n×n pixels into one (by averaging)'};
-            self.DiffractionPartialExportPixelsDist.Layout.Row = 1;
-            self.DiffractionPartialExportPixelsDist.Layout.Column = 4;
-            self.DiffractionPartialExportPixelsDist.Value = 1;
+            app.DiffractionPartialExportPixelsDist = uispinner(app.DiffractionPartialExportGrid);
+            app.DiffractionPartialExportPixelsDist.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportPixelsDist.RoundFractionalValues = 'on';
+            app.DiffractionPartialExportPixelsDist.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialExportPixelsDist.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportPixelsDist.Tag = 'Export Diffraction';
+            app.DiffractionPartialExportPixelsDist.Tooltip = {'To bin n×n pixels into one (by averaging)'};
+            app.DiffractionPartialExportPixelsDist.Layout.Row = 1;
+            app.DiffractionPartialExportPixelsDist.Layout.Column = 4;
+            app.DiffractionPartialExportPixelsDist.Value = 1;
 
             % Create xsub1Label_3
-            self.xsub1Label_3 = uilabel(self.DiffractionPartialExportGrid);
-            self.xsub1Label_3.HorizontalAlignment = 'right';
-            self.xsub1Label_3.Layout.Row = 2;
-            self.xsub1Label_3.Layout.Column = 1;
-            self.xsub1Label_3.Interpreter = 'html';
-            self.xsub1Label_3.Text = 'x<sub>1';
+            app.xsub1Label_3 = uilabel(app.DiffractionPartialExportGrid);
+            app.xsub1Label_3.HorizontalAlignment = 'right';
+            app.xsub1Label_3.Layout.Row = 2;
+            app.xsub1Label_3.Layout.Column = 1;
+            app.xsub1Label_3.Interpreter = 'html';
+            app.xsub1Label_3.Text = 'x<sub>1';
 
             % Create DiffractionPartialExportXStart
-            self.DiffractionPartialExportXStart = uispinner(self.DiffractionPartialExportGrid);
-            self.DiffractionPartialExportXStart.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportXStart.RoundFractionalValues = 'on';
-            self.DiffractionPartialExportXStart.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialExportXStart.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportXStart.Tag = 'Export Diffraction';
-            self.DiffractionPartialExportXStart.Tooltip = {'Starting pixel on X (1st dimension of image stack) to import, in each frame'};
-            self.DiffractionPartialExportXStart.Layout.Row = 2;
-            self.DiffractionPartialExportXStart.Layout.Column = 2;
-            self.DiffractionPartialExportXStart.Value = 1;
+            app.DiffractionPartialExportXStart = uispinner(app.DiffractionPartialExportGrid);
+            app.DiffractionPartialExportXStart.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportXStart.RoundFractionalValues = 'on';
+            app.DiffractionPartialExportXStart.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialExportXStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportXStart.Tag = 'Export Diffraction';
+            app.DiffractionPartialExportXStart.Tooltip = {'Starting pixel on X (1st dimension of image stack) to import, in each frame'};
+            app.DiffractionPartialExportXStart.Layout.Row = 2;
+            app.DiffractionPartialExportXStart.Layout.Column = 2;
+            app.DiffractionPartialExportXStart.Value = 1;
 
             % Create ysub1Label_3
-            self.ysub1Label_3 = uilabel(self.DiffractionPartialExportGrid);
-            self.ysub1Label_3.HorizontalAlignment = 'right';
-            self.ysub1Label_3.Layout.Row = 2;
-            self.ysub1Label_3.Layout.Column = 3;
-            self.ysub1Label_3.Interpreter = 'html';
-            self.ysub1Label_3.Text = 'y<sub>1';
+            app.ysub1Label_3 = uilabel(app.DiffractionPartialExportGrid);
+            app.ysub1Label_3.HorizontalAlignment = 'right';
+            app.ysub1Label_3.Layout.Row = 2;
+            app.ysub1Label_3.Layout.Column = 3;
+            app.ysub1Label_3.Interpreter = 'html';
+            app.ysub1Label_3.Text = 'y<sub>1';
 
             % Create DiffractionPartialExportYStart
-            self.DiffractionPartialExportYStart = uispinner(self.DiffractionPartialExportGrid);
-            self.DiffractionPartialExportYStart.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportYStart.RoundFractionalValues = 'on';
-            self.DiffractionPartialExportYStart.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialExportYStart.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportYStart.Tag = 'Export Diffraction';
-            self.DiffractionPartialExportYStart.Tooltip = {'Starting pixel on Y (2nd dimension of image stack) to import, in each frame'};
-            self.DiffractionPartialExportYStart.Layout.Row = 2;
-            self.DiffractionPartialExportYStart.Layout.Column = 4;
-            self.DiffractionPartialExportYStart.Value = 1;
+            app.DiffractionPartialExportYStart = uispinner(app.DiffractionPartialExportGrid);
+            app.DiffractionPartialExportYStart.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportYStart.RoundFractionalValues = 'on';
+            app.DiffractionPartialExportYStart.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialExportYStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportYStart.Tag = 'Export Diffraction';
+            app.DiffractionPartialExportYStart.Tooltip = {'Starting pixel on Y (2nd dimension of image stack) to import, in each frame'};
+            app.DiffractionPartialExportYStart.Layout.Row = 2;
+            app.DiffractionPartialExportYStart.Layout.Column = 4;
+            app.DiffractionPartialExportYStart.Value = 1;
 
             % Create ENPxXl
-            self.ENPxXl = uilabel(self.DiffractionPartialExportGrid);
-            self.ENPxXl.HorizontalAlignment = 'right';
-            self.ENPxXl.Layout.Row = 3;
-            self.ENPxXl.Layout.Column = 1;
-            self.ENPxXl.Text = 'X';
+            app.ENPxXl = uilabel(app.DiffractionPartialExportGrid);
+            app.ENPxXl.HorizontalAlignment = 'right';
+            app.ENPxXl.Layout.Row = 3;
+            app.ENPxXl.Layout.Column = 1;
+            app.ENPxXl.Text = 'X';
 
             % Create DiffractionPartialExportX
-            self.DiffractionPartialExportX = uispinner(self.DiffractionPartialExportGrid);
-            self.DiffractionPartialExportX.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportX.RoundFractionalValues = 'on';
-            self.DiffractionPartialExportX.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialExportX.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportX.Tag = 'Export Diffraction';
-            self.DiffractionPartialExportX.Tooltip = {'Total pixels after binning on X (1st dimension of image stack), in each frame'};
-            self.DiffractionPartialExportX.Layout.Row = 3;
-            self.DiffractionPartialExportX.Layout.Column = 2;
-            self.DiffractionPartialExportX.Value = 1;
+            app.DiffractionPartialExportX = uispinner(app.DiffractionPartialExportGrid);
+            app.DiffractionPartialExportX.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportX.RoundFractionalValues = 'on';
+            app.DiffractionPartialExportX.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialExportX.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportX.Tag = 'Export Diffraction';
+            app.DiffractionPartialExportX.Tooltip = {'Total pixels after binning on X (1st dimension of image stack), in each frame'};
+            app.DiffractionPartialExportX.Layout.Row = 3;
+            app.DiffractionPartialExportX.Layout.Column = 2;
+            app.DiffractionPartialExportX.Value = 1;
 
             % Create ENPxYl
-            self.ENPxYl = uilabel(self.DiffractionPartialExportGrid);
-            self.ENPxYl.HorizontalAlignment = 'right';
-            self.ENPxYl.Layout.Row = 3;
-            self.ENPxYl.Layout.Column = 3;
-            self.ENPxYl.Text = 'Y';
+            app.ENPxYl = uilabel(app.DiffractionPartialExportGrid);
+            app.ENPxYl.HorizontalAlignment = 'right';
+            app.ENPxYl.Layout.Row = 3;
+            app.ENPxYl.Layout.Column = 3;
+            app.ENPxYl.Text = 'Y';
 
             % Create DiffractionPartialExportY
-            self.DiffractionPartialExportY = uispinner(self.DiffractionPartialExportGrid);
-            self.DiffractionPartialExportY.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportY.RoundFractionalValues = 'on';
-            self.DiffractionPartialExportY.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialExportY.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.DiffractionPartialExportY.Tag = 'Export Diffraction';
-            self.DiffractionPartialExportY.Tooltip = {'Total pixels after binning on Y (2nd dimension of image stack), in each frame'};
-            self.DiffractionPartialExportY.Layout.Row = 3;
-            self.DiffractionPartialExportY.Layout.Column = 4;
-            self.DiffractionPartialExportY.Value = 1;
+            app.DiffractionPartialExportY = uispinner(app.DiffractionPartialExportGrid);
+            app.DiffractionPartialExportY.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportY.RoundFractionalValues = 'on';
+            app.DiffractionPartialExportY.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialExportY.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.DiffractionPartialExportY.Tag = 'Export Diffraction';
+            app.DiffractionPartialExportY.Tooltip = {'Total pixels after binning on Y (2nd dimension of image stack), in each frame'};
+            app.DiffractionPartialExportY.Layout.Row = 3;
+            app.DiffractionPartialExportY.Layout.Column = 4;
+            app.DiffractionPartialExportY.Value = 1;
 
             % Create RealPartialExportGrid
-            self.RealPartialExportGrid = uigridlayout(self.ExportGrid);
-            self.RealPartialExportGrid.ColumnWidth = {'1x', 80, '1x', 80};
-            self.RealPartialExportGrid.RowHeight = {24, 24, 24};
-            self.RealPartialExportGrid.ColumnSpacing = 4;
-            self.RealPartialExportGrid.RowSpacing = 2;
-            self.RealPartialExportGrid.Padding = [0 0 0 0];
-            self.RealPartialExportGrid.Layout.Row = 4;
-            self.RealPartialExportGrid.Layout.Column = 2;
+            app.RealPartialExportGrid = uigridlayout(app.ExportGrid);
+            app.RealPartialExportGrid.ColumnWidth = {'1x', 80, '1x', 80};
+            app.RealPartialExportGrid.RowHeight = {24, 24, 24};
+            app.RealPartialExportGrid.ColumnSpacing = 4;
+            app.RealPartialExportGrid.RowSpacing = 2;
+            app.RealPartialExportGrid.Padding = [0 0 0 0];
+            app.RealPartialExportGrid.Layout.Row = 4;
+            app.RealPartialExportGrid.Layout.Column = 2;
 
             % Create xsub1Label_4
-            self.xsub1Label_4 = uilabel(self.RealPartialExportGrid);
-            self.xsub1Label_4.HorizontalAlignment = 'right';
-            self.xsub1Label_4.Layout.Row = 2;
-            self.xsub1Label_4.Layout.Column = 1;
-            self.xsub1Label_4.Interpreter = 'html';
-            self.xsub1Label_4.Text = 'x<sub>1';
+            app.xsub1Label_4 = uilabel(app.RealPartialExportGrid);
+            app.xsub1Label_4.HorizontalAlignment = 'right';
+            app.xsub1Label_4.Layout.Row = 2;
+            app.xsub1Label_4.Layout.Column = 1;
+            app.xsub1Label_4.Interpreter = 'html';
+            app.xsub1Label_4.Text = 'x<sub>1';
 
             % Create RealPartialExportXStart
-            self.RealPartialExportXStart = uispinner(self.RealPartialExportGrid);
-            self.RealPartialExportXStart.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportXStart.RoundFractionalValues = 'on';
-            self.RealPartialExportXStart.ValueDisplayFormat = '%.0f';
-            self.RealPartialExportXStart.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportXStart.Tag = 'Export Real';
-            self.RealPartialExportXStart.Tooltip = {'Starting frame on X (3rd dimension of image stack) to import'};
-            self.RealPartialExportXStart.Layout.Row = 2;
-            self.RealPartialExportXStart.Layout.Column = 2;
-            self.RealPartialExportXStart.Value = 1;
+            app.RealPartialExportXStart = uispinner(app.RealPartialExportGrid);
+            app.RealPartialExportXStart.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportXStart.RoundFractionalValues = 'on';
+            app.RealPartialExportXStart.ValueDisplayFormat = '%.0f';
+            app.RealPartialExportXStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportXStart.Tag = 'Export Real';
+            app.RealPartialExportXStart.Tooltip = {'Starting frame on X (3rd dimension of image stack) to import'};
+            app.RealPartialExportXStart.Layout.Row = 2;
+            app.RealPartialExportXStart.Layout.Column = 2;
+            app.RealPartialExportXStart.Value = 1;
 
             % Create ysub1Label_4
-            self.ysub1Label_4 = uilabel(self.RealPartialExportGrid);
-            self.ysub1Label_4.HorizontalAlignment = 'right';
-            self.ysub1Label_4.Layout.Row = 2;
-            self.ysub1Label_4.Layout.Column = 3;
-            self.ysub1Label_4.Interpreter = 'html';
-            self.ysub1Label_4.Text = 'y<sub>1';
+            app.ysub1Label_4 = uilabel(app.RealPartialExportGrid);
+            app.ysub1Label_4.HorizontalAlignment = 'right';
+            app.ysub1Label_4.Layout.Row = 2;
+            app.ysub1Label_4.Layout.Column = 3;
+            app.ysub1Label_4.Interpreter = 'html';
+            app.ysub1Label_4.Text = 'y<sub>1';
 
             % Create RealPartialExportYStart
-            self.RealPartialExportYStart = uispinner(self.RealPartialExportGrid);
-            self.RealPartialExportYStart.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportYStart.RoundFractionalValues = 'on';
-            self.RealPartialExportYStart.ValueDisplayFormat = '%.0f';
-            self.RealPartialExportYStart.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportYStart.Tag = 'Export Real';
-            self.RealPartialExportYStart.Tooltip = {'Starting frame on Y (4th dimension of image stack) to import'};
-            self.RealPartialExportYStart.Layout.Row = 2;
-            self.RealPartialExportYStart.Layout.Column = 4;
-            self.RealPartialExportYStart.Value = 1;
+            app.RealPartialExportYStart = uispinner(app.RealPartialExportGrid);
+            app.RealPartialExportYStart.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportYStart.RoundFractionalValues = 'on';
+            app.RealPartialExportYStart.ValueDisplayFormat = '%.0f';
+            app.RealPartialExportYStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportYStart.Tag = 'Export Real';
+            app.RealPartialExportYStart.Tooltip = {'Starting frame on Y (4th dimension of image stack) to import'};
+            app.RealPartialExportYStart.Layout.Row = 2;
+            app.RealPartialExportYStart.Layout.Column = 4;
+            app.RealPartialExportYStart.Value = 1;
 
             % Create ENFrXl
-            self.ENFrXl = uilabel(self.RealPartialExportGrid);
-            self.ENFrXl.HorizontalAlignment = 'right';
-            self.ENFrXl.Layout.Row = 3;
-            self.ENFrXl.Layout.Column = 1;
-            self.ENFrXl.Text = 'X';
+            app.ENFrXl = uilabel(app.RealPartialExportGrid);
+            app.ENFrXl.HorizontalAlignment = 'right';
+            app.ENFrXl.Layout.Row = 3;
+            app.ENFrXl.Layout.Column = 1;
+            app.ENFrXl.Text = 'X';
 
             % Create RealPartialExportX
-            self.RealPartialExportX = uispinner(self.RealPartialExportGrid);
-            self.RealPartialExportX.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportX.RoundFractionalValues = 'on';
-            self.RealPartialExportX.ValueDisplayFormat = '%.0f';
-            self.RealPartialExportX.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportX.Tag = 'Export Real';
-            self.RealPartialExportX.Tooltip = {'Total frames after sampling on X (3rd dimension of image stack)'};
-            self.RealPartialExportX.Layout.Row = 3;
-            self.RealPartialExportX.Layout.Column = 2;
-            self.RealPartialExportX.Value = 1;
+            app.RealPartialExportX = uispinner(app.RealPartialExportGrid);
+            app.RealPartialExportX.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportX.RoundFractionalValues = 'on';
+            app.RealPartialExportX.ValueDisplayFormat = '%.0f';
+            app.RealPartialExportX.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportX.Tag = 'Export Real';
+            app.RealPartialExportX.Tooltip = {'Total frames after sampling on X (3rd dimension of image stack)'};
+            app.RealPartialExportX.Layout.Row = 3;
+            app.RealPartialExportX.Layout.Column = 2;
+            app.RealPartialExportX.Value = 1;
 
             % Create ENFrYl
-            self.ENFrYl = uilabel(self.RealPartialExportGrid);
-            self.ENFrYl.HorizontalAlignment = 'right';
-            self.ENFrYl.Layout.Row = 3;
-            self.ENFrYl.Layout.Column = 3;
-            self.ENFrYl.Text = 'Y';
+            app.ENFrYl = uilabel(app.RealPartialExportGrid);
+            app.ENFrYl.HorizontalAlignment = 'right';
+            app.ENFrYl.Layout.Row = 3;
+            app.ENFrYl.Layout.Column = 3;
+            app.ENFrYl.Text = 'Y';
 
             % Create RealPartialExportY
-            self.RealPartialExportY = uispinner(self.RealPartialExportGrid);
-            self.RealPartialExportY.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportY.RoundFractionalValues = 'on';
-            self.RealPartialExportY.ValueDisplayFormat = '%.0f';
-            self.RealPartialExportY.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportY.Tag = 'Export Real';
-            self.RealPartialExportY.Tooltip = {'Total frames after sampling on Y (4th dimension of image stack)'};
-            self.RealPartialExportY.Layout.Row = 3;
-            self.RealPartialExportY.Layout.Column = 4;
-            self.RealPartialExportY.Value = 1;
+            app.RealPartialExportY = uispinner(app.RealPartialExportGrid);
+            app.RealPartialExportY.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportY.RoundFractionalValues = 'on';
+            app.RealPartialExportY.ValueDisplayFormat = '%.0f';
+            app.RealPartialExportY.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportY.Tag = 'Export Real';
+            app.RealPartialExportY.Tooltip = {'Total frames after sampling on Y (4th dimension of image stack)'};
+            app.RealPartialExportY.Layout.Row = 3;
+            app.RealPartialExportY.Layout.Column = 4;
+            app.RealPartialExportY.Value = 1;
 
             % Create SamplingIntervalLabel
-            self.SamplingIntervalLabel = uilabel(self.RealPartialExportGrid);
-            self.SamplingIntervalLabel.HorizontalAlignment = 'right';
-            self.SamplingIntervalLabel.Layout.Row = 1;
-            self.SamplingIntervalLabel.Layout.Column = [1 3];
-            self.SamplingIntervalLabel.Text = 'Sampling Interval';
+            app.SamplingIntervalLabel = uilabel(app.RealPartialExportGrid);
+            app.SamplingIntervalLabel.HorizontalAlignment = 'right';
+            app.SamplingIntervalLabel.Layout.Row = 1;
+            app.SamplingIntervalLabel.Layout.Column = [1 3];
+            app.SamplingIntervalLabel.Text = 'Sampling Interval';
 
             % Create RealPartialExportFramesDist
-            self.RealPartialExportFramesDist = uispinner(self.RealPartialExportGrid);
-            self.RealPartialExportFramesDist.ValueChangingFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportFramesDist.RoundFractionalValues = 'on';
-            self.RealPartialExportFramesDist.ValueDisplayFormat = '%.0f';
-            self.RealPartialExportFramesDist.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.RealPartialExportFramesDist.Tag = 'Export Real';
-            self.RealPartialExportFramesDist.Tooltip = {'Distance between sampling frames in both X & Y directions (neighboring frames have distance of 1)'};
-            self.RealPartialExportFramesDist.Layout.Row = 1;
-            self.RealPartialExportFramesDist.Layout.Column = 4;
-            self.RealPartialExportFramesDist.Value = 1;
+            app.RealPartialExportFramesDist = uispinner(app.RealPartialExportGrid);
+            app.RealPartialExportFramesDist.ValueChangingFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportFramesDist.RoundFractionalValues = 'on';
+            app.RealPartialExportFramesDist.ValueDisplayFormat = '%.0f';
+            app.RealPartialExportFramesDist.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.RealPartialExportFramesDist.Tag = 'Export Real';
+            app.RealPartialExportFramesDist.Tooltip = {'Distance between sampling frames in both X & Y directions (neighboring frames have distance of 1)'};
+            app.RealPartialExportFramesDist.Layout.Row = 1;
+            app.RealPartialExportFramesDist.Layout.Column = 4;
+            app.RealPartialExportFramesDist.Value = 1;
 
             % Create SummaryLabel
-            self.SummaryLabel = uilabel(self.ExportGrid);
-            self.SummaryLabel.HorizontalAlignment = 'center';
-            self.SummaryLabel.VerticalAlignment = 'bottom';
-            self.SummaryLabel.FontName = 'Arial';
-            self.SummaryLabel.FontWeight = 'bold';
-            self.SummaryLabel.Layout.Row = 5;
-            self.SummaryLabel.Layout.Column = [1 2];
-            self.SummaryLabel.Text = 'Summary';
+            app.SummaryLabel = uilabel(app.ExportGrid);
+            app.SummaryLabel.HorizontalAlignment = 'center';
+            app.SummaryLabel.VerticalAlignment = 'bottom';
+            app.SummaryLabel.FontName = 'Arial';
+            app.SummaryLabel.FontWeight = 'bold';
+            app.SummaryLabel.Layout.Row = 5;
+            app.SummaryLabel.Layout.Column = [1 2];
+            app.SummaryLabel.Text = 'Summary';
 
             % Create ExportNotes
-            self.ExportNotes = uitextarea(self.ExportGrid);
-            self.ExportNotes.Editable = 'off';
-            self.ExportNotes.FontName = 'Arial';
-            self.ExportNotes.Layout.Row = 6;
-            self.ExportNotes.Layout.Column = [1 2];
+            app.ExportNotes = uitextarea(app.ExportGrid);
+            app.ExportNotes.Editable = 'off';
+            app.ExportNotes.FontName = 'Arial';
+            app.ExportNotes.Layout.Row = 6;
+            app.ExportNotes.Layout.Column = [1 2];
 
             % Create ExportPartialFrames
-            self.ExportPartialFrames = uicheckbox(self.ExportGrid);
-            self.ExportPartialFrames.ValueChangedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.ExportPartialFrames.Tag = 'Export Real';
-            self.ExportPartialFrames.Text = '    Real-space Partial Export';
-            self.ExportPartialFrames.FontName = 'Arial';
-            self.ExportPartialFrames.FontWeight = 'bold';
-            self.ExportPartialFrames.Layout.Row = 3;
-            self.ExportPartialFrames.Layout.Column = 2;
+            app.ExportPartialFrames = uicheckbox(app.ExportGrid);
+            app.ExportPartialFrames.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.ExportPartialFrames.Tag = 'Export Real';
+            app.ExportPartialFrames.Text = '    Real-space Partial Export';
+            app.ExportPartialFrames.FontName = 'Arial';
+            app.ExportPartialFrames.FontWeight = 'bold';
+            app.ExportPartialFrames.Layout.Row = 3;
+            app.ExportPartialFrames.Layout.Column = 2;
 
             % Create SaveExportButtonGrid
-            self.SaveExportButtonGrid = uigridlayout(self.SaveGrid);
-            self.SaveExportButtonGrid.ColumnWidth = {120, '1x', 120};
-            self.SaveExportButtonGrid.RowHeight = {'1x'};
-            self.SaveExportButtonGrid.ColumnSpacing = 8;
-            self.SaveExportButtonGrid.Padding = [4 4 4 4];
-            self.SaveExportButtonGrid.Layout.Row = 3;
-            self.SaveExportButtonGrid.Layout.Column = 1;
+            app.SaveExportButtonGrid = uigridlayout(app.SaveGrid);
+            app.SaveExportButtonGrid.ColumnWidth = {120, '1x', 120};
+            app.SaveExportButtonGrid.RowHeight = {'1x'};
+            app.SaveExportButtonGrid.ColumnSpacing = 8;
+            app.SaveExportButtonGrid.Padding = [4 4 4 4];
+            app.SaveExportButtonGrid.Layout.Row = 3;
+            app.SaveExportButtonGrid.Layout.Column = 1;
 
             % Create SaveExport
-            self.SaveExport = uibutton(self.SaveExportButtonGrid, 'push');
-            self.SaveExport.ButtonPushedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.SaveExport.FontName = 'Arial';
-            self.SaveExport.FontWeight = 'bold';
-            self.SaveExport.Layout.Row = 1;
-            self.SaveExport.Layout.Column = 1;
-            self.SaveExport.Text = 'Save Images';
+            app.SaveExport = uibutton(app.SaveExportButtonGrid, 'push');
+            app.SaveExport.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.SaveExport.FontName = 'Arial';
+            app.SaveExport.FontWeight = 'bold';
+            app.SaveExport.Layout.Row = 1;
+            app.SaveExport.Layout.Column = 1;
+            app.SaveExport.Text = 'Save Images';
 
             % Create SaveCloseButton
-            self.SaveCloseButton = uibutton(self.SaveExportButtonGrid, 'push');
-            self.SaveCloseButton.ButtonPushedFcn = createCallbackFcn(self, @export_callbacks, true);
-            self.SaveCloseButton.FontName = 'Arial';
-            self.SaveCloseButton.FontWeight = 'bold';
-            self.SaveCloseButton.Layout.Row = 1;
-            self.SaveCloseButton.Layout.Column = 3;
-            self.SaveCloseButton.Text = 'Close';
+            app.SaveCloseButton = uibutton(app.SaveExportButtonGrid, 'push');
+            app.SaveCloseButton.ButtonPushedFcn = createCallbackFcn(app, @export_callbacks, true);
+            app.SaveCloseButton.FontName = 'Arial';
+            app.SaveCloseButton.FontWeight = 'bold';
+            app.SaveCloseButton.Layout.Row = 1;
+            app.SaveCloseButton.Layout.Column = 3;
+            app.SaveCloseButton.Text = 'Close';
 
             % Create ImportPanel
-            self.ImportPanel = uipanel(self.Quant4D_Fig);
-            self.ImportPanel.AutoResizeChildren = 'off';
-            self.ImportPanel.BorderType = 'none';
-            self.ImportPanel.FontWeight = 'bold';
-            self.ImportPanel.Position = [548 -27 600 500];
+            app.ImportPanel = uipanel(app.Quant4D_Fig);
+            app.ImportPanel.AutoResizeChildren = 'off';
+            app.ImportPanel.BorderType = 'none';
+            app.ImportPanel.FontWeight = 'bold';
+            app.ImportPanel.Position = [548 -27 600 500];
 
             % Create ImportGrid
-            self.ImportGrid = uigridlayout(self.ImportPanel);
-            self.ImportGrid.ColumnWidth = {'1x', '1.8x'};
-            self.ImportGrid.RowHeight = {24, '1x', 24};
-            self.ImportGrid.ColumnSpacing = 8;
-            self.ImportGrid.RowSpacing = 4;
-            self.ImportGrid.Padding = [4 4 4 4];
+            app.ImportGrid = uigridlayout(app.ImportPanel);
+            app.ImportGrid.ColumnWidth = {'1x', '1.8x'};
+            app.ImportGrid.RowHeight = {24, '1x', 24};
+            app.ImportGrid.ColumnSpacing = 8;
+            app.ImportGrid.RowSpacing = 4;
+            app.ImportGrid.Padding = [4 4 4 4];
 
             % Create ImportFileGrid
-            self.ImportFileGrid = uigridlayout(self.ImportGrid);
-            self.ImportFileGrid.ColumnWidth = {'fit', '1x'};
-            self.ImportFileGrid.RowHeight = {'1x'};
-            self.ImportFileGrid.ColumnSpacing = 4;
-            self.ImportFileGrid.Padding = [0 0 0 0];
-            self.ImportFileGrid.Layout.Row = 1;
-            self.ImportFileGrid.Layout.Column = [1 2];
+            app.ImportFileGrid = uigridlayout(app.ImportGrid);
+            app.ImportFileGrid.ColumnWidth = {'fit', '1x'};
+            app.ImportFileGrid.RowHeight = {'1x'};
+            app.ImportFileGrid.ColumnSpacing = 4;
+            app.ImportFileGrid.Padding = [0 0 0 0];
+            app.ImportFileGrid.Layout.Row = 1;
+            app.ImportFileGrid.Layout.Column = [1 2];
 
             % Create ImportFileSelect
-            self.ImportFileSelect = uibutton(self.ImportFileGrid, 'push');
-            self.ImportFileSelect.ButtonPushedFcn = createCallbackFcn(self, @import_select_file, true);
-            self.ImportFileSelect.IconAlignment = 'center';
-            self.ImportFileSelect.BackgroundColor = [0.702 1 0.702];
-            self.ImportFileSelect.FontName = 'Arial';
-            self.ImportFileSelect.FontWeight = 'bold';
-            self.ImportFileSelect.Layout.Row = 1;
-            self.ImportFileSelect.Layout.Column = 1;
-            self.ImportFileSelect.Text = 'Select';
+            app.ImportFileSelect = uibutton(app.ImportFileGrid, 'push');
+            app.ImportFileSelect.ButtonPushedFcn = createCallbackFcn(app, @import_select_file, true);
+            app.ImportFileSelect.IconAlignment = 'center';
+            app.ImportFileSelect.BackgroundColor = [0.702 1 0.702];
+            app.ImportFileSelect.FontName = 'Arial';
+            app.ImportFileSelect.FontWeight = 'bold';
+            app.ImportFileSelect.Layout.Row = 1;
+            app.ImportFileSelect.Layout.Column = 1;
+            app.ImportFileSelect.Text = 'Select';
 
             % Create ImportFilePath
-            self.ImportFilePath = uieditfield(self.ImportFileGrid, 'text');
-            self.ImportFilePath.ValueChangedFcn = createCallbackFcn(self, @import_select_file, true);
-            self.ImportFilePath.Layout.Row = 1;
-            self.ImportFilePath.Layout.Column = 2;
+            app.ImportFilePath = uieditfield(app.ImportFileGrid, 'text');
+            app.ImportFilePath.ValueChangedFcn = createCallbackFcn(app, @import_select_file, true);
+            app.ImportFilePath.Layout.Row = 1;
+            app.ImportFilePath.Layout.Column = 2;
 
             % Create ImportDatasetInfoPanel
-            self.ImportDatasetInfoPanel = uipanel(self.ImportGrid);
-            self.ImportDatasetInfoPanel.AutoResizeChildren = 'off';
-            self.ImportDatasetInfoPanel.BorderType = 'none';
-            self.ImportDatasetInfoPanel.TitlePosition = 'centertop';
-            self.ImportDatasetInfoPanel.Title = 'Dataset Info';
-            self.ImportDatasetInfoPanel.Layout.Row = [2 3];
-            self.ImportDatasetInfoPanel.Layout.Column = 1;
-            self.ImportDatasetInfoPanel.FontName = 'Arial';
-            self.ImportDatasetInfoPanel.FontWeight = 'bold';
-            self.ImportDatasetInfoPanel.FontSize = 14;
+            app.ImportDatasetInfoPanel = uipanel(app.ImportGrid);
+            app.ImportDatasetInfoPanel.AutoResizeChildren = 'off';
+            app.ImportDatasetInfoPanel.BorderType = 'none';
+            app.ImportDatasetInfoPanel.TitlePosition = 'centertop';
+            app.ImportDatasetInfoPanel.Title = 'Dataset Info';
+            app.ImportDatasetInfoPanel.Layout.Row = [2 3];
+            app.ImportDatasetInfoPanel.Layout.Column = 1;
+            app.ImportDatasetInfoPanel.FontName = 'Arial';
+            app.ImportDatasetInfoPanel.FontWeight = 'bold';
+            app.ImportDatasetInfoPanel.FontSize = 14;
 
             % Create ImportDatasetInfoGrid
-            self.ImportDatasetInfoGrid = uigridlayout(self.ImportDatasetInfoPanel);
-            self.ImportDatasetInfoGrid.ColumnWidth = {'1x'};
-            self.ImportDatasetInfoGrid.RowHeight = {48, 'fit', 'fit', 'fit', 'fit', '1x'};
-            self.ImportDatasetInfoGrid.ColumnSpacing = 4;
-            self.ImportDatasetInfoGrid.RowSpacing = 4;
-            self.ImportDatasetInfoGrid.Padding = [0 0 0 4];
+            app.ImportDatasetInfoGrid = uigridlayout(app.ImportDatasetInfoPanel);
+            app.ImportDatasetInfoGrid.ColumnWidth = {'1x'};
+            app.ImportDatasetInfoGrid.RowHeight = {48, 'fit', 'fit', 'fit', 'fit', '1x'};
+            app.ImportDatasetInfoGrid.ColumnSpacing = 4;
+            app.ImportDatasetInfoGrid.RowSpacing = 4;
+            app.ImportDatasetInfoGrid.Padding = [0 0 0 4];
 
             % Create FileTypeButtonGroup
-            self.FileTypeButtonGroup = uibuttongroup(self.ImportDatasetInfoGrid);
-            self.FileTypeButtonGroup.AutoResizeChildren = 'off';
-            self.FileTypeButtonGroup.SelectionChangedFcn = createCallbackFcn(self, @import_file_type, true);
-            self.FileTypeButtonGroup.Tooltip = {'EMPAD'; '128x128 pixels'; 'Header: 0 bytes'; 'Footer: 1024 bytes'; '32-bit Real, Little endian'; ''; 'MEDIPIX'; '256x256 pixels'; 'Header: 384 bytes'; 'Footer: 0 bytes'; 'Unsigned integer, Big endian'; ''; 'MRC'; 'variable # of pixels'; 'Header: 1024 bytes'; 'Footer: 0 bytes'; 'Signed integer, Little endian'};
-            self.FileTypeButtonGroup.BorderType = 'none';
-            self.FileTypeButtonGroup.TitlePosition = 'centertop';
-            self.FileTypeButtonGroup.Layout.Row = 1;
-            self.FileTypeButtonGroup.Layout.Column = 1;
-            self.FileTypeButtonGroup.FontWeight = 'bold';
+            app.FileTypeButtonGroup = uibuttongroup(app.ImportDatasetInfoGrid);
+            app.FileTypeButtonGroup.AutoResizeChildren = 'off';
+            app.FileTypeButtonGroup.SelectionChangedFcn = createCallbackFcn(app, @import_file_type, true);
+            app.FileTypeButtonGroup.Tooltip = {'EMPAD'; '128x128 pixels'; 'Header: 0 bytes'; 'Footer: 1024 bytes'; '32-bit Real, Little endian'; ''; 'MEDIPIX'; '256x256 pixels'; 'Header: 384 bytes'; 'Footer: 0 bytes'; 'Unsigned integer, Big endian'; ''; 'MRC'; 'variable # of pixels'; 'Header: 1024 bytes'; 'Footer: 0 bytes'; 'Signed integer, Little endian'};
+            app.FileTypeButtonGroup.BorderType = 'none';
+            app.FileTypeButtonGroup.TitlePosition = 'centertop';
+            app.FileTypeButtonGroup.Layout.Row = 1;
+            app.FileTypeButtonGroup.Layout.Column = 1;
+            app.FileTypeButtonGroup.FontWeight = 'bold';
 
             % Create EMPAD
-            self.EMPAD = uitogglebutton(self.FileTypeButtonGroup);
-            self.EMPAD.Tooltip = {'*.raw'; '128x128 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 1024 bytes'; '32-bit Real, Little Endian'};
-            self.EMPAD.Text = 'EMPAD';
-            self.EMPAD.Position = [3 27 68 22];
-            self.EMPAD.Value = true;
+            app.EMPAD = uitogglebutton(app.FileTypeButtonGroup);
+            app.EMPAD.Tooltip = {'*.raw'; '128x128 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 1024 bytes'; '32-bit Real, Little Endian'};
+            app.EMPAD.Text = 'EMPAD';
+            app.EMPAD.Position = [3 27 68 22];
+            app.EMPAD.Value = true;
 
             % Create Medipix
-            self.Medipix = uitogglebutton(self.FileTypeButtonGroup);
-            self.Medipix.Tooltip = {'*.mib'; '256x256 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 384 bytes'; 'Frame Footer: 0 bytes'; 'Unsigned integer, Big Endian'};
-            self.Medipix.Text = 'Medipix';
-            self.Medipix.Position = [71 27 68 22];
+            app.Medipix = uitogglebutton(app.FileTypeButtonGroup);
+            app.Medipix.Tooltip = {'*.mib'; '256x256 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 384 bytes'; 'Frame Footer: 0 bytes'; 'Unsigned integer, Big Endian'};
+            app.Medipix.Text = 'Medipix';
+            app.Medipix.Position = [71 27 68 22];
 
             % Create MRC
-            self.MRC = uitogglebutton(self.FileTypeButtonGroup);
-            self.MRC.Tooltip = {'*.mrc'; 'Data Offset: 1024 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 0 bytes'; 'Signed integer, Little Endian'};
-            self.MRC.Text = 'MRC';
-            self.MRC.Position = [139 27 68 22];
+            app.MRC = uitogglebutton(app.FileTypeButtonGroup);
+            app.MRC.Tooltip = {'*.mrc'; 'Data Offset: 1024 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 0 bytes'; 'Signed integer, Little Endian'};
+            app.MRC.Text = 'MRC';
+            app.MRC.Position = [139 27 68 22];
 
             % Create DM34
-            self.DM34 = uitogglebutton(self.FileTypeButtonGroup);
-            self.DM34.Tooltip = {'Gatan *.dm3/*.dm4'};
-            self.DM34.Text = 'DM3/4';
-            self.DM34.Position = [3 5 68 22];
+            app.DM34 = uitogglebutton(app.FileTypeButtonGroup);
+            app.DM34.Tooltip = {'Gatan *.dm3/*.dm4'};
+            app.DM34.Text = 'DM3/4';
+            app.DM34.Position = [3 5 68 22];
 
             % Create HDF5
-            self.HDF5 = uitogglebutton(self.FileTypeButtonGroup);
-            self.HDF5.Tooltip = {'*.h5/*.hdf5'};
-            self.HDF5.Text = 'HDF5';
-            self.HDF5.Position = [71 5 68 22];
+            app.HDF5 = uitogglebutton(app.FileTypeButtonGroup);
+            app.HDF5.Tooltip = {'*.h5/*.hdf5'};
+            app.HDF5.Text = 'HDF5';
+            app.HDF5.Position = [71 5 68 22];
 
             % Create Custom
-            self.Custom = uitogglebutton(self.FileTypeButtonGroup);
-            self.Custom.Tooltip = {'E.g. simulated/raw data'};
-            self.Custom.Text = 'Custom';
-            self.Custom.Position = [139 5 68 22];
+            app.Custom = uitogglebutton(app.FileTypeButtonGroup);
+            app.Custom.Tooltip = {'E.g. simulated/raw data'};
+            app.Custom.Text = 'Custom';
+            app.Custom.Position = [139 5 68 22];
 
             % Create ImportDatasetStructureGrid
-            self.ImportDatasetStructureGrid = uigridlayout(self.ImportDatasetInfoGrid);
-            self.ImportDatasetStructureGrid.ColumnWidth = {'fit', '1x'};
-            self.ImportDatasetStructureGrid.RowHeight = {24, 24, 24, 24, 24, 24};
-            self.ImportDatasetStructureGrid.ColumnSpacing = 4;
-            self.ImportDatasetStructureGrid.RowSpacing = 2;
-            self.ImportDatasetStructureGrid.Padding = [0 0 0 0];
-            self.ImportDatasetStructureGrid.Layout.Row = 2;
-            self.ImportDatasetStructureGrid.Layout.Column = 1;
+            app.ImportDatasetStructureGrid = uigridlayout(app.ImportDatasetInfoGrid);
+            app.ImportDatasetStructureGrid.ColumnWidth = {'fit', '1x'};
+            app.ImportDatasetStructureGrid.RowHeight = {24, 24, 24, 24, 24, 24};
+            app.ImportDatasetStructureGrid.ColumnSpacing = 4;
+            app.ImportDatasetStructureGrid.RowSpacing = 2;
+            app.ImportDatasetStructureGrid.Padding = [0 0 0 0];
+            app.ImportDatasetStructureGrid.Layout.Row = 2;
+            app.ImportDatasetStructureGrid.Layout.Column = 1;
 
             % Create SubdatasetDropDownLabel
-            self.SubdatasetDropDownLabel = uilabel(self.ImportDatasetStructureGrid);
-            self.SubdatasetDropDownLabel.HorizontalAlignment = 'right';
-            self.SubdatasetDropDownLabel.Layout.Row = 1;
-            self.SubdatasetDropDownLabel.Layout.Column = 1;
-            self.SubdatasetDropDownLabel.Text = 'Sub-dataset';
+            app.SubdatasetDropDownLabel = uilabel(app.ImportDatasetStructureGrid);
+            app.SubdatasetDropDownLabel.HorizontalAlignment = 'right';
+            app.SubdatasetDropDownLabel.Layout.Row = 1;
+            app.SubdatasetDropDownLabel.Layout.Column = 1;
+            app.SubdatasetDropDownLabel.Text = 'Sub-dataset';
 
             % Create SubDataset
-            self.SubDataset = uidropdown(self.ImportDatasetStructureGrid);
-            self.SubDataset.Items = {};
-            self.SubDataset.ValueChangedFcn = createCallbackFcn(self, @import_file_type, true);
-            self.SubDataset.Tooltip = {'Some file formats (e.g. DM3, DM4 or HDF5) can contain multiple image-stacks in one file'};
-            self.SubDataset.Layout.Row = 1;
-            self.SubDataset.Layout.Column = 2;
-            self.SubDataset.Value = {};
+            app.SubDataset = uidropdown(app.ImportDatasetStructureGrid);
+            app.SubDataset.Items = {};
+            app.SubDataset.ValueChangedFcn = createCallbackFcn(app, @import_file_type, true);
+            app.SubDataset.Tooltip = {'Some file formats (e.g. DM3, DM4 or HDF5) can contain multiple image-stacks in one file'};
+            app.SubDataset.Layout.Row = 1;
+            app.SubDataset.Layout.Column = 2;
+            app.SubDataset.Value = {};
 
             % Create DataOffsetLabel
-            self.DataOffsetLabel = uilabel(self.ImportDatasetStructureGrid);
-            self.DataOffsetLabel.HorizontalAlignment = 'right';
-            self.DataOffsetLabel.Layout.Row = 2;
-            self.DataOffsetLabel.Layout.Column = 1;
-            self.DataOffsetLabel.Text = 'Data Offset';
+            app.DataOffsetLabel = uilabel(app.ImportDatasetStructureGrid);
+            app.DataOffsetLabel.HorizontalAlignment = 'right';
+            app.DataOffsetLabel.Layout.Row = 2;
+            app.DataOffsetLabel.Layout.Column = 1;
+            app.DataOffsetLabel.Text = 'Data Offset';
 
             % Create DataOffset
-            self.DataOffset = uieditfield(self.ImportDatasetStructureGrid, 'numeric');
-            self.DataOffset.Limits = [0 Inf];
-            self.DataOffset.ValueDisplayFormat = '%d bytes';
-            self.DataOffset.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.DataOffset.Tooltip = {'Number of bytes before the image stack in file (e.g. for metadata)'};
-            self.DataOffset.Layout.Row = 2;
-            self.DataOffset.Layout.Column = 2;
+            app.DataOffset = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
+            app.DataOffset.Limits = [0 Inf];
+            app.DataOffset.ValueDisplayFormat = '%d bytes';
+            app.DataOffset.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DataOffset.Tooltip = {'Number of bytes before the image stack in file (e.g. for metadata)'};
+            app.DataOffset.Layout.Row = 2;
+            app.DataOffset.Layout.Column = 2;
 
             % Create FrameHeaderLabel
-            self.FrameHeaderLabel = uilabel(self.ImportDatasetStructureGrid);
-            self.FrameHeaderLabel.HorizontalAlignment = 'right';
-            self.FrameHeaderLabel.Layout.Row = 3;
-            self.FrameHeaderLabel.Layout.Column = 1;
-            self.FrameHeaderLabel.Text = 'Frame Header';
+            app.FrameHeaderLabel = uilabel(app.ImportDatasetStructureGrid);
+            app.FrameHeaderLabel.HorizontalAlignment = 'right';
+            app.FrameHeaderLabel.Layout.Row = 3;
+            app.FrameHeaderLabel.Layout.Column = 1;
+            app.FrameHeaderLabel.Text = 'Frame Header';
 
             % Create FrameHeader
-            self.FrameHeader = uieditfield(self.ImportDatasetStructureGrid, 'numeric');
-            self.FrameHeader.Limits = [0 Inf];
-            self.FrameHeader.ValueDisplayFormat = '%d bytes';
-            self.FrameHeader.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.FrameHeader.Tooltip = {'Number of bytes before the actual pattern in each frame (e.g. for metadata)'};
-            self.FrameHeader.Layout.Row = 3;
-            self.FrameHeader.Layout.Column = 2;
+            app.FrameHeader = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
+            app.FrameHeader.Limits = [0 Inf];
+            app.FrameHeader.ValueDisplayFormat = '%d bytes';
+            app.FrameHeader.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.FrameHeader.Tooltip = {'Number of bytes before the actual pattern in each frame (e.g. for metadata)'};
+            app.FrameHeader.Layout.Row = 3;
+            app.FrameHeader.Layout.Column = 2;
 
             % Create FrameFooterLabel
-            self.FrameFooterLabel = uilabel(self.ImportDatasetStructureGrid);
-            self.FrameFooterLabel.HorizontalAlignment = 'right';
-            self.FrameFooterLabel.Layout.Row = 4;
-            self.FrameFooterLabel.Layout.Column = 1;
-            self.FrameFooterLabel.Text = 'Frame Footer';
+            app.FrameFooterLabel = uilabel(app.ImportDatasetStructureGrid);
+            app.FrameFooterLabel.HorizontalAlignment = 'right';
+            app.FrameFooterLabel.Layout.Row = 4;
+            app.FrameFooterLabel.Layout.Column = 1;
+            app.FrameFooterLabel.Text = 'Frame Footer';
 
             % Create FrameFooter
-            self.FrameFooter = uieditfield(self.ImportDatasetStructureGrid, 'numeric');
-            self.FrameFooter.Limits = [0 Inf];
-            self.FrameFooter.ValueDisplayFormat = '%d bytes';
-            self.FrameFooter.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.FrameFooter.Tooltip = {'Number of bytes after the actual pattern in each frame (e.g. for metadata)'};
-            self.FrameFooter.Layout.Row = 4;
-            self.FrameFooter.Layout.Column = 2;
+            app.FrameFooter = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
+            app.FrameFooter.Limits = [0 Inf];
+            app.FrameFooter.ValueDisplayFormat = '%d bytes';
+            app.FrameFooter.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.FrameFooter.Tooltip = {'Number of bytes after the actual pattern in each frame (e.g. for metadata)'};
+            app.FrameFooter.Layout.Row = 4;
+            app.FrameFooter.Layout.Column = 2;
 
             % Create DataTypeLabel
-            self.DataTypeLabel = uilabel(self.ImportDatasetStructureGrid);
-            self.DataTypeLabel.HorizontalAlignment = 'right';
-            self.DataTypeLabel.Layout.Row = 5;
-            self.DataTypeLabel.Layout.Column = 1;
-            self.DataTypeLabel.Text = 'Data Type';
+            app.DataTypeLabel = uilabel(app.ImportDatasetStructureGrid);
+            app.DataTypeLabel.HorizontalAlignment = 'right';
+            app.DataTypeLabel.Layout.Row = 5;
+            app.DataTypeLabel.Layout.Column = 1;
+            app.DataTypeLabel.Text = 'Data Type';
 
             % Create ImportDataType
-            self.ImportDataType = uidropdown(self.ImportDatasetStructureGrid);
-            self.ImportDataType.Items = {};
-            self.ImportDataType.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportDataType.Layout.Row = 5;
-            self.ImportDataType.Layout.Column = 2;
-            self.ImportDataType.Value = {};
+            app.ImportDataType = uidropdown(app.ImportDatasetStructureGrid);
+            app.ImportDataType.Items = {};
+            app.ImportDataType.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportDataType.Layout.Row = 5;
+            app.ImportDataType.Layout.Column = 2;
+            app.ImportDataType.Value = {};
 
             % Create ByteOrderDropDownLabel
-            self.ByteOrderDropDownLabel = uilabel(self.ImportDatasetStructureGrid);
-            self.ByteOrderDropDownLabel.HorizontalAlignment = 'right';
-            self.ByteOrderDropDownLabel.Layout.Row = 6;
-            self.ByteOrderDropDownLabel.Layout.Column = 1;
-            self.ByteOrderDropDownLabel.Text = 'Byte Order';
+            app.ByteOrderDropDownLabel = uilabel(app.ImportDatasetStructureGrid);
+            app.ByteOrderDropDownLabel.HorizontalAlignment = 'right';
+            app.ByteOrderDropDownLabel.Layout.Row = 6;
+            app.ByteOrderDropDownLabel.Layout.Column = 1;
+            app.ByteOrderDropDownLabel.Text = 'Byte Order';
 
             % Create ImportByteOrder
-            self.ImportByteOrder = uidropdown(self.ImportDatasetStructureGrid);
-            self.ImportByteOrder.Items = {'Little Endian', 'Big Endian'};
-            self.ImportByteOrder.ItemsData = {'l', 'b'};
-            self.ImportByteOrder.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportByteOrder.Layout.Row = 6;
-            self.ImportByteOrder.Layout.Column = 2;
-            self.ImportByteOrder.Value = 'l';
+            app.ImportByteOrder = uidropdown(app.ImportDatasetStructureGrid);
+            app.ImportByteOrder.Items = {'Little Endian', 'Big Endian'};
+            app.ImportByteOrder.ItemsData = {'l', 'b'};
+            app.ImportByteOrder.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportByteOrder.Layout.Row = 6;
+            app.ImportByteOrder.Layout.Column = 2;
+            app.ImportByteOrder.Value = 'l';
 
             % Create ImportDimensionGrid
-            self.ImportDimensionGrid = uigridlayout(self.ImportDatasetInfoGrid);
-            self.ImportDimensionGrid.ColumnWidth = {'fit', 'fit', '1x', 'fit', '1x'};
-            self.ImportDimensionGrid.RowHeight = {24, 24};
-            self.ImportDimensionGrid.ColumnSpacing = 4;
-            self.ImportDimensionGrid.RowSpacing = 4;
-            self.ImportDimensionGrid.Padding = [0 0 0 0];
-            self.ImportDimensionGrid.Layout.Row = 3;
-            self.ImportDimensionGrid.Layout.Column = 1;
+            app.ImportDimensionGrid = uigridlayout(app.ImportDatasetInfoGrid);
+            app.ImportDimensionGrid.ColumnWidth = {'fit', 'fit', '1x', 'fit', '1x'};
+            app.ImportDimensionGrid.RowHeight = {24, 24};
+            app.ImportDimensionGrid.ColumnSpacing = 4;
+            app.ImportDimensionGrid.RowSpacing = 4;
+            app.ImportDimensionGrid.Padding = [0 0 0 0];
+            app.ImportDimensionGrid.Layout.Row = 3;
+            app.ImportDimensionGrid.Layout.Column = 1;
 
             % Create ImportPixelsLabel
-            self.ImportPixelsLabel = uilabel(self.ImportDimensionGrid);
-            self.ImportPixelsLabel.HorizontalAlignment = 'center';
-            self.ImportPixelsLabel.FontName = 'Arial';
-            self.ImportPixelsLabel.FontWeight = 'bold';
-            self.ImportPixelsLabel.Layout.Row = 1;
-            self.ImportPixelsLabel.Layout.Column = 1;
-            self.ImportPixelsLabel.Text = 'Pixels';
+            app.ImportPixelsLabel = uilabel(app.ImportDimensionGrid);
+            app.ImportPixelsLabel.HorizontalAlignment = 'center';
+            app.ImportPixelsLabel.FontName = 'Arial';
+            app.ImportPixelsLabel.FontWeight = 'bold';
+            app.ImportPixelsLabel.Layout.Row = 1;
+            app.ImportPixelsLabel.Layout.Column = 1;
+            app.ImportPixelsLabel.Text = 'Pixels';
 
             % Create XLabel_2
-            self.XLabel_2 = uilabel(self.ImportDimensionGrid);
-            self.XLabel_2.HorizontalAlignment = 'right';
-            self.XLabel_2.Layout.Row = 1;
-            self.XLabel_2.Layout.Column = 2;
-            self.XLabel_2.Text = 'X';
+            app.XLabel_2 = uilabel(app.ImportDimensionGrid);
+            app.XLabel_2.HorizontalAlignment = 'right';
+            app.XLabel_2.Layout.Row = 1;
+            app.XLabel_2.Layout.Column = 2;
+            app.XLabel_2.Text = 'X';
 
             % Create ImportPixelsX
-            self.ImportPixelsX = uieditfield(self.ImportDimensionGrid, 'numeric');
-            self.ImportPixelsX.Limits = [1 Inf];
-            self.ImportPixelsX.RoundFractionalValues = 'on';
-            self.ImportPixelsX.ValueDisplayFormat = '%d';
-            self.ImportPixelsX.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportPixelsX.Tag = 'Import Diffraction';
-            self.ImportPixelsX.HorizontalAlignment = 'center';
-            self.ImportPixelsX.Tooltip = {'Number of pixels on X axis in each frame (1st dimension of image stack)'};
-            self.ImportPixelsX.Layout.Row = 1;
-            self.ImportPixelsX.Layout.Column = 3;
-            self.ImportPixelsX.Value = 1;
+            app.ImportPixelsX = uieditfield(app.ImportDimensionGrid, 'numeric');
+            app.ImportPixelsX.Limits = [1 Inf];
+            app.ImportPixelsX.RoundFractionalValues = 'on';
+            app.ImportPixelsX.ValueDisplayFormat = '%d';
+            app.ImportPixelsX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportPixelsX.Tag = 'Import Diffraction';
+            app.ImportPixelsX.HorizontalAlignment = 'center';
+            app.ImportPixelsX.Tooltip = {'Number of pixels on X axis in each frame (1st dimension of image stack)'};
+            app.ImportPixelsX.Layout.Row = 1;
+            app.ImportPixelsX.Layout.Column = 3;
+            app.ImportPixelsX.Value = 1;
 
             % Create YLabel_2
-            self.YLabel_2 = uilabel(self.ImportDimensionGrid);
-            self.YLabel_2.HorizontalAlignment = 'right';
-            self.YLabel_2.Layout.Row = 1;
-            self.YLabel_2.Layout.Column = 4;
-            self.YLabel_2.Text = ' Y';
+            app.YLabel_2 = uilabel(app.ImportDimensionGrid);
+            app.YLabel_2.HorizontalAlignment = 'right';
+            app.YLabel_2.Layout.Row = 1;
+            app.YLabel_2.Layout.Column = 4;
+            app.YLabel_2.Text = ' Y';
 
             % Create ImportPixelsY
-            self.ImportPixelsY = uieditfield(self.ImportDimensionGrid, 'numeric');
-            self.ImportPixelsY.Limits = [1 Inf];
-            self.ImportPixelsY.RoundFractionalValues = 'on';
-            self.ImportPixelsY.ValueDisplayFormat = '%d';
-            self.ImportPixelsY.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportPixelsY.Tag = 'Import Diffraction';
-            self.ImportPixelsY.HorizontalAlignment = 'center';
-            self.ImportPixelsY.Tooltip = {'Number of pixels on Y axis in each frame (2nd dimension of image stack)'};
-            self.ImportPixelsY.Layout.Row = 1;
-            self.ImportPixelsY.Layout.Column = 5;
-            self.ImportPixelsY.Value = 1;
+            app.ImportPixelsY = uieditfield(app.ImportDimensionGrid, 'numeric');
+            app.ImportPixelsY.Limits = [1 Inf];
+            app.ImportPixelsY.RoundFractionalValues = 'on';
+            app.ImportPixelsY.ValueDisplayFormat = '%d';
+            app.ImportPixelsY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportPixelsY.Tag = 'Import Diffraction';
+            app.ImportPixelsY.HorizontalAlignment = 'center';
+            app.ImportPixelsY.Tooltip = {'Number of pixels on Y axis in each frame (2nd dimension of image stack)'};
+            app.ImportPixelsY.Layout.Row = 1;
+            app.ImportPixelsY.Layout.Column = 5;
+            app.ImportPixelsY.Value = 1;
 
             % Create ImportFramesLabel
-            self.ImportFramesLabel = uilabel(self.ImportDimensionGrid);
-            self.ImportFramesLabel.HorizontalAlignment = 'center';
-            self.ImportFramesLabel.FontName = 'Arial';
-            self.ImportFramesLabel.FontWeight = 'bold';
-            self.ImportFramesLabel.Layout.Row = 2;
-            self.ImportFramesLabel.Layout.Column = 1;
-            self.ImportFramesLabel.Text = 'Frames';
+            app.ImportFramesLabel = uilabel(app.ImportDimensionGrid);
+            app.ImportFramesLabel.HorizontalAlignment = 'center';
+            app.ImportFramesLabel.FontName = 'Arial';
+            app.ImportFramesLabel.FontWeight = 'bold';
+            app.ImportFramesLabel.Layout.Row = 2;
+            app.ImportFramesLabel.Layout.Column = 1;
+            app.ImportFramesLabel.Text = 'Frames';
 
             % Create XLabel
-            self.XLabel = uilabel(self.ImportDimensionGrid);
-            self.XLabel.HorizontalAlignment = 'right';
-            self.XLabel.Layout.Row = 2;
-            self.XLabel.Layout.Column = 2;
-            self.XLabel.Text = 'X';
+            app.XLabel = uilabel(app.ImportDimensionGrid);
+            app.XLabel.HorizontalAlignment = 'right';
+            app.XLabel.Layout.Row = 2;
+            app.XLabel.Layout.Column = 2;
+            app.XLabel.Text = 'X';
 
             % Create ImportFramesX
-            self.ImportFramesX = uieditfield(self.ImportDimensionGrid, 'numeric');
-            self.ImportFramesX.Limits = [1 Inf];
-            self.ImportFramesX.RoundFractionalValues = 'on';
-            self.ImportFramesX.ValueDisplayFormat = '%d';
-            self.ImportFramesX.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportFramesX.Tag = 'Import Real';
-            self.ImportFramesX.HorizontalAlignment = 'center';
-            self.ImportFramesX.Tooltip = {'Number of frames on X axis (3rd dimension of image stack)'};
-            self.ImportFramesX.Layout.Row = 2;
-            self.ImportFramesX.Layout.Column = 3;
-            self.ImportFramesX.Value = 1;
+            app.ImportFramesX = uieditfield(app.ImportDimensionGrid, 'numeric');
+            app.ImportFramesX.Limits = [1 Inf];
+            app.ImportFramesX.RoundFractionalValues = 'on';
+            app.ImportFramesX.ValueDisplayFormat = '%d';
+            app.ImportFramesX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportFramesX.Tag = 'Import Real';
+            app.ImportFramesX.HorizontalAlignment = 'center';
+            app.ImportFramesX.Tooltip = {'Number of frames on X axis (3rd dimension of image stack)'};
+            app.ImportFramesX.Layout.Row = 2;
+            app.ImportFramesX.Layout.Column = 3;
+            app.ImportFramesX.Value = 1;
 
             % Create YLabel
-            self.YLabel = uilabel(self.ImportDimensionGrid);
-            self.YLabel.HorizontalAlignment = 'right';
-            self.YLabel.Layout.Row = 2;
-            self.YLabel.Layout.Column = 4;
-            self.YLabel.Text = ' Y';
+            app.YLabel = uilabel(app.ImportDimensionGrid);
+            app.YLabel.HorizontalAlignment = 'right';
+            app.YLabel.Layout.Row = 2;
+            app.YLabel.Layout.Column = 4;
+            app.YLabel.Text = ' Y';
 
             % Create ImportFramesY
-            self.ImportFramesY = uieditfield(self.ImportDimensionGrid, 'numeric');
-            self.ImportFramesY.Limits = [1 Inf];
-            self.ImportFramesY.RoundFractionalValues = 'on';
-            self.ImportFramesY.ValueDisplayFormat = '%d';
-            self.ImportFramesY.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportFramesY.Tag = 'Import Real';
-            self.ImportFramesY.HorizontalAlignment = 'center';
-            self.ImportFramesY.Tooltip = {'Number of frames on Y axis (4th dimension of image stack)'};
-            self.ImportFramesY.Layout.Row = 2;
-            self.ImportFramesY.Layout.Column = 5;
-            self.ImportFramesY.Value = 1;
+            app.ImportFramesY = uieditfield(app.ImportDimensionGrid, 'numeric');
+            app.ImportFramesY.Limits = [1 Inf];
+            app.ImportFramesY.RoundFractionalValues = 'on';
+            app.ImportFramesY.ValueDisplayFormat = '%d';
+            app.ImportFramesY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportFramesY.Tag = 'Import Real';
+            app.ImportFramesY.HorizontalAlignment = 'center';
+            app.ImportFramesY.Tooltip = {'Number of frames on Y axis (4th dimension of image stack)'};
+            app.ImportFramesY.Layout.Row = 2;
+            app.ImportFramesY.Layout.Column = 5;
+            app.ImportFramesY.Value = 1;
 
             % Create ImportFileSizeGrid
-            self.ImportFileSizeGrid = uigridlayout(self.ImportDatasetInfoGrid);
-            self.ImportFileSizeGrid.ColumnWidth = {'fit', '1x'};
-            self.ImportFileSizeGrid.RowHeight = {'fit', 'fit'};
-            self.ImportFileSizeGrid.ColumnSpacing = 4;
-            self.ImportFileSizeGrid.RowSpacing = 2;
-            self.ImportFileSizeGrid.Padding = [0 0 0 0];
-            self.ImportFileSizeGrid.Layout.Row = 4;
-            self.ImportFileSizeGrid.Layout.Column = 1;
+            app.ImportFileSizeGrid = uigridlayout(app.ImportDatasetInfoGrid);
+            app.ImportFileSizeGrid.ColumnWidth = {'fit', '1x'};
+            app.ImportFileSizeGrid.RowHeight = {'fit', 'fit'};
+            app.ImportFileSizeGrid.ColumnSpacing = 4;
+            app.ImportFileSizeGrid.RowSpacing = 2;
+            app.ImportFileSizeGrid.Padding = [0 0 0 0];
+            app.ImportFileSizeGrid.Layout.Row = 4;
+            app.ImportFileSizeGrid.Layout.Column = 1;
 
             % Create ImportActualFilesizeLabel
-            self.ImportActualFilesizeLabel = uilabel(self.ImportFileSizeGrid);
-            self.ImportActualFilesizeLabel.HorizontalAlignment = 'right';
-            self.ImportActualFilesizeLabel.Layout.Row = 1;
-            self.ImportActualFilesizeLabel.Layout.Column = 1;
-            self.ImportActualFilesizeLabel.Text = 'Size:';
+            app.ImportActualFilesizeLabel = uilabel(app.ImportFileSizeGrid);
+            app.ImportActualFilesizeLabel.HorizontalAlignment = 'right';
+            app.ImportActualFilesizeLabel.Layout.Row = 1;
+            app.ImportActualFilesizeLabel.Layout.Column = 1;
+            app.ImportActualFilesizeLabel.Text = 'Size:';
 
             % Create ImportActualFilesize
-            self.ImportActualFilesize = uilabel(self.ImportFileSizeGrid);
-            self.ImportActualFilesize.HorizontalAlignment = 'center';
-            self.ImportActualFilesize.Tooltip = {'Actual physical file size'};
-            self.ImportActualFilesize.Layout.Row = 1;
-            self.ImportActualFilesize.Layout.Column = 2;
-            self.ImportActualFilesize.Text = '';
+            app.ImportActualFilesize = uilabel(app.ImportFileSizeGrid);
+            app.ImportActualFilesize.HorizontalAlignment = 'center';
+            app.ImportActualFilesize.Tooltip = {'Actual physical file size'};
+            app.ImportActualFilesize.Layout.Row = 1;
+            app.ImportActualFilesize.Layout.Column = 2;
+            app.ImportActualFilesize.Text = '';
 
             % Create ImportEstimatedFilesizeLabel
-            self.ImportEstimatedFilesizeLabel = uilabel(self.ImportFileSizeGrid);
-            self.ImportEstimatedFilesizeLabel.HorizontalAlignment = 'right';
-            self.ImportEstimatedFilesizeLabel.Layout.Row = 2;
-            self.ImportEstimatedFilesizeLabel.Layout.Column = 1;
-            self.ImportEstimatedFilesizeLabel.Text = 'Est.:';
+            app.ImportEstimatedFilesizeLabel = uilabel(app.ImportFileSizeGrid);
+            app.ImportEstimatedFilesizeLabel.HorizontalAlignment = 'right';
+            app.ImportEstimatedFilesizeLabel.Layout.Row = 2;
+            app.ImportEstimatedFilesizeLabel.Layout.Column = 1;
+            app.ImportEstimatedFilesizeLabel.Text = 'Est.:';
 
             % Create ImportEstimatedFilesize
-            self.ImportEstimatedFilesize = uilabel(self.ImportFileSizeGrid);
-            self.ImportEstimatedFilesize.HorizontalAlignment = 'center';
-            self.ImportEstimatedFilesize.Tooltip = {'File size calculated from info above. Size after the image stack (the "data tail") is implicit, thus may not be accurate'};
-            self.ImportEstimatedFilesize.Layout.Row = 2;
-            self.ImportEstimatedFilesize.Layout.Column = 2;
-            self.ImportEstimatedFilesize.Text = '';
+            app.ImportEstimatedFilesize = uilabel(app.ImportFileSizeGrid);
+            app.ImportEstimatedFilesize.HorizontalAlignment = 'center';
+            app.ImportEstimatedFilesize.Tooltip = {'File size calculated from info above. Size after the image stack (the "data tail") is implicit, thus may not be accurate'};
+            app.ImportEstimatedFilesize.Layout.Row = 2;
+            app.ImportEstimatedFilesize.Layout.Column = 2;
+            app.ImportEstimatedFilesize.Text = '';
 
             % Create DatasetInfofromMetadataLabel
-            self.DatasetInfofromMetadataLabel = uilabel(self.ImportDatasetInfoGrid);
-            self.DatasetInfofromMetadataLabel.HorizontalAlignment = 'center';
-            self.DatasetInfofromMetadataLabel.VerticalAlignment = 'bottom';
-            self.DatasetInfofromMetadataLabel.FontName = 'Arial';
-            self.DatasetInfofromMetadataLabel.FontWeight = 'bold';
-            self.DatasetInfofromMetadataLabel.Layout.Row = 5;
-            self.DatasetInfofromMetadataLabel.Layout.Column = 1;
-            self.DatasetInfofromMetadataLabel.Text = 'Dataset Info from Metadata';
+            app.DatasetInfofromMetadataLabel = uilabel(app.ImportDatasetInfoGrid);
+            app.DatasetInfofromMetadataLabel.HorizontalAlignment = 'center';
+            app.DatasetInfofromMetadataLabel.VerticalAlignment = 'bottom';
+            app.DatasetInfofromMetadataLabel.FontName = 'Arial';
+            app.DatasetInfofromMetadataLabel.FontWeight = 'bold';
+            app.DatasetInfofromMetadataLabel.Layout.Row = 5;
+            app.DatasetInfofromMetadataLabel.Layout.Column = 1;
+            app.DatasetInfofromMetadataLabel.Text = 'Dataset Info from Metadata';
 
             % Create ImportFileMetadata
-            self.ImportFileMetadata = uitextarea(self.ImportDatasetInfoGrid);
-            self.ImportFileMetadata.Editable = 'off';
-            self.ImportFileMetadata.FontName = 'Arial';
-            self.ImportFileMetadata.Layout.Row = 6;
-            self.ImportFileMetadata.Layout.Column = 1;
+            app.ImportFileMetadata = uitextarea(app.ImportDatasetInfoGrid);
+            app.ImportFileMetadata.Editable = 'off';
+            app.ImportFileMetadata.FontName = 'Arial';
+            app.ImportFileMetadata.Layout.Row = 6;
+            app.ImportFileMetadata.Layout.Column = 1;
 
             % Create ImportOptionsPanel
-            self.ImportOptionsPanel = uipanel(self.ImportGrid);
-            self.ImportOptionsPanel.AutoResizeChildren = 'off';
-            self.ImportOptionsPanel.BorderType = 'none';
-            self.ImportOptionsPanel.TitlePosition = 'centertop';
-            self.ImportOptionsPanel.Title = 'Import Options';
-            self.ImportOptionsPanel.Layout.Row = 2;
-            self.ImportOptionsPanel.Layout.Column = 2;
-            self.ImportOptionsPanel.FontName = 'Arial';
-            self.ImportOptionsPanel.FontWeight = 'bold';
-            self.ImportOptionsPanel.FontSize = 14;
+            app.ImportOptionsPanel = uipanel(app.ImportGrid);
+            app.ImportOptionsPanel.AutoResizeChildren = 'off';
+            app.ImportOptionsPanel.BorderType = 'none';
+            app.ImportOptionsPanel.TitlePosition = 'centertop';
+            app.ImportOptionsPanel.Title = 'Import Options';
+            app.ImportOptionsPanel.Layout.Row = 2;
+            app.ImportOptionsPanel.Layout.Column = 2;
+            app.ImportOptionsPanel.FontName = 'Arial';
+            app.ImportOptionsPanel.FontWeight = 'bold';
+            app.ImportOptionsPanel.FontSize = 14;
 
             % Create ImportOptionsGrid
-            self.ImportOptionsGrid = uigridlayout(self.ImportOptionsPanel);
-            self.ImportOptionsGrid.RowHeight = {24, 'fit', 'fit', 'fit', '1x'};
-            self.ImportOptionsGrid.ColumnSpacing = 6;
-            self.ImportOptionsGrid.RowSpacing = 6;
-            self.ImportOptionsGrid.Padding = [0 0 0 4];
+            app.ImportOptionsGrid = uigridlayout(app.ImportOptionsPanel);
+            app.ImportOptionsGrid.RowHeight = {24, 'fit', 'fit', 'fit', '1x'};
+            app.ImportOptionsGrid.ColumnSpacing = 6;
+            app.ImportOptionsGrid.RowSpacing = 6;
+            app.ImportOptionsGrid.Padding = [0 0 0 4];
 
             % Create MemoryGrid
-            self.MemoryGrid = uigridlayout(self.ImportOptionsGrid);
-            self.MemoryGrid.ColumnWidth = {'fit', '1x'};
-            self.MemoryGrid.RowHeight = {'1x'};
-            self.MemoryGrid.ColumnSpacing = 8;
-            self.MemoryGrid.RowSpacing = 4;
-            self.MemoryGrid.Padding = [0 0 0 0];
-            self.MemoryGrid.Layout.Row = 1;
-            self.MemoryGrid.Layout.Column = [1 2];
+            app.MemoryGrid = uigridlayout(app.ImportOptionsGrid);
+            app.MemoryGrid.ColumnWidth = {'fit', '1x'};
+            app.MemoryGrid.RowHeight = {'1x'};
+            app.MemoryGrid.ColumnSpacing = 8;
+            app.MemoryGrid.RowSpacing = 4;
+            app.MemoryGrid.Padding = [0 0 0 0];
+            app.MemoryGrid.Layout.Row = 1;
+            app.MemoryGrid.Layout.Column = [1 2];
 
             % Create MemoryType
-            self.MemoryType = uidropdown(self.MemoryGrid);
-            self.MemoryType.Items = {'Physical Memory', 'Virtual Mapping'};
-            self.MemoryType.Tooltip = {'VIRTUAL MEMORY is best for most large datasets as it does not physically load the dataset into RAM. This can be significantly faster depending on drive speed and file size. HOWEVER - it is currently only beneficial for datasets with no header of footer.'; ''; 'Virtual mapping to the GPU is not recommended at this point. It is extremely fast to load, but still requires significant GPU memory resources.'};
-            self.MemoryType.Layout.Row = 1;
-            self.MemoryType.Layout.Column = 1;
-            self.MemoryType.Value = 'Physical Memory';
+            app.MemoryType = uidropdown(app.MemoryGrid);
+            app.MemoryType.Items = {'Physical Memory', 'Virtual Mapping'};
+            app.MemoryType.Tooltip = {'VIRTUAL MEMORY is best for most large datasets as it does not physically load the dataset into RAM. This can be significantly faster depending on drive speed and file size. HOWEVER - it is currently only beneficial for datasets with no header of footer.'; ''; 'Virtual mapping to the GPU is not recommended at this point. It is extremely fast to load, but still requires significant GPU memory resources.'};
+            app.MemoryType.Layout.Row = 1;
+            app.MemoryType.Layout.Column = 1;
+            app.MemoryType.Value = 'Physical Memory';
 
             % Create GPU
-            self.GPU = uidropdown(self.MemoryGrid);
-            self.GPU.Items = {'GPU off'};
-            self.GPU.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.GPU.Tooltip = {'GPU acceleration'};
-            self.GPU.Layout.Row = 1;
-            self.GPU.Layout.Column = 2;
-            self.GPU.Value = 'GPU off';
+            app.GPU = uidropdown(app.MemoryGrid);
+            app.GPU.Items = {'GPU off'};
+            app.GPU.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.GPU.Tooltip = {'GPU acceleration'};
+            app.GPU.Layout.Row = 1;
+            app.GPU.Layout.Column = 2;
+            app.GPU.Value = 'GPU off';
 
             % Create ImportPartialPixels
-            self.ImportPartialPixels = uicheckbox(self.ImportOptionsGrid);
-            self.ImportPartialPixels.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportPartialPixels.Tag = 'Import Diffraction';
-            self.ImportPartialPixels.Text = '    Diffraction Partial Import';
-            self.ImportPartialPixels.FontName = 'Arial';
-            self.ImportPartialPixels.FontWeight = 'bold';
-            self.ImportPartialPixels.Layout.Row = 2;
-            self.ImportPartialPixels.Layout.Column = 1;
+            app.ImportPartialPixels = uicheckbox(app.ImportOptionsGrid);
+            app.ImportPartialPixels.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportPartialPixels.Tag = 'Import Diffraction';
+            app.ImportPartialPixels.Text = '    Diffraction Partial Import';
+            app.ImportPartialPixels.FontName = 'Arial';
+            app.ImportPartialPixels.FontWeight = 'bold';
+            app.ImportPartialPixels.Layout.Row = 2;
+            app.ImportPartialPixels.Layout.Column = 1;
 
             % Create ImportPartialFrames
-            self.ImportPartialFrames = uicheckbox(self.ImportOptionsGrid);
-            self.ImportPartialFrames.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.ImportPartialFrames.Tag = 'Import Real';
-            self.ImportPartialFrames.Text = '    Real-space Partial Import';
-            self.ImportPartialFrames.FontName = 'Arial';
-            self.ImportPartialFrames.FontWeight = 'bold';
-            self.ImportPartialFrames.Layout.Row = 2;
-            self.ImportPartialFrames.Layout.Column = 2;
+            app.ImportPartialFrames = uicheckbox(app.ImportOptionsGrid);
+            app.ImportPartialFrames.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportPartialFrames.Tag = 'Import Real';
+            app.ImportPartialFrames.Text = '    Real-space Partial Import';
+            app.ImportPartialFrames.FontName = 'Arial';
+            app.ImportPartialFrames.FontWeight = 'bold';
+            app.ImportPartialFrames.Layout.Row = 2;
+            app.ImportPartialFrames.Layout.Column = 2;
 
             % Create DiffractionPartialImportGrid
-            self.DiffractionPartialImportGrid = uigridlayout(self.ImportOptionsGrid);
-            self.DiffractionPartialImportGrid.ColumnWidth = {'fit', '1x', 'fit', '1x'};
-            self.DiffractionPartialImportGrid.RowHeight = {24, 24, 24};
-            self.DiffractionPartialImportGrid.ColumnSpacing = 4;
-            self.DiffractionPartialImportGrid.RowSpacing = 2;
-            self.DiffractionPartialImportGrid.Padding = [0 0 0 0];
-            self.DiffractionPartialImportGrid.Layout.Row = 3;
-            self.DiffractionPartialImportGrid.Layout.Column = 1;
+            app.DiffractionPartialImportGrid = uigridlayout(app.ImportOptionsGrid);
+            app.DiffractionPartialImportGrid.ColumnWidth = {'fit', '1x', 'fit', '1x'};
+            app.DiffractionPartialImportGrid.RowHeight = {24, 24, 24};
+            app.DiffractionPartialImportGrid.ColumnSpacing = 4;
+            app.DiffractionPartialImportGrid.RowSpacing = 2;
+            app.DiffractionPartialImportGrid.Padding = [0 0 0 0];
+            app.DiffractionPartialImportGrid.Layout.Row = 3;
+            app.DiffractionPartialImportGrid.Layout.Column = 1;
 
             % Create BinningDistanceLabel
-            self.BinningDistanceLabel = uilabel(self.DiffractionPartialImportGrid);
-            self.BinningDistanceLabel.HorizontalAlignment = 'right';
-            self.BinningDistanceLabel.Enable = 'off';
-            self.BinningDistanceLabel.Layout.Row = 1;
-            self.BinningDistanceLabel.Layout.Column = [1 3];
-            self.BinningDistanceLabel.Text = 'Binning Distance';
+            app.BinningDistanceLabel = uilabel(app.DiffractionPartialImportGrid);
+            app.BinningDistanceLabel.HorizontalAlignment = 'right';
+            app.BinningDistanceLabel.Enable = 'off';
+            app.BinningDistanceLabel.Layout.Row = 1;
+            app.BinningDistanceLabel.Layout.Column = [1 3];
+            app.BinningDistanceLabel.Text = 'Binning Distance';
 
             % Create DiffractionPartialImportPixelsDist
-            self.DiffractionPartialImportPixelsDist = uispinner(self.DiffractionPartialImportGrid);
-            self.DiffractionPartialImportPixelsDist.RoundFractionalValues = 'on';
-            self.DiffractionPartialImportPixelsDist.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialImportPixelsDist.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.DiffractionPartialImportPixelsDist.Tag = 'Import Diffraction';
-            self.DiffractionPartialImportPixelsDist.Enable = 'off';
-            self.DiffractionPartialImportPixelsDist.Tooltip = {'To bin n×n pixels into one (by averaging)'};
-            self.DiffractionPartialImportPixelsDist.Layout.Row = 1;
-            self.DiffractionPartialImportPixelsDist.Layout.Column = 4;
-            self.DiffractionPartialImportPixelsDist.Value = 1;
+            app.DiffractionPartialImportPixelsDist = uispinner(app.DiffractionPartialImportGrid);
+            app.DiffractionPartialImportPixelsDist.RoundFractionalValues = 'on';
+            app.DiffractionPartialImportPixelsDist.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialImportPixelsDist.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DiffractionPartialImportPixelsDist.Tag = 'Import Diffraction';
+            app.DiffractionPartialImportPixelsDist.Enable = 'off';
+            app.DiffractionPartialImportPixelsDist.Tooltip = {'To bin n×n pixels into one (by averaging)'};
+            app.DiffractionPartialImportPixelsDist.Layout.Row = 1;
+            app.DiffractionPartialImportPixelsDist.Layout.Column = 4;
+            app.DiffractionPartialImportPixelsDist.Value = 1;
 
             % Create xsub1Label_5
-            self.xsub1Label_5 = uilabel(self.DiffractionPartialImportGrid);
-            self.xsub1Label_5.HorizontalAlignment = 'right';
-            self.xsub1Label_5.Enable = 'off';
-            self.xsub1Label_5.Layout.Row = 2;
-            self.xsub1Label_5.Layout.Column = 1;
-            self.xsub1Label_5.Interpreter = 'html';
-            self.xsub1Label_5.Text = 'x<sub>1';
+            app.xsub1Label_5 = uilabel(app.DiffractionPartialImportGrid);
+            app.xsub1Label_5.HorizontalAlignment = 'right';
+            app.xsub1Label_5.Enable = 'off';
+            app.xsub1Label_5.Layout.Row = 2;
+            app.xsub1Label_5.Layout.Column = 1;
+            app.xsub1Label_5.Interpreter = 'html';
+            app.xsub1Label_5.Text = 'x<sub>1';
 
             % Create DiffractionPartialImportXStart
-            self.DiffractionPartialImportXStart = uispinner(self.DiffractionPartialImportGrid);
-            self.DiffractionPartialImportXStart.RoundFractionalValues = 'on';
-            self.DiffractionPartialImportXStart.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialImportXStart.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.DiffractionPartialImportXStart.Tag = 'Import Diffraction';
-            self.DiffractionPartialImportXStart.Enable = 'off';
-            self.DiffractionPartialImportXStart.Tooltip = {'Starting pixel on X (1st dimension of image stack) to import, in each frame'};
-            self.DiffractionPartialImportXStart.Layout.Row = 2;
-            self.DiffractionPartialImportXStart.Layout.Column = 2;
-            self.DiffractionPartialImportXStart.Value = 1;
+            app.DiffractionPartialImportXStart = uispinner(app.DiffractionPartialImportGrid);
+            app.DiffractionPartialImportXStart.RoundFractionalValues = 'on';
+            app.DiffractionPartialImportXStart.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialImportXStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DiffractionPartialImportXStart.Tag = 'Import Diffraction';
+            app.DiffractionPartialImportXStart.Enable = 'off';
+            app.DiffractionPartialImportXStart.Tooltip = {'Starting pixel on X (1st dimension of image stack) to import, in each frame'};
+            app.DiffractionPartialImportXStart.Layout.Row = 2;
+            app.DiffractionPartialImportXStart.Layout.Column = 2;
+            app.DiffractionPartialImportXStart.Value = 1;
 
             % Create ysub1Label_5
-            self.ysub1Label_5 = uilabel(self.DiffractionPartialImportGrid);
-            self.ysub1Label_5.HorizontalAlignment = 'right';
-            self.ysub1Label_5.Enable = 'off';
-            self.ysub1Label_5.Layout.Row = 2;
-            self.ysub1Label_5.Layout.Column = 3;
-            self.ysub1Label_5.Interpreter = 'html';
-            self.ysub1Label_5.Text = 'y<sub>1';
+            app.ysub1Label_5 = uilabel(app.DiffractionPartialImportGrid);
+            app.ysub1Label_5.HorizontalAlignment = 'right';
+            app.ysub1Label_5.Enable = 'off';
+            app.ysub1Label_5.Layout.Row = 2;
+            app.ysub1Label_5.Layout.Column = 3;
+            app.ysub1Label_5.Interpreter = 'html';
+            app.ysub1Label_5.Text = 'y<sub>1';
 
             % Create DiffractionPartialImportYStart
-            self.DiffractionPartialImportYStart = uispinner(self.DiffractionPartialImportGrid);
-            self.DiffractionPartialImportYStart.RoundFractionalValues = 'on';
-            self.DiffractionPartialImportYStart.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialImportYStart.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.DiffractionPartialImportYStart.Tag = 'Import Diffraction';
-            self.DiffractionPartialImportYStart.Enable = 'off';
-            self.DiffractionPartialImportYStart.Tooltip = {'Starting pixel on Y (2nd dimension of image stack) to import, in each frame'};
-            self.DiffractionPartialImportYStart.Layout.Row = 2;
-            self.DiffractionPartialImportYStart.Layout.Column = 4;
-            self.DiffractionPartialImportYStart.Value = 1;
+            app.DiffractionPartialImportYStart = uispinner(app.DiffractionPartialImportGrid);
+            app.DiffractionPartialImportYStart.RoundFractionalValues = 'on';
+            app.DiffractionPartialImportYStart.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialImportYStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DiffractionPartialImportYStart.Tag = 'Import Diffraction';
+            app.DiffractionPartialImportYStart.Enable = 'off';
+            app.DiffractionPartialImportYStart.Tooltip = {'Starting pixel on Y (2nd dimension of image stack) to import, in each frame'};
+            app.DiffractionPartialImportYStart.Layout.Row = 2;
+            app.DiffractionPartialImportYStart.Layout.Column = 4;
+            app.DiffractionPartialImportYStart.Value = 1;
 
             % Create XLabel_3
-            self.XLabel_3 = uilabel(self.DiffractionPartialImportGrid);
-            self.XLabel_3.HorizontalAlignment = 'right';
-            self.XLabel_3.Enable = 'off';
-            self.XLabel_3.Layout.Row = 3;
-            self.XLabel_3.Layout.Column = 1;
-            self.XLabel_3.Text = 'X';
+            app.XLabel_3 = uilabel(app.DiffractionPartialImportGrid);
+            app.XLabel_3.HorizontalAlignment = 'right';
+            app.XLabel_3.Enable = 'off';
+            app.XLabel_3.Layout.Row = 3;
+            app.XLabel_3.Layout.Column = 1;
+            app.XLabel_3.Text = 'X';
 
             % Create DiffractionPartialImportX
-            self.DiffractionPartialImportX = uispinner(self.DiffractionPartialImportGrid);
-            self.DiffractionPartialImportX.RoundFractionalValues = 'on';
-            self.DiffractionPartialImportX.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialImportX.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.DiffractionPartialImportX.Tag = 'Import Diffraction';
-            self.DiffractionPartialImportX.Enable = 'off';
-            self.DiffractionPartialImportX.Tooltip = {'Total pixels after binning on X (1st dimension of image stack), in each frame'};
-            self.DiffractionPartialImportX.Layout.Row = 3;
-            self.DiffractionPartialImportX.Layout.Column = 2;
-            self.DiffractionPartialImportX.Value = 1;
+            app.DiffractionPartialImportX = uispinner(app.DiffractionPartialImportGrid);
+            app.DiffractionPartialImportX.RoundFractionalValues = 'on';
+            app.DiffractionPartialImportX.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialImportX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DiffractionPartialImportX.Tag = 'Import Diffraction';
+            app.DiffractionPartialImportX.Enable = 'off';
+            app.DiffractionPartialImportX.Tooltip = {'Total pixels after binning on X (1st dimension of image stack), in each frame'};
+            app.DiffractionPartialImportX.Layout.Row = 3;
+            app.DiffractionPartialImportX.Layout.Column = 2;
+            app.DiffractionPartialImportX.Value = 1;
 
             % Create YLabel_3
-            self.YLabel_3 = uilabel(self.DiffractionPartialImportGrid);
-            self.YLabel_3.HorizontalAlignment = 'right';
-            self.YLabel_3.Enable = 'off';
-            self.YLabel_3.Layout.Row = 3;
-            self.YLabel_3.Layout.Column = 3;
-            self.YLabel_3.Text = 'Y';
+            app.YLabel_3 = uilabel(app.DiffractionPartialImportGrid);
+            app.YLabel_3.HorizontalAlignment = 'right';
+            app.YLabel_3.Enable = 'off';
+            app.YLabel_3.Layout.Row = 3;
+            app.YLabel_3.Layout.Column = 3;
+            app.YLabel_3.Text = 'Y';
 
             % Create DiffractionPartialImportY
-            self.DiffractionPartialImportY = uispinner(self.DiffractionPartialImportGrid);
-            self.DiffractionPartialImportY.RoundFractionalValues = 'on';
-            self.DiffractionPartialImportY.ValueDisplayFormat = '%.0f';
-            self.DiffractionPartialImportY.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.DiffractionPartialImportY.Tag = 'Import Diffraction';
-            self.DiffractionPartialImportY.Enable = 'off';
-            self.DiffractionPartialImportY.Tooltip = {'Total pixels after binning on Y (2nd dimension of image stack), in each frame'};
-            self.DiffractionPartialImportY.Layout.Row = 3;
-            self.DiffractionPartialImportY.Layout.Column = 4;
-            self.DiffractionPartialImportY.Value = 1;
+            app.DiffractionPartialImportY = uispinner(app.DiffractionPartialImportGrid);
+            app.DiffractionPartialImportY.RoundFractionalValues = 'on';
+            app.DiffractionPartialImportY.ValueDisplayFormat = '%.0f';
+            app.DiffractionPartialImportY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DiffractionPartialImportY.Tag = 'Import Diffraction';
+            app.DiffractionPartialImportY.Enable = 'off';
+            app.DiffractionPartialImportY.Tooltip = {'Total pixels after binning on Y (2nd dimension of image stack), in each frame'};
+            app.DiffractionPartialImportY.Layout.Row = 3;
+            app.DiffractionPartialImportY.Layout.Column = 4;
+            app.DiffractionPartialImportY.Value = 1;
 
             % Create RealPartialImportGrid
-            self.RealPartialImportGrid = uigridlayout(self.ImportOptionsGrid);
-            self.RealPartialImportGrid.ColumnWidth = {'fit', '1x', 'fit', '1x'};
-            self.RealPartialImportGrid.RowHeight = {24, 24, 24};
-            self.RealPartialImportGrid.ColumnSpacing = 4;
-            self.RealPartialImportGrid.RowSpacing = 2;
-            self.RealPartialImportGrid.Padding = [0 0 0 0];
-            self.RealPartialImportGrid.Layout.Row = 3;
-            self.RealPartialImportGrid.Layout.Column = 2;
+            app.RealPartialImportGrid = uigridlayout(app.ImportOptionsGrid);
+            app.RealPartialImportGrid.ColumnWidth = {'fit', '1x', 'fit', '1x'};
+            app.RealPartialImportGrid.RowHeight = {24, 24, 24};
+            app.RealPartialImportGrid.ColumnSpacing = 4;
+            app.RealPartialImportGrid.RowSpacing = 2;
+            app.RealPartialImportGrid.Padding = [0 0 0 0];
+            app.RealPartialImportGrid.Layout.Row = 3;
+            app.RealPartialImportGrid.Layout.Column = 2;
 
             % Create SamplingIntervalLabel_2
-            self.SamplingIntervalLabel_2 = uilabel(self.RealPartialImportGrid);
-            self.SamplingIntervalLabel_2.HorizontalAlignment = 'right';
-            self.SamplingIntervalLabel_2.Enable = 'off';
-            self.SamplingIntervalLabel_2.Layout.Row = 1;
-            self.SamplingIntervalLabel_2.Layout.Column = [1 3];
-            self.SamplingIntervalLabel_2.Text = 'Sampling Interval';
+            app.SamplingIntervalLabel_2 = uilabel(app.RealPartialImportGrid);
+            app.SamplingIntervalLabel_2.HorizontalAlignment = 'right';
+            app.SamplingIntervalLabel_2.Enable = 'off';
+            app.SamplingIntervalLabel_2.Layout.Row = 1;
+            app.SamplingIntervalLabel_2.Layout.Column = [1 3];
+            app.SamplingIntervalLabel_2.Text = 'Sampling Interval';
 
             % Create RealPartialImportFramesDist
-            self.RealPartialImportFramesDist = uispinner(self.RealPartialImportGrid);
-            self.RealPartialImportFramesDist.RoundFractionalValues = 'on';
-            self.RealPartialImportFramesDist.ValueDisplayFormat = '%.0f';
-            self.RealPartialImportFramesDist.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.RealPartialImportFramesDist.Tag = 'Import Real';
-            self.RealPartialImportFramesDist.Enable = 'off';
-            self.RealPartialImportFramesDist.Tooltip = {'Distance between sampling frames in both X & Y directions (neighboring frames have distance of 1)'};
-            self.RealPartialImportFramesDist.Layout.Row = 1;
-            self.RealPartialImportFramesDist.Layout.Column = 4;
-            self.RealPartialImportFramesDist.Value = 1;
+            app.RealPartialImportFramesDist = uispinner(app.RealPartialImportGrid);
+            app.RealPartialImportFramesDist.RoundFractionalValues = 'on';
+            app.RealPartialImportFramesDist.ValueDisplayFormat = '%.0f';
+            app.RealPartialImportFramesDist.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.RealPartialImportFramesDist.Tag = 'Import Real';
+            app.RealPartialImportFramesDist.Enable = 'off';
+            app.RealPartialImportFramesDist.Tooltip = {'Distance between sampling frames in both X & Y directions (neighboring frames have distance of 1)'};
+            app.RealPartialImportFramesDist.Layout.Row = 1;
+            app.RealPartialImportFramesDist.Layout.Column = 4;
+            app.RealPartialImportFramesDist.Value = 1;
 
             % Create xsub1Label_6
-            self.xsub1Label_6 = uilabel(self.RealPartialImportGrid);
-            self.xsub1Label_6.HorizontalAlignment = 'right';
-            self.xsub1Label_6.Enable = 'off';
-            self.xsub1Label_6.Layout.Row = 2;
-            self.xsub1Label_6.Layout.Column = 1;
-            self.xsub1Label_6.Interpreter = 'html';
-            self.xsub1Label_6.Text = 'x<sub>1';
+            app.xsub1Label_6 = uilabel(app.RealPartialImportGrid);
+            app.xsub1Label_6.HorizontalAlignment = 'right';
+            app.xsub1Label_6.Enable = 'off';
+            app.xsub1Label_6.Layout.Row = 2;
+            app.xsub1Label_6.Layout.Column = 1;
+            app.xsub1Label_6.Interpreter = 'html';
+            app.xsub1Label_6.Text = 'x<sub>1';
 
             % Create RealPartialImportXStart
-            self.RealPartialImportXStart = uispinner(self.RealPartialImportGrid);
-            self.RealPartialImportXStart.RoundFractionalValues = 'on';
-            self.RealPartialImportXStart.ValueDisplayFormat = '%.0f';
-            self.RealPartialImportXStart.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.RealPartialImportXStart.Tag = 'Import Real';
-            self.RealPartialImportXStart.Enable = 'off';
-            self.RealPartialImportXStart.Tooltip = {'Starting frame on X (3rd dimension of image stack) to import'};
-            self.RealPartialImportXStart.Layout.Row = 2;
-            self.RealPartialImportXStart.Layout.Column = 2;
-            self.RealPartialImportXStart.Value = 1;
+            app.RealPartialImportXStart = uispinner(app.RealPartialImportGrid);
+            app.RealPartialImportXStart.RoundFractionalValues = 'on';
+            app.RealPartialImportXStart.ValueDisplayFormat = '%.0f';
+            app.RealPartialImportXStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.RealPartialImportXStart.Tag = 'Import Real';
+            app.RealPartialImportXStart.Enable = 'off';
+            app.RealPartialImportXStart.Tooltip = {'Starting frame on X (3rd dimension of image stack) to import'};
+            app.RealPartialImportXStart.Layout.Row = 2;
+            app.RealPartialImportXStart.Layout.Column = 2;
+            app.RealPartialImportXStart.Value = 1;
 
             % Create ysub1Label_6
-            self.ysub1Label_6 = uilabel(self.RealPartialImportGrid);
-            self.ysub1Label_6.HorizontalAlignment = 'right';
-            self.ysub1Label_6.Enable = 'off';
-            self.ysub1Label_6.Layout.Row = 2;
-            self.ysub1Label_6.Layout.Column = 3;
-            self.ysub1Label_6.Interpreter = 'html';
-            self.ysub1Label_6.Text = 'y<sub>1';
+            app.ysub1Label_6 = uilabel(app.RealPartialImportGrid);
+            app.ysub1Label_6.HorizontalAlignment = 'right';
+            app.ysub1Label_6.Enable = 'off';
+            app.ysub1Label_6.Layout.Row = 2;
+            app.ysub1Label_6.Layout.Column = 3;
+            app.ysub1Label_6.Interpreter = 'html';
+            app.ysub1Label_6.Text = 'y<sub>1';
 
             % Create RealPartialImportYStart
-            self.RealPartialImportYStart = uispinner(self.RealPartialImportGrid);
-            self.RealPartialImportYStart.RoundFractionalValues = 'on';
-            self.RealPartialImportYStart.ValueDisplayFormat = '%.0f';
-            self.RealPartialImportYStart.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.RealPartialImportYStart.Tag = 'Import Real';
-            self.RealPartialImportYStart.Enable = 'off';
-            self.RealPartialImportYStart.Tooltip = {'Starting frame on Y (4th dimension of image stack) to import'};
-            self.RealPartialImportYStart.Layout.Row = 2;
-            self.RealPartialImportYStart.Layout.Column = 4;
-            self.RealPartialImportYStart.Value = 1;
+            app.RealPartialImportYStart = uispinner(app.RealPartialImportGrid);
+            app.RealPartialImportYStart.RoundFractionalValues = 'on';
+            app.RealPartialImportYStart.ValueDisplayFormat = '%.0f';
+            app.RealPartialImportYStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.RealPartialImportYStart.Tag = 'Import Real';
+            app.RealPartialImportYStart.Enable = 'off';
+            app.RealPartialImportYStart.Tooltip = {'Starting frame on Y (4th dimension of image stack) to import'};
+            app.RealPartialImportYStart.Layout.Row = 2;
+            app.RealPartialImportYStart.Layout.Column = 4;
+            app.RealPartialImportYStart.Value = 1;
 
             % Create INFrXl
-            self.INFrXl = uilabel(self.RealPartialImportGrid);
-            self.INFrXl.HorizontalAlignment = 'right';
-            self.INFrXl.Enable = 'off';
-            self.INFrXl.Layout.Row = 3;
-            self.INFrXl.Layout.Column = 1;
-            self.INFrXl.Text = 'X';
+            app.INFrXl = uilabel(app.RealPartialImportGrid);
+            app.INFrXl.HorizontalAlignment = 'right';
+            app.INFrXl.Enable = 'off';
+            app.INFrXl.Layout.Row = 3;
+            app.INFrXl.Layout.Column = 1;
+            app.INFrXl.Text = 'X';
 
             % Create RealPartialImportX
-            self.RealPartialImportX = uispinner(self.RealPartialImportGrid);
-            self.RealPartialImportX.RoundFractionalValues = 'on';
-            self.RealPartialImportX.ValueDisplayFormat = '%.0f';
-            self.RealPartialImportX.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.RealPartialImportX.Tag = 'Import Real';
-            self.RealPartialImportX.Enable = 'off';
-            self.RealPartialImportX.Tooltip = {'Total frames after sampling on X (3rd dimension of image stack)'};
-            self.RealPartialImportX.Layout.Row = 3;
-            self.RealPartialImportX.Layout.Column = 2;
-            self.RealPartialImportX.Value = 1;
+            app.RealPartialImportX = uispinner(app.RealPartialImportGrid);
+            app.RealPartialImportX.RoundFractionalValues = 'on';
+            app.RealPartialImportX.ValueDisplayFormat = '%.0f';
+            app.RealPartialImportX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.RealPartialImportX.Tag = 'Import Real';
+            app.RealPartialImportX.Enable = 'off';
+            app.RealPartialImportX.Tooltip = {'Total frames after sampling on X (3rd dimension of image stack)'};
+            app.RealPartialImportX.Layout.Row = 3;
+            app.RealPartialImportX.Layout.Column = 2;
+            app.RealPartialImportX.Value = 1;
 
             % Create INFrYl
-            self.INFrYl = uilabel(self.RealPartialImportGrid);
-            self.INFrYl.HorizontalAlignment = 'right';
-            self.INFrYl.Enable = 'off';
-            self.INFrYl.Layout.Row = 3;
-            self.INFrYl.Layout.Column = 3;
-            self.INFrYl.Text = 'Y';
+            app.INFrYl = uilabel(app.RealPartialImportGrid);
+            app.INFrYl.HorizontalAlignment = 'right';
+            app.INFrYl.Enable = 'off';
+            app.INFrYl.Layout.Row = 3;
+            app.INFrYl.Layout.Column = 3;
+            app.INFrYl.Text = 'Y';
 
             % Create RealPartialImportY
-            self.RealPartialImportY = uispinner(self.RealPartialImportGrid);
-            self.RealPartialImportY.RoundFractionalValues = 'on';
-            self.RealPartialImportY.ValueDisplayFormat = '%.0f';
-            self.RealPartialImportY.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.RealPartialImportY.Tag = 'Import Real';
-            self.RealPartialImportY.Enable = 'off';
-            self.RealPartialImportY.Tooltip = {'Total frames after sampling on Y (4th dimension of image stack)'};
-            self.RealPartialImportY.Layout.Row = 3;
-            self.RealPartialImportY.Layout.Column = 4;
-            self.RealPartialImportY.Value = 1;
+            app.RealPartialImportY = uispinner(app.RealPartialImportGrid);
+            app.RealPartialImportY.RoundFractionalValues = 'on';
+            app.RealPartialImportY.ValueDisplayFormat = '%.0f';
+            app.RealPartialImportY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.RealPartialImportY.Tag = 'Import Real';
+            app.RealPartialImportY.Enable = 'off';
+            app.RealPartialImportY.Tooltip = {'Total frames after sampling on Y (4th dimension of image stack)'};
+            app.RealPartialImportY.Layout.Row = 3;
+            app.RealPartialImportY.Layout.Column = 4;
+            app.RealPartialImportY.Value = 1;
 
             % Create ImportSummaryLabel
-            self.ImportSummaryLabel = uilabel(self.ImportOptionsGrid);
-            self.ImportSummaryLabel.HorizontalAlignment = 'center';
-            self.ImportSummaryLabel.VerticalAlignment = 'bottom';
-            self.ImportSummaryLabel.FontName = 'Arial';
-            self.ImportSummaryLabel.FontWeight = 'bold';
-            self.ImportSummaryLabel.Layout.Row = 4;
-            self.ImportSummaryLabel.Layout.Column = [1 2];
-            self.ImportSummaryLabel.Text = 'Import Summary';
+            app.ImportSummaryLabel = uilabel(app.ImportOptionsGrid);
+            app.ImportSummaryLabel.HorizontalAlignment = 'center';
+            app.ImportSummaryLabel.VerticalAlignment = 'bottom';
+            app.ImportSummaryLabel.FontName = 'Arial';
+            app.ImportSummaryLabel.FontWeight = 'bold';
+            app.ImportSummaryLabel.Layout.Row = 4;
+            app.ImportSummaryLabel.Layout.Column = [1 2];
+            app.ImportSummaryLabel.Text = 'Import Summary';
 
             % Create ImportSummary
-            self.ImportSummary = uitextarea(self.ImportOptionsGrid);
-            self.ImportSummary.Editable = 'off';
-            self.ImportSummary.FontName = 'Arial';
-            self.ImportSummary.Layout.Row = 5;
-            self.ImportSummary.Layout.Column = [1 2];
+            app.ImportSummary = uitextarea(app.ImportOptionsGrid);
+            app.ImportSummary.Editable = 'off';
+            app.ImportSummary.FontName = 'Arial';
+            app.ImportSummary.Layout.Row = 5;
+            app.ImportSummary.Layout.Column = [1 2];
 
             % Create ImportButtonGrid
-            self.ImportButtonGrid = uigridlayout(self.ImportGrid);
-            self.ImportButtonGrid.ColumnWidth = {'1x', '1x', '1x'};
-            self.ImportButtonGrid.RowHeight = {24};
-            self.ImportButtonGrid.ColumnSpacing = 4;
-            self.ImportButtonGrid.RowSpacing = 4;
-            self.ImportButtonGrid.Padding = [0 0 0 0];
-            self.ImportButtonGrid.Layout.Row = 3;
-            self.ImportButtonGrid.Layout.Column = 2;
+            app.ImportButtonGrid = uigridlayout(app.ImportGrid);
+            app.ImportButtonGrid.ColumnWidth = {'1x', '1x', '1x'};
+            app.ImportButtonGrid.RowHeight = {24};
+            app.ImportButtonGrid.ColumnSpacing = 4;
+            app.ImportButtonGrid.RowSpacing = 4;
+            app.ImportButtonGrid.Padding = [0 0 0 0];
+            app.ImportButtonGrid.Layout.Row = 3;
+            app.ImportButtonGrid.Layout.Column = 2;
 
             % Create ImportData
-            self.ImportData = uibutton(self.ImportButtonGrid, 'push');
-            self.ImportData.ButtonPushedFcn = createCallbackFcn(self, @import_callbacks, true);
-            self.ImportData.FontName = 'Arial';
-            self.ImportData.FontWeight = 'bold';
-            self.ImportData.Layout.Row = 1;
-            self.ImportData.Layout.Column = 1;
-            self.ImportData.Text = 'Import Data';
+            app.ImportData = uibutton(app.ImportButtonGrid, 'push');
+            app.ImportData.ButtonPushedFcn = createCallbackFcn(app, @import_callbacks, true);
+            app.ImportData.FontName = 'Arial';
+            app.ImportData.FontWeight = 'bold';
+            app.ImportData.Layout.Row = 1;
+            app.ImportData.Layout.Column = 1;
+            app.ImportData.Text = 'Import Data';
 
             % Create SwapDataset
-            self.SwapDataset = uicheckbox(self.ImportButtonGrid);
-            self.SwapDataset.ValueChangedFcn = createCallbackFcn(self, @import_box_input, true);
-            self.SwapDataset.Tooltip = {'Keep all current parameters/alignments/setups, and swap the already-imported dataset with another with exact (import) dimensions/datatype'};
-            self.SwapDataset.Text = 'Swap Dataset';
-            self.SwapDataset.Layout.Row = 1;
-            self.SwapDataset.Layout.Column = 2;
+            app.SwapDataset = uicheckbox(app.ImportButtonGrid);
+            app.SwapDataset.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.SwapDataset.Tooltip = {'Keep all current parameters/alignments/setups, and swap the already-imported dataset with another with exact (import) dimensions/datatype'};
+            app.SwapDataset.Text = 'Swap Dataset';
+            app.SwapDataset.Layout.Row = 1;
+            app.SwapDataset.Layout.Column = 2;
 
             % Create CancelImport
-            self.CancelImport = uibutton(self.ImportButtonGrid, 'push');
-            self.CancelImport.ButtonPushedFcn = createCallbackFcn(self, @import_callbacks, true);
-            self.CancelImport.FontName = 'Arial';
-            self.CancelImport.FontWeight = 'bold';
-            self.CancelImport.Layout.Row = 1;
-            self.CancelImport.Layout.Column = 3;
-            self.CancelImport.Text = 'Cancel';
+            app.CancelImport = uibutton(app.ImportButtonGrid, 'push');
+            app.CancelImport.ButtonPushedFcn = createCallbackFcn(app, @import_callbacks, true);
+            app.CancelImport.FontName = 'Arial';
+            app.CancelImport.FontWeight = 'bold';
+            app.CancelImport.Layout.Row = 1;
+            app.CancelImport.Layout.Column = 3;
+            app.CancelImport.Text = 'Cancel';
 
             % Create SettingsPanel
-            self.SettingsPanel = uipanel(self.Quant4D_Fig);
-            self.SettingsPanel.AutoResizeChildren = 'off';
-            self.SettingsPanel.BorderType = 'none';
-            self.SettingsPanel.TitlePosition = 'centertop';
-            self.SettingsPanel.FontWeight = 'bold';
-            self.SettingsPanel.Position = [280 1 260 470];
+            app.SettingsPanel = uipanel(app.Quant4D_Fig);
+            app.SettingsPanel.AutoResizeChildren = 'off';
+            app.SettingsPanel.BorderType = 'none';
+            app.SettingsPanel.TitlePosition = 'centertop';
+            app.SettingsPanel.FontWeight = 'bold';
+            app.SettingsPanel.Position = [280 1 260 470];
 
             % Create SettingsGrid
-            self.SettingsGrid = uigridlayout(self.SettingsPanel);
-            self.SettingsGrid.ColumnWidth = {'1x'};
-            self.SettingsGrid.RowHeight = {'1x'};
-            self.SettingsGrid.ColumnSpacing = 4;
-            self.SettingsGrid.RowSpacing = 4;
-            self.SettingsGrid.Padding = [0 0 0 0];
+            app.SettingsGrid = uigridlayout(app.SettingsPanel);
+            app.SettingsGrid.ColumnWidth = {'1x'};
+            app.SettingsGrid.RowHeight = {'1x'};
+            app.SettingsGrid.ColumnSpacing = 4;
+            app.SettingsGrid.RowSpacing = 4;
+            app.SettingsGrid.Padding = [0 0 0 0];
 
             % Create SettingsTabGroup
-            self.SettingsTabGroup = uitabgroup(self.SettingsGrid);
-            self.SettingsTabGroup.AutoResizeChildren = 'off';
-            self.SettingsTabGroup.Layout.Row = 1;
-            self.SettingsTabGroup.Layout.Column = 1;
+            app.SettingsTabGroup = uitabgroup(app.SettingsGrid);
+            app.SettingsTabGroup.AutoResizeChildren = 'off';
+            app.SettingsTabGroup.Layout.Row = 1;
+            app.SettingsTabGroup.Layout.Column = 1;
 
             % Create DisplayTab
-            self.DisplayTab = uitab(self.SettingsTabGroup);
-            self.DisplayTab.Title = 'Display';
+            app.DisplayTab = uitab(app.SettingsTabGroup);
+            app.DisplayTab.Title = 'Display';
 
             % Create DisplayGrid
-            self.DisplayGrid = uigridlayout(self.DisplayTab);
-            self.DisplayGrid.ColumnWidth = {'1x'};
-            self.DisplayGrid.RowHeight = {'fit', 46, '1x', 'fit'};
-            self.DisplayGrid.ColumnSpacing = 4;
-            self.DisplayGrid.RowSpacing = 4;
-            self.DisplayGrid.Padding = [4 4 4 4];
+            app.DisplayGrid = uigridlayout(app.DisplayTab);
+            app.DisplayGrid.ColumnWidth = {'1x'};
+            app.DisplayGrid.RowHeight = {'fit', 46, '1x', 'fit'};
+            app.DisplayGrid.ColumnSpacing = 4;
+            app.DisplayGrid.RowSpacing = 4;
+            app.DisplayGrid.Padding = [4 4 4 4];
 
             % Create DisplayDropDownGrid
-            self.DisplayDropDownGrid = uigridlayout(self.DisplayGrid);
-            self.DisplayDropDownGrid.ColumnWidth = {24, 'fit', '1x', 24};
-            self.DisplayDropDownGrid.RowHeight = {24, 24};
-            self.DisplayDropDownGrid.ColumnSpacing = 4;
-            self.DisplayDropDownGrid.RowSpacing = 4;
-            self.DisplayDropDownGrid.Padding = [0 0 0 0];
-            self.DisplayDropDownGrid.Layout.Row = 1;
-            self.DisplayDropDownGrid.Layout.Column = 1;
+            app.DisplayDropDownGrid = uigridlayout(app.DisplayGrid);
+            app.DisplayDropDownGrid.ColumnWidth = {24, 'fit', '1x', 24};
+            app.DisplayDropDownGrid.RowHeight = {24, 24};
+            app.DisplayDropDownGrid.ColumnSpacing = 4;
+            app.DisplayDropDownGrid.RowSpacing = 4;
+            app.DisplayDropDownGrid.Padding = [0 0 0 0];
+            app.DisplayDropDownGrid.Layout.Row = 1;
+            app.DisplayDropDownGrid.Layout.Column = 1;
 
             % Create ShowImageWindow
-            self.ShowImageWindow = uibutton(self.DisplayDropDownGrid, 'push');
-            self.ShowImageWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowImageWindow.Icon = 'frontWindow.png';
-            self.ShowImageWindow.FontWeight = 'bold';
-            self.ShowImageWindow.Tooltip = {'Bring selected image to front'};
-            self.ShowImageWindow.Layout.Row = 1;
-            self.ShowImageWindow.Layout.Column = 1;
-            self.ShowImageWindow.Text = '';
+            app.ShowImageWindow = uibutton(app.DisplayDropDownGrid, 'push');
+            app.ShowImageWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowImageWindow.Icon = 'frontWindow.png';
+            app.ShowImageWindow.FontWeight = 'bold';
+            app.ShowImageWindow.Tooltip = {'Bring selected image to front'};
+            app.ShowImageWindow.Layout.Row = 1;
+            app.ShowImageWindow.Layout.Column = 1;
+            app.ShowImageWindow.Text = '';
 
             % Create ImageLabel
-            self.ImageLabel = uilabel(self.DisplayDropDownGrid);
-            self.ImageLabel.HorizontalAlignment = 'right';
-            self.ImageLabel.FontName = 'Arial';
-            self.ImageLabel.FontWeight = 'bold';
-            self.ImageLabel.Layout.Row = 1;
-            self.ImageLabel.Layout.Column = 2;
-            self.ImageLabel.Text = 'Image';
+            app.ImageLabel = uilabel(app.DisplayDropDownGrid);
+            app.ImageLabel.HorizontalAlignment = 'right';
+            app.ImageLabel.FontName = 'Arial';
+            app.ImageLabel.FontWeight = 'bold';
+            app.ImageLabel.Layout.Row = 1;
+            app.ImageLabel.Layout.Column = 2;
+            app.ImageLabel.Text = 'Image';
 
             % Create DisplayImage
-            self.DisplayImage = uidropdown(self.DisplayDropDownGrid);
-            self.DisplayImage.Items = {};
-            self.DisplayImage.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayImage.FontName = 'Arial';
-            self.DisplayImage.Layout.Row = 1;
-            self.DisplayImage.Layout.Column = 3;
-            self.DisplayImage.Value = {};
+            app.DisplayImage = uidropdown(app.DisplayDropDownGrid);
+            app.DisplayImage.Items = {};
+            app.DisplayImage.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayImage.FontName = 'Arial';
+            app.DisplayImage.Layout.Row = 1;
+            app.DisplayImage.Layout.Column = 3;
+            app.DisplayImage.Value = {};
 
             % Create DisplayLock
-            self.DisplayLock = uibutton(self.DisplayDropDownGrid, 'state');
-            self.DisplayLock.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayLock.Tooltip = {'Stop changing the selected image when clicking on a new image'};
-            self.DisplayLock.Icon = 'link.png';
-            self.DisplayLock.Text = '';
-            self.DisplayLock.Layout.Row = 1;
-            self.DisplayLock.Layout.Column = 4;
+            app.DisplayLock = uibutton(app.DisplayDropDownGrid, 'state');
+            app.DisplayLock.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayLock.Tooltip = {'Stop changing the selected image when clicking on a new image'};
+            app.DisplayLock.Icon = 'link.png';
+            app.DisplayLock.Text = '';
+            app.DisplayLock.Layout.Row = 1;
+            app.DisplayLock.Layout.Column = 4;
 
             % Create ColormapLabel
-            self.ColormapLabel = uilabel(self.DisplayDropDownGrid);
-            self.ColormapLabel.HorizontalAlignment = 'right';
-            self.ColormapLabel.Layout.Row = 2;
-            self.ColormapLabel.Layout.Column = [1 2];
-            self.ColormapLabel.Text = 'Colormap';
+            app.ColormapLabel = uilabel(app.DisplayDropDownGrid);
+            app.ColormapLabel.HorizontalAlignment = 'right';
+            app.ColormapLabel.Layout.Row = 2;
+            app.ColormapLabel.Layout.Column = [1 2];
+            app.ColormapLabel.Text = 'Colormap';
 
             % Create DispColorMap
-            self.DispColorMap = uidropdown(self.DisplayDropDownGrid);
-            self.DispColorMap.Items = {'gray', 'hsv', 'jet', 'parula', 'hot', 'cool', 'spring', 'summer', 'autumn', 'winter', 'bone', 'copper', 'pink'};
-            self.DispColorMap.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DispColorMap.Layout.Row = 2;
-            self.DispColorMap.Layout.Column = 3;
-            self.DispColorMap.Value = 'gray';
+            app.DispColorMap = uidropdown(app.DisplayDropDownGrid);
+            app.DispColorMap.Items = {'gray', 'hsv', 'jet', 'parula', 'hot', 'cool', 'spring', 'summer', 'autumn', 'winter', 'bone', 'copper', 'pink'};
+            app.DispColorMap.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DispColorMap.Layout.Row = 2;
+            app.DispColorMap.Layout.Column = 3;
+            app.DispColorMap.Value = 'gray';
 
             % Create DispColorMapInvert
-            self.DispColorMapInvert = uibutton(self.DisplayDropDownGrid, 'state');
-            self.DispColorMapInvert.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DispColorMapInvert.Tooltip = {'Invert colormap'};
-            self.DispColorMapInvert.Icon = 'invertColors.png';
-            self.DispColorMapInvert.Text = '';
-            self.DispColorMapInvert.Layout.Row = 2;
-            self.DispColorMapInvert.Layout.Column = 4;
+            app.DispColorMapInvert = uibutton(app.DisplayDropDownGrid, 'state');
+            app.DispColorMapInvert.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DispColorMapInvert.Tooltip = {'Invert colormap'};
+            app.DispColorMapInvert.Icon = 'invertColors.png';
+            app.DispColorMapInvert.Text = '';
+            app.DispColorMapInvert.Layout.Row = 2;
+            app.DispColorMapInvert.Layout.Column = 4;
 
             % Create ImageStatistics
-            self.ImageStatistics = uitextarea(self.DisplayGrid);
-            self.ImageStatistics.Editable = 'off';
-            self.ImageStatistics.FontName = 'Monospaced';
-            self.ImageStatistics.FontSize = 11;
-            self.ImageStatistics.FontWeight = 'bold';
-            self.ImageStatistics.Layout.Row = 2;
-            self.ImageStatistics.Layout.Column = 1;
+            app.ImageStatistics = uitextarea(app.DisplayGrid);
+            app.ImageStatistics.Editable = 'off';
+            app.ImageStatistics.FontName = 'Monospaced';
+            app.ImageStatistics.FontSize = 11;
+            app.ImageStatistics.FontWeight = 'bold';
+            app.ImageStatistics.Layout.Row = 2;
+            app.ImageStatistics.Layout.Column = 1;
 
             % Create HistogramGrid
-            self.HistogramGrid = uigridlayout(self.DisplayGrid);
-            self.HistogramGrid.ColumnWidth = {'1x', 'fit', 6};
-            self.HistogramGrid.RowHeight = {6, 'fit', '1x'};
-            self.HistogramGrid.ColumnSpacing = 4;
-            self.HistogramGrid.RowSpacing = 4;
-            self.HistogramGrid.Padding = [0 0 0 0];
-            self.HistogramGrid.Layout.Row = 3;
-            self.HistogramGrid.Layout.Column = 1;
+            app.HistogramGrid = uigridlayout(app.DisplayGrid);
+            app.HistogramGrid.ColumnWidth = {'1x', 'fit', 6};
+            app.HistogramGrid.RowHeight = {6, 'fit', '1x'};
+            app.HistogramGrid.ColumnSpacing = 4;
+            app.HistogramGrid.RowSpacing = 4;
+            app.HistogramGrid.Padding = [0 0 0 0];
+            app.HistogramGrid.Layout.Row = 3;
+            app.HistogramGrid.Layout.Column = 1;
 
             % Create HistogramAxes
-            self.HistogramAxes = uiaxes(self.HistogramGrid);
-            self.HistogramAxes.Toolbar.Visible = 'off';
-            self.HistogramAxes.XTick = [];
-            self.HistogramAxes.YTick = [];
-            self.HistogramAxes.ZTick = [];
-            self.HistogramAxes.Box = 'on';
-            self.HistogramAxes.NextPlot = 'add';
-            self.HistogramAxes.Layout.Row = [1 3];
-            self.HistogramAxes.Layout.Column = [1 3];
+            app.HistogramAxes = uiaxes(app.HistogramGrid);
+            app.HistogramAxes.Toolbar.Visible = 'off';
+            app.HistogramAxes.XTick = [];
+            app.HistogramAxes.YTick = [];
+            app.HistogramAxes.ZTick = [];
+            app.HistogramAxes.Box = 'on';
+            app.HistogramAxes.NextPlot = 'add';
+            app.HistogramAxes.Layout.Row = [1 3];
+            app.HistogramAxes.Layout.Column = [1 3];
 
             % Create HistogramLog
-            self.HistogramLog = uibutton(self.HistogramGrid, 'state');
-            self.HistogramLog.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.HistogramLog.Text = 'log';
-            self.HistogramLog.FontName = 'Arial';
-            self.HistogramLog.FontWeight = 'bold';
-            self.HistogramLog.Layout.Row = 2;
-            self.HistogramLog.Layout.Column = 2;
+            app.HistogramLog = uibutton(app.HistogramGrid, 'state');
+            app.HistogramLog.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.HistogramLog.Text = 'log';
+            app.HistogramLog.FontName = 'Arial';
+            app.HistogramLog.FontWeight = 'bold';
+            app.HistogramLog.Layout.Row = 2;
+            app.HistogramLog.Layout.Column = 2;
 
             % Create DispContrastsGrid
-            self.DispContrastsGrid = uigridlayout(self.DisplayGrid);
-            self.DispContrastsGrid.ColumnWidth = {24, '1x', 72};
-            self.DispContrastsGrid.RowHeight = {24, 24, 24, 24};
-            self.DispContrastsGrid.ColumnSpacing = 4;
-            self.DispContrastsGrid.RowSpacing = 4;
-            self.DispContrastsGrid.Padding = [0 0 0 0];
-            self.DispContrastsGrid.Layout.Row = 4;
-            self.DispContrastsGrid.Layout.Column = 1;
+            app.DispContrastsGrid = uigridlayout(app.DisplayGrid);
+            app.DispContrastsGrid.ColumnWidth = {24, '1x', 72};
+            app.DispContrastsGrid.RowHeight = {24, 24, 24, 24};
+            app.DispContrastsGrid.ColumnSpacing = 4;
+            app.DispContrastsGrid.RowSpacing = 4;
+            app.DispContrastsGrid.Padding = [0 0 0 0];
+            app.DispContrastsGrid.Layout.Row = 4;
+            app.DispContrastsGrid.Layout.Column = 1;
 
             % Create DisplayBrightnessReset
-            self.DisplayBrightnessReset = uibutton(self.DispContrastsGrid, 'push');
-            self.DisplayBrightnessReset.ButtonPushedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayBrightnessReset.Icon = 'brightness.png';
-            self.DisplayBrightnessReset.FontWeight = 'bold';
-            self.DisplayBrightnessReset.Tooltip = {'Reset Brightness'};
-            self.DisplayBrightnessReset.Layout.Row = 1;
-            self.DisplayBrightnessReset.Layout.Column = 1;
-            self.DisplayBrightnessReset.Text = '';
+            app.DisplayBrightnessReset = uibutton(app.DispContrastsGrid, 'push');
+            app.DisplayBrightnessReset.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayBrightnessReset.Icon = 'brightness.png';
+            app.DisplayBrightnessReset.FontWeight = 'bold';
+            app.DisplayBrightnessReset.Tooltip = {'Reset Brightness'};
+            app.DisplayBrightnessReset.Layout.Row = 1;
+            app.DisplayBrightnessReset.Layout.Column = 1;
+            app.DisplayBrightnessReset.Text = '';
 
             % Create DisplayBrightness
-            self.DisplayBrightness = uislider(self.DispContrastsGrid);
-            self.DisplayBrightness.MajorTicks = [];
-            self.DisplayBrightness.MajorTickLabels = {};
-            self.DisplayBrightness.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayBrightness.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayBrightness.Layout.Row = 1;
-            self.DisplayBrightness.Layout.Column = 2;
-            self.DisplayBrightness.Value = 50;
+            app.DisplayBrightness = uislider(app.DispContrastsGrid);
+            app.DisplayBrightness.MajorTicks = [];
+            app.DisplayBrightness.MajorTickLabels = {};
+            app.DisplayBrightness.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayBrightness.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayBrightness.Layout.Row = 1;
+            app.DisplayBrightness.Layout.Column = 2;
+            app.DisplayBrightness.Value = 50;
 
             % Create DisplayBrightnessSpinner
-            self.DisplayBrightnessSpinner = uispinner(self.DispContrastsGrid);
-            self.DisplayBrightnessSpinner.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayBrightnessSpinner.Limits = [0 100];
-            self.DisplayBrightnessSpinner.ValueDisplayFormat = '%.4g%%';
-            self.DisplayBrightnessSpinner.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayBrightnessSpinner.Layout.Row = 1;
-            self.DisplayBrightnessSpinner.Layout.Column = 3;
-            self.DisplayBrightnessSpinner.Value = 50;
+            app.DisplayBrightnessSpinner = uispinner(app.DispContrastsGrid);
+            app.DisplayBrightnessSpinner.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayBrightnessSpinner.Limits = [0 100];
+            app.DisplayBrightnessSpinner.ValueDisplayFormat = '%.4g%%';
+            app.DisplayBrightnessSpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayBrightnessSpinner.Layout.Row = 1;
+            app.DisplayBrightnessSpinner.Layout.Column = 3;
+            app.DisplayBrightnessSpinner.Value = 50;
 
             % Create DisplayContrastReset
-            self.DisplayContrastReset = uibutton(self.DispContrastsGrid, 'push');
-            self.DisplayContrastReset.ButtonPushedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayContrastReset.Icon = 'contrast.png';
-            self.DisplayContrastReset.FontWeight = 'bold';
-            self.DisplayContrastReset.Tooltip = {'Reset Contrast'};
-            self.DisplayContrastReset.Layout.Row = 2;
-            self.DisplayContrastReset.Layout.Column = 1;
-            self.DisplayContrastReset.Text = '';
+            app.DisplayContrastReset = uibutton(app.DispContrastsGrid, 'push');
+            app.DisplayContrastReset.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayContrastReset.Icon = 'contrast.png';
+            app.DisplayContrastReset.FontWeight = 'bold';
+            app.DisplayContrastReset.Tooltip = {'Reset Contrast'};
+            app.DisplayContrastReset.Layout.Row = 2;
+            app.DisplayContrastReset.Layout.Column = 1;
+            app.DisplayContrastReset.Text = '';
 
             % Create DisplayContrast
-            self.DisplayContrast = uislider(self.DispContrastsGrid);
-            self.DisplayContrast.MajorTicks = [];
-            self.DisplayContrast.MajorTickLabels = {};
-            self.DisplayContrast.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayContrast.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayContrast.Layout.Row = 2;
-            self.DisplayContrast.Layout.Column = 2;
-            self.DisplayContrast.Value = 50;
+            app.DisplayContrast = uislider(app.DispContrastsGrid);
+            app.DisplayContrast.MajorTicks = [];
+            app.DisplayContrast.MajorTickLabels = {};
+            app.DisplayContrast.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayContrast.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayContrast.Layout.Row = 2;
+            app.DisplayContrast.Layout.Column = 2;
+            app.DisplayContrast.Value = 50;
 
             % Create DisplayContrastSpinner
-            self.DisplayContrastSpinner = uispinner(self.DispContrastsGrid);
-            self.DisplayContrastSpinner.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayContrastSpinner.Limits = [0 100];
-            self.DisplayContrastSpinner.ValueDisplayFormat = '%.4g%%';
-            self.DisplayContrastSpinner.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayContrastSpinner.Layout.Row = 2;
-            self.DisplayContrastSpinner.Layout.Column = 3;
-            self.DisplayContrastSpinner.Value = 50;
+            app.DisplayContrastSpinner = uispinner(app.DispContrastsGrid);
+            app.DisplayContrastSpinner.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayContrastSpinner.Limits = [0 100];
+            app.DisplayContrastSpinner.ValueDisplayFormat = '%.4g%%';
+            app.DisplayContrastSpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayContrastSpinner.Layout.Row = 2;
+            app.DisplayContrastSpinner.Layout.Column = 3;
+            app.DisplayContrastSpinner.Value = 50;
 
             % Create DisplayGammaReset
-            self.DisplayGammaReset = uibutton(self.DispContrastsGrid, 'push');
-            self.DisplayGammaReset.ButtonPushedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayGammaReset.Icon = 'gamma.png';
-            self.DisplayGammaReset.FontWeight = 'bold';
-            self.DisplayGammaReset.Tooltip = {'Reset Gamma'};
-            self.DisplayGammaReset.Layout.Row = 3;
-            self.DisplayGammaReset.Layout.Column = 1;
-            self.DisplayGammaReset.Text = '';
+            app.DisplayGammaReset = uibutton(app.DispContrastsGrid, 'push');
+            app.DisplayGammaReset.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayGammaReset.Icon = 'gamma.png';
+            app.DisplayGammaReset.FontWeight = 'bold';
+            app.DisplayGammaReset.Tooltip = {'Reset Gamma'};
+            app.DisplayGammaReset.Layout.Row = 3;
+            app.DisplayGammaReset.Layout.Column = 1;
+            app.DisplayGammaReset.Text = '';
 
             % Create DisplayGamma
-            self.DisplayGamma = uislider(self.DispContrastsGrid);
-            self.DisplayGamma.Limits = [0 2];
-            self.DisplayGamma.MajorTicks = [];
-            self.DisplayGamma.MajorTickLabels = {};
-            self.DisplayGamma.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayGamma.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayGamma.Layout.Row = 3;
-            self.DisplayGamma.Layout.Column = 2;
-            self.DisplayGamma.Value = 1;
+            app.DisplayGamma = uislider(app.DispContrastsGrid);
+            app.DisplayGamma.Limits = [0 2];
+            app.DisplayGamma.MajorTicks = [];
+            app.DisplayGamma.MajorTickLabels = {};
+            app.DisplayGamma.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayGamma.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayGamma.Layout.Row = 3;
+            app.DisplayGamma.Layout.Column = 2;
+            app.DisplayGamma.Value = 1;
 
             % Create DisplayGammaSpinner
-            self.DisplayGammaSpinner = uispinner(self.DispContrastsGrid);
-            self.DisplayGammaSpinner.Step = 0.01;
-            self.DisplayGammaSpinner.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayGammaSpinner.Limits = [0 2];
-            self.DisplayGammaSpinner.ValueDisplayFormat = '%.5g';
-            self.DisplayGammaSpinner.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayGammaSpinner.Layout.Row = 3;
-            self.DisplayGammaSpinner.Layout.Column = 3;
-            self.DisplayGammaSpinner.Value = 1;
+            app.DisplayGammaSpinner = uispinner(app.DispContrastsGrid);
+            app.DisplayGammaSpinner.Step = 0.01;
+            app.DisplayGammaSpinner.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayGammaSpinner.Limits = [0 2];
+            app.DisplayGammaSpinner.ValueDisplayFormat = '%.5g';
+            app.DisplayGammaSpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayGammaSpinner.Layout.Row = 3;
+            app.DisplayGammaSpinner.Layout.Column = 3;
+            app.DisplayGammaSpinner.Value = 1;
 
             % Create ShowMaskWindow
-            self.ShowMaskWindow = uibutton(self.DispContrastsGrid, 'push');
-            self.ShowMaskWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowMaskWindow.Icon = 'Aperture.png';
-            self.ShowMaskWindow.Tooltip = {'Show Mask Image'};
-            self.ShowMaskWindow.Layout.Row = 4;
-            self.ShowMaskWindow.Layout.Column = 1;
-            self.ShowMaskWindow.Text = '';
+            app.ShowMaskWindow = uibutton(app.DispContrastsGrid, 'push');
+            app.ShowMaskWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowMaskWindow.Icon = 'Aperture.png';
+            app.ShowMaskWindow.Tooltip = {'Show Mask Image'};
+            app.ShowMaskWindow.Layout.Row = 4;
+            app.ShowMaskWindow.Layout.Column = 1;
+            app.ShowMaskWindow.Text = '';
 
             % Create DisplayMaskOpacitySlider
-            self.DisplayMaskOpacitySlider = uislider(self.DispContrastsGrid);
-            self.DisplayMaskOpacitySlider.MajorTicks = [];
-            self.DisplayMaskOpacitySlider.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayMaskOpacitySlider.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayMaskOpacitySlider.Tooltip = {'Mask opacity displayed on pattern'};
-            self.DisplayMaskOpacitySlider.Layout.Row = 4;
-            self.DisplayMaskOpacitySlider.Layout.Column = 2;
+            app.DisplayMaskOpacitySlider = uislider(app.DispContrastsGrid);
+            app.DisplayMaskOpacitySlider.MajorTicks = [];
+            app.DisplayMaskOpacitySlider.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayMaskOpacitySlider.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayMaskOpacitySlider.Tooltip = {'Mask opacity displayed on pattern'};
+            app.DisplayMaskOpacitySlider.Layout.Row = 4;
+            app.DisplayMaskOpacitySlider.Layout.Column = 2;
 
             % Create DisplayMaskOpacitySpinner
-            self.DisplayMaskOpacitySpinner = uispinner(self.DispContrastsGrid);
-            self.DisplayMaskOpacitySpinner.ValueChangingFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayMaskOpacitySpinner.Limits = [0 100];
-            self.DisplayMaskOpacitySpinner.ValueDisplayFormat = '%.4g%%';
-            self.DisplayMaskOpacitySpinner.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayMaskOpacitySpinner.Layout.Row = 4;
-            self.DisplayMaskOpacitySpinner.Layout.Column = 3;
+            app.DisplayMaskOpacitySpinner = uispinner(app.DispContrastsGrid);
+            app.DisplayMaskOpacitySpinner.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayMaskOpacitySpinner.Limits = [0 100];
+            app.DisplayMaskOpacitySpinner.ValueDisplayFormat = '%.4g%%';
+            app.DisplayMaskOpacitySpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayMaskOpacitySpinner.Layout.Row = 4;
+            app.DisplayMaskOpacitySpinner.Layout.Column = 3;
 
             % Create WindowsTab
-            self.WindowsTab = uitab(self.SettingsTabGroup);
-            self.WindowsTab.Title = 'Windows';
+            app.WindowsTab = uitab(app.SettingsTabGroup);
+            app.WindowsTab.Title = 'Windows';
 
             % Create WindowsTabGrid
-            self.WindowsTabGrid = uigridlayout(self.WindowsTab);
-            self.WindowsTabGrid.ColumnWidth = {'1x'};
-            self.WindowsTabGrid.RowHeight = {'2.5x', '1x', 108};
-            self.WindowsTabGrid.ColumnSpacing = 4;
-            self.WindowsTabGrid.RowSpacing = 4;
-            self.WindowsTabGrid.Padding = [4 4 4 4];
+            app.WindowsTabGrid = uigridlayout(app.WindowsTab);
+            app.WindowsTabGrid.ColumnWidth = {'1x'};
+            app.WindowsTabGrid.RowHeight = {'2.5x', '1x', 108};
+            app.WindowsTabGrid.ColumnSpacing = 4;
+            app.WindowsTabGrid.RowSpacing = 4;
+            app.WindowsTabGrid.Padding = [4 4 4 4];
 
             % Create BandpassFilterPanel
-            self.BandpassFilterPanel = uipanel(self.WindowsTabGrid);
-            self.BandpassFilterPanel.AutoResizeChildren = 'off';
-            self.BandpassFilterPanel.Tooltip = {'Apply a bandpass, lowpass, or highpass filter. Units are in pixels applied in fourier space.'};
-            self.BandpassFilterPanel.BorderType = 'none';
-            self.BandpassFilterPanel.TitlePosition = 'centertop';
-            self.BandpassFilterPanel.Title = 'iCoM / dCoM Bandpass Filter';
-            self.BandpassFilterPanel.Layout.Row = 2;
-            self.BandpassFilterPanel.Layout.Column = 1;
-            self.BandpassFilterPanel.FontWeight = 'bold';
+            app.BandpassFilterPanel = uipanel(app.WindowsTabGrid);
+            app.BandpassFilterPanel.AutoResizeChildren = 'off';
+            app.BandpassFilterPanel.Tooltip = {'Apply a bandpass, lowpass, or highpass filter. Units are in pixels applied in fourier space.'};
+            app.BandpassFilterPanel.BorderType = 'none';
+            app.BandpassFilterPanel.TitlePosition = 'centertop';
+            app.BandpassFilterPanel.Title = 'iCoM / dCoM Bandpass Filter';
+            app.BandpassFilterPanel.Layout.Row = 2;
+            app.BandpassFilterPanel.Layout.Column = 1;
+            app.BandpassFilterPanel.FontWeight = 'bold';
 
             % Create BandpassFilterGrid
-            self.BandpassFilterGrid = uigridlayout(self.BandpassFilterPanel);
-            self.BandpassFilterGrid.RowHeight = {'fit', 24};
-            self.BandpassFilterGrid.ColumnSpacing = 4;
-            self.BandpassFilterGrid.RowSpacing = 4;
-            self.BandpassFilterGrid.Padding = [0 0 0 4];
+            app.BandpassFilterGrid = uigridlayout(app.BandpassFilterPanel);
+            app.BandpassFilterGrid.RowHeight = {'fit', 24};
+            app.BandpassFilterGrid.ColumnSpacing = 4;
+            app.BandpassFilterGrid.RowSpacing = 4;
+            app.BandpassFilterGrid.Padding = [0 0 0 4];
 
             % Create BandpassFilter
-            self.BandpassFilter = uislider(self.BandpassFilterGrid, 'range');
-            self.BandpassFilter.MajorTicks = [];
-            self.BandpassFilter.ValueChangedFcn = createCallbackFcn(self, @first_moment, true);
-            self.BandpassFilter.ValueChangingFcn = createCallbackFcn(self, @first_moment, true);
-            self.BandpassFilter.Layout.Row = 1;
-            self.BandpassFilter.Layout.Column = [1 2];
+            app.BandpassFilter = uislider(app.BandpassFilterGrid, 'range');
+            app.BandpassFilter.MajorTicks = [];
+            app.BandpassFilter.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
+            app.BandpassFilter.ValueChangingFcn = createCallbackFcn(app, @first_moment, true);
+            app.BandpassFilter.Layout.Row = 1;
+            app.BandpassFilter.Layout.Column = [1 2];
 
             % Create BandpassFilterHigh
-            self.BandpassFilterHigh = uispinner(self.BandpassFilterGrid);
-            self.BandpassFilterHigh.ValueChangingFcn = createCallbackFcn(self, @first_moment, true);
-            self.BandpassFilterHigh.Limits = [0 100];
-            self.BandpassFilterHigh.RoundFractionalValues = 'on';
-            self.BandpassFilterHigh.ValueDisplayFormat = '%d px';
-            self.BandpassFilterHigh.ValueChangedFcn = createCallbackFcn(self, @first_moment, true);
-            self.BandpassFilterHigh.Layout.Row = 2;
-            self.BandpassFilterHigh.Layout.Column = 2;
-            self.BandpassFilterHigh.Value = 100;
+            app.BandpassFilterHigh = uispinner(app.BandpassFilterGrid);
+            app.BandpassFilterHigh.ValueChangingFcn = createCallbackFcn(app, @first_moment, true);
+            app.BandpassFilterHigh.Limits = [0 100];
+            app.BandpassFilterHigh.RoundFractionalValues = 'on';
+            app.BandpassFilterHigh.ValueDisplayFormat = '%d px';
+            app.BandpassFilterHigh.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
+            app.BandpassFilterHigh.Layout.Row = 2;
+            app.BandpassFilterHigh.Layout.Column = 2;
+            app.BandpassFilterHigh.Value = 100;
 
             % Create BandpassFilterLow
-            self.BandpassFilterLow = uispinner(self.BandpassFilterGrid);
-            self.BandpassFilterLow.ValueChangingFcn = createCallbackFcn(self, @first_moment, true);
-            self.BandpassFilterLow.Limits = [0 100];
-            self.BandpassFilterLow.RoundFractionalValues = 'on';
-            self.BandpassFilterLow.ValueDisplayFormat = '%d px';
-            self.BandpassFilterLow.ValueChangedFcn = createCallbackFcn(self, @first_moment, true);
-            self.BandpassFilterLow.Layout.Row = 2;
-            self.BandpassFilterLow.Layout.Column = 1;
+            app.BandpassFilterLow = uispinner(app.BandpassFilterGrid);
+            app.BandpassFilterLow.ValueChangingFcn = createCallbackFcn(app, @first_moment, true);
+            app.BandpassFilterLow.Limits = [0 100];
+            app.BandpassFilterLow.RoundFractionalValues = 'on';
+            app.BandpassFilterLow.ValueDisplayFormat = '%d px';
+            app.BandpassFilterLow.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
+            app.BandpassFilterLow.Layout.Row = 2;
+            app.BandpassFilterLow.Layout.Column = 1;
 
             % Create ShowImageWindowsPanel
-            self.ShowImageWindowsPanel = uipanel(self.WindowsTabGrid);
-            self.ShowImageWindowsPanel.AutoResizeChildren = 'off';
-            self.ShowImageWindowsPanel.BorderType = 'none';
-            self.ShowImageWindowsPanel.TitlePosition = 'centertop';
-            self.ShowImageWindowsPanel.Title = 'Show Image Windows';
-            self.ShowImageWindowsPanel.Layout.Row = 1;
-            self.ShowImageWindowsPanel.Layout.Column = 1;
-            self.ShowImageWindowsPanel.FontName = 'Arial';
-            self.ShowImageWindowsPanel.FontWeight = 'bold';
+            app.ShowImageWindowsPanel = uipanel(app.WindowsTabGrid);
+            app.ShowImageWindowsPanel.AutoResizeChildren = 'off';
+            app.ShowImageWindowsPanel.BorderType = 'none';
+            app.ShowImageWindowsPanel.TitlePosition = 'centertop';
+            app.ShowImageWindowsPanel.Title = 'Show Image Windows';
+            app.ShowImageWindowsPanel.Layout.Row = 1;
+            app.ShowImageWindowsPanel.Layout.Column = 1;
+            app.ShowImageWindowsPanel.FontName = 'Arial';
+            app.ShowImageWindowsPanel.FontWeight = 'bold';
 
             % Create ShowImageWindowsGrid
-            self.ShowImageWindowsGrid = uigridlayout(self.ShowImageWindowsPanel);
-            self.ShowImageWindowsGrid.RowHeight = {24, 24, 24, 24, 24, 24, 'fit'};
-            self.ShowImageWindowsGrid.ColumnSpacing = 0;
-            self.ShowImageWindowsGrid.RowSpacing = 0;
-            self.ShowImageWindowsGrid.Padding = [0 0 0 4];
+            app.ShowImageWindowsGrid = uigridlayout(app.ShowImageWindowsPanel);
+            app.ShowImageWindowsGrid.RowHeight = {24, 24, 24, 24, 24, 24, 'fit'};
+            app.ShowImageWindowsGrid.ColumnSpacing = 0;
+            app.ShowImageWindowsGrid.RowSpacing = 0;
+            app.ShowImageWindowsGrid.Padding = [0 0 0 4];
 
             % Create ShowDiffractionWindow
-            self.ShowDiffractionWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowDiffractionWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowDiffractionWindow.Tag = 'Diffraction';
-            self.ShowDiffractionWindow.Tooltip = {'Show Diffraction Pattern'};
-            self.ShowDiffractionWindow.Layout.Row = 1;
-            self.ShowDiffractionWindow.Layout.Column = 1;
-            self.ShowDiffractionWindow.Text = 'Diffraction';
+            app.ShowDiffractionWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowDiffractionWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowDiffractionWindow.Tag = 'Diffraction';
+            app.ShowDiffractionWindow.Tooltip = {'Show Diffraction Pattern'};
+            app.ShowDiffractionWindow.Layout.Row = 1;
+            app.ShowDiffractionWindow.Layout.Column = 1;
+            app.ShowDiffractionWindow.Text = 'Diffraction';
 
             % Create ShowDiffractionMaskWindow2
-            self.ShowDiffractionMaskWindow2 = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowDiffractionMaskWindow2.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowDiffractionMaskWindow2.Tag = 'DiffractionMask';
-            self.ShowDiffractionMaskWindow2.Icon = 'Aperture.png';
-            self.ShowDiffractionMaskWindow2.Tooltip = {'Show Diffraction Mask'};
-            self.ShowDiffractionMaskWindow2.Layout.Row = 1;
-            self.ShowDiffractionMaskWindow2.Layout.Column = 2;
-            self.ShowDiffractionMaskWindow2.Text = 'Diff. Mask';
+            app.ShowDiffractionMaskWindow2 = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowDiffractionMaskWindow2.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowDiffractionMaskWindow2.Tag = 'DiffractionMask';
+            app.ShowDiffractionMaskWindow2.Icon = 'Aperture.png';
+            app.ShowDiffractionMaskWindow2.Tooltip = {'Show Diffraction Mask'};
+            app.ShowDiffractionMaskWindow2.Layout.Row = 1;
+            app.ShowDiffractionMaskWindow2.Layout.Column = 2;
+            app.ShowDiffractionMaskWindow2.Text = 'Diff. Mask';
 
             % Create ShowRealWindow
-            self.ShowRealWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowRealWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowRealWindow.Tag = 'Real';
-            self.ShowRealWindow.Tooltip = {'Show Real-space Image'};
-            self.ShowRealWindow.Layout.Row = 2;
-            self.ShowRealWindow.Layout.Column = 1;
-            self.ShowRealWindow.Text = 'BF/DF';
+            app.ShowRealWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowRealWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowRealWindow.Tag = 'Real';
+            app.ShowRealWindow.Tooltip = {'Show Real-space Image'};
+            app.ShowRealWindow.Layout.Row = 2;
+            app.ShowRealWindow.Layout.Column = 1;
+            app.ShowRealWindow.Text = 'BF/DF';
 
             % Create ShowRealMaskWindow2
-            self.ShowRealMaskWindow2 = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowRealMaskWindow2.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowRealMaskWindow2.Tag = 'RealMask';
-            self.ShowRealMaskWindow2.Icon = 'Aperture.png';
-            self.ShowRealMaskWindow2.FontSize = 10;
-            self.ShowRealMaskWindow2.Tooltip = {'Show Real-space Mask'};
-            self.ShowRealMaskWindow2.Layout.Row = 2;
-            self.ShowRealMaskWindow2.Layout.Column = 2;
-            self.ShowRealMaskWindow2.Text = 'BF/DF Mask';
+            app.ShowRealMaskWindow2 = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowRealMaskWindow2.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowRealMaskWindow2.Tag = 'RealMask';
+            app.ShowRealMaskWindow2.Icon = 'Aperture.png';
+            app.ShowRealMaskWindow2.FontSize = 10;
+            app.ShowRealMaskWindow2.Tooltip = {'Show Real-space Mask'};
+            app.ShowRealMaskWindow2.Layout.Row = 2;
+            app.ShowRealMaskWindow2.Layout.Column = 2;
+            app.ShowRealMaskWindow2.Text = 'BF/DF Mask';
 
             % Create ShowColorWheelWindow2
-            self.ShowColorWheelWindow2 = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowColorWheelWindow2.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowColorWheelWindow2.Tag = 'ColorWheel';
-            self.ShowColorWheelWindow2.Icon = 'colorwheel.png';
-            self.ShowColorWheelWindow2.Tooltip = {'Show Color Wheel for Phase Vector Field Direction'};
-            self.ShowColorWheelWindow2.Layout.Row = 5;
-            self.ShowColorWheelWindow2.Layout.Column = 1;
-            self.ShowColorWheelWindow2.Text = 'φ';
+            app.ShowColorWheelWindow2 = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowColorWheelWindow2.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowColorWheelWindow2.Tag = 'ColorWheel';
+            app.ShowColorWheelWindow2.Icon = 'colorwheel.png';
+            app.ShowColorWheelWindow2.Tooltip = {'Show Color Wheel for Phase Vector Field Direction'};
+            app.ShowColorWheelWindow2.Layout.Row = 5;
+            app.ShowColorWheelWindow2.Layout.Column = 1;
+            app.ShowColorWheelWindow2.Text = 'φ';
 
             % Create ShowCoMPhaseMagnitudeWindow
-            self.ShowCoMPhaseMagnitudeWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowCoMPhaseMagnitudeWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowCoMPhaseMagnitudeWindow.Tag = 'CoMPhMag';
-            self.ShowCoMPhaseMagnitudeWindow.Tooltip = {'Show CoM/DPC Phase (Magnitude-shaded) Image'};
-            self.ShowCoMPhaseMagnitudeWindow.Layout.Row = 5;
-            self.ShowCoMPhaseMagnitudeWindow.Layout.Column = 2;
-            self.ShowCoMPhaseMagnitudeWindow.Text = '|CoM| φ';
+            app.ShowCoMPhaseMagnitudeWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowCoMPhaseMagnitudeWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowCoMPhaseMagnitudeWindow.Tag = 'CoMPhMag';
+            app.ShowCoMPhaseMagnitudeWindow.Tooltip = {'Show CoM/DPC Phase (Magnitude-shaded) Image'};
+            app.ShowCoMPhaseMagnitudeWindow.Layout.Row = 5;
+            app.ShowCoMPhaseMagnitudeWindow.Layout.Column = 2;
+            app.ShowCoMPhaseMagnitudeWindow.Text = '|CoM| φ';
 
             % Create ShowCoMPhaseWindow
-            self.ShowCoMPhaseWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowCoMPhaseWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowCoMPhaseWindow.Tag = 'CoMPh';
-            self.ShowCoMPhaseWindow.Tooltip = {'Show CoM/DPC Phase Image'};
-            self.ShowCoMPhaseWindow.Layout.Row = 4;
-            self.ShowCoMPhaseWindow.Layout.Column = 2;
-            self.ShowCoMPhaseWindow.Text = 'CoM φ';
+            app.ShowCoMPhaseWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowCoMPhaseWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowCoMPhaseWindow.Tag = 'CoMPh';
+            app.ShowCoMPhaseWindow.Tooltip = {'Show CoM/DPC Phase Image'};
+            app.ShowCoMPhaseWindow.Layout.Row = 4;
+            app.ShowCoMPhaseWindow.Layout.Column = 2;
+            app.ShowCoMPhaseWindow.Text = 'CoM φ';
 
             % Create ShowCoMMagnitudeWindow
-            self.ShowCoMMagnitudeWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowCoMMagnitudeWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowCoMMagnitudeWindow.Tag = 'CoMMag';
-            self.ShowCoMMagnitudeWindow.Tooltip = {'Show CoM/DPC Magnitude Image'};
-            self.ShowCoMMagnitudeWindow.Layout.Row = 4;
-            self.ShowCoMMagnitudeWindow.Layout.Column = 1;
-            self.ShowCoMMagnitudeWindow.Text = '|CoM|';
+            app.ShowCoMMagnitudeWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowCoMMagnitudeWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowCoMMagnitudeWindow.Tag = 'CoMMag';
+            app.ShowCoMMagnitudeWindow.Tooltip = {'Show CoM/DPC Magnitude Image'};
+            app.ShowCoMMagnitudeWindow.Layout.Row = 4;
+            app.ShowCoMMagnitudeWindow.Layout.Column = 1;
+            app.ShowCoMMagnitudeWindow.Text = '|CoM|';
 
             % Create ShowCoMXWindow
-            self.ShowCoMXWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowCoMXWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowCoMXWindow.Tag = 'CoMX';
-            self.ShowCoMXWindow.Tooltip = {'Show CoM/DPC X Image'};
-            self.ShowCoMXWindow.Layout.Row = 3;
-            self.ShowCoMXWindow.Layout.Column = 1;
-            self.ShowCoMXWindow.Text = 'CoM X';
+            app.ShowCoMXWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowCoMXWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowCoMXWindow.Tag = 'CoMX';
+            app.ShowCoMXWindow.Tooltip = {'Show CoM/DPC X Image'};
+            app.ShowCoMXWindow.Layout.Row = 3;
+            app.ShowCoMXWindow.Layout.Column = 1;
+            app.ShowCoMXWindow.Text = 'CoM X';
 
             % Create ShowCoMYWindow
-            self.ShowCoMYWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowCoMYWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowCoMYWindow.Tag = 'CoMY';
-            self.ShowCoMYWindow.Tooltip = {'Show CoM/DPC Y Image'};
-            self.ShowCoMYWindow.Layout.Row = 3;
-            self.ShowCoMYWindow.Layout.Column = 2;
-            self.ShowCoMYWindow.Text = 'CoM Y';
+            app.ShowCoMYWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowCoMYWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowCoMYWindow.Tag = 'CoMY';
+            app.ShowCoMYWindow.Tooltip = {'Show CoM/DPC Y Image'};
+            app.ShowCoMYWindow.Layout.Row = 3;
+            app.ShowCoMYWindow.Layout.Column = 2;
+            app.ShowCoMYWindow.Text = 'CoM Y';
 
             % Create ShowdCoMWindow
-            self.ShowdCoMWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowdCoMWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowdCoMWindow.Tag = 'dCoM';
-            self.ShowdCoMWindow.Tooltip = {'Show dCoM/dDPC Image'};
-            self.ShowdCoMWindow.Layout.Row = 6;
-            self.ShowdCoMWindow.Layout.Column = 1;
-            self.ShowdCoMWindow.Text = 'dCoM';
+            app.ShowdCoMWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowdCoMWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowdCoMWindow.Tag = 'dCoM';
+            app.ShowdCoMWindow.Tooltip = {'Show dCoM/dDPC Image'};
+            app.ShowdCoMWindow.Layout.Row = 6;
+            app.ShowdCoMWindow.Layout.Column = 1;
+            app.ShowdCoMWindow.Text = 'dCoM';
 
             % Create ShowiCoMWindow
-            self.ShowiCoMWindow = uibutton(self.ShowImageWindowsGrid, 'push');
-            self.ShowiCoMWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowiCoMWindow.Tag = 'iCoM';
-            self.ShowiCoMWindow.Tooltip = {'Show iCoM/iDPC Image'};
-            self.ShowiCoMWindow.Layout.Row = 6;
-            self.ShowiCoMWindow.Layout.Column = 2;
-            self.ShowiCoMWindow.Text = 'iCoM';
+            app.ShowiCoMWindow = uibutton(app.ShowImageWindowsGrid, 'push');
+            app.ShowiCoMWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowiCoMWindow.Tag = 'iCoM';
+            app.ShowiCoMWindow.Tooltip = {'Show iCoM/iDPC Image'};
+            app.ShowiCoMWindow.Layout.Row = 6;
+            app.ShowiCoMWindow.Layout.Column = 2;
+            app.ShowiCoMWindow.Text = 'iCoM';
 
             % Create VectorSamplingGrid
-            self.VectorSamplingGrid = uigridlayout(self.ShowImageWindowsGrid);
-            self.VectorSamplingGrid.ColumnWidth = {'fit', '1x', 24, 24};
-            self.VectorSamplingGrid.RowHeight = {24};
-            self.VectorSamplingGrid.ColumnSpacing = 4;
-            self.VectorSamplingGrid.RowSpacing = 4;
-            self.VectorSamplingGrid.Padding = [4 4 4 4];
-            self.VectorSamplingGrid.Layout.Row = 7;
-            self.VectorSamplingGrid.Layout.Column = [1 2];
+            app.VectorSamplingGrid = uigridlayout(app.ShowImageWindowsGrid);
+            app.VectorSamplingGrid.ColumnWidth = {'fit', '1x', 24, 24};
+            app.VectorSamplingGrid.RowHeight = {24};
+            app.VectorSamplingGrid.ColumnSpacing = 4;
+            app.VectorSamplingGrid.RowSpacing = 4;
+            app.VectorSamplingGrid.Padding = [4 4 4 4];
+            app.VectorSamplingGrid.Layout.Row = 7;
+            app.VectorSamplingGrid.Layout.Column = [1 2];
 
             % Create DispVecFieldLabel
-            self.DispVecFieldLabel = uilabel(self.VectorSamplingGrid);
-            self.DispVecFieldLabel.HorizontalAlignment = 'right';
-            self.DispVecFieldLabel.Layout.Row = 1;
-            self.DispVecFieldLabel.Layout.Column = 1;
-            self.DispVecFieldLabel.Text = 'Vector Sampling:';
+            app.DispVecFieldLabel = uilabel(app.VectorSamplingGrid);
+            app.DispVecFieldLabel.HorizontalAlignment = 'right';
+            app.DispVecFieldLabel.Layout.Row = 1;
+            app.DispVecFieldLabel.Layout.Column = 1;
+            app.DispVecFieldLabel.Text = 'Vector Sampling:';
 
             % Create DisplayVectorField
-            self.DisplayVectorField = uidropdown(self.VectorSamplingGrid);
-            self.DisplayVectorField.Items = {'None', '1:1', '1:2', '1:4', '1:8', '1:16'};
-            self.DisplayVectorField.ItemsData = [0 1 2 4 8 16];
-            self.DisplayVectorField.ValueChangedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayVectorField.Tooltip = {'Plot vector field on the current selected Real-space image'};
-            self.DisplayVectorField.Layout.Row = 1;
-            self.DisplayVectorField.Layout.Column = 2;
-            self.DisplayVectorField.Value = 0;
+            app.DisplayVectorField = uidropdown(app.VectorSamplingGrid);
+            app.DisplayVectorField.Items = {'None', '1:1', '1:2', '1:4', '1:8', '1:16'};
+            app.DisplayVectorField.ItemsData = [0 1 2 4 8 16];
+            app.DisplayVectorField.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayVectorField.Tooltip = {'Plot vector field on the current selected Real-space image'};
+            app.DisplayVectorField.Layout.Row = 1;
+            app.DisplayVectorField.Layout.Column = 2;
+            app.DisplayVectorField.Value = 0;
 
             % Create DisplayVectorColor
-            self.DisplayVectorColor = uibutton(self.VectorSamplingGrid, 'push');
-            self.DisplayVectorColor.ButtonPushedFcn = createCallbackFcn(self, @display_callbacks, true);
-            self.DisplayVectorColor.Icon = 'colorPicker.png';
-            self.DisplayVectorColor.Tooltip = {'Change Vector Field color'};
-            self.DisplayVectorColor.Layout.Row = 1;
-            self.DisplayVectorColor.Layout.Column = 3;
-            self.DisplayVectorColor.Text = '';
+            app.DisplayVectorColor = uibutton(app.VectorSamplingGrid, 'push');
+            app.DisplayVectorColor.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
+            app.DisplayVectorColor.Icon = 'colorPicker.png';
+            app.DisplayVectorColor.Tooltip = {'Change Vector Field color'};
+            app.DisplayVectorColor.Layout.Row = 1;
+            app.DisplayVectorColor.Layout.Column = 3;
+            app.DisplayVectorColor.Text = '';
 
             % Create ShowColorWheelWindow
-            self.ShowColorWheelWindow = uibutton(self.VectorSamplingGrid, 'push');
-            self.ShowColorWheelWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowColorWheelWindow.Tag = 'ColorWheel';
-            self.ShowColorWheelWindow.Icon = 'colorwheel.png';
-            self.ShowColorWheelWindow.Tooltip = {'Show Color Wheel for Phase Vector Field Direction'};
-            self.ShowColorWheelWindow.Layout.Row = 1;
-            self.ShowColorWheelWindow.Layout.Column = 4;
-            self.ShowColorWheelWindow.Text = '';
+            app.ShowColorWheelWindow = uibutton(app.VectorSamplingGrid, 'push');
+            app.ShowColorWheelWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowColorWheelWindow.Tag = 'ColorWheel';
+            app.ShowColorWheelWindow.Icon = 'colorwheel.png';
+            app.ShowColorWheelWindow.Tooltip = {'Show Color Wheel for Phase Vector Field Direction'};
+            app.ShowColorWheelWindow.Layout.Row = 1;
+            app.ShowColorWheelWindow.Layout.Column = 4;
+            app.ShowColorWheelWindow.Text = '';
 
             % Create WindowResizePanel
-            self.WindowResizePanel = uipanel(self.WindowsTabGrid);
-            self.WindowResizePanel.BorderType = 'none';
-            self.WindowResizePanel.TitlePosition = 'centertop';
-            self.WindowResizePanel.Title = 'Window size and orientation';
-            self.WindowResizePanel.Layout.Row = 3;
-            self.WindowResizePanel.Layout.Column = 1;
-            self.WindowResizePanel.FontWeight = 'bold';
+            app.WindowResizePanel = uipanel(app.WindowsTabGrid);
+            app.WindowResizePanel.BorderType = 'none';
+            app.WindowResizePanel.TitlePosition = 'centertop';
+            app.WindowResizePanel.Title = 'Window size and orientation';
+            app.WindowResizePanel.Layout.Row = 3;
+            app.WindowResizePanel.Layout.Column = 1;
+            app.WindowResizePanel.FontWeight = 'bold';
 
             % Create WindowResizeGrid
-            self.WindowResizeGrid = uigridlayout(self.WindowResizePanel);
-            self.WindowResizeGrid.ColumnWidth = {'1x'};
-            self.WindowResizeGrid.RowHeight = {'1x'};
-            self.WindowResizeGrid.ColumnSpacing = 0;
-            self.WindowResizeGrid.RowSpacing = 0;
-            self.WindowResizeGrid.Padding = [0 0 0 0];
+            app.WindowResizeGrid = uigridlayout(app.WindowResizePanel);
+            app.WindowResizeGrid.ColumnWidth = {'1x'};
+            app.WindowResizeGrid.RowHeight = {'1x'};
+            app.WindowResizeGrid.ColumnSpacing = 0;
+            app.WindowResizeGrid.RowSpacing = 0;
+            app.WindowResizeGrid.Padding = [0 0 0 0];
 
             % Create WindowResizeTabGroup
-            self.WindowResizeTabGroup = uitabgroup(self.WindowResizeGrid);
-            self.WindowResizeTabGroup.Layout.Row = 1;
-            self.WindowResizeTabGroup.Layout.Column = 1;
+            app.WindowResizeTabGroup = uitabgroup(app.WindowResizeGrid);
+            app.WindowResizeTabGroup.Layout.Row = 1;
+            app.WindowResizeTabGroup.Layout.Column = 1;
 
             % Create DiffractionTab
-            self.DiffractionTab = uitab(self.WindowResizeTabGroup);
-            self.DiffractionTab.Title = 'Diffraction';
+            app.DiffractionTab = uitab(app.WindowResizeTabGroup);
+            app.DiffractionTab.Title = 'Diffraction';
 
             % Create DiffractionTabGrid
-            self.DiffractionTabGrid = uigridlayout(self.DiffractionTab);
-            self.DiffractionTabGrid.ColumnWidth = {'1x'};
-            self.DiffractionTabGrid.RowHeight = {'1x'};
-            self.DiffractionTabGrid.ColumnSpacing = 4;
-            self.DiffractionTabGrid.RowSpacing = 4;
-            self.DiffractionTabGrid.Padding = [4 4 4 4];
+            app.DiffractionTabGrid = uigridlayout(app.DiffractionTab);
+            app.DiffractionTabGrid.ColumnWidth = {'1x'};
+            app.DiffractionTabGrid.RowHeight = {'1x'};
+            app.DiffractionTabGrid.ColumnSpacing = 4;
+            app.DiffractionTabGrid.RowSpacing = 4;
+            app.DiffractionTabGrid.Padding = [4 4 4 4];
 
             % Create DiffractionWindowPanel
-            self.DiffractionWindowPanel = uipanel(self.DiffractionTabGrid);
-            self.DiffractionWindowPanel.AutoResizeChildren = 'off';
-            self.DiffractionWindowPanel.BorderType = 'none';
-            self.DiffractionWindowPanel.TitlePosition = 'centertop';
-            self.DiffractionWindowPanel.Layout.Row = 1;
-            self.DiffractionWindowPanel.Layout.Column = 1;
-            self.DiffractionWindowPanel.FontName = 'Arial';
-            self.DiffractionWindowPanel.FontWeight = 'bold';
+            app.DiffractionWindowPanel = uipanel(app.DiffractionTabGrid);
+            app.DiffractionWindowPanel.AutoResizeChildren = 'off';
+            app.DiffractionWindowPanel.BorderType = 'none';
+            app.DiffractionWindowPanel.TitlePosition = 'centertop';
+            app.DiffractionWindowPanel.Layout.Row = 1;
+            app.DiffractionWindowPanel.Layout.Column = 1;
+            app.DiffractionWindowPanel.FontName = 'Arial';
+            app.DiffractionWindowPanel.FontWeight = 'bold';
 
             % Create DiffractionWindowGrid
-            self.DiffractionWindowGrid = uigridlayout(self.DiffractionWindowPanel);
-            self.DiffractionWindowGrid.ColumnWidth = {12, 60, 12, 60, '1x', 'fit', 'fit'};
-            self.DiffractionWindowGrid.RowHeight = {24, 24};
-            self.DiffractionWindowGrid.ColumnSpacing = 4;
-            self.DiffractionWindowGrid.RowSpacing = 4;
-            self.DiffractionWindowGrid.Padding = [0 0 0 4];
+            app.DiffractionWindowGrid = uigridlayout(app.DiffractionWindowPanel);
+            app.DiffractionWindowGrid.ColumnWidth = {12, 60, 12, 60, '1x', 'fit', 'fit'};
+            app.DiffractionWindowGrid.RowHeight = {24, 24};
+            app.DiffractionWindowGrid.ColumnSpacing = 4;
+            app.DiffractionWindowGrid.RowSpacing = 4;
+            app.DiffractionWindowGrid.Padding = [0 0 0 4];
 
             % Create DiffractionAxesGrid
-            self.DiffractionAxesGrid = uigridlayout(self.DiffractionWindowGrid);
-            self.DiffractionAxesGrid.ColumnWidth = {'1x', 24, 24, 24, '1x', 20, 'fit', '1x'};
-            self.DiffractionAxesGrid.RowHeight = {24};
-            self.DiffractionAxesGrid.ColumnSpacing = 4;
-            self.DiffractionAxesGrid.RowSpacing = 4;
-            self.DiffractionAxesGrid.Padding = [0 0 0 0];
-            self.DiffractionAxesGrid.Layout.Row = 1;
-            self.DiffractionAxesGrid.Layout.Column = [1 7];
+            app.DiffractionAxesGrid = uigridlayout(app.DiffractionWindowGrid);
+            app.DiffractionAxesGrid.ColumnWidth = {'1x', 24, 24, 24, '1x', 20, 'fit', '1x'};
+            app.DiffractionAxesGrid.RowHeight = {24};
+            app.DiffractionAxesGrid.ColumnSpacing = 4;
+            app.DiffractionAxesGrid.RowSpacing = 4;
+            app.DiffractionAxesGrid.Padding = [0 0 0 0];
+            app.DiffractionAxesGrid.Layout.Row = 1;
+            app.DiffractionAxesGrid.Layout.Column = [1 7];
 
             % Create ShowDiffractionAxes
-            self.ShowDiffractionAxes = uibutton(self.DiffractionAxesGrid, 'state');
-            self.ShowDiffractionAxes.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.ShowDiffractionAxes.Tag = 'Diffraction';
-            self.ShowDiffractionAxes.Tooltip = {'Show Axis Directions on Images'};
-            self.ShowDiffractionAxes.Icon = 'axes.png';
-            self.ShowDiffractionAxes.Text = '';
-            self.ShowDiffractionAxes.Layout.Row = 1;
-            self.ShowDiffractionAxes.Layout.Column = 2;
-            self.ShowDiffractionAxes.Value = true;
+            app.ShowDiffractionAxes = uibutton(app.DiffractionAxesGrid, 'state');
+            app.ShowDiffractionAxes.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.ShowDiffractionAxes.Tag = 'Diffraction';
+            app.ShowDiffractionAxes.Tooltip = {'Show Axis Directions on Images'};
+            app.ShowDiffractionAxes.Icon = 'axes.png';
+            app.ShowDiffractionAxes.Text = '';
+            app.ShowDiffractionAxes.Layout.Row = 1;
+            app.ShowDiffractionAxes.Layout.Column = 2;
+            app.ShowDiffractionAxes.Value = true;
 
             % Create ReverseDiffractionX
-            self.ReverseDiffractionX = uibutton(self.DiffractionAxesGrid, 'state');
-            self.ReverseDiffractionX.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.ReverseDiffractionX.Tag = 'Diffraction';
-            self.ReverseDiffractionX.Tooltip = {'Reverse X-axis Direction'};
-            self.ReverseDiffractionX.Icon = 'axis-x.png';
-            self.ReverseDiffractionX.Text = '';
-            self.ReverseDiffractionX.FontWeight = 'bold';
-            self.ReverseDiffractionX.Layout.Row = 1;
-            self.ReverseDiffractionX.Layout.Column = 3;
+            app.ReverseDiffractionX = uibutton(app.DiffractionAxesGrid, 'state');
+            app.ReverseDiffractionX.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.ReverseDiffractionX.Tag = 'Diffraction';
+            app.ReverseDiffractionX.Tooltip = {'Reverse X-axis Direction'};
+            app.ReverseDiffractionX.Icon = 'axis-x.png';
+            app.ReverseDiffractionX.Text = '';
+            app.ReverseDiffractionX.FontWeight = 'bold';
+            app.ReverseDiffractionX.Layout.Row = 1;
+            app.ReverseDiffractionX.Layout.Column = 3;
 
             % Create ReverseDiffractionY
-            self.ReverseDiffractionY = uibutton(self.DiffractionAxesGrid, 'state');
-            self.ReverseDiffractionY.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.ReverseDiffractionY.Tag = 'Diffraction';
-            self.ReverseDiffractionY.Tooltip = {'Reverse Y-axis Direction'};
-            self.ReverseDiffractionY.Icon = 'axis-y.png';
-            self.ReverseDiffractionY.Text = '';
-            self.ReverseDiffractionY.FontWeight = 'bold';
-            self.ReverseDiffractionY.Layout.Row = 1;
-            self.ReverseDiffractionY.Layout.Column = 4;
-            self.ReverseDiffractionY.Value = true;
+            app.ReverseDiffractionY = uibutton(app.DiffractionAxesGrid, 'state');
+            app.ReverseDiffractionY.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.ReverseDiffractionY.Tag = 'Diffraction';
+            app.ReverseDiffractionY.Tooltip = {'Reverse Y-axis Direction'};
+            app.ReverseDiffractionY.Icon = 'axis-y.png';
+            app.ReverseDiffractionY.Text = '';
+            app.ReverseDiffractionY.FontWeight = 'bold';
+            app.ReverseDiffractionY.Layout.Row = 1;
+            app.ReverseDiffractionY.Layout.Column = 4;
+            app.ReverseDiffractionY.Value = true;
 
             % Create RotateDiffractionIcon
-            self.RotateDiffractionIcon = uiimage(self.DiffractionAxesGrid);
-            self.RotateDiffractionIcon.Tooltip = {'Rotate View'};
-            self.RotateDiffractionIcon.Layout.Row = 1;
-            self.RotateDiffractionIcon.Layout.Column = 6;
-            self.RotateDiffractionIcon.ImageSource = 'right_rotate.png';
+            app.RotateDiffractionIcon = uiimage(app.DiffractionAxesGrid);
+            app.RotateDiffractionIcon.Tooltip = {'Rotate View'};
+            app.RotateDiffractionIcon.Layout.Row = 1;
+            app.RotateDiffractionIcon.Layout.Column = 6;
+            app.RotateDiffractionIcon.ImageSource = 'right_rotate.png';
 
             % Create RotateDiffraction
-            self.RotateDiffraction = uidropdown(self.DiffractionAxesGrid);
-            self.RotateDiffraction.Items = {'0°', '90°', '180°', '-90°'};
-            self.RotateDiffraction.ItemsData = [0 90 180 -90];
-            self.RotateDiffraction.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.RotateDiffraction.Tag = 'Diffraction';
-            self.RotateDiffraction.Tooltip = {'Rotate Image Display'};
-            self.RotateDiffraction.Layout.Row = 1;
-            self.RotateDiffraction.Layout.Column = 7;
-            self.RotateDiffraction.Value = 0;
+            app.RotateDiffraction = uidropdown(app.DiffractionAxesGrid);
+            app.RotateDiffraction.Items = {'0°', '90°', '180°', '-90°'};
+            app.RotateDiffraction.ItemsData = [0 90 180 -90];
+            app.RotateDiffraction.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.RotateDiffraction.Tag = 'Diffraction';
+            app.RotateDiffraction.Tooltip = {'Rotate Image Display'};
+            app.RotateDiffraction.Layout.Row = 1;
+            app.RotateDiffraction.Layout.Column = 7;
+            app.RotateDiffraction.Value = 0;
 
             % Create WEditFieldLabel
-            self.WEditFieldLabel = uilabel(self.DiffractionWindowGrid);
-            self.WEditFieldLabel.HorizontalAlignment = 'right';
-            self.WEditFieldLabel.Layout.Row = 2;
-            self.WEditFieldLabel.Layout.Column = 1;
-            self.WEditFieldLabel.Text = 'W';
+            app.WEditFieldLabel = uilabel(app.DiffractionWindowGrid);
+            app.WEditFieldLabel.HorizontalAlignment = 'right';
+            app.WEditFieldLabel.Layout.Row = 2;
+            app.WEditFieldLabel.Layout.Column = 1;
+            app.WEditFieldLabel.Text = 'W';
 
             % Create SetDiffractionWindowWidth
-            self.SetDiffractionWindowWidth = uieditfield(self.DiffractionWindowGrid, 'numeric');
-            self.SetDiffractionWindowWidth.Limits = [1 Inf];
-            self.SetDiffractionWindowWidth.RoundFractionalValues = 'on';
-            self.SetDiffractionWindowWidth.ValueDisplayFormat = '%.0f';
-            self.SetDiffractionWindowWidth.ValueChangedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetDiffractionWindowWidth.Tag = 'Diffraction';
-            self.SetDiffractionWindowWidth.Layout.Row = 2;
-            self.SetDiffractionWindowWidth.Layout.Column = 2;
-            self.SetDiffractionWindowWidth.Value = 400;
+            app.SetDiffractionWindowWidth = uieditfield(app.DiffractionWindowGrid, 'numeric');
+            app.SetDiffractionWindowWidth.Limits = [1 Inf];
+            app.SetDiffractionWindowWidth.RoundFractionalValues = 'on';
+            app.SetDiffractionWindowWidth.ValueDisplayFormat = '%.0f';
+            app.SetDiffractionWindowWidth.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetDiffractionWindowWidth.Tag = 'Diffraction';
+            app.SetDiffractionWindowWidth.Layout.Row = 2;
+            app.SetDiffractionWindowWidth.Layout.Column = 2;
+            app.SetDiffractionWindowWidth.Value = 400;
 
             % Create HEditFieldLabel
-            self.HEditFieldLabel = uilabel(self.DiffractionWindowGrid);
-            self.HEditFieldLabel.HorizontalAlignment = 'right';
-            self.HEditFieldLabel.Layout.Row = 2;
-            self.HEditFieldLabel.Layout.Column = 3;
-            self.HEditFieldLabel.Text = 'H';
+            app.HEditFieldLabel = uilabel(app.DiffractionWindowGrid);
+            app.HEditFieldLabel.HorizontalAlignment = 'right';
+            app.HEditFieldLabel.Layout.Row = 2;
+            app.HEditFieldLabel.Layout.Column = 3;
+            app.HEditFieldLabel.Text = 'H';
 
             % Create SetDiffractionWindowHeight
-            self.SetDiffractionWindowHeight = uieditfield(self.DiffractionWindowGrid, 'numeric');
-            self.SetDiffractionWindowHeight.Limits = [1 Inf];
-            self.SetDiffractionWindowHeight.RoundFractionalValues = 'on';
-            self.SetDiffractionWindowHeight.ValueDisplayFormat = '%.0f';
-            self.SetDiffractionWindowHeight.ValueChangedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetDiffractionWindowHeight.Tag = 'Diffraction';
-            self.SetDiffractionWindowHeight.Layout.Row = 2;
-            self.SetDiffractionWindowHeight.Layout.Column = 4;
-            self.SetDiffractionWindowHeight.Value = 400;
+            app.SetDiffractionWindowHeight = uieditfield(app.DiffractionWindowGrid, 'numeric');
+            app.SetDiffractionWindowHeight.Limits = [1 Inf];
+            app.SetDiffractionWindowHeight.RoundFractionalValues = 'on';
+            app.SetDiffractionWindowHeight.ValueDisplayFormat = '%.0f';
+            app.SetDiffractionWindowHeight.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetDiffractionWindowHeight.Tag = 'Diffraction';
+            app.SetDiffractionWindowHeight.Layout.Row = 2;
+            app.SetDiffractionWindowHeight.Layout.Column = 4;
+            app.SetDiffractionWindowHeight.Value = 400;
 
             % Create SetDiffractionWindow
-            self.SetDiffractionWindow = uibutton(self.DiffractionWindowGrid, 'push');
-            self.SetDiffractionWindow.ButtonPushedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetDiffractionWindow.Tag = 'Diffraction';
-            self.SetDiffractionWindow.Layout.Row = 2;
-            self.SetDiffractionWindow.Layout.Column = 6;
-            self.SetDiffractionWindow.Text = 'Set';
+            app.SetDiffractionWindow = uibutton(app.DiffractionWindowGrid, 'push');
+            app.SetDiffractionWindow.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetDiffractionWindow.Tag = 'Diffraction';
+            app.SetDiffractionWindow.Layout.Row = 2;
+            app.SetDiffractionWindow.Layout.Column = 6;
+            app.SetDiffractionWindow.Text = 'Set';
 
             % Create SetAllDiffractionWindows
-            self.SetAllDiffractionWindows = uibutton(self.DiffractionWindowGrid, 'push');
-            self.SetAllDiffractionWindows.ButtonPushedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetAllDiffractionWindows.Tag = 'Diffraction';
-            self.SetAllDiffractionWindows.Layout.Row = 2;
-            self.SetAllDiffractionWindows.Layout.Column = 7;
-            self.SetAllDiffractionWindows.Text = 'Set All';
+            app.SetAllDiffractionWindows = uibutton(app.DiffractionWindowGrid, 'push');
+            app.SetAllDiffractionWindows.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetAllDiffractionWindows.Tag = 'Diffraction';
+            app.SetAllDiffractionWindows.Layout.Row = 2;
+            app.SetAllDiffractionWindows.Layout.Column = 7;
+            app.SetAllDiffractionWindows.Text = 'Set All';
 
             % Create RealspaceTab
-            self.RealspaceTab = uitab(self.WindowResizeTabGroup);
-            self.RealspaceTab.Title = 'Real-space';
+            app.RealspaceTab = uitab(app.WindowResizeTabGroup);
+            app.RealspaceTab.Title = 'Real-space';
 
             % Create RealspaceTabGrid
-            self.RealspaceTabGrid = uigridlayout(self.RealspaceTab);
-            self.RealspaceTabGrid.ColumnWidth = {'1x'};
-            self.RealspaceTabGrid.RowHeight = {'fit'};
-            self.RealspaceTabGrid.ColumnSpacing = 4;
-            self.RealspaceTabGrid.RowSpacing = 4;
-            self.RealspaceTabGrid.Padding = [4 4 4 4];
+            app.RealspaceTabGrid = uigridlayout(app.RealspaceTab);
+            app.RealspaceTabGrid.ColumnWidth = {'1x'};
+            app.RealspaceTabGrid.RowHeight = {'fit'};
+            app.RealspaceTabGrid.ColumnSpacing = 4;
+            app.RealspaceTabGrid.RowSpacing = 4;
+            app.RealspaceTabGrid.Padding = [4 4 4 4];
 
             % Create RealWindowPanel
-            self.RealWindowPanel = uipanel(self.RealspaceTabGrid);
-            self.RealWindowPanel.AutoResizeChildren = 'off';
-            self.RealWindowPanel.BorderType = 'none';
-            self.RealWindowPanel.TitlePosition = 'centertop';
-            self.RealWindowPanel.Layout.Row = 1;
-            self.RealWindowPanel.Layout.Column = 1;
-            self.RealWindowPanel.FontName = 'Arial';
-            self.RealWindowPanel.FontWeight = 'bold';
+            app.RealWindowPanel = uipanel(app.RealspaceTabGrid);
+            app.RealWindowPanel.AutoResizeChildren = 'off';
+            app.RealWindowPanel.BorderType = 'none';
+            app.RealWindowPanel.TitlePosition = 'centertop';
+            app.RealWindowPanel.Layout.Row = 1;
+            app.RealWindowPanel.Layout.Column = 1;
+            app.RealWindowPanel.FontName = 'Arial';
+            app.RealWindowPanel.FontWeight = 'bold';
 
             % Create RealWindowGrid
-            self.RealWindowGrid = uigridlayout(self.RealWindowPanel);
-            self.RealWindowGrid.ColumnWidth = {12, 60, 12, 60, '1x', 'fit', 'fit'};
-            self.RealWindowGrid.RowHeight = {24, 24};
-            self.RealWindowGrid.ColumnSpacing = 4;
-            self.RealWindowGrid.RowSpacing = 4;
-            self.RealWindowGrid.Padding = [0 0 0 4];
+            app.RealWindowGrid = uigridlayout(app.RealWindowPanel);
+            app.RealWindowGrid.ColumnWidth = {12, 60, 12, 60, '1x', 'fit', 'fit'};
+            app.RealWindowGrid.RowHeight = {24, 24};
+            app.RealWindowGrid.ColumnSpacing = 4;
+            app.RealWindowGrid.RowSpacing = 4;
+            app.RealWindowGrid.Padding = [0 0 0 4];
 
             % Create RealAxesGrid
-            self.RealAxesGrid = uigridlayout(self.RealWindowGrid);
-            self.RealAxesGrid.ColumnWidth = {'1x', 24, 24, 24, '1x', 20, 'fit', '1x'};
-            self.RealAxesGrid.RowHeight = {24};
-            self.RealAxesGrid.ColumnSpacing = 4;
-            self.RealAxesGrid.RowSpacing = 4;
-            self.RealAxesGrid.Padding = [0 0 0 0];
-            self.RealAxesGrid.Layout.Row = 1;
-            self.RealAxesGrid.Layout.Column = [1 7];
+            app.RealAxesGrid = uigridlayout(app.RealWindowGrid);
+            app.RealAxesGrid.ColumnWidth = {'1x', 24, 24, 24, '1x', 20, 'fit', '1x'};
+            app.RealAxesGrid.RowHeight = {24};
+            app.RealAxesGrid.ColumnSpacing = 4;
+            app.RealAxesGrid.RowSpacing = 4;
+            app.RealAxesGrid.Padding = [0 0 0 0];
+            app.RealAxesGrid.Layout.Row = 1;
+            app.RealAxesGrid.Layout.Column = [1 7];
 
             % Create ShowRealAxes
-            self.ShowRealAxes = uibutton(self.RealAxesGrid, 'state');
-            self.ShowRealAxes.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.ShowRealAxes.Tag = 'Real';
-            self.ShowRealAxes.Tooltip = {'Show Axis Directions on Images'};
-            self.ShowRealAxes.Icon = 'axes.png';
-            self.ShowRealAxes.Text = '';
-            self.ShowRealAxes.Layout.Row = 1;
-            self.ShowRealAxes.Layout.Column = 2;
-            self.ShowRealAxes.Value = true;
+            app.ShowRealAxes = uibutton(app.RealAxesGrid, 'state');
+            app.ShowRealAxes.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.ShowRealAxes.Tag = 'Real';
+            app.ShowRealAxes.Tooltip = {'Show Axis Directions on Images'};
+            app.ShowRealAxes.Icon = 'axes.png';
+            app.ShowRealAxes.Text = '';
+            app.ShowRealAxes.Layout.Row = 1;
+            app.ShowRealAxes.Layout.Column = 2;
+            app.ShowRealAxes.Value = true;
 
             % Create ReverseRealX
-            self.ReverseRealX = uibutton(self.RealAxesGrid, 'state');
-            self.ReverseRealX.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.ReverseRealX.Tag = 'Real';
-            self.ReverseRealX.Tooltip = {'Reverse X-axis Direction'};
-            self.ReverseRealX.Icon = 'axis-x.png';
-            self.ReverseRealX.Text = '';
-            self.ReverseRealX.FontWeight = 'bold';
-            self.ReverseRealX.Layout.Row = 1;
-            self.ReverseRealX.Layout.Column = 3;
+            app.ReverseRealX = uibutton(app.RealAxesGrid, 'state');
+            app.ReverseRealX.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.ReverseRealX.Tag = 'Real';
+            app.ReverseRealX.Tooltip = {'Reverse X-axis Direction'};
+            app.ReverseRealX.Icon = 'axis-x.png';
+            app.ReverseRealX.Text = '';
+            app.ReverseRealX.FontWeight = 'bold';
+            app.ReverseRealX.Layout.Row = 1;
+            app.ReverseRealX.Layout.Column = 3;
 
             % Create ReverseRealY
-            self.ReverseRealY = uibutton(self.RealAxesGrid, 'state');
-            self.ReverseRealY.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.ReverseRealY.Tag = 'Real';
-            self.ReverseRealY.Tooltip = {'Reverse Y-axis Direction'};
-            self.ReverseRealY.Icon = 'axis-y.png';
-            self.ReverseRealY.Text = '';
-            self.ReverseRealY.FontWeight = 'bold';
-            self.ReverseRealY.Layout.Row = 1;
-            self.ReverseRealY.Layout.Column = 4;
-            self.ReverseRealY.Value = true;
+            app.ReverseRealY = uibutton(app.RealAxesGrid, 'state');
+            app.ReverseRealY.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.ReverseRealY.Tag = 'Real';
+            app.ReverseRealY.Tooltip = {'Reverse Y-axis Direction'};
+            app.ReverseRealY.Icon = 'axis-y.png';
+            app.ReverseRealY.Text = '';
+            app.ReverseRealY.FontWeight = 'bold';
+            app.ReverseRealY.Layout.Row = 1;
+            app.ReverseRealY.Layout.Column = 4;
+            app.ReverseRealY.Value = true;
 
             % Create RotateRealIcon
-            self.RotateRealIcon = uiimage(self.RealAxesGrid);
-            self.RotateRealIcon.Tooltip = {'Rotate View'};
-            self.RotateRealIcon.Layout.Row = 1;
-            self.RotateRealIcon.Layout.Column = 6;
-            self.RotateRealIcon.ImageSource = 'right_rotate.png';
+            app.RotateRealIcon = uiimage(app.RealAxesGrid);
+            app.RotateRealIcon.Tooltip = {'Rotate View'};
+            app.RotateRealIcon.Layout.Row = 1;
+            app.RotateRealIcon.Layout.Column = 6;
+            app.RotateRealIcon.ImageSource = 'right_rotate.png';
 
             % Create RotateReal
-            self.RotateReal = uidropdown(self.RealAxesGrid);
-            self.RotateReal.Items = {'0°', '90°', '180°', '-90°'};
-            self.RotateReal.ItemsData = [0 90 180 -90];
-            self.RotateReal.ValueChangedFcn = createCallbackFcn(self, @axis_direction_callbacks, true);
-            self.RotateReal.Tag = 'Real';
-            self.RotateReal.Tooltip = {'Rotate Image Display'};
-            self.RotateReal.Layout.Row = 1;
-            self.RotateReal.Layout.Column = 7;
-            self.RotateReal.Value = 0;
+            app.RotateReal = uidropdown(app.RealAxesGrid);
+            app.RotateReal.Items = {'0°', '90°', '180°', '-90°'};
+            app.RotateReal.ItemsData = [0 90 180 -90];
+            app.RotateReal.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
+            app.RotateReal.Tag = 'Real';
+            app.RotateReal.Tooltip = {'Rotate Image Display'};
+            app.RotateReal.Layout.Row = 1;
+            app.RotateReal.Layout.Column = 7;
+            app.RotateReal.Value = 0;
 
             % Create HEditField_2Label
-            self.HEditField_2Label = uilabel(self.RealWindowGrid);
-            self.HEditField_2Label.HorizontalAlignment = 'right';
-            self.HEditField_2Label.Layout.Row = 2;
-            self.HEditField_2Label.Layout.Column = 3;
-            self.HEditField_2Label.Text = 'H';
+            app.HEditField_2Label = uilabel(app.RealWindowGrid);
+            app.HEditField_2Label.HorizontalAlignment = 'right';
+            app.HEditField_2Label.Layout.Row = 2;
+            app.HEditField_2Label.Layout.Column = 3;
+            app.HEditField_2Label.Text = 'H';
 
             % Create SetRealWindowHeight
-            self.SetRealWindowHeight = uieditfield(self.RealWindowGrid, 'numeric');
-            self.SetRealWindowHeight.Limits = [1 Inf];
-            self.SetRealWindowHeight.RoundFractionalValues = 'on';
-            self.SetRealWindowHeight.ValueDisplayFormat = '%.0f';
-            self.SetRealWindowHeight.ValueChangedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetRealWindowHeight.Tag = 'Real';
-            self.SetRealWindowHeight.Layout.Row = 2;
-            self.SetRealWindowHeight.Layout.Column = 4;
-            self.SetRealWindowHeight.Value = 400;
+            app.SetRealWindowHeight = uieditfield(app.RealWindowGrid, 'numeric');
+            app.SetRealWindowHeight.Limits = [1 Inf];
+            app.SetRealWindowHeight.RoundFractionalValues = 'on';
+            app.SetRealWindowHeight.ValueDisplayFormat = '%.0f';
+            app.SetRealWindowHeight.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetRealWindowHeight.Tag = 'Real';
+            app.SetRealWindowHeight.Layout.Row = 2;
+            app.SetRealWindowHeight.Layout.Column = 4;
+            app.SetRealWindowHeight.Value = 400;
 
             % Create SetRealWindow
-            self.SetRealWindow = uibutton(self.RealWindowGrid, 'push');
-            self.SetRealWindow.ButtonPushedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetRealWindow.Tag = 'Real';
-            self.SetRealWindow.Layout.Row = 2;
-            self.SetRealWindow.Layout.Column = 6;
-            self.SetRealWindow.Text = 'Set';
+            app.SetRealWindow = uibutton(app.RealWindowGrid, 'push');
+            app.SetRealWindow.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetRealWindow.Tag = 'Real';
+            app.SetRealWindow.Layout.Row = 2;
+            app.SetRealWindow.Layout.Column = 6;
+            app.SetRealWindow.Text = 'Set';
 
             % Create SetAllRealWindows
-            self.SetAllRealWindows = uibutton(self.RealWindowGrid, 'push');
-            self.SetAllRealWindows.ButtonPushedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetAllRealWindows.Tag = 'Real';
-            self.SetAllRealWindows.Layout.Row = 2;
-            self.SetAllRealWindows.Layout.Column = 7;
-            self.SetAllRealWindows.Text = 'Set All';
+            app.SetAllRealWindows = uibutton(app.RealWindowGrid, 'push');
+            app.SetAllRealWindows.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetAllRealWindows.Tag = 'Real';
+            app.SetAllRealWindows.Layout.Row = 2;
+            app.SetAllRealWindows.Layout.Column = 7;
+            app.SetAllRealWindows.Text = 'Set All';
 
             % Create WEditField_2Label
-            self.WEditField_2Label = uilabel(self.RealWindowGrid);
-            self.WEditField_2Label.HorizontalAlignment = 'right';
-            self.WEditField_2Label.Layout.Row = 2;
-            self.WEditField_2Label.Layout.Column = 1;
-            self.WEditField_2Label.Text = 'W';
+            app.WEditField_2Label = uilabel(app.RealWindowGrid);
+            app.WEditField_2Label.HorizontalAlignment = 'right';
+            app.WEditField_2Label.Layout.Row = 2;
+            app.WEditField_2Label.Layout.Column = 1;
+            app.WEditField_2Label.Text = 'W';
 
             % Create SetRealWindowWidth
-            self.SetRealWindowWidth = uieditfield(self.RealWindowGrid, 'numeric');
-            self.SetRealWindowWidth.Limits = [1 Inf];
-            self.SetRealWindowWidth.RoundFractionalValues = 'on';
-            self.SetRealWindowWidth.ValueDisplayFormat = '%.0f';
-            self.SetRealWindowWidth.ValueChangedFcn = createCallbackFcn(self, @resize_window, true);
-            self.SetRealWindowWidth.Tag = 'Real';
-            self.SetRealWindowWidth.Layout.Row = 2;
-            self.SetRealWindowWidth.Layout.Column = 2;
-            self.SetRealWindowWidth.Value = 400;
+            app.SetRealWindowWidth = uieditfield(app.RealWindowGrid, 'numeric');
+            app.SetRealWindowWidth.Limits = [1 Inf];
+            app.SetRealWindowWidth.RoundFractionalValues = 'on';
+            app.SetRealWindowWidth.ValueDisplayFormat = '%.0f';
+            app.SetRealWindowWidth.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
+            app.SetRealWindowWidth.Tag = 'Real';
+            app.SetRealWindowWidth.Layout.Row = 2;
+            app.SetRealWindowWidth.Layout.Column = 2;
+            app.SetRealWindowWidth.Value = 400;
 
             % Create MiscTab
-            self.MiscTab = uitab(self.SettingsTabGroup);
-            self.MiscTab.AutoResizeChildren = 'off';
-            self.MiscTab.Title = 'Misc';
+            app.MiscTab = uitab(app.SettingsTabGroup);
+            app.MiscTab.AutoResizeChildren = 'off';
+            app.MiscTab.Title = 'Misc';
 
             % Create MiscGrid
-            self.MiscGrid = uigridlayout(self.MiscTab);
-            self.MiscGrid.ColumnWidth = {'1x'};
-            self.MiscGrid.RowHeight = {24, 24, 'fit', 'fit'};
-            self.MiscGrid.ColumnSpacing = 4;
-            self.MiscGrid.Padding = [4 4 4 4];
+            app.MiscGrid = uigridlayout(app.MiscTab);
+            app.MiscGrid.ColumnWidth = {'1x'};
+            app.MiscGrid.RowHeight = {24, 24, 'fit', 'fit'};
+            app.MiscGrid.ColumnSpacing = 4;
+            app.MiscGrid.Padding = [4 4 4 4];
 
             % Create LiveUpdateImagesGrid
-            self.LiveUpdateImagesGrid = uigridlayout(self.MiscGrid);
-            self.LiveUpdateImagesGrid.ColumnWidth = {'1x', 18, 'fit', 'fit', '1x'};
-            self.LiveUpdateImagesGrid.RowHeight = {20};
-            self.LiveUpdateImagesGrid.ColumnSpacing = 4;
-            self.LiveUpdateImagesGrid.RowSpacing = 4;
-            self.LiveUpdateImagesGrid.Padding = [0 0 0 0];
-            self.LiveUpdateImagesGrid.Layout.Row = 1;
-            self.LiveUpdateImagesGrid.Layout.Column = 1;
+            app.LiveUpdateImagesGrid = uigridlayout(app.MiscGrid);
+            app.LiveUpdateImagesGrid.ColumnWidth = {'1x', 18, 'fit', 'fit', '1x'};
+            app.LiveUpdateImagesGrid.RowHeight = {20};
+            app.LiveUpdateImagesGrid.ColumnSpacing = 4;
+            app.LiveUpdateImagesGrid.RowSpacing = 4;
+            app.LiveUpdateImagesGrid.Padding = [0 0 0 0];
+            app.LiveUpdateImagesGrid.Layout.Row = 1;
+            app.LiveUpdateImagesGrid.Layout.Column = 1;
 
             % Create CalculationPolicyIcon
-            self.CalculationPolicyIcon = uiimage(self.LiveUpdateImagesGrid);
-            self.CalculationPolicyIcon.Tooltip = {''};
-            self.CalculationPolicyIcon.Layout.Row = 1;
-            self.CalculationPolicyIcon.Layout.Column = 2;
-            self.CalculationPolicyIcon.ImageSource = 'refresh.png';
+            app.CalculationPolicyIcon = uiimage(app.LiveUpdateImagesGrid);
+            app.CalculationPolicyIcon.Tooltip = {''};
+            app.CalculationPolicyIcon.Layout.Row = 1;
+            app.CalculationPolicyIcon.Layout.Column = 2;
+            app.CalculationPolicyIcon.ImageSource = 'refresh.png';
 
             % Create CalculationPolicyDropDownLabel
-            self.CalculationPolicyDropDownLabel = uilabel(self.LiveUpdateImagesGrid);
-            self.CalculationPolicyDropDownLabel.HorizontalAlignment = 'right';
-            self.CalculationPolicyDropDownLabel.FontName = 'Arial';
-            self.CalculationPolicyDropDownLabel.FontWeight = 'bold';
-            self.CalculationPolicyDropDownLabel.Tooltip = {''};
-            self.CalculationPolicyDropDownLabel.Layout.Row = 1;
-            self.CalculationPolicyDropDownLabel.Layout.Column = 3;
-            self.CalculationPolicyDropDownLabel.Text = 'Calculation Policy';
+            app.CalculationPolicyDropDownLabel = uilabel(app.LiveUpdateImagesGrid);
+            app.CalculationPolicyDropDownLabel.HorizontalAlignment = 'right';
+            app.CalculationPolicyDropDownLabel.FontName = 'Arial';
+            app.CalculationPolicyDropDownLabel.FontWeight = 'bold';
+            app.CalculationPolicyDropDownLabel.Tooltip = {''};
+            app.CalculationPolicyDropDownLabel.Layout.Row = 1;
+            app.CalculationPolicyDropDownLabel.Layout.Column = 3;
+            app.CalculationPolicyDropDownLabel.Text = 'Calculation Policy';
 
             % Create CalculationPolicy
-            self.CalculationPolicy = uidropdown(self.LiveUpdateImagesGrid);
-            self.CalculationPolicy.Items = {'Active', 'Reduced', 'Passive'};
-            self.CalculationPolicy.ItemsData = [2 1 0];
-            self.CalculationPolicy.ValueChangedFcn = createCallbackFcn(self, @update_images, true);
-            self.CalculationPolicy.Tooltip = {'Policy to calculate/update images:'; '  1) Active - update in real-time.'; '  2) Reduced - update when interactions finish.'; '  3) Passive - update only when the "Update Images" Button (or F5) is pressed or "Diffraction Detector Mode" changes.'};
-            self.CalculationPolicy.Layout.Row = 1;
-            self.CalculationPolicy.Layout.Column = 4;
-            self.CalculationPolicy.Value = 2;
+            app.CalculationPolicy = uidropdown(app.LiveUpdateImagesGrid);
+            app.CalculationPolicy.Items = {'Active', 'Reduced', 'Passive'};
+            app.CalculationPolicy.ItemsData = [2 1 0];
+            app.CalculationPolicy.ValueChangedFcn = createCallbackFcn(app, @update_images, true);
+            app.CalculationPolicy.Tooltip = {'Policy to calculate/update images:'; '  1) Active - update in real-time.'; '  2) Reduced - update when interactions finish.'; '  3) Passive - update only when the "Update Images" Button (or F5) is pressed or "Diffraction Detector Mode" changes.'};
+            app.CalculationPolicy.Layout.Row = 1;
+            app.CalculationPolicy.Layout.Column = 4;
+            app.CalculationPolicy.Value = 2;
 
             % Create DetectorCoordinatePanel
-            self.DetectorCoordinatePanel = uipanel(self.MiscGrid);
-            self.DetectorCoordinatePanel.AutoResizeChildren = 'off';
-            self.DetectorCoordinatePanel.BorderType = 'none';
-            self.DetectorCoordinatePanel.TitlePosition = 'centertop';
-            self.DetectorCoordinatePanel.Title = 'Detector Coordinate Options';
-            self.DetectorCoordinatePanel.Layout.Row = 3;
-            self.DetectorCoordinatePanel.Layout.Column = 1;
-            self.DetectorCoordinatePanel.FontName = 'Arial';
-            self.DetectorCoordinatePanel.FontWeight = 'bold';
+            app.DetectorCoordinatePanel = uipanel(app.MiscGrid);
+            app.DetectorCoordinatePanel.AutoResizeChildren = 'off';
+            app.DetectorCoordinatePanel.BorderType = 'none';
+            app.DetectorCoordinatePanel.TitlePosition = 'centertop';
+            app.DetectorCoordinatePanel.Title = 'Detector Coordinate Options';
+            app.DetectorCoordinatePanel.Layout.Row = 3;
+            app.DetectorCoordinatePanel.Layout.Column = 1;
+            app.DetectorCoordinatePanel.FontName = 'Arial';
+            app.DetectorCoordinatePanel.FontWeight = 'bold';
 
             % Create DetectorCoordinateGrid
-            self.DetectorCoordinateGrid = uigridlayout(self.DetectorCoordinatePanel);
-            self.DetectorCoordinateGrid.ColumnWidth = {'1x', 'fit', '1x', 'fit', '1x', 'fit', '1x'};
-            self.DetectorCoordinateGrid.RowHeight = {24};
-            self.DetectorCoordinateGrid.ColumnSpacing = 4;
-            self.DetectorCoordinateGrid.RowSpacing = 4;
-            self.DetectorCoordinateGrid.Padding = [0 0 0 4];
+            app.DetectorCoordinateGrid = uigridlayout(app.DetectorCoordinatePanel);
+            app.DetectorCoordinateGrid.ColumnWidth = {'1x', 'fit', '1x', 'fit', '1x', 'fit', '1x'};
+            app.DetectorCoordinateGrid.RowHeight = {24};
+            app.DetectorCoordinateGrid.ColumnSpacing = 4;
+            app.DetectorCoordinateGrid.RowSpacing = 4;
+            app.DetectorCoordinateGrid.Padding = [0 0 0 4];
 
             % Create DetectorCoordinateSystem
-            self.DetectorCoordinateSystem = uidropdown(self.DetectorCoordinateGrid);
-            self.DetectorCoordinateSystem.Items = {'Polar', 'Cartesian'};
-            self.DetectorCoordinateSystem.ValueChangedFcn = createCallbackFcn(self, @detector_coordinates_callbacks, true);
-            self.DetectorCoordinateSystem.Tooltip = {'Display diffraction coordinates with a Cartesian or polar system'};
-            self.DetectorCoordinateSystem.Layout.Row = 1;
-            self.DetectorCoordinateSystem.Layout.Column = 2;
-            self.DetectorCoordinateSystem.Value = 'Polar';
+            app.DetectorCoordinateSystem = uidropdown(app.DetectorCoordinateGrid);
+            app.DetectorCoordinateSystem.Items = {'Polar', 'Cartesian'};
+            app.DetectorCoordinateSystem.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
+            app.DetectorCoordinateSystem.Tooltip = {'Display diffraction coordinates with a Cartesian or polar system'};
+            app.DetectorCoordinateSystem.Layout.Row = 1;
+            app.DetectorCoordinateSystem.Layout.Column = 2;
+            app.DetectorCoordinateSystem.Value = 'Polar';
 
             % Create DetectorCoordinatePosition
-            self.DetectorCoordinatePosition = uidropdown(self.DetectorCoordinateGrid);
-            self.DetectorCoordinatePosition.Items = {'Relative', 'Absolute'};
-            self.DetectorCoordinatePosition.ValueChangedFcn = createCallbackFcn(self, @detector_coordinates_callbacks, true);
-            self.DetectorCoordinatePosition.Tooltip = {'Display diffraction coordinates as absolute positions or relative to the transmitted beam'};
-            self.DetectorCoordinatePosition.Layout.Row = 1;
-            self.DetectorCoordinatePosition.Layout.Column = 4;
-            self.DetectorCoordinatePosition.Value = 'Relative';
+            app.DetectorCoordinatePosition = uidropdown(app.DetectorCoordinateGrid);
+            app.DetectorCoordinatePosition.Items = {'Relative', 'Absolute'};
+            app.DetectorCoordinatePosition.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
+            app.DetectorCoordinatePosition.Tooltip = {'Display diffraction coordinates as absolute positions or relative to the transmitted beam'};
+            app.DetectorCoordinatePosition.Layout.Row = 1;
+            app.DetectorCoordinatePosition.Layout.Column = 4;
+            app.DetectorCoordinatePosition.Value = 'Relative';
 
             % Create DetectorCoordinateUnit
-            self.DetectorCoordinateUnit = uidropdown(self.DetectorCoordinateGrid);
-            self.DetectorCoordinateUnit.Items = {'mrad', 'pixels'};
-            self.DetectorCoordinateUnit.ItemsData = {'mrad', 'px'};
-            self.DetectorCoordinateUnit.ValueChangedFcn = createCallbackFcn(self, @detector_coordinates_callbacks, true);
-            self.DetectorCoordinateUnit.Tooltip = {'Display diffraction coordinates in mrad or pixel'};
-            self.DetectorCoordinateUnit.Layout.Row = 1;
-            self.DetectorCoordinateUnit.Layout.Column = 6;
-            self.DetectorCoordinateUnit.Value = 'mrad';
+            app.DetectorCoordinateUnit = uidropdown(app.DetectorCoordinateGrid);
+            app.DetectorCoordinateUnit.Items = {'mrad', 'pixels'};
+            app.DetectorCoordinateUnit.ItemsData = {'mrad', 'px'};
+            app.DetectorCoordinateUnit.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
+            app.DetectorCoordinateUnit.Tooltip = {'Display diffraction coordinates in mrad or pixel'};
+            app.DetectorCoordinateUnit.Layout.Row = 1;
+            app.DetectorCoordinateUnit.Layout.Column = 6;
+            app.DetectorCoordinateUnit.Value = 'mrad';
 
             % Create DatasetOptionPanel
-            self.DatasetOptionPanel = uipanel(self.MiscGrid);
-            self.DatasetOptionPanel.BorderType = 'none';
-            self.DatasetOptionPanel.TitlePosition = 'centertop';
-            self.DatasetOptionPanel.Title = 'Swap Dataset Byte Order and Dimensions';
-            self.DatasetOptionPanel.Layout.Row = 4;
-            self.DatasetOptionPanel.Layout.Column = 1;
-            self.DatasetOptionPanel.FontName = 'Arial';
-            self.DatasetOptionPanel.FontWeight = 'bold';
+            app.DatasetOptionPanel = uipanel(app.MiscGrid);
+            app.DatasetOptionPanel.BorderType = 'none';
+            app.DatasetOptionPanel.TitlePosition = 'centertop';
+            app.DatasetOptionPanel.Title = 'Swap Dataset Byte Order and Dimensions';
+            app.DatasetOptionPanel.Layout.Row = 4;
+            app.DatasetOptionPanel.Layout.Column = 1;
+            app.DatasetOptionPanel.FontName = 'Arial';
+            app.DatasetOptionPanel.FontWeight = 'bold';
 
             % Create DatasetOptionGrid
-            self.DatasetOptionGrid = uigridlayout(self.DatasetOptionPanel);
-            self.DatasetOptionGrid.ColumnWidth = {'1x', 'fit', '1x'};
-            self.DatasetOptionGrid.RowHeight = {10, 10, 10, 10};
-            self.DatasetOptionGrid.ColumnSpacing = 2;
-            self.DatasetOptionGrid.RowSpacing = 4;
-            self.DatasetOptionGrid.Padding = [0 0 0 4];
+            app.DatasetOptionGrid = uigridlayout(app.DatasetOptionPanel);
+            app.DatasetOptionGrid.ColumnWidth = {'1x', 'fit', '1x'};
+            app.DatasetOptionGrid.RowHeight = {10, 10, 10, 10};
+            app.DatasetOptionGrid.ColumnSpacing = 2;
+            app.DatasetOptionGrid.RowSpacing = 4;
+            app.DatasetOptionGrid.Padding = [0 0 0 4];
 
             % Create SwapByteOrder
-            self.SwapByteOrder = uibutton(self.DatasetOptionGrid, 'push');
-            self.SwapByteOrder.ButtonPushedFcn = createCallbackFcn(self, @dataset_options_callbacks, true);
-            self.SwapByteOrder.Tooltip = {'Swap the X/Y dimension sizes of the diffraction images, without re-importing'};
-            self.SwapByteOrder.Layout.Row = [2 3];
-            self.SwapByteOrder.Layout.Column = 1;
-            self.SwapByteOrder.Text = 'Swap Byte Order';
+            app.SwapByteOrder = uibutton(app.DatasetOptionGrid, 'push');
+            app.SwapByteOrder.ButtonPushedFcn = createCallbackFcn(app, @dataset_options_callbacks, true);
+            app.SwapByteOrder.Tooltip = {'Swap the X/Y dimension sizes of the diffraction images, without re-importing'};
+            app.SwapByteOrder.Layout.Row = [2 3];
+            app.SwapByteOrder.Layout.Column = 1;
+            app.SwapByteOrder.Text = 'Swap Byte Order';
 
             % Create SwapDiffractionXY
-            self.SwapDiffractionXY = uibutton(self.DatasetOptionGrid, 'push');
-            self.SwapDiffractionXY.ButtonPushedFcn = createCallbackFcn(self, @dataset_options_callbacks, true);
-            self.SwapDiffractionXY.Tag = 'Diffraction';
-            self.SwapDiffractionXY.Tooltip = {'Swap the X/Y dimension sizes of the diffraction images, without re-importing'};
-            self.SwapDiffractionXY.Layout.Row = [1 2];
-            self.SwapDiffractionXY.Layout.Column = [2 3];
-            self.SwapDiffractionXY.Text = 'Swap Diffraction X/Y';
+            app.SwapDiffractionXY = uibutton(app.DatasetOptionGrid, 'push');
+            app.SwapDiffractionXY.ButtonPushedFcn = createCallbackFcn(app, @dataset_options_callbacks, true);
+            app.SwapDiffractionXY.Tag = 'Diffraction';
+            app.SwapDiffractionXY.Tooltip = {'Swap the X/Y dimension sizes of the diffraction images, without re-importing'};
+            app.SwapDiffractionXY.Layout.Row = [1 2];
+            app.SwapDiffractionXY.Layout.Column = [2 3];
+            app.SwapDiffractionXY.Text = 'Swap Diffraction X/Y';
 
             % Create SwapRealXY
-            self.SwapRealXY = uibutton(self.DatasetOptionGrid, 'push');
-            self.SwapRealXY.ButtonPushedFcn = createCallbackFcn(self, @dataset_options_callbacks, true);
-            self.SwapRealXY.Tag = 'Real';
-            self.SwapRealXY.Tooltip = {'Swap the X/Y dimension sizes of the real-space images, without re-importing'};
-            self.SwapRealXY.Layout.Row = [3 4];
-            self.SwapRealXY.Layout.Column = [2 3];
-            self.SwapRealXY.Text = 'Swap Real-space X/Y';
+            app.SwapRealXY = uibutton(app.DatasetOptionGrid, 'push');
+            app.SwapRealXY.ButtonPushedFcn = createCallbackFcn(app, @dataset_options_callbacks, true);
+            app.SwapRealXY.Tag = 'Real';
+            app.SwapRealXY.Tooltip = {'Swap the X/Y dimension sizes of the real-space images, without re-importing'};
+            app.SwapRealXY.Layout.Row = [3 4];
+            app.SwapRealXY.Layout.Column = [2 3];
+            app.SwapRealXY.Text = 'Swap Real-space X/Y';
 
             % Create InfoTab
-            self.InfoTab = uitab(self.SettingsTabGroup);
-            self.InfoTab.AutoResizeChildren = 'off';
-            self.InfoTab.Title = 'Info';
+            app.InfoTab = uitab(app.SettingsTabGroup);
+            app.InfoTab.AutoResizeChildren = 'off';
+            app.InfoTab.Title = 'Info';
 
             % Create InfoGrid
-            self.InfoGrid = uigridlayout(self.InfoTab);
-            self.InfoGrid.ColumnWidth = {'1x'};
-            self.InfoGrid.RowHeight = {'fit', '1x', 'fit'};
-            self.InfoGrid.ColumnSpacing = 4;
-            self.InfoGrid.RowSpacing = 4;
-            self.InfoGrid.Padding = [4 4 4 4];
+            app.InfoGrid = uigridlayout(app.InfoTab);
+            app.InfoGrid.ColumnWidth = {'1x'};
+            app.InfoGrid.RowHeight = {'fit', '1x', 'fit'};
+            app.InfoGrid.ColumnSpacing = 4;
+            app.InfoGrid.RowSpacing = 4;
+            app.InfoGrid.Padding = [4 4 4 4];
 
             % Create DatasetInfoTextAreaLabel
-            self.DatasetInfoTextAreaLabel = uilabel(self.InfoGrid);
-            self.DatasetInfoTextAreaLabel.HorizontalAlignment = 'center';
-            self.DatasetInfoTextAreaLabel.VerticalAlignment = 'bottom';
-            self.DatasetInfoTextAreaLabel.FontName = 'Arial';
-            self.DatasetInfoTextAreaLabel.FontWeight = 'bold';
-            self.DatasetInfoTextAreaLabel.Layout.Row = 1;
-            self.DatasetInfoTextAreaLabel.Layout.Column = 1;
-            self.DatasetInfoTextAreaLabel.Text = 'Dataset Info';
+            app.DatasetInfoTextAreaLabel = uilabel(app.InfoGrid);
+            app.DatasetInfoTextAreaLabel.HorizontalAlignment = 'center';
+            app.DatasetInfoTextAreaLabel.VerticalAlignment = 'bottom';
+            app.DatasetInfoTextAreaLabel.FontName = 'Arial';
+            app.DatasetInfoTextAreaLabel.FontWeight = 'bold';
+            app.DatasetInfoTextAreaLabel.Layout.Row = 1;
+            app.DatasetInfoTextAreaLabel.Layout.Column = 1;
+            app.DatasetInfoTextAreaLabel.Text = 'Dataset Info';
 
             % Create DatasetInfo
-            self.DatasetInfo = uitextarea(self.InfoGrid);
-            self.DatasetInfo.Editable = 'off';
-            self.DatasetInfo.FontName = 'Arial';
-            self.DatasetInfo.Layout.Row = 2;
-            self.DatasetInfo.Layout.Column = 1;
+            app.DatasetInfo = uitextarea(app.InfoGrid);
+            app.DatasetInfo.Editable = 'off';
+            app.DatasetInfo.FontName = 'Arial';
+            app.DatasetInfo.Layout.Row = 2;
+            app.DatasetInfo.Layout.Column = 1;
 
             % Create ShowVariables
-            self.ShowVariables = uibutton(self.InfoGrid, 'state');
-            self.ShowVariables.ValueChangedFcn = createCallbackFcn(self, @variable_viewer, true);
-            self.ShowVariables.Text = 'Show all variables';
-            self.ShowVariables.FontWeight = 'bold';
-            self.ShowVariables.Layout.Row = 3;
-            self.ShowVariables.Layout.Column = 1;
+            app.ShowVariables = uibutton(app.InfoGrid, 'state');
+            app.ShowVariables.ValueChangedFcn = createCallbackFcn(app, @variable_viewer, true);
+            app.ShowVariables.Text = 'Show all variables';
+            app.ShowVariables.FontWeight = 'bold';
+            app.ShowVariables.Layout.Row = 3;
+            app.ShowVariables.Layout.Column = 1;
 
             % Create MathTab
-            self.MathTab = uitab(self.SettingsTabGroup);
-            self.MathTab.Title = 'Math';
+            app.MathTab = uitab(app.SettingsTabGroup);
+            app.MathTab.Title = 'Math';
 
             % Create MathGrid
-            self.MathGrid = uigridlayout(self.MathTab);
-            self.MathGrid.ColumnWidth = {'1x'};
-            self.MathGrid.RowHeight = {'fit', 'fit', '1x', 24};
-            self.MathGrid.ColumnSpacing = 4;
-            self.MathGrid.RowSpacing = 4;
-            self.MathGrid.Padding = [4 4 4 4];
+            app.MathGrid = uigridlayout(app.MathTab);
+            app.MathGrid.ColumnWidth = {'1x'};
+            app.MathGrid.RowHeight = {'fit', 'fit', '1x', 24};
+            app.MathGrid.ColumnSpacing = 4;
+            app.MathGrid.RowSpacing = 4;
+            app.MathGrid.Padding = [4 4 4 4];
 
             % Create MathExampleGrid
-            self.MathExampleGrid = uigridlayout(self.MathGrid);
-            self.MathExampleGrid.ColumnWidth = {'1x', 18};
-            self.MathExampleGrid.RowHeight = {18, '1x'};
-            self.MathExampleGrid.ColumnSpacing = 4;
-            self.MathExampleGrid.RowSpacing = 2;
-            self.MathExampleGrid.Padding = [0 0 0 0];
-            self.MathExampleGrid.Layout.Row = 1;
-            self.MathExampleGrid.Layout.Column = 1;
+            app.MathExampleGrid = uigridlayout(app.MathGrid);
+            app.MathExampleGrid.ColumnWidth = {'1x', 18};
+            app.MathExampleGrid.RowHeight = {18, '1x'};
+            app.MathExampleGrid.ColumnSpacing = 4;
+            app.MathExampleGrid.RowSpacing = 2;
+            app.MathExampleGrid.Padding = [0 0 0 0];
+            app.MathExampleGrid.Layout.Row = 1;
+            app.MathExampleGrid.Layout.Column = 1;
 
             % Create MathExample
-            self.MathExample = uilabel(self.MathExampleGrid);
-            self.MathExample.FontName = 'Arial';
-            self.MathExample.Layout.Row = [1 2];
-            self.MathExample.Layout.Column = [1 2];
-            self.MathExample.Interpreter = 'html';
-            self.MathExample.Text = {'<center><b>Syntax Examples</b></center>• Union of B and C, then intersects with A:'; '<b style="font-family:''Consolas''">  A & (B | C)</b>'; '• A squared plus B times C (element-wisely), then transposed:'; '<b style="font-family:''Consolas''">  (A.^2 + B .* C)''</b>'; '• Concatenates (on X-dimension) A''s Rows 1-3  to B''s Rows 4-to-last:'; '<b style="font-family:''Consolas''">  [A(1:3,:) ; B(4:end,:)]</b>'};
+            app.MathExample = uilabel(app.MathExampleGrid);
+            app.MathExample.FontName = 'Arial';
+            app.MathExample.Layout.Row = [1 2];
+            app.MathExample.Layout.Column = [1 2];
+            app.MathExample.Interpreter = 'html';
+            app.MathExample.Text = {'<center><b>Syntax Examples</b></center>• Union of B and C, then intersects with A:'; '<b style="font-family:''Consolas''">  A & (B | C)</b>'; '• A squared plus B times C (element-wisely), then transposed:'; '<b style="font-family:''Consolas''">  (A.^2 + B .* C)''</b>'; '• Concatenates (on X-dimension) A''s Rows 1-3  to B''s Rows 4-to-last:'; '<b style="font-family:''Consolas''">  [A(1:3,:) ; B(4:end,:)]</b>'};
 
             % Create MathHelpIcon
-            self.MathHelpIcon = uiimage(self.MathExampleGrid);
-            self.MathHelpIcon.Tooltip = {'• MATLAB syntax/functions are used.'; '• The X/Y dimensions (in images) are corresponding to the 1st/2nd dimensions (Rows/Columns) of arrays, respectively.'};
-            self.MathHelpIcon.Layout.Row = 1;
-            self.MathHelpIcon.Layout.Column = 2;
-            self.MathHelpIcon.ImageSource = 'help.png';
+            app.MathHelpIcon = uiimage(app.MathExampleGrid);
+            app.MathHelpIcon.Tooltip = {'• MATLAB syntax/functions are used.'; '• The X/Y dimensions (in images) are corresponding to the 1st/2nd dimensions (Rows/Columns) of arrays, respectively.'};
+            app.MathHelpIcon.Layout.Row = 1;
+            app.MathHelpIcon.Layout.Column = 2;
+            app.MathHelpIcon.ImageSource = 'help.png';
 
             % Create FormulaLabel
-            self.FormulaLabel = uilabel(self.MathGrid);
-            self.FormulaLabel.HorizontalAlignment = 'center';
-            self.FormulaLabel.FontName = 'Arial';
-            self.FormulaLabel.FontWeight = 'bold';
-            self.FormulaLabel.Layout.Row = 2;
-            self.FormulaLabel.Layout.Column = 1;
-            self.FormulaLabel.Text = 'Formula';
+            app.FormulaLabel = uilabel(app.MathGrid);
+            app.FormulaLabel.HorizontalAlignment = 'center';
+            app.FormulaLabel.FontName = 'Arial';
+            app.FormulaLabel.FontWeight = 'bold';
+            app.FormulaLabel.Layout.Row = 2;
+            app.FormulaLabel.Layout.Column = 1;
+            app.FormulaLabel.Text = 'Formula';
 
             % Create MathFormula
-            self.MathFormula = uitextarea(self.MathGrid);
-            self.MathFormula.FontName = 'Arial';
-            self.MathFormula.Layout.Row = 3;
-            self.MathFormula.Layout.Column = 1;
+            app.MathFormula = uitextarea(app.MathGrid);
+            app.MathFormula.FontName = 'Arial';
+            app.MathFormula.Layout.Row = 3;
+            app.MathFormula.Layout.Column = 1;
 
             % Create EvaluateGrid
-            self.EvaluateGrid = uigridlayout(self.MathGrid);
-            self.EvaluateGrid.ColumnWidth = {18, '1x', 'fit', '1x', 18};
-            self.EvaluateGrid.RowHeight = {'1x'};
-            self.EvaluateGrid.ColumnSpacing = 4;
-            self.EvaluateGrid.RowSpacing = 4;
-            self.EvaluateGrid.Padding = [0 0 0 0];
-            self.EvaluateGrid.Layout.Row = 4;
-            self.EvaluateGrid.Layout.Column = 1;
+            app.EvaluateGrid = uigridlayout(app.MathGrid);
+            app.EvaluateGrid.ColumnWidth = {18, '1x', 'fit', '1x', 18};
+            app.EvaluateGrid.RowHeight = {'1x'};
+            app.EvaluateGrid.ColumnSpacing = 4;
+            app.EvaluateGrid.RowSpacing = 4;
+            app.EvaluateGrid.Padding = [0 0 0 0];
+            app.EvaluateGrid.Layout.Row = 4;
+            app.EvaluateGrid.Layout.Column = 1;
 
             % Create Evaluate
-            self.Evaluate = uibutton(self.EvaluateGrid, 'push');
-            self.Evaluate.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.Evaluate.FontName = 'Arial';
-            self.Evaluate.Layout.Row = 1;
-            self.Evaluate.Layout.Column = 3;
-            self.Evaluate.Text = 'Evaluate';
+            app.Evaluate = uibutton(app.EvaluateGrid, 'push');
+            app.Evaluate.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.Evaluate.FontName = 'Arial';
+            app.Evaluate.Layout.Row = 1;
+            app.Evaluate.Layout.Column = 3;
+            app.Evaluate.Text = 'Evaluate';
 
             % Create VariablesTab
-            self.VariablesTab = uitab(self.SettingsTabGroup);
-            self.VariablesTab.Title = 'Variables';
+            app.VariablesTab = uitab(app.SettingsTabGroup);
+            app.VariablesTab.Title = 'Variables';
 
             % Create VariablesGrid
-            self.VariablesGrid = uigridlayout(self.VariablesTab);
-            self.VariablesGrid.ColumnWidth = {'1x'};
+            app.VariablesGrid = uigridlayout(app.VariablesTab);
+            app.VariablesGrid.ColumnWidth = {'1x'};
 
             % Create VariablesTable
-            self.VariablesTable = uitable(self.VariablesGrid);
-            self.VariablesTable.ColumnName = {'Value'};
-            self.VariablesTable.ColumnWidth = {'1x'};
-            self.VariablesTable.RowName = {};
-            self.VariablesTable.Layout.Row = 2;
-            self.VariablesTable.Layout.Column = 1;
+            app.VariablesTable = uitable(app.VariablesGrid);
+            app.VariablesTable.ColumnName = {'Value'};
+            app.VariablesTable.ColumnWidth = {'1x'};
+            app.VariablesTable.RowName = {};
+            app.VariablesTable.Layout.Row = 2;
+            app.VariablesTable.Layout.Column = 1;
 
             % Create VariablesTree
-            self.VariablesTree = uitree(self.VariablesGrid);
-            self.VariablesTree.SelectionChangedFcn = createCallbackFcn(self, @variable_viewer, true);
-            self.VariablesTree.Layout.Row = 1;
-            self.VariablesTree.Layout.Column = 1;
+            app.VariablesTree = uitree(app.VariablesGrid);
+            app.VariablesTree.SelectionChangedFcn = createCallbackFcn(app, @variable_viewer, true);
+            app.VariablesTree.Layout.Row = 1;
+            app.VariablesTree.Layout.Column = 1;
 
             % Create ModeTabGroup
-            self.ModeTabGroup = uitabgroup(self.Quant4D_Fig);
-            self.ModeTabGroup.TabLocation = 'bottom';
-            self.ModeTabGroup.Position = [-266 85 260 328];
+            app.ModeTabGroup = uitabgroup(app.Quant4D_Fig);
+            app.ModeTabGroup.TabLocation = 'bottom';
+            app.ModeTabGroup.Position = [-266 85 260 328];
 
             % Create PreviewTab
-            self.PreviewTab = uitab(self.ModeTabGroup);
-            self.PreviewTab.Title = 'Pv';
+            app.PreviewTab = uitab(app.ModeTabGroup);
+            app.PreviewTab.Title = 'Pv';
 
             % Create PreviewGrid
-            self.PreviewGrid = uigridlayout(self.PreviewTab);
-            self.PreviewGrid.ColumnWidth = {'1x'};
-            self.PreviewGrid.RowHeight = {'1x'};
-            self.PreviewGrid.ColumnSpacing = 4;
-            self.PreviewGrid.RowSpacing = 4;
-            self.PreviewGrid.Padding = [4 4 4 4];
+            app.PreviewGrid = uigridlayout(app.PreviewTab);
+            app.PreviewGrid.ColumnWidth = {'1x'};
+            app.PreviewGrid.RowHeight = {'1x'};
+            app.PreviewGrid.ColumnSpacing = 4;
+            app.PreviewGrid.RowSpacing = 4;
+            app.PreviewGrid.Padding = [4 4 4 4];
 
             % Create PreviewFramePanel
-            self.PreviewFramePanel = uipanel(self.PreviewGrid);
-            self.PreviewFramePanel.BorderType = 'none';
-            self.PreviewFramePanel.TitlePosition = 'centertop';
-            self.PreviewFramePanel.Title = 'Preview Frame';
-            self.PreviewFramePanel.Layout.Row = 1;
-            self.PreviewFramePanel.Layout.Column = 1;
-            self.PreviewFramePanel.FontName = 'Arial';
-            self.PreviewFramePanel.FontWeight = 'bold';
+            app.PreviewFramePanel = uipanel(app.PreviewGrid);
+            app.PreviewFramePanel.BorderType = 'none';
+            app.PreviewFramePanel.TitlePosition = 'centertop';
+            app.PreviewFramePanel.Title = 'Preview Frame';
+            app.PreviewFramePanel.Layout.Row = 1;
+            app.PreviewFramePanel.Layout.Column = 1;
+            app.PreviewFramePanel.FontName = 'Arial';
+            app.PreviewFramePanel.FontWeight = 'bold';
 
             % Create PreviewButtonGrid
-            self.PreviewButtonGrid = uigridlayout(self.PreviewFramePanel);
-            self.PreviewButtonGrid.ColumnWidth = {'1x', '1x', '1x'};
-            self.PreviewButtonGrid.RowHeight = {24, 24, 24, '1x'};
-            self.PreviewButtonGrid.ColumnSpacing = 2;
-            self.PreviewButtonGrid.RowSpacing = 2;
-            self.PreviewButtonGrid.Padding = [0 0 0 4];
+            app.PreviewButtonGrid = uigridlayout(app.PreviewFramePanel);
+            app.PreviewButtonGrid.ColumnWidth = {'1x', '1x', '1x'};
+            app.PreviewButtonGrid.RowHeight = {24, 24, 24, '1x'};
+            app.PreviewButtonGrid.ColumnSpacing = 2;
+            app.PreviewButtonGrid.RowSpacing = 2;
+            app.PreviewButtonGrid.Padding = [0 0 0 4];
 
             % Create PreviewFrame_1_1
-            self.PreviewFrame_1_1 = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_1_1.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_1_1.FontName = 'Consolas';
-            self.PreviewFrame_1_1.Layout.Row = 1;
-            self.PreviewFrame_1_1.Layout.Column = 1;
-            self.PreviewFrame_1_1.Text = '[1,1]';
+            app.PreviewFrame_1_1 = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_1_1.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_1_1.FontName = 'Consolas';
+            app.PreviewFrame_1_1.Layout.Row = 1;
+            app.PreviewFrame_1_1.Layout.Column = 1;
+            app.PreviewFrame_1_1.Text = '[1,1]';
 
             % Create PreviewFrame_X2_1
-            self.PreviewFrame_X2_1 = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_X2_1.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_X2_1.FontName = 'Consolas';
-            self.PreviewFrame_X2_1.Layout.Row = 1;
-            self.PreviewFrame_X2_1.Layout.Column = 2;
-            self.PreviewFrame_X2_1.Text = '[X/2,1]';
+            app.PreviewFrame_X2_1 = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_X2_1.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_X2_1.FontName = 'Consolas';
+            app.PreviewFrame_X2_1.Layout.Row = 1;
+            app.PreviewFrame_X2_1.Layout.Column = 2;
+            app.PreviewFrame_X2_1.Text = '[X/2,1]';
 
             % Create PreviewFrame_X_1
-            self.PreviewFrame_X_1 = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_X_1.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_X_1.FontName = 'Consolas';
-            self.PreviewFrame_X_1.Layout.Row = 1;
-            self.PreviewFrame_X_1.Layout.Column = 3;
-            self.PreviewFrame_X_1.Text = '[X,1]';
+            app.PreviewFrame_X_1 = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_X_1.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_X_1.FontName = 'Consolas';
+            app.PreviewFrame_X_1.Layout.Row = 1;
+            app.PreviewFrame_X_1.Layout.Column = 3;
+            app.PreviewFrame_X_1.Text = '[X,1]';
 
             % Create PreviewFrame_1_Y2
-            self.PreviewFrame_1_Y2 = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_1_Y2.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_1_Y2.FontName = 'Consolas';
-            self.PreviewFrame_1_Y2.Layout.Row = 2;
-            self.PreviewFrame_1_Y2.Layout.Column = 1;
-            self.PreviewFrame_1_Y2.Text = '[1,Y/2]';
+            app.PreviewFrame_1_Y2 = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_1_Y2.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_1_Y2.FontName = 'Consolas';
+            app.PreviewFrame_1_Y2.Layout.Row = 2;
+            app.PreviewFrame_1_Y2.Layout.Column = 1;
+            app.PreviewFrame_1_Y2.Text = '[1,Y/2]';
 
             % Create PreviewFrame_X2_Y2
-            self.PreviewFrame_X2_Y2 = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_X2_Y2.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_X2_Y2.FontName = 'Consolas';
-            self.PreviewFrame_X2_Y2.Layout.Row = 2;
-            self.PreviewFrame_X2_Y2.Layout.Column = 2;
-            self.PreviewFrame_X2_Y2.Text = '[X/2,Y/2]';
+            app.PreviewFrame_X2_Y2 = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_X2_Y2.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_X2_Y2.FontName = 'Consolas';
+            app.PreviewFrame_X2_Y2.Layout.Row = 2;
+            app.PreviewFrame_X2_Y2.Layout.Column = 2;
+            app.PreviewFrame_X2_Y2.Text = '[X/2,Y/2]';
 
             % Create PreviewFrame_X_Y2
-            self.PreviewFrame_X_Y2 = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_X_Y2.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_X_Y2.FontName = 'Consolas';
-            self.PreviewFrame_X_Y2.Layout.Row = 2;
-            self.PreviewFrame_X_Y2.Layout.Column = 3;
-            self.PreviewFrame_X_Y2.Text = '[X,Y/2]';
+            app.PreviewFrame_X_Y2 = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_X_Y2.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_X_Y2.FontName = 'Consolas';
+            app.PreviewFrame_X_Y2.Layout.Row = 2;
+            app.PreviewFrame_X_Y2.Layout.Column = 3;
+            app.PreviewFrame_X_Y2.Text = '[X,Y/2]';
 
             % Create PreviewFrame_1_Y
-            self.PreviewFrame_1_Y = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_1_Y.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_1_Y.FontName = 'Consolas';
-            self.PreviewFrame_1_Y.Layout.Row = 3;
-            self.PreviewFrame_1_Y.Layout.Column = 1;
-            self.PreviewFrame_1_Y.Text = '[1,Y]';
+            app.PreviewFrame_1_Y = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_1_Y.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_1_Y.FontName = 'Consolas';
+            app.PreviewFrame_1_Y.Layout.Row = 3;
+            app.PreviewFrame_1_Y.Layout.Column = 1;
+            app.PreviewFrame_1_Y.Text = '[1,Y]';
 
             % Create PreviewFrame_X2_Y
-            self.PreviewFrame_X2_Y = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_X2_Y.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_X2_Y.FontName = 'Consolas';
-            self.PreviewFrame_X2_Y.Layout.Row = 3;
-            self.PreviewFrame_X2_Y.Layout.Column = 2;
-            self.PreviewFrame_X2_Y.Text = '[X/2,Y]';
+            app.PreviewFrame_X2_Y = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_X2_Y.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_X2_Y.FontName = 'Consolas';
+            app.PreviewFrame_X2_Y.Layout.Row = 3;
+            app.PreviewFrame_X2_Y.Layout.Column = 2;
+            app.PreviewFrame_X2_Y.Text = '[X/2,Y]';
 
             % Create PreviewFrame_X_Y
-            self.PreviewFrame_X_Y = uibutton(self.PreviewButtonGrid, 'push');
-            self.PreviewFrame_X_Y.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrame_X_Y.FontName = 'Consolas';
-            self.PreviewFrame_X_Y.Layout.Row = 3;
-            self.PreviewFrame_X_Y.Layout.Column = 3;
-            self.PreviewFrame_X_Y.Text = '[X,Y]';
+            app.PreviewFrame_X_Y = uibutton(app.PreviewButtonGrid, 'push');
+            app.PreviewFrame_X_Y.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrame_X_Y.FontName = 'Consolas';
+            app.PreviewFrame_X_Y.Layout.Row = 3;
+            app.PreviewFrame_X_Y.Layout.Column = 3;
+            app.PreviewFrame_X_Y.Text = '[X,Y]';
 
             % Create PreviewFrameGrid
-            self.PreviewFrameGrid = uigridlayout(self.PreviewButtonGrid);
-            self.PreviewFrameGrid.ColumnWidth = {'1x', 'fit', '1x', 'fit', '1x'};
-            self.PreviewFrameGrid.RowHeight = {24};
-            self.PreviewFrameGrid.ColumnSpacing = 4;
-            self.PreviewFrameGrid.RowSpacing = 4;
-            self.PreviewFrameGrid.Padding = [0 0 0 4];
-            self.PreviewFrameGrid.Layout.Row = 4;
-            self.PreviewFrameGrid.Layout.Column = [1 3];
+            app.PreviewFrameGrid = uigridlayout(app.PreviewButtonGrid);
+            app.PreviewFrameGrid.ColumnWidth = {'1x', 'fit', '1x', 'fit', '1x'};
+            app.PreviewFrameGrid.RowHeight = {24};
+            app.PreviewFrameGrid.ColumnSpacing = 4;
+            app.PreviewFrameGrid.RowSpacing = 4;
+            app.PreviewFrameGrid.Padding = [0 0 0 4];
+            app.PreviewFrameGrid.Layout.Row = 4;
+            app.PreviewFrameGrid.Layout.Column = [1 3];
 
             % Create PreviewButton
-            self.PreviewButton = uibutton(self.PreviewFrameGrid, 'push');
-            self.PreviewButton.ButtonPushedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewButton.FontName = 'Arial';
-            self.PreviewButton.FontWeight = 'bold';
-            self.PreviewButton.Layout.Row = 1;
-            self.PreviewButton.Layout.Column = 1;
-            self.PreviewButton.Text = 'Preview';
+            app.PreviewButton = uibutton(app.PreviewFrameGrid, 'push');
+            app.PreviewButton.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewButton.FontName = 'Arial';
+            app.PreviewButton.FontWeight = 'bold';
+            app.PreviewButton.Layout.Row = 1;
+            app.PreviewButton.Layout.Column = 1;
+            app.PreviewButton.Text = 'Preview';
 
             % Create PvFrXLabel
-            self.PvFrXLabel = uilabel(self.PreviewFrameGrid);
-            self.PvFrXLabel.HorizontalAlignment = 'right';
-            self.PvFrXLabel.Layout.Row = 1;
-            self.PvFrXLabel.Layout.Column = 2;
-            self.PvFrXLabel.Text = 'X';
+            app.PvFrXLabel = uilabel(app.PreviewFrameGrid);
+            app.PvFrXLabel.HorizontalAlignment = 'right';
+            app.PvFrXLabel.Layout.Row = 1;
+            app.PvFrXLabel.Layout.Column = 2;
+            app.PvFrXLabel.Text = 'X';
 
             % Create PreviewFrameX
-            self.PreviewFrameX = uispinner(self.PreviewFrameGrid);
-            self.PreviewFrameX.RoundFractionalValues = 'on';
-            self.PreviewFrameX.ValueDisplayFormat = '%.0f';
-            self.PreviewFrameX.ValueChangedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrameX.Layout.Row = 1;
-            self.PreviewFrameX.Layout.Column = 3;
-            self.PreviewFrameX.Value = 1;
+            app.PreviewFrameX = uispinner(app.PreviewFrameGrid);
+            app.PreviewFrameX.RoundFractionalValues = 'on';
+            app.PreviewFrameX.ValueDisplayFormat = '%.0f';
+            app.PreviewFrameX.ValueChangedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrameX.Layout.Row = 1;
+            app.PreviewFrameX.Layout.Column = 3;
+            app.PreviewFrameX.Value = 1;
 
             % Create PvFrYLabel
-            self.PvFrYLabel = uilabel(self.PreviewFrameGrid);
-            self.PvFrYLabel.HorizontalAlignment = 'right';
-            self.PvFrYLabel.Layout.Row = 1;
-            self.PvFrYLabel.Layout.Column = 4;
-            self.PvFrYLabel.Text = 'Y';
+            app.PvFrYLabel = uilabel(app.PreviewFrameGrid);
+            app.PvFrYLabel.HorizontalAlignment = 'right';
+            app.PvFrYLabel.Layout.Row = 1;
+            app.PvFrYLabel.Layout.Column = 4;
+            app.PvFrYLabel.Text = 'Y';
 
             % Create PreviewFrameY
-            self.PreviewFrameY = uispinner(self.PreviewFrameGrid);
-            self.PreviewFrameY.RoundFractionalValues = 'on';
-            self.PreviewFrameY.ValueDisplayFormat = '%.0f';
-            self.PreviewFrameY.ValueChangedFcn = createCallbackFcn(self, @preview_callbacks, true);
-            self.PreviewFrameY.Layout.Row = 1;
-            self.PreviewFrameY.Layout.Column = 5;
-            self.PreviewFrameY.Value = 1;
+            app.PreviewFrameY = uispinner(app.PreviewFrameGrid);
+            app.PreviewFrameY.RoundFractionalValues = 'on';
+            app.PreviewFrameY.ValueDisplayFormat = '%.0f';
+            app.PreviewFrameY.ValueChangedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewFrameY.Layout.Row = 1;
+            app.PreviewFrameY.Layout.Column = 5;
+            app.PreviewFrameY.Value = 1;
 
             % Create AlignmentTab
-            self.AlignmentTab = uitab(self.ModeTabGroup);
-            self.AlignmentTab.Title = 'Align';
-            self.AlignmentTab.BackgroundColor = [0.9412 0.9412 0.9412];
+            app.AlignmentTab = uitab(app.ModeTabGroup);
+            app.AlignmentTab.Title = 'Align';
+            app.AlignmentTab.BackgroundColor = [0.9412 0.9412 0.9412];
 
             % Create AlignmentGrid
-            self.AlignmentGrid = uigridlayout(self.AlignmentTab);
-            self.AlignmentGrid.ColumnWidth = {'1x'};
-            self.AlignmentGrid.RowHeight = {'fit', 'fit', 18};
-            self.AlignmentGrid.ColumnSpacing = 4;
-            self.AlignmentGrid.RowSpacing = 4;
-            self.AlignmentGrid.Padding = [4 4 4 4];
+            app.AlignmentGrid = uigridlayout(app.AlignmentTab);
+            app.AlignmentGrid.ColumnWidth = {'1x'};
+            app.AlignmentGrid.RowHeight = {'fit', 'fit', 18};
+            app.AlignmentGrid.ColumnSpacing = 4;
+            app.AlignmentGrid.RowSpacing = 4;
+            app.AlignmentGrid.Padding = [4 4 4 4];
 
             % Create DiffractionCalibrationPanel
-            self.DiffractionCalibrationPanel = uipanel(self.AlignmentGrid);
-            self.DiffractionCalibrationPanel.BorderType = 'none';
-            self.DiffractionCalibrationPanel.TitlePosition = 'centertop';
-            self.DiffractionCalibrationPanel.Title = 'Diffraction Calibration';
-            self.DiffractionCalibrationPanel.Layout.Row = 1;
-            self.DiffractionCalibrationPanel.Layout.Column = 1;
-            self.DiffractionCalibrationPanel.FontName = 'Arial';
-            self.DiffractionCalibrationPanel.FontWeight = 'bold';
+            app.DiffractionCalibrationPanel = uipanel(app.AlignmentGrid);
+            app.DiffractionCalibrationPanel.BorderType = 'none';
+            app.DiffractionCalibrationPanel.TitlePosition = 'centertop';
+            app.DiffractionCalibrationPanel.Title = 'Diffraction Calibration';
+            app.DiffractionCalibrationPanel.Layout.Row = 1;
+            app.DiffractionCalibrationPanel.Layout.Column = 1;
+            app.DiffractionCalibrationPanel.FontName = 'Arial';
+            app.DiffractionCalibrationPanel.FontWeight = 'bold';
 
             % Create DiffractionCalibrationGrid
-            self.DiffractionCalibrationGrid = uigridlayout(self.DiffractionCalibrationPanel);
-            self.DiffractionCalibrationGrid.ColumnWidth = {'1x', 58, 58, '1x'};
-            self.DiffractionCalibrationGrid.RowHeight = {24, 24};
-            self.DiffractionCalibrationGrid.ColumnSpacing = 4;
-            self.DiffractionCalibrationGrid.RowSpacing = 4;
-            self.DiffractionCalibrationGrid.Padding = [0 0 0 4];
+            app.DiffractionCalibrationGrid = uigridlayout(app.DiffractionCalibrationPanel);
+            app.DiffractionCalibrationGrid.ColumnWidth = {'1x', 58, 58, '1x'};
+            app.DiffractionCalibrationGrid.RowHeight = {24, 24};
+            app.DiffractionCalibrationGrid.ColumnSpacing = 4;
+            app.DiffractionCalibrationGrid.RowSpacing = 4;
+            app.DiffractionCalibrationGrid.Padding = [0 0 0 4];
 
             % Create ConvergenceAngleLabel
-            self.ConvergenceAngleLabel = uilabel(self.DiffractionCalibrationGrid);
-            self.ConvergenceAngleLabel.HorizontalAlignment = 'right';
-            self.ConvergenceAngleLabel.Layout.Row = 1;
-            self.ConvergenceAngleLabel.Layout.Column = [1 2];
-            self.ConvergenceAngleLabel.Text = 'Convergence Angle';
+            app.ConvergenceAngleLabel = uilabel(app.DiffractionCalibrationGrid);
+            app.ConvergenceAngleLabel.HorizontalAlignment = 'right';
+            app.ConvergenceAngleLabel.Layout.Row = 1;
+            app.ConvergenceAngleLabel.Layout.Column = [1 2];
+            app.ConvergenceAngleLabel.Text = 'Convergence Angle';
 
             % Create Alpha
-            self.Alpha = uieditfield(self.DiffractionCalibrationGrid, 'numeric');
-            self.Alpha.Limits = [0 Inf];
-            self.Alpha.ValueDisplayFormat = '%.2f';
-            self.Alpha.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.Alpha.Layout.Row = 1;
-            self.Alpha.Layout.Column = 3;
-            self.Alpha.Value = 12;
+            app.Alpha = uieditfield(app.DiffractionCalibrationGrid, 'numeric');
+            app.Alpha.Limits = [0 Inf];
+            app.Alpha.ValueDisplayFormat = '%.2f';
+            app.Alpha.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.Alpha.Layout.Row = 1;
+            app.Alpha.Layout.Column = 3;
+            app.Alpha.Value = 12;
 
             % Create AlphaLabel
-            self.AlphaLabel = uilabel(self.DiffractionCalibrationGrid);
-            self.AlphaLabel.Layout.Row = 1;
-            self.AlphaLabel.Layout.Column = 4;
-            self.AlphaLabel.Text = 'mrad';
+            app.AlphaLabel = uilabel(app.DiffractionCalibrationGrid);
+            app.AlphaLabel.Layout.Row = 1;
+            app.AlphaLabel.Layout.Column = 4;
+            app.AlphaLabel.Text = 'mrad';
 
             % Create DiffractionScaleLabel
-            self.DiffractionScaleLabel = uilabel(self.DiffractionCalibrationGrid);
-            self.DiffractionScaleLabel.HorizontalAlignment = 'right';
-            self.DiffractionScaleLabel.Layout.Row = 2;
-            self.DiffractionScaleLabel.Layout.Column = [1 2];
-            self.DiffractionScaleLabel.Text = 'Diffraction Scale';
+            app.DiffractionScaleLabel = uilabel(app.DiffractionCalibrationGrid);
+            app.DiffractionScaleLabel.HorizontalAlignment = 'right';
+            app.DiffractionScaleLabel.Layout.Row = 2;
+            app.DiffractionScaleLabel.Layout.Column = [1 2];
+            app.DiffractionScaleLabel.Text = 'Diffraction Scale';
 
             % Create mradPx
-            self.mradPx = uieditfield(self.DiffractionCalibrationGrid, 'numeric');
-            self.mradPx.Limits = [0 Inf];
-            self.mradPx.ValueDisplayFormat = '%.4g';
-            self.mradPx.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.mradPx.Layout.Row = 2;
-            self.mradPx.Layout.Column = 3;
-            self.mradPx.Value = 1;
+            app.mradPx = uieditfield(app.DiffractionCalibrationGrid, 'numeric');
+            app.mradPx.Limits = [0 Inf];
+            app.mradPx.ValueDisplayFormat = '%.4g';
+            app.mradPx.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.mradPx.Layout.Row = 2;
+            app.mradPx.Layout.Column = 3;
+            app.mradPx.Value = 1;
 
             % Create mradPxLabel
-            self.mradPxLabel = uilabel(self.DiffractionCalibrationGrid);
-            self.mradPxLabel.Layout.Row = 2;
-            self.mradPxLabel.Layout.Column = 4;
-            self.mradPxLabel.Text = 'mrad/px';
+            app.mradPxLabel = uilabel(app.DiffractionCalibrationGrid);
+            app.mradPxLabel.Layout.Row = 2;
+            app.mradPxLabel.Layout.Column = 4;
+            app.mradPxLabel.Text = 'mrad/px';
 
             % Create TransBeamAlignPanel
-            self.TransBeamAlignPanel = uipanel(self.AlignmentGrid);
-            self.TransBeamAlignPanel.BorderType = 'none';
-            self.TransBeamAlignPanel.TitlePosition = 'centertop';
-            self.TransBeamAlignPanel.Title = 'Transmitted Beam Position Alignment';
-            self.TransBeamAlignPanel.Layout.Row = 2;
-            self.TransBeamAlignPanel.Layout.Column = 1;
-            self.TransBeamAlignPanel.FontName = 'Arial';
-            self.TransBeamAlignPanel.FontWeight = 'bold';
+            app.TransBeamAlignPanel = uipanel(app.AlignmentGrid);
+            app.TransBeamAlignPanel.BorderType = 'none';
+            app.TransBeamAlignPanel.TitlePosition = 'centertop';
+            app.TransBeamAlignPanel.Title = 'Transmitted Beam Position Alignment';
+            app.TransBeamAlignPanel.Layout.Row = 2;
+            app.TransBeamAlignPanel.Layout.Column = 1;
+            app.TransBeamAlignPanel.FontName = 'Arial';
+            app.TransBeamAlignPanel.FontWeight = 'bold';
 
             % Create TransBeamAlignGrid
-            self.TransBeamAlignGrid = uigridlayout(self.TransBeamAlignPanel);
-            self.TransBeamAlignGrid.ColumnWidth = {'1x', 80, 80, '1x'};
-            self.TransBeamAlignGrid.RowHeight = {24, 2, 24, 'fit', 2, 24, 'fit', 2, 24, 'fit'};
-            self.TransBeamAlignGrid.ColumnSpacing = 4;
-            self.TransBeamAlignGrid.RowSpacing = 2;
-            self.TransBeamAlignGrid.Padding = [0 0 0 4];
+            app.TransBeamAlignGrid = uigridlayout(app.TransBeamAlignPanel);
+            app.TransBeamAlignGrid.ColumnWidth = {'1x', 80, 80, '1x'};
+            app.TransBeamAlignGrid.RowHeight = {24, 2, 24, 'fit', 2, 24, 'fit', 2, 24, 'fit'};
+            app.TransBeamAlignGrid.ColumnSpacing = 4;
+            app.TransBeamAlignGrid.RowSpacing = 2;
+            app.TransBeamAlignGrid.Padding = [0 0 0 4];
 
             % Create TBAutoAlign
-            self.TBAutoAlign = uibutton(self.TransBeamAlignGrid, 'push');
-            self.TBAutoAlign.ButtonPushedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TBAutoAlign.Layout.Row = 1;
-            self.TBAutoAlign.Layout.Column = [2 3];
-            self.TBAutoAlign.Text = 'Auto Align';
+            app.TBAutoAlign = uibutton(app.TransBeamAlignGrid, 'push');
+            app.TBAutoAlign.ButtonPushedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TBAutoAlign.Layout.Row = 1;
+            app.TBAutoAlign.Layout.Column = [2 3];
+            app.TBAutoAlign.Text = 'Auto Align';
 
             % Create TBCrossAlign
-            self.TBCrossAlign = uibutton(self.TransBeamAlignGrid, 'push');
-            self.TBCrossAlign.ButtonPushedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TBCrossAlign.Tooltip = {'Align transmitted beam location as the crossing point of two lines'};
-            self.TBCrossAlign.Layout.Row = 1;
-            self.TBCrossAlign.Layout.Column = 4;
-            self.TBCrossAlign.Text = 'X';
+            app.TBCrossAlign = uibutton(app.TransBeamAlignGrid, 'push');
+            app.TBCrossAlign.ButtonPushedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TBCrossAlign.Tooltip = {'Align transmitted beam location as the crossing point of two lines'};
+            app.TBCrossAlign.Layout.Row = 1;
+            app.TBCrossAlign.Layout.Column = 4;
+            app.TBCrossAlign.Text = 'X';
 
             % Create TBRLabel
-            self.TBRLabel = uilabel(self.TransBeamAlignGrid);
-            self.TBRLabel.HorizontalAlignment = 'right';
-            self.TBRLabel.Layout.Row = 3;
-            self.TBRLabel.Layout.Column = 2;
-            self.TBRLabel.Text = 'Radius';
+            app.TBRLabel = uilabel(app.TransBeamAlignGrid);
+            app.TBRLabel.HorizontalAlignment = 'right';
+            app.TBRLabel.Layout.Row = 3;
+            app.TBRLabel.Layout.Column = 2;
+            app.TBRLabel.Text = 'Radius';
 
             % Create TransBeamRSpinner
-            self.TransBeamRSpinner = uispinner(self.TransBeamAlignGrid);
-            self.TransBeamRSpinner.Step = 0.25;
-            self.TransBeamRSpinner.ValueChangingFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamRSpinner.ValueDisplayFormat = '%.2f';
-            self.TransBeamRSpinner.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamRSpinner.Layout.Row = 3;
-            self.TransBeamRSpinner.Layout.Column = 3;
+            app.TransBeamRSpinner = uispinner(app.TransBeamAlignGrid);
+            app.TransBeamRSpinner.Step = 0.25;
+            app.TransBeamRSpinner.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamRSpinner.ValueDisplayFormat = '%.2f';
+            app.TransBeamRSpinner.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamRSpinner.Layout.Row = 3;
+            app.TransBeamRSpinner.Layout.Column = 3;
 
             % Create TBR_NFLabel
-            self.TBR_NFLabel = uilabel(self.TransBeamAlignGrid);
-            self.TBR_NFLabel.Layout.Row = 3;
-            self.TBR_NFLabel.Layout.Column = 4;
-            self.TBR_NFLabel.Text = 'px';
+            app.TBR_NFLabel = uilabel(app.TransBeamAlignGrid);
+            app.TBR_NFLabel.Layout.Row = 3;
+            app.TBR_NFLabel.Layout.Column = 4;
+            app.TBR_NFLabel.Text = 'px';
 
             % Create TransBeamR
-            self.TransBeamR = uislider(self.TransBeamAlignGrid);
-            self.TransBeamR.MajorTicks = [];
-            self.TransBeamR.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamR.ValueChangingFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamR.Layout.Row = 4;
-            self.TransBeamR.Layout.Column = [1 4];
+            app.TransBeamR = uislider(app.TransBeamAlignGrid);
+            app.TransBeamR.MajorTicks = [];
+            app.TransBeamR.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamR.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamR.Layout.Row = 4;
+            app.TransBeamR.Layout.Column = [1 4];
 
             % Create TBXLabel
-            self.TBXLabel = uilabel(self.TransBeamAlignGrid);
-            self.TBXLabel.HorizontalAlignment = 'right';
-            self.TBXLabel.Layout.Row = 6;
-            self.TBXLabel.Layout.Column = 2;
-            self.TBXLabel.Text = 'X';
+            app.TBXLabel = uilabel(app.TransBeamAlignGrid);
+            app.TBXLabel.HorizontalAlignment = 'right';
+            app.TBXLabel.Layout.Row = 6;
+            app.TBXLabel.Layout.Column = 2;
+            app.TBXLabel.Text = 'X';
 
             % Create TransBeamXSpinner
-            self.TransBeamXSpinner = uispinner(self.TransBeamAlignGrid);
-            self.TransBeamXSpinner.Step = 0.25;
-            self.TransBeamXSpinner.ValueChangingFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamXSpinner.ValueDisplayFormat = '%.2f';
-            self.TransBeamXSpinner.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamXSpinner.Layout.Row = 6;
-            self.TransBeamXSpinner.Layout.Column = 3;
+            app.TransBeamXSpinner = uispinner(app.TransBeamAlignGrid);
+            app.TransBeamXSpinner.Step = 0.25;
+            app.TransBeamXSpinner.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamXSpinner.ValueDisplayFormat = '%.2f';
+            app.TransBeamXSpinner.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamXSpinner.Layout.Row = 6;
+            app.TransBeamXSpinner.Layout.Column = 3;
 
             % Create TBX_NFLabel
-            self.TBX_NFLabel = uilabel(self.TransBeamAlignGrid);
-            self.TBX_NFLabel.Layout.Row = 6;
-            self.TBX_NFLabel.Layout.Column = 4;
-            self.TBX_NFLabel.Text = 'px';
+            app.TBX_NFLabel = uilabel(app.TransBeamAlignGrid);
+            app.TBX_NFLabel.Layout.Row = 6;
+            app.TBX_NFLabel.Layout.Column = 4;
+            app.TBX_NFLabel.Text = 'px';
 
             % Create TransBeamX
-            self.TransBeamX = uislider(self.TransBeamAlignGrid);
-            self.TransBeamX.MajorTicks = [];
-            self.TransBeamX.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamX.ValueChangingFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamX.Layout.Row = 7;
-            self.TransBeamX.Layout.Column = [1 4];
+            app.TransBeamX = uislider(app.TransBeamAlignGrid);
+            app.TransBeamX.MajorTicks = [];
+            app.TransBeamX.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamX.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamX.Layout.Row = 7;
+            app.TransBeamX.Layout.Column = [1 4];
 
             % Create TBYLabel
-            self.TBYLabel = uilabel(self.TransBeamAlignGrid);
-            self.TBYLabel.HorizontalAlignment = 'right';
-            self.TBYLabel.Layout.Row = 9;
-            self.TBYLabel.Layout.Column = 2;
-            self.TBYLabel.Text = 'Y';
+            app.TBYLabel = uilabel(app.TransBeamAlignGrid);
+            app.TBYLabel.HorizontalAlignment = 'right';
+            app.TBYLabel.Layout.Row = 9;
+            app.TBYLabel.Layout.Column = 2;
+            app.TBYLabel.Text = 'Y';
 
             % Create TransBeamYSpinner
-            self.TransBeamYSpinner = uispinner(self.TransBeamAlignGrid);
-            self.TransBeamYSpinner.Step = 0.25;
-            self.TransBeamYSpinner.ValueChangingFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamYSpinner.ValueDisplayFormat = '%.2f';
-            self.TransBeamYSpinner.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamYSpinner.Layout.Row = 9;
-            self.TransBeamYSpinner.Layout.Column = 3;
+            app.TransBeamYSpinner = uispinner(app.TransBeamAlignGrid);
+            app.TransBeamYSpinner.Step = 0.25;
+            app.TransBeamYSpinner.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamYSpinner.ValueDisplayFormat = '%.2f';
+            app.TransBeamYSpinner.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamYSpinner.Layout.Row = 9;
+            app.TransBeamYSpinner.Layout.Column = 3;
 
             % Create TBY_NFLabel
-            self.TBY_NFLabel = uilabel(self.TransBeamAlignGrid);
-            self.TBY_NFLabel.Layout.Row = 9;
-            self.TBY_NFLabel.Layout.Column = 4;
-            self.TBY_NFLabel.Text = 'px';
+            app.TBY_NFLabel = uilabel(app.TransBeamAlignGrid);
+            app.TBY_NFLabel.Layout.Row = 9;
+            app.TBY_NFLabel.Layout.Column = 4;
+            app.TBY_NFLabel.Text = 'px';
 
             % Create TransBeamY
-            self.TransBeamY = uislider(self.TransBeamAlignGrid);
-            self.TransBeamY.MajorTicks = [];
-            self.TransBeamY.ValueChangedFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamY.ValueChangingFcn = createCallbackFcn(self, @transmitted_beam_callbacks, true);
-            self.TransBeamY.Layout.Row = 10;
-            self.TransBeamY.Layout.Column = [1 4];
+            app.TransBeamY = uislider(app.TransBeamAlignGrid);
+            app.TransBeamY.MajorTicks = [];
+            app.TransBeamY.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamY.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
+            app.TransBeamY.Layout.Row = 10;
+            app.TransBeamY.Layout.Column = [1 4];
 
             % Create AlignmentHelpIcon
-            self.AlignmentHelpIcon = uiimage(self.AlignmentGrid);
-            self.AlignmentHelpIcon.Tooltip = {'1. Set "Convergence Angle"'; '2. Align the transmitted beam''s X/Y location'; '3. Switch from "Alignment" to another mode'};
-            self.AlignmentHelpIcon.Layout.Row = 3;
-            self.AlignmentHelpIcon.Layout.Column = 1;
-            self.AlignmentHelpIcon.ImageSource = 'help.png';
+            app.AlignmentHelpIcon = uiimage(app.AlignmentGrid);
+            app.AlignmentHelpIcon.Tooltip = {'1. Set "Convergence Angle"'; '2. Align the transmitted beam''s X/Y location'; '3. Switch from "Alignment" to another mode'};
+            app.AlignmentHelpIcon.Layout.Row = 3;
+            app.AlignmentHelpIcon.Layout.Column = 1;
+            app.AlignmentHelpIcon.ImageSource = 'help.png';
 
             % Create AnnularDetectorTab
-            self.AnnularDetectorTab = uitab(self.ModeTabGroup);
-            self.AnnularDetectorTab.Title = 'Ann';
-            self.AnnularDetectorTab.BackgroundColor = [0.9412 0.9412 0.9412];
+            app.AnnularDetectorTab = uitab(app.ModeTabGroup);
+            app.AnnularDetectorTab.Title = 'Ann';
+            app.AnnularDetectorTab.BackgroundColor = [0.9412 0.9412 0.9412];
 
             % Create AnnularDetectorGrid
-            self.AnnularDetectorGrid = uigridlayout(self.AnnularDetectorTab);
-            self.AnnularDetectorGrid.ColumnWidth = {'1x'};
-            self.AnnularDetectorGrid.RowHeight = {'fit', 'fit', 'fit', '1x', 24};
-            self.AnnularDetectorGrid.ColumnSpacing = 4;
-            self.AnnularDetectorGrid.RowSpacing = 4;
-            self.AnnularDetectorGrid.Padding = [4 4 4 4];
+            app.AnnularDetectorGrid = uigridlayout(app.AnnularDetectorTab);
+            app.AnnularDetectorGrid.ColumnWidth = {'1x'};
+            app.AnnularDetectorGrid.RowHeight = {'fit', 'fit', 'fit', '1x', 24};
+            app.AnnularDetectorGrid.ColumnSpacing = 4;
+            app.AnnularDetectorGrid.RowSpacing = 4;
+            app.AnnularDetectorGrid.Padding = [4 4 4 4];
 
             % Create AnnularRadiiPanel
-            self.AnnularRadiiPanel = uipanel(self.AnnularDetectorGrid);
-            self.AnnularRadiiPanel.BorderType = 'none';
-            self.AnnularRadiiPanel.TitlePosition = 'centertop';
-            self.AnnularRadiiPanel.Title = 'Annular Detector Radii';
-            self.AnnularRadiiPanel.Layout.Row = 1;
-            self.AnnularRadiiPanel.Layout.Column = 1;
-            self.AnnularRadiiPanel.FontName = 'Arial';
-            self.AnnularRadiiPanel.FontWeight = 'bold';
+            app.AnnularRadiiPanel = uipanel(app.AnnularDetectorGrid);
+            app.AnnularRadiiPanel.BorderType = 'none';
+            app.AnnularRadiiPanel.TitlePosition = 'centertop';
+            app.AnnularRadiiPanel.Title = 'Annular Detector Radii';
+            app.AnnularRadiiPanel.Layout.Row = 1;
+            app.AnnularRadiiPanel.Layout.Column = 1;
+            app.AnnularRadiiPanel.FontName = 'Arial';
+            app.AnnularRadiiPanel.FontWeight = 'bold';
 
             % Create AnnularRadiiGrid
-            self.AnnularRadiiGrid = uigridlayout(self.AnnularRadiiPanel);
-            self.AnnularRadiiGrid.ColumnWidth = {24, '1x', 52, 80, '1x'};
-            self.AnnularRadiiGrid.RowHeight = {24, 'fit', 2, 24, 'fit', 2};
-            self.AnnularRadiiGrid.ColumnSpacing = 4;
-            self.AnnularRadiiGrid.RowSpacing = 2;
-            self.AnnularRadiiGrid.Padding = [0 0 0 4];
+            app.AnnularRadiiGrid = uigridlayout(app.AnnularRadiiPanel);
+            app.AnnularRadiiGrid.ColumnWidth = {24, '1x', 52, 80, '1x'};
+            app.AnnularRadiiGrid.RowHeight = {24, 'fit', 2, 24, 'fit', 2};
+            app.AnnularRadiiGrid.ColumnSpacing = 4;
+            app.AnnularRadiiGrid.RowSpacing = 2;
+            app.AnnularRadiiGrid.Padding = [0 0 0 4];
 
             % Create AnnRiLabel
-            self.AnnRiLabel = uilabel(self.AnnularRadiiGrid);
-            self.AnnRiLabel.HorizontalAlignment = 'right';
-            self.AnnRiLabel.Layout.Row = 1;
-            self.AnnRiLabel.Layout.Column = [2 3];
-            self.AnnRiLabel.Text = 'Inner Radius';
+            app.AnnRiLabel = uilabel(app.AnnularRadiiGrid);
+            app.AnnRiLabel.HorizontalAlignment = 'right';
+            app.AnnRiLabel.Layout.Row = 1;
+            app.AnnRiLabel.Layout.Column = [2 3];
+            app.AnnRiLabel.Text = 'Inner Radius';
 
             % Create InnerAnnularRadiusSpinner
-            self.InnerAnnularRadiusSpinner = uispinner(self.AnnularRadiiGrid);
-            self.InnerAnnularRadiusSpinner.Step = 0.25;
-            self.InnerAnnularRadiusSpinner.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.InnerAnnularRadiusSpinner.ValueDisplayFormat = '%.2f';
-            self.InnerAnnularRadiusSpinner.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.InnerAnnularRadiusSpinner.Tag = 'AnnDetr RI';
-            self.InnerAnnularRadiusSpinner.Layout.Row = 1;
-            self.InnerAnnularRadiusSpinner.Layout.Column = 4;
+            app.InnerAnnularRadiusSpinner = uispinner(app.AnnularRadiiGrid);
+            app.InnerAnnularRadiusSpinner.Step = 0.25;
+            app.InnerAnnularRadiusSpinner.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.InnerAnnularRadiusSpinner.ValueDisplayFormat = '%.2f';
+            app.InnerAnnularRadiusSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.InnerAnnularRadiusSpinner.Tag = 'AnnDetr RI';
+            app.InnerAnnularRadiusSpinner.Layout.Row = 1;
+            app.InnerAnnularRadiusSpinner.Layout.Column = 4;
 
             % Create AnnRi_NFLabel
-            self.AnnRi_NFLabel = uilabel(self.AnnularRadiiGrid);
-            self.AnnRi_NFLabel.Layout.Row = 1;
-            self.AnnRi_NFLabel.Layout.Column = 5;
-            self.AnnRi_NFLabel.Text = 'mrad';
+            app.AnnRi_NFLabel = uilabel(app.AnnularRadiiGrid);
+            app.AnnRi_NFLabel.Layout.Row = 1;
+            app.AnnRi_NFLabel.Layout.Column = 5;
+            app.AnnRi_NFLabel.Text = 'mrad';
 
             % Create InnerAnnularRadius
-            self.InnerAnnularRadius = uislider(self.AnnularRadiiGrid);
-            self.InnerAnnularRadius.MajorTicks = [];
-            self.InnerAnnularRadius.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.InnerAnnularRadius.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.InnerAnnularRadius.Tag = 'AnnDetr RI';
-            self.InnerAnnularRadius.Layout.Row = 2;
-            self.InnerAnnularRadius.Layout.Column = [1 5];
+            app.InnerAnnularRadius = uislider(app.AnnularRadiiGrid);
+            app.InnerAnnularRadius.MajorTicks = [];
+            app.InnerAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.InnerAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.InnerAnnularRadius.Tag = 'AnnDetr RI';
+            app.InnerAnnularRadius.Layout.Row = 2;
+            app.InnerAnnularRadius.Layout.Column = [1 5];
 
             % Create AnnularRadiusLink
-            self.AnnularRadiusLink = uibutton(self.AnnularRadiiGrid, 'state');
-            self.AnnularRadiusLink.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.AnnularRadiusLink.Tag = 'AnnDetr';
-            self.AnnularRadiusLink.Tooltip = {'Move inner/outer annular sliders together'};
-            self.AnnularRadiusLink.Icon = 'link.png';
-            self.AnnularRadiusLink.Text = '';
-            self.AnnularRadiusLink.Layout.Row = 4;
-            self.AnnularRadiusLink.Layout.Column = 1;
+            app.AnnularRadiusLink = uibutton(app.AnnularRadiiGrid, 'state');
+            app.AnnularRadiusLink.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.AnnularRadiusLink.Tag = 'AnnDetr';
+            app.AnnularRadiusLink.Tooltip = {'Move inner/outer annular sliders together'};
+            app.AnnularRadiusLink.Icon = 'link.png';
+            app.AnnularRadiusLink.Text = '';
+            app.AnnularRadiusLink.Layout.Row = 4;
+            app.AnnularRadiusLink.Layout.Column = 1;
 
             % Create AnnRoLabel
-            self.AnnRoLabel = uilabel(self.AnnularRadiiGrid);
-            self.AnnRoLabel.HorizontalAlignment = 'right';
-            self.AnnRoLabel.Layout.Row = 4;
-            self.AnnRoLabel.Layout.Column = [2 3];
-            self.AnnRoLabel.Text = 'Outer Radius';
+            app.AnnRoLabel = uilabel(app.AnnularRadiiGrid);
+            app.AnnRoLabel.HorizontalAlignment = 'right';
+            app.AnnRoLabel.Layout.Row = 4;
+            app.AnnRoLabel.Layout.Column = [2 3];
+            app.AnnRoLabel.Text = 'Outer Radius';
 
             % Create OuterAnnularRadiusSpinner
-            self.OuterAnnularRadiusSpinner = uispinner(self.AnnularRadiiGrid);
-            self.OuterAnnularRadiusSpinner.Step = 0.25;
-            self.OuterAnnularRadiusSpinner.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.OuterAnnularRadiusSpinner.ValueDisplayFormat = '%.2f';
-            self.OuterAnnularRadiusSpinner.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.OuterAnnularRadiusSpinner.Tag = 'AnnDetr RO';
-            self.OuterAnnularRadiusSpinner.Layout.Row = 4;
-            self.OuterAnnularRadiusSpinner.Layout.Column = 4;
+            app.OuterAnnularRadiusSpinner = uispinner(app.AnnularRadiiGrid);
+            app.OuterAnnularRadiusSpinner.Step = 0.25;
+            app.OuterAnnularRadiusSpinner.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.OuterAnnularRadiusSpinner.ValueDisplayFormat = '%.2f';
+            app.OuterAnnularRadiusSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.OuterAnnularRadiusSpinner.Tag = 'AnnDetr RO';
+            app.OuterAnnularRadiusSpinner.Layout.Row = 4;
+            app.OuterAnnularRadiusSpinner.Layout.Column = 4;
 
             % Create AnnRo_NFLabel
-            self.AnnRo_NFLabel = uilabel(self.AnnularRadiiGrid);
-            self.AnnRo_NFLabel.Layout.Row = 4;
-            self.AnnRo_NFLabel.Layout.Column = 5;
-            self.AnnRo_NFLabel.Text = 'mrad';
+            app.AnnRo_NFLabel = uilabel(app.AnnularRadiiGrid);
+            app.AnnRo_NFLabel.Layout.Row = 4;
+            app.AnnRo_NFLabel.Layout.Column = 5;
+            app.AnnRo_NFLabel.Text = 'mrad';
 
             % Create OuterAnnularRadius
-            self.OuterAnnularRadius = uislider(self.AnnularRadiiGrid);
-            self.OuterAnnularRadius.MajorTicks = [];
-            self.OuterAnnularRadius.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.OuterAnnularRadius.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.OuterAnnularRadius.Tag = 'AnnDetr RO';
-            self.OuterAnnularRadius.Layout.Row = 5;
-            self.OuterAnnularRadius.Layout.Column = [1 5];
+            app.OuterAnnularRadius = uislider(app.AnnularRadiiGrid);
+            app.OuterAnnularRadius.MajorTicks = [];
+            app.OuterAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.OuterAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.OuterAnnularRadius.Tag = 'AnnDetr RO';
+            app.OuterAnnularRadius.Layout.Row = 5;
+            app.OuterAnnularRadius.Layout.Column = [1 5];
 
             % Create ScanDirectionPanel
-            self.ScanDirectionPanel = uipanel(self.AnnularDetectorGrid);
-            self.ScanDirectionPanel.BorderType = 'none';
-            self.ScanDirectionPanel.TitlePosition = 'centertop';
-            self.ScanDirectionPanel.Title = 'Scanning Direction';
-            self.ScanDirectionPanel.Visible = 'off';
-            self.ScanDirectionPanel.Layout.Row = 2;
-            self.ScanDirectionPanel.Layout.Column = 1;
-            self.ScanDirectionPanel.FontName = 'Arial';
-            self.ScanDirectionPanel.FontWeight = 'bold';
+            app.ScanDirectionPanel = uipanel(app.AnnularDetectorGrid);
+            app.ScanDirectionPanel.BorderType = 'none';
+            app.ScanDirectionPanel.TitlePosition = 'centertop';
+            app.ScanDirectionPanel.Title = 'Scanning Direction';
+            app.ScanDirectionPanel.Visible = 'off';
+            app.ScanDirectionPanel.Layout.Row = 2;
+            app.ScanDirectionPanel.Layout.Column = 1;
+            app.ScanDirectionPanel.FontName = 'Arial';
+            app.ScanDirectionPanel.FontWeight = 'bold';
 
             % Create ScanDirectionGrid
-            self.ScanDirectionGrid = uigridlayout(self.ScanDirectionPanel);
-            self.ScanDirectionGrid.ColumnWidth = {24, 24, 24, 24, '1x', 80, '1x', 24};
-            self.ScanDirectionGrid.RowHeight = {24, 14};
-            self.ScanDirectionGrid.ColumnSpacing = 4;
-            self.ScanDirectionGrid.RowSpacing = 2;
-            self.ScanDirectionGrid.Padding = [0 0 0 4];
+            app.ScanDirectionGrid = uigridlayout(app.ScanDirectionPanel);
+            app.ScanDirectionGrid.ColumnWidth = {24, 24, 24, 24, '1x', 80, '1x', 24};
+            app.ScanDirectionGrid.RowHeight = {24, 14};
+            app.ScanDirectionGrid.ColumnSpacing = 4;
+            app.ScanDirectionGrid.RowSpacing = 2;
+            app.ScanDirectionGrid.Padding = [0 0 0 4];
 
             % Create ScanDirectionLock
-            self.ScanDirectionLock = uibutton(self.ScanDirectionGrid, 'state');
-            self.ScanDirectionLock.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.ScanDirectionLock.Tag = 'ScanDir';
-            self.ScanDirectionLock.Icon = 'unlock.png';
-            self.ScanDirectionLock.Text = '';
-            self.ScanDirectionLock.Layout.Row = 1;
-            self.ScanDirectionLock.Layout.Column = 1;
+            app.ScanDirectionLock = uibutton(app.ScanDirectionGrid, 'state');
+            app.ScanDirectionLock.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.ScanDirectionLock.Tag = 'ScanDir';
+            app.ScanDirectionLock.Icon = 'unlock.png';
+            app.ScanDirectionLock.Text = '';
+            app.ScanDirectionLock.Layout.Row = 1;
+            app.ScanDirectionLock.Layout.Column = 1;
 
             % Create AutoCurl
-            self.AutoCurl = uibutton(self.ScanDirectionGrid, 'push');
-            self.AutoCurl.ButtonPushedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.AutoCurl.Layout.Row = 1;
-            self.AutoCurl.Layout.Column = [2 3];
-            self.AutoCurl.Text = 'Auto';
+            app.AutoCurl = uibutton(app.ScanDirectionGrid, 'push');
+            app.AutoCurl.ButtonPushedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.AutoCurl.Layout.Row = 1;
+            app.AutoCurl.Layout.Column = [2 3];
+            app.AutoCurl.Text = 'Auto';
 
             % Create ScanDirLabel
-            self.ScanDirLabel = uilabel(self.ScanDirectionGrid);
-            self.ScanDirLabel.HorizontalAlignment = 'right';
-            self.ScanDirLabel.Layout.Row = 1;
-            self.ScanDirLabel.Layout.Column = [3 5];
-            self.ScanDirLabel.Text = 'Angle';
+            app.ScanDirLabel = uilabel(app.ScanDirectionGrid);
+            app.ScanDirLabel.HorizontalAlignment = 'right';
+            app.ScanDirLabel.Layout.Row = 1;
+            app.ScanDirLabel.Layout.Column = [3 5];
+            app.ScanDirLabel.Text = 'Angle';
 
             % Create ScanDirectionSpinner
-            self.ScanDirectionSpinner = uispinner(self.ScanDirectionGrid);
-            self.ScanDirectionSpinner.Step = 4;
-            self.ScanDirectionSpinner.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.ScanDirectionSpinner.Limits = [-180 180];
-            self.ScanDirectionSpinner.ValueDisplayFormat = '%.2f';
-            self.ScanDirectionSpinner.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.ScanDirectionSpinner.Tag = 'ScanDir';
-            self.ScanDirectionSpinner.Layout.Row = 1;
-            self.ScanDirectionSpinner.Layout.Column = 6;
+            app.ScanDirectionSpinner = uispinner(app.ScanDirectionGrid);
+            app.ScanDirectionSpinner.Step = 4;
+            app.ScanDirectionSpinner.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.ScanDirectionSpinner.Limits = [-180 180];
+            app.ScanDirectionSpinner.ValueDisplayFormat = '%.2f';
+            app.ScanDirectionSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.ScanDirectionSpinner.Tag = 'ScanDir';
+            app.ScanDirectionSpinner.Layout.Row = 1;
+            app.ScanDirectionSpinner.Layout.Column = 6;
 
             % Create ScanDir_NFLabel
-            self.ScanDir_NFLabel = uilabel(self.ScanDirectionGrid);
-            self.ScanDir_NFLabel.Layout.Row = 1;
-            self.ScanDir_NFLabel.Layout.Column = 7;
-            self.ScanDir_NFLabel.Text = '°';
+            app.ScanDir_NFLabel = uilabel(app.ScanDirectionGrid);
+            app.ScanDir_NFLabel.Layout.Row = 1;
+            app.ScanDir_NFLabel.Layout.Column = 7;
+            app.ScanDir_NFLabel.Text = '°';
 
             % Create FlipScanDirectionY
-            self.FlipScanDirectionY = uibutton(self.ScanDirectionGrid, 'state');
-            self.FlipScanDirectionY.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.FlipScanDirectionY.Tag = 'ScanDir';
-            self.FlipScanDirectionY.Tooltip = {'Flip Scan Y Direction'};
-            self.FlipScanDirectionY.Icon = 'axis-y.png';
-            self.FlipScanDirectionY.Text = '';
-            self.FlipScanDirectionY.FontWeight = 'bold';
-            self.FlipScanDirectionY.Layout.Row = 1;
-            self.FlipScanDirectionY.Layout.Column = 8;
+            app.FlipScanDirectionY = uibutton(app.ScanDirectionGrid, 'state');
+            app.FlipScanDirectionY.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.FlipScanDirectionY.Tag = 'ScanDir';
+            app.FlipScanDirectionY.Tooltip = {'Flip Scan Y Direction'};
+            app.FlipScanDirectionY.Icon = 'axis-y.png';
+            app.FlipScanDirectionY.Text = '';
+            app.FlipScanDirectionY.FontWeight = 'bold';
+            app.FlipScanDirectionY.Layout.Row = 1;
+            app.FlipScanDirectionY.Layout.Column = 8;
 
             % Create ScanDirectionSlider
-            self.ScanDirectionSlider = uislider(self.ScanDirectionGrid);
-            self.ScanDirectionSlider.Limits = [-180 180];
-            self.ScanDirectionSlider.MajorTicks = [];
-            self.ScanDirectionSlider.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.ScanDirectionSlider.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.ScanDirectionSlider.Tag = 'ScanDir';
-            self.ScanDirectionSlider.Layout.Row = 2;
-            self.ScanDirectionSlider.Layout.Column = [1 8];
+            app.ScanDirectionSlider = uislider(app.ScanDirectionGrid);
+            app.ScanDirectionSlider.Limits = [-180 180];
+            app.ScanDirectionSlider.MajorTicks = [];
+            app.ScanDirectionSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.ScanDirectionSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.ScanDirectionSlider.Tag = 'ScanDir';
+            app.ScanDirectionSlider.Layout.Row = 2;
+            app.ScanDirectionSlider.Layout.Column = [1 8];
 
             % Create SegmentedDetectorPanel
-            self.SegmentedDetectorPanel = uipanel(self.AnnularDetectorGrid);
-            self.SegmentedDetectorPanel.BorderType = 'none';
-            self.SegmentedDetectorPanel.TitlePosition = 'centertop';
-            self.SegmentedDetectorPanel.Title = 'Segmented Detector Controls';
-            self.SegmentedDetectorPanel.Visible = 'off';
-            self.SegmentedDetectorPanel.Layout.Row = 3;
-            self.SegmentedDetectorPanel.Layout.Column = 1;
-            self.SegmentedDetectorPanel.FontName = 'Arial';
-            self.SegmentedDetectorPanel.FontWeight = 'bold';
+            app.SegmentedDetectorPanel = uipanel(app.AnnularDetectorGrid);
+            app.SegmentedDetectorPanel.BorderType = 'none';
+            app.SegmentedDetectorPanel.TitlePosition = 'centertop';
+            app.SegmentedDetectorPanel.Title = 'Segmented Detector Controls';
+            app.SegmentedDetectorPanel.Visible = 'off';
+            app.SegmentedDetectorPanel.Layout.Row = 3;
+            app.SegmentedDetectorPanel.Layout.Column = 1;
+            app.SegmentedDetectorPanel.FontName = 'Arial';
+            app.SegmentedDetectorPanel.FontWeight = 'bold';
 
             % Create SegmentedDetectorGrid
-            self.SegmentedDetectorGrid = uigridlayout(self.SegmentedDetectorPanel);
-            self.SegmentedDetectorGrid.ColumnWidth = {44, 24, '1x', 32, 44, 32, '1x', 24};
-            self.SegmentedDetectorGrid.RowHeight = {24, 1, 24, 'fit', 1};
-            self.SegmentedDetectorGrid.ColumnSpacing = 4;
-            self.SegmentedDetectorGrid.RowSpacing = 2;
-            self.SegmentedDetectorGrid.Padding = [0 4 0 4];
+            app.SegmentedDetectorGrid = uigridlayout(app.SegmentedDetectorPanel);
+            app.SegmentedDetectorGrid.ColumnWidth = {44, 24, '1x', 32, 44, 32, '1x', 24};
+            app.SegmentedDetectorGrid.RowHeight = {24, 1, 24, 'fit', 1};
+            app.SegmentedDetectorGrid.ColumnSpacing = 4;
+            app.SegmentedDetectorGrid.RowSpacing = 2;
+            app.SegmentedDetectorGrid.Padding = [0 4 0 4];
 
             % Create SegmentsLabel
-            self.SegmentsLabel = uilabel(self.SegmentedDetectorGrid);
-            self.SegmentsLabel.HorizontalAlignment = 'right';
-            self.SegmentsLabel.Layout.Row = [1 2];
-            self.SegmentsLabel.Layout.Column = [1 2];
-            self.SegmentsLabel.Text = 'Segments';
+            app.SegmentsLabel = uilabel(app.SegmentedDetectorGrid);
+            app.SegmentsLabel.HorizontalAlignment = 'right';
+            app.SegmentsLabel.Layout.Row = [1 2];
+            app.SegmentsLabel.Layout.Column = [1 2];
+            app.SegmentsLabel.Text = 'Segments';
 
             % Create NSeg
-            self.NSeg = uispinner(self.SegmentedDetectorGrid);
-            self.NSeg.Limits = [2 32];
-            self.NSeg.RoundFractionalValues = 'on';
-            self.NSeg.ValueDisplayFormat = '%d';
-            self.NSeg.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.NSeg.Tag = 'SegDetr';
-            self.NSeg.Layout.Row = [1 2];
-            self.NSeg.Layout.Column = [3 4];
-            self.NSeg.Value = 4;
+            app.NSeg = uispinner(app.SegmentedDetectorGrid);
+            app.NSeg.Limits = [2 32];
+            app.NSeg.RoundFractionalValues = 'on';
+            app.NSeg.ValueDisplayFormat = '%d';
+            app.NSeg.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.NSeg.Tag = 'SegDetr';
+            app.NSeg.Layout.Row = [1 2];
+            app.NSeg.Layout.Column = [3 4];
+            app.NSeg.Value = 4;
 
             % Create RungsLabel
-            self.RungsLabel = uilabel(self.SegmentedDetectorGrid);
-            self.RungsLabel.HorizontalAlignment = 'right';
-            self.RungsLabel.Layout.Row = 1;
-            self.RungsLabel.Layout.Column = 5;
-            self.RungsLabel.Text = 'Rungs';
+            app.RungsLabel = uilabel(app.SegmentedDetectorGrid);
+            app.RungsLabel.HorizontalAlignment = 'right';
+            app.RungsLabel.Layout.Row = 1;
+            app.RungsLabel.Layout.Column = 5;
+            app.RungsLabel.Text = 'Rungs';
 
             % Create NRung
-            self.NRung = uispinner(self.SegmentedDetectorGrid);
-            self.NRung.Limits = [1 16];
-            self.NRung.RoundFractionalValues = 'on';
-            self.NRung.ValueDisplayFormat = '%d';
-            self.NRung.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.NRung.Tag = 'SegDetr';
-            self.NRung.Layout.Row = 1;
-            self.NRung.Layout.Column = [6 7];
-            self.NRung.Value = 1;
+            app.NRung = uispinner(app.SegmentedDetectorGrid);
+            app.NRung.Limits = [1 16];
+            app.NRung.RoundFractionalValues = 'on';
+            app.NRung.ValueDisplayFormat = '%d';
+            app.NRung.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.NRung.Tag = 'SegDetr';
+            app.NRung.Layout.Row = 1;
+            app.NRung.Layout.Column = [6 7];
+            app.NRung.Value = 1;
 
             % Create DetRotLabel
-            self.DetRotLabel = uilabel(self.SegmentedDetectorGrid);
-            self.DetRotLabel.HorizontalAlignment = 'right';
-            self.DetRotLabel.Layout.Row = 3;
-            self.DetRotLabel.Layout.Column = [1 4];
-            self.DetRotLabel.Text = 'Rotation';
+            app.DetRotLabel = uilabel(app.SegmentedDetectorGrid);
+            app.DetRotLabel.HorizontalAlignment = 'right';
+            app.DetRotLabel.Layout.Row = 3;
+            app.DetRotLabel.Layout.Column = [1 4];
+            app.DetRotLabel.Text = 'Rotation';
 
             % Create DetectorRotationSpinner
-            self.DetectorRotationSpinner = uispinner(self.SegmentedDetectorGrid);
-            self.DetectorRotationSpinner.Step = 4;
-            self.DetectorRotationSpinner.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.DetectorRotationSpinner.Limits = [-180 180];
-            self.DetectorRotationSpinner.ValueDisplayFormat = '%.2f';
-            self.DetectorRotationSpinner.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.DetectorRotationSpinner.Tag = 'SegDetr';
-            self.DetectorRotationSpinner.Layout.Row = [2 3];
-            self.DetectorRotationSpinner.Layout.Column = [5 6];
+            app.DetectorRotationSpinner = uispinner(app.SegmentedDetectorGrid);
+            app.DetectorRotationSpinner.Step = 4;
+            app.DetectorRotationSpinner.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.DetectorRotationSpinner.Limits = [-180 180];
+            app.DetectorRotationSpinner.ValueDisplayFormat = '%.2f';
+            app.DetectorRotationSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.DetectorRotationSpinner.Tag = 'SegDetr';
+            app.DetectorRotationSpinner.Layout.Row = [2 3];
+            app.DetectorRotationSpinner.Layout.Column = [5 6];
 
             % Create DetRot_NFLabel
-            self.DetRot_NFLabel = uilabel(self.SegmentedDetectorGrid);
-            self.DetRot_NFLabel.Layout.Row = [2 3];
-            self.DetRot_NFLabel.Layout.Column = 7;
-            self.DetRot_NFLabel.Text = '°';
+            app.DetRot_NFLabel = uilabel(app.SegmentedDetectorGrid);
+            app.DetRot_NFLabel.Layout.Row = [2 3];
+            app.DetRot_NFLabel.Layout.Column = 7;
+            app.DetRot_NFLabel.Text = '°';
 
             % Create DetectorRotationSlider
-            self.DetectorRotationSlider = uislider(self.SegmentedDetectorGrid);
-            self.DetectorRotationSlider.Limits = [-180 180];
-            self.DetectorRotationSlider.MajorTicks = [];
-            self.DetectorRotationSlider.ValueChangedFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.DetectorRotationSlider.ValueChangingFcn = createCallbackFcn(self, @annular_detector_callbacks, true);
-            self.DetectorRotationSlider.Tag = 'SegDetr';
-            self.DetectorRotationSlider.Layout.Row = [4 5];
-            self.DetectorRotationSlider.Layout.Column = [1 8];
+            app.DetectorRotationSlider = uislider(app.SegmentedDetectorGrid);
+            app.DetectorRotationSlider.Limits = [-180 180];
+            app.DetectorRotationSlider.MajorTicks = [];
+            app.DetectorRotationSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.DetectorRotationSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
+            app.DetectorRotationSlider.Tag = 'SegDetr';
+            app.DetectorRotationSlider.Layout.Row = [4 5];
+            app.DetectorRotationSlider.Layout.Column = [1 8];
 
             % Create AnnularStepGrid
-            self.AnnularStepGrid = uigridlayout(self.AnnularDetectorGrid);
-            self.AnnularStepGrid.ColumnWidth = {'1x', '4x', 60, '1x'};
-            self.AnnularStepGrid.RowHeight = {24};
-            self.AnnularStepGrid.ColumnSpacing = 0;
-            self.AnnularStepGrid.RowSpacing = 0;
-            self.AnnularStepGrid.Padding = [0 0 0 0];
-            self.AnnularStepGrid.Layout.Row = 5;
-            self.AnnularStepGrid.Layout.Column = 1;
+            app.AnnularStepGrid = uigridlayout(app.AnnularDetectorGrid);
+            app.AnnularStepGrid.ColumnWidth = {'1x', '4x', 60, '1x'};
+            app.AnnularStepGrid.RowHeight = {24};
+            app.AnnularStepGrid.ColumnSpacing = 0;
+            app.AnnularStepGrid.RowSpacing = 0;
+            app.AnnularStepGrid.Padding = [0 0 0 0];
+            app.AnnularStepGrid.Layout.Row = 5;
+            app.AnnularStepGrid.Layout.Column = 1;
 
             % Create AnnularIntegrationStepEditFieldLabel
-            self.AnnularIntegrationStepEditFieldLabel = uilabel(self.AnnularStepGrid);
-            self.AnnularIntegrationStepEditFieldLabel.WordWrap = 'on';
-            self.AnnularIntegrationStepEditFieldLabel.Layout.Row = 1;
-            self.AnnularIntegrationStepEditFieldLabel.Layout.Column = [1 4];
-            self.AnnularIntegrationStepEditFieldLabel.Text = 'Annular Integration Step';
+            app.AnnularIntegrationStepEditFieldLabel = uilabel(app.AnnularStepGrid);
+            app.AnnularIntegrationStepEditFieldLabel.WordWrap = 'on';
+            app.AnnularIntegrationStepEditFieldLabel.Layout.Row = 1;
+            app.AnnularIntegrationStepEditFieldLabel.Layout.Column = [1 4];
+            app.AnnularIntegrationStepEditFieldLabel.Text = 'Annular Integration Step';
 
             % Create AnnularStep
-            self.AnnularStep = uieditfield(self.AnnularStepGrid, 'numeric');
-            self.AnnularStep.Limits = [1e-05 Inf];
-            self.AnnularStep.ValueDisplayFormat = '%11.2f mrad';
-            self.AnnularStep.ValueChangedFcn = createCallbackFcn(self, @detector_coordinates_callbacks, true);
-            self.AnnularStep.Tooltip = {'Set fine/coarse step size for annular integration (in mrad). '};
-            self.AnnularStep.Layout.Row = 1;
-            self.AnnularStep.Layout.Column = [3 4];
-            self.AnnularStep.Value = 0.5;
+            app.AnnularStep = uieditfield(app.AnnularStepGrid, 'numeric');
+            app.AnnularStep.Limits = [1e-05 Inf];
+            app.AnnularStep.ValueDisplayFormat = '%11.2f mrad';
+            app.AnnularStep.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
+            app.AnnularStep.Tooltip = {'Set fine/coarse step size for annular integration (in mrad). '};
+            app.AnnularStep.Layout.Row = 1;
+            app.AnnularStep.Layout.Column = [3 4];
+            app.AnnularStep.Value = 0.5;
 
             % Create VirtualApertureTab
-            self.VirtualApertureTab = uitab(self.ModeTabGroup);
-            self.VirtualApertureTab.Title = 'Vr';
+            app.VirtualApertureTab = uitab(app.ModeTabGroup);
+            app.VirtualApertureTab.Title = 'Vr';
 
             % Create VirtualApertureGrid
-            self.VirtualApertureGrid = uigridlayout(self.VirtualApertureTab);
-            self.VirtualApertureGrid.ColumnWidth = {'1x'};
-            self.VirtualApertureGrid.RowHeight = {'fit', 'fit', '1x'};
-            self.VirtualApertureGrid.ColumnSpacing = 4;
-            self.VirtualApertureGrid.RowSpacing = 4;
-            self.VirtualApertureGrid.Padding = [4 4 4 4];
+            app.VirtualApertureGrid = uigridlayout(app.VirtualApertureTab);
+            app.VirtualApertureGrid.ColumnWidth = {'1x'};
+            app.VirtualApertureGrid.RowHeight = {'fit', 'fit', '1x'};
+            app.VirtualApertureGrid.ColumnSpacing = 4;
+            app.VirtualApertureGrid.RowSpacing = 4;
+            app.VirtualApertureGrid.Padding = [4 4 4 4];
 
             % Create VirtualApertureCoordinatesPanel
-            self.VirtualApertureCoordinatesPanel = uipanel(self.VirtualApertureGrid);
-            self.VirtualApertureCoordinatesPanel.BorderType = 'none';
-            self.VirtualApertureCoordinatesPanel.TitlePosition = 'centertop';
-            self.VirtualApertureCoordinatesPanel.Title = 'Aperture Coordinates';
-            self.VirtualApertureCoordinatesPanel.Layout.Row = 1;
-            self.VirtualApertureCoordinatesPanel.Layout.Column = 1;
-            self.VirtualApertureCoordinatesPanel.FontName = 'Arial';
-            self.VirtualApertureCoordinatesPanel.FontWeight = 'bold';
+            app.VirtualApertureCoordinatesPanel = uipanel(app.VirtualApertureGrid);
+            app.VirtualApertureCoordinatesPanel.BorderType = 'none';
+            app.VirtualApertureCoordinatesPanel.TitlePosition = 'centertop';
+            app.VirtualApertureCoordinatesPanel.Title = 'Aperture Coordinates';
+            app.VirtualApertureCoordinatesPanel.Layout.Row = 1;
+            app.VirtualApertureCoordinatesPanel.Layout.Column = 1;
+            app.VirtualApertureCoordinatesPanel.FontName = 'Arial';
+            app.VirtualApertureCoordinatesPanel.FontWeight = 'bold';
 
             % Create VirtualApertureCoordinatesGrid
-            self.VirtualApertureCoordinatesGrid = uigridlayout(self.VirtualApertureCoordinatesPanel);
-            self.VirtualApertureCoordinatesGrid.ColumnWidth = {'1x', 52, 24, 80, '1x'};
-            self.VirtualApertureCoordinatesGrid.RowHeight = {24, 'fit', 2, 24, 'fit', 2, 24, 'fit', 2, 24};
-            self.VirtualApertureCoordinatesGrid.ColumnSpacing = 4;
-            self.VirtualApertureCoordinatesGrid.RowSpacing = 2;
-            self.VirtualApertureCoordinatesGrid.Padding = [0 0 0 4];
+            app.VirtualApertureCoordinatesGrid = uigridlayout(app.VirtualApertureCoordinatesPanel);
+            app.VirtualApertureCoordinatesGrid.ColumnWidth = {'1x', 52, 24, 80, '1x'};
+            app.VirtualApertureCoordinatesGrid.RowHeight = {24, 'fit', 2, 24, 'fit', 2, 24, 'fit', 2, 24};
+            app.VirtualApertureCoordinatesGrid.ColumnSpacing = 4;
+            app.VirtualApertureCoordinatesGrid.RowSpacing = 2;
+            app.VirtualApertureCoordinatesGrid.Padding = [0 0 0 4];
 
             % Create VrApRLabel
-            self.VrApRLabel = uilabel(self.VirtualApertureCoordinatesGrid);
-            self.VrApRLabel.HorizontalAlignment = 'right';
-            self.VrApRLabel.Layout.Row = 1;
-            self.VrApRLabel.Layout.Column = [2 3];
-            self.VrApRLabel.Text = 'Radius';
+            app.VrApRLabel = uilabel(app.VirtualApertureCoordinatesGrid);
+            app.VrApRLabel.HorizontalAlignment = 'right';
+            app.VrApRLabel.Layout.Row = 1;
+            app.VrApRLabel.Layout.Column = [2 3];
+            app.VrApRLabel.Text = 'Radius';
 
             % Create VirtualApertureRSpinner
-            self.VirtualApertureRSpinner = uispinner(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureRSpinner.Step = 0.25;
-            self.VirtualApertureRSpinner.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureRSpinner.ValueDisplayFormat = '%.2f';
-            self.VirtualApertureRSpinner.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureRSpinner.Layout.Row = 1;
-            self.VirtualApertureRSpinner.Layout.Column = 4;
+            app.VirtualApertureRSpinner = uispinner(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureRSpinner.Step = 0.25;
+            app.VirtualApertureRSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureRSpinner.ValueDisplayFormat = '%.2f';
+            app.VirtualApertureRSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureRSpinner.Layout.Row = 1;
+            app.VirtualApertureRSpinner.Layout.Column = 4;
 
             % Create VrApR_NFLabel
-            self.VrApR_NFLabel = uilabel(self.VirtualApertureCoordinatesGrid);
-            self.VrApR_NFLabel.Layout.Row = 1;
-            self.VrApR_NFLabel.Layout.Column = 5;
-            self.VrApR_NFLabel.Text = 'mrad';
+            app.VrApR_NFLabel = uilabel(app.VirtualApertureCoordinatesGrid);
+            app.VrApR_NFLabel.Layout.Row = 1;
+            app.VrApR_NFLabel.Layout.Column = 5;
+            app.VrApR_NFLabel.Text = 'mrad';
 
             % Create VirtualApertureR
-            self.VirtualApertureR = uislider(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureR.MajorTicks = [];
-            self.VirtualApertureR.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureR.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureR.Layout.Row = 2;
-            self.VirtualApertureR.Layout.Column = [1 5];
+            app.VirtualApertureR = uislider(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureR.MajorTicks = [];
+            app.VirtualApertureR.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureR.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureR.Layout.Row = 2;
+            app.VirtualApertureR.Layout.Column = [1 5];
 
             % Create VrApXLabel
-            self.VrApXLabel = uilabel(self.VirtualApertureCoordinatesGrid);
-            self.VrApXLabel.HorizontalAlignment = 'right';
-            self.VrApXLabel.Layout.Row = 4;
-            self.VrApXLabel.Layout.Column = [2 3];
-            self.VrApXLabel.Text = 'X';
+            app.VrApXLabel = uilabel(app.VirtualApertureCoordinatesGrid);
+            app.VrApXLabel.HorizontalAlignment = 'right';
+            app.VrApXLabel.Layout.Row = 4;
+            app.VrApXLabel.Layout.Column = [2 3];
+            app.VrApXLabel.Text = 'X';
 
             % Create VirtualApertureXSpinner
-            self.VirtualApertureXSpinner = uispinner(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureXSpinner.Step = 0.25;
-            self.VirtualApertureXSpinner.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureXSpinner.ValueDisplayFormat = '%.2f';
-            self.VirtualApertureXSpinner.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureXSpinner.Layout.Row = 4;
-            self.VirtualApertureXSpinner.Layout.Column = 4;
+            app.VirtualApertureXSpinner = uispinner(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureXSpinner.Step = 0.25;
+            app.VirtualApertureXSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureXSpinner.ValueDisplayFormat = '%.2f';
+            app.VirtualApertureXSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureXSpinner.Layout.Row = 4;
+            app.VirtualApertureXSpinner.Layout.Column = 4;
 
             % Create VrApX_NFLabel
-            self.VrApX_NFLabel = uilabel(self.VirtualApertureCoordinatesGrid);
-            self.VrApX_NFLabel.Layout.Row = 4;
-            self.VrApX_NFLabel.Layout.Column = 5;
-            self.VrApX_NFLabel.Text = 'mrad';
+            app.VrApX_NFLabel = uilabel(app.VirtualApertureCoordinatesGrid);
+            app.VrApX_NFLabel.Layout.Row = 4;
+            app.VrApX_NFLabel.Layout.Column = 5;
+            app.VrApX_NFLabel.Text = 'mrad';
 
             % Create VirtualApertureX
-            self.VirtualApertureX = uislider(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureX.MajorTicks = [];
-            self.VirtualApertureX.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureX.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureX.Layout.Row = 5;
-            self.VirtualApertureX.Layout.Column = [1 5];
+            app.VirtualApertureX = uislider(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureX.MajorTicks = [];
+            app.VirtualApertureX.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureX.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureX.Layout.Row = 5;
+            app.VirtualApertureX.Layout.Column = [1 5];
 
             % Create VrApYLabel
-            self.VrApYLabel = uilabel(self.VirtualApertureCoordinatesGrid);
-            self.VrApYLabel.HorizontalAlignment = 'right';
-            self.VrApYLabel.Layout.Row = 7;
-            self.VrApYLabel.Layout.Column = [2 3];
-            self.VrApYLabel.Text = 'Y';
+            app.VrApYLabel = uilabel(app.VirtualApertureCoordinatesGrid);
+            app.VrApYLabel.HorizontalAlignment = 'right';
+            app.VrApYLabel.Layout.Row = 7;
+            app.VrApYLabel.Layout.Column = [2 3];
+            app.VrApYLabel.Text = 'Y';
 
             % Create VirtualApertureYSpinner
-            self.VirtualApertureYSpinner = uispinner(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureYSpinner.Step = 0.25;
-            self.VirtualApertureYSpinner.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureYSpinner.ValueDisplayFormat = '%.2f';
-            self.VirtualApertureYSpinner.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureYSpinner.Layout.Row = 7;
-            self.VirtualApertureYSpinner.Layout.Column = 4;
+            app.VirtualApertureYSpinner = uispinner(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureYSpinner.Step = 0.25;
+            app.VirtualApertureYSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureYSpinner.ValueDisplayFormat = '%.2f';
+            app.VirtualApertureYSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureYSpinner.Layout.Row = 7;
+            app.VirtualApertureYSpinner.Layout.Column = 4;
 
             % Create VrApY_NFLabel
-            self.VrApY_NFLabel = uilabel(self.VirtualApertureCoordinatesGrid);
-            self.VrApY_NFLabel.Layout.Row = 7;
-            self.VrApY_NFLabel.Layout.Column = 5;
-            self.VrApY_NFLabel.Text = 'mrad';
+            app.VrApY_NFLabel = uilabel(app.VirtualApertureCoordinatesGrid);
+            app.VrApY_NFLabel.Layout.Row = 7;
+            app.VrApY_NFLabel.Layout.Column = 5;
+            app.VrApY_NFLabel.Text = 'mrad';
 
             % Create VirtualApertureY
-            self.VirtualApertureY = uislider(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureY.MajorTicks = [];
-            self.VirtualApertureY.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureY.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureY.Layout.Row = 8;
-            self.VirtualApertureY.Layout.Column = [1 5];
+            app.VirtualApertureY = uislider(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureY.MajorTicks = [];
+            app.VirtualApertureY.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureY.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureY.Layout.Row = 8;
+            app.VirtualApertureY.Layout.Column = [1 5];
 
             % Create VirtualApertureRotationGrid
-            self.VirtualApertureRotationGrid = uigridlayout(self.VirtualApertureCoordinatesGrid);
-            self.VirtualApertureRotationGrid.ColumnWidth = {24, '1x', 24, 'fit', 24, '1x', 24};
-            self.VirtualApertureRotationGrid.RowHeight = {24};
-            self.VirtualApertureRotationGrid.ColumnSpacing = 4;
-            self.VirtualApertureRotationGrid.RowSpacing = 4;
-            self.VirtualApertureRotationGrid.Padding = [0 0 0 0];
-            self.VirtualApertureRotationGrid.Layout.Row = 10;
-            self.VirtualApertureRotationGrid.Layout.Column = [1 5];
+            app.VirtualApertureRotationGrid = uigridlayout(app.VirtualApertureCoordinatesGrid);
+            app.VirtualApertureRotationGrid.ColumnWidth = {24, '1x', 24, 'fit', 24, '1x', 24};
+            app.VirtualApertureRotationGrid.RowHeight = {24};
+            app.VirtualApertureRotationGrid.ColumnSpacing = 4;
+            app.VirtualApertureRotationGrid.RowSpacing = 4;
+            app.VirtualApertureRotationGrid.Padding = [0 0 0 0];
+            app.VirtualApertureRotationGrid.Layout.Row = 10;
+            app.VirtualApertureRotationGrid.Layout.Column = [1 5];
 
             % Create VirtualApertureReset
-            self.VirtualApertureReset = uibutton(self.VirtualApertureRotationGrid, 'push');
-            self.VirtualApertureReset.ButtonPushedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureReset.Icon = 'home.png';
-            self.VirtualApertureReset.FontWeight = 'bold';
-            self.VirtualApertureReset.Tooltip = {'Home'};
-            self.VirtualApertureReset.Layout.Row = 1;
-            self.VirtualApertureReset.Layout.Column = 1;
-            self.VirtualApertureReset.Text = '';
+            app.VirtualApertureReset = uibutton(app.VirtualApertureRotationGrid, 'push');
+            app.VirtualApertureReset.ButtonPushedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureReset.Icon = 'home.png';
+            app.VirtualApertureReset.FontWeight = 'bold';
+            app.VirtualApertureReset.Tooltip = {'Home'};
+            app.VirtualApertureReset.Layout.Row = 1;
+            app.VirtualApertureReset.Layout.Column = 1;
+            app.VirtualApertureReset.Text = '';
 
             % Create VirtualApertureRotateCCW
-            self.VirtualApertureRotateCCW = uibutton(self.VirtualApertureRotationGrid, 'push');
-            self.VirtualApertureRotateCCW.ButtonPushedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureRotateCCW.Icon = 'left_rotate.png';
-            self.VirtualApertureRotateCCW.Layout.Row = 1;
-            self.VirtualApertureRotateCCW.Layout.Column = 3;
-            self.VirtualApertureRotateCCW.Text = '';
+            app.VirtualApertureRotateCCW = uibutton(app.VirtualApertureRotationGrid, 'push');
+            app.VirtualApertureRotateCCW.ButtonPushedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureRotateCCW.Icon = 'left_rotate.png';
+            app.VirtualApertureRotateCCW.Layout.Row = 1;
+            app.VirtualApertureRotateCCW.Layout.Column = 3;
+            app.VirtualApertureRotateCCW.Text = '';
 
             % Create VirtualApertureRotationStep
-            self.VirtualApertureRotationStep = uidropdown(self.VirtualApertureRotationGrid);
-            self.VirtualApertureRotationStep.Items = {'90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°'};
-            self.VirtualApertureRotationStep.ItemsData = [90 60 45 30 22.5 10 5 2 1 0.5 0.25];
-            self.VirtualApertureRotationStep.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureRotationStep.Layout.Row = 1;
-            self.VirtualApertureRotationStep.Layout.Column = 4;
-            self.VirtualApertureRotationStep.Value = 90;
+            app.VirtualApertureRotationStep = uidropdown(app.VirtualApertureRotationGrid);
+            app.VirtualApertureRotationStep.Items = {'90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°'};
+            app.VirtualApertureRotationStep.ItemsData = [90 60 45 30 22.5 10 5 2 1 0.5 0.25];
+            app.VirtualApertureRotationStep.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureRotationStep.Layout.Row = 1;
+            app.VirtualApertureRotationStep.Layout.Column = 4;
+            app.VirtualApertureRotationStep.Value = 90;
 
             % Create VirtualApertureRotateCW
-            self.VirtualApertureRotateCW = uibutton(self.VirtualApertureRotationGrid, 'push');
-            self.VirtualApertureRotateCW.ButtonPushedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureRotateCW.Icon = 'right_rotate.png';
-            self.VirtualApertureRotateCW.Layout.Row = 1;
-            self.VirtualApertureRotateCW.Layout.Column = 5;
-            self.VirtualApertureRotateCW.Text = '';
+            app.VirtualApertureRotateCW = uibutton(app.VirtualApertureRotationGrid, 'push');
+            app.VirtualApertureRotateCW.ButtonPushedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureRotateCW.Icon = 'right_rotate.png';
+            app.VirtualApertureRotateCW.Layout.Row = 1;
+            app.VirtualApertureRotateCW.Layout.Column = 5;
+            app.VirtualApertureRotateCW.Text = '';
 
             % Create VirtualApertureInvert
-            self.VirtualApertureInvert = uibutton(self.VirtualApertureRotationGrid, 'state');
-            self.VirtualApertureInvert.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureInvert.Tooltip = {'Invert virtual aperture mask'};
-            self.VirtualApertureInvert.Icon = 'invertColors.png';
-            self.VirtualApertureInvert.Text = '';
-            self.VirtualApertureInvert.Layout.Row = 1;
-            self.VirtualApertureInvert.Layout.Column = 7;
+            app.VirtualApertureInvert = uibutton(app.VirtualApertureRotationGrid, 'state');
+            app.VirtualApertureInvert.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureInvert.Tooltip = {'Invert virtual aperture mask'};
+            app.VirtualApertureInvert.Icon = 'invertColors.png';
+            app.VirtualApertureInvert.Text = '';
+            app.VirtualApertureInvert.Layout.Row = 1;
+            app.VirtualApertureInvert.Layout.Column = 7;
 
             % Create AnnularStepGrid_2
-            self.AnnularStepGrid_2 = uigridlayout(self.VirtualApertureRotationGrid);
-            self.AnnularStepGrid_2.ColumnWidth = {'1x', '4x', 60, '1x'};
-            self.AnnularStepGrid_2.RowHeight = {'1x'};
-            self.AnnularStepGrid_2.ColumnSpacing = 0;
-            self.AnnularStepGrid_2.RowSpacing = 0;
-            self.AnnularStepGrid_2.Padding = [0 0 0 0];
-            self.AnnularStepGrid_2.Layout.Row = 1;
-            self.AnnularStepGrid_2.Layout.Column = 2;
+            app.AnnularStepGrid_2 = uigridlayout(app.VirtualApertureRotationGrid);
+            app.AnnularStepGrid_2.ColumnWidth = {'1x', '4x', 60, '1x'};
+            app.AnnularStepGrid_2.RowHeight = {'1x'};
+            app.AnnularStepGrid_2.ColumnSpacing = 0;
+            app.AnnularStepGrid_2.RowSpacing = 0;
+            app.AnnularStepGrid_2.Padding = [0 0 0 0];
+            app.AnnularStepGrid_2.Layout.Row = 1;
+            app.AnnularStepGrid_2.Layout.Column = 2;
 
             % Create AnnularIntegrationStepEditFieldLabel_2
-            self.AnnularIntegrationStepEditFieldLabel_2 = uilabel(self.AnnularStepGrid_2);
-            self.AnnularIntegrationStepEditFieldLabel_2.WordWrap = 'on';
-            self.AnnularIntegrationStepEditFieldLabel_2.Layout.Row = 1;
-            self.AnnularIntegrationStepEditFieldLabel_2.Layout.Column = [1 2];
-            self.AnnularIntegrationStepEditFieldLabel_2.Text = 'Annular Integration Step';
+            app.AnnularIntegrationStepEditFieldLabel_2 = uilabel(app.AnnularStepGrid_2);
+            app.AnnularIntegrationStepEditFieldLabel_2.WordWrap = 'on';
+            app.AnnularIntegrationStepEditFieldLabel_2.Layout.Row = 1;
+            app.AnnularIntegrationStepEditFieldLabel_2.Layout.Column = [1 2];
+            app.AnnularIntegrationStepEditFieldLabel_2.Text = 'Annular Integration Step';
 
             % Create AnnularStep_2
-            self.AnnularStep_2 = uieditfield(self.AnnularStepGrid_2, 'numeric');
-            self.AnnularStep_2.Limits = [1e-05 Inf];
-            self.AnnularStep_2.ValueDisplayFormat = '%11.2f mrad';
-            self.AnnularStep_2.Layout.Row = 1;
-            self.AnnularStep_2.Layout.Column = [3 4];
-            self.AnnularStep_2.Value = 0.5;
+            app.AnnularStep_2 = uieditfield(app.AnnularStepGrid_2, 'numeric');
+            app.AnnularStep_2.Limits = [1e-05 Inf];
+            app.AnnularStep_2.ValueDisplayFormat = '%11.2f mrad';
+            app.AnnularStep_2.Layout.Row = 1;
+            app.AnnularStep_2.Layout.Column = [3 4];
+            app.AnnularStep_2.Value = 0.5;
 
             % Create VirtualApertureSymmetryPanel
-            self.VirtualApertureSymmetryPanel = uipanel(self.VirtualApertureGrid);
-            self.VirtualApertureSymmetryPanel.BorderType = 'none';
-            self.VirtualApertureSymmetryPanel.TitlePosition = 'centertop';
-            self.VirtualApertureSymmetryPanel.Title = 'Symmetry Operations';
-            self.VirtualApertureSymmetryPanel.Layout.Row = 2;
-            self.VirtualApertureSymmetryPanel.Layout.Column = 1;
-            self.VirtualApertureSymmetryPanel.FontName = 'Arial';
-            self.VirtualApertureSymmetryPanel.FontWeight = 'bold';
+            app.VirtualApertureSymmetryPanel = uipanel(app.VirtualApertureGrid);
+            app.VirtualApertureSymmetryPanel.BorderType = 'none';
+            app.VirtualApertureSymmetryPanel.TitlePosition = 'centertop';
+            app.VirtualApertureSymmetryPanel.Title = 'Symmetry Operations';
+            app.VirtualApertureSymmetryPanel.Layout.Row = 2;
+            app.VirtualApertureSymmetryPanel.Layout.Column = 1;
+            app.VirtualApertureSymmetryPanel.FontName = 'Arial';
+            app.VirtualApertureSymmetryPanel.FontWeight = 'bold';
 
             % Create VirtualApertureSymmetryGrid
-            self.VirtualApertureSymmetryGrid = uigridlayout(self.VirtualApertureSymmetryPanel);
-            self.VirtualApertureSymmetryGrid.ColumnWidth = {'1x', 'fit', 'fit', '1x'};
-            self.VirtualApertureSymmetryGrid.RowHeight = {24, 'fit'};
-            self.VirtualApertureSymmetryGrid.ColumnSpacing = 4;
-            self.VirtualApertureSymmetryGrid.RowSpacing = 4;
-            self.VirtualApertureSymmetryGrid.Padding = [0 0 0 6];
+            app.VirtualApertureSymmetryGrid = uigridlayout(app.VirtualApertureSymmetryPanel);
+            app.VirtualApertureSymmetryGrid.ColumnWidth = {'1x', 'fit', 'fit', '1x'};
+            app.VirtualApertureSymmetryGrid.RowHeight = {24, 'fit'};
+            app.VirtualApertureSymmetryGrid.ColumnSpacing = 4;
+            app.VirtualApertureSymmetryGrid.RowSpacing = 4;
+            app.VirtualApertureSymmetryGrid.Padding = [0 0 0 6];
 
             % Create VrApSymmLabel
-            self.VrApSymmLabel = uilabel(self.VirtualApertureSymmetryGrid);
-            self.VrApSymmLabel.HorizontalAlignment = 'right';
-            self.VrApSymmLabel.Layout.Row = 1;
-            self.VrApSymmLabel.Layout.Column = 2;
-            self.VrApSymmLabel.Text = 'Rotational Symmetry';
+            app.VrApSymmLabel = uilabel(app.VirtualApertureSymmetryGrid);
+            app.VrApSymmLabel.HorizontalAlignment = 'right';
+            app.VrApSymmLabel.Layout.Row = 1;
+            app.VrApSymmLabel.Layout.Column = 2;
+            app.VrApSymmLabel.Text = 'Rotational Symmetry';
 
             % Create VirtualApertureSymmetry
-            self.VirtualApertureSymmetry = uidropdown(self.VirtualApertureSymmetryGrid);
-            self.VirtualApertureSymmetry.Items = {'1', '2', '3', '4', '6'};
-            self.VirtualApertureSymmetry.ItemsData = [1 2 3 4 6];
-            self.VirtualApertureSymmetry.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureSymmetry.Layout.Row = 1;
-            self.VirtualApertureSymmetry.Layout.Column = 3;
-            self.VirtualApertureSymmetry.Value = 1;
+            app.VirtualApertureSymmetry = uidropdown(app.VirtualApertureSymmetryGrid);
+            app.VirtualApertureSymmetry.Items = {'1', '2', '3', '4', '6'};
+            app.VirtualApertureSymmetry.ItemsData = [1 2 3 4 6];
+            app.VirtualApertureSymmetry.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureSymmetry.Layout.Row = 1;
+            app.VirtualApertureSymmetry.Layout.Column = 3;
+            app.VirtualApertureSymmetry.Value = 1;
 
             % Create VirtualApertureMirrorGrid
-            self.VirtualApertureMirrorGrid = uigridlayout(self.VirtualApertureSymmetryGrid);
-            self.VirtualApertureMirrorGrid.ColumnWidth = {24, 24, 52, '1x', 80, '1x', 24};
-            self.VirtualApertureMirrorGrid.RowHeight = {24, 14};
-            self.VirtualApertureMirrorGrid.ColumnSpacing = 4;
-            self.VirtualApertureMirrorGrid.RowSpacing = 2;
-            self.VirtualApertureMirrorGrid.Padding = [0 0 0 0];
-            self.VirtualApertureMirrorGrid.Layout.Row = 2;
-            self.VirtualApertureMirrorGrid.Layout.Column = [1 4];
+            app.VirtualApertureMirrorGrid = uigridlayout(app.VirtualApertureSymmetryGrid);
+            app.VirtualApertureMirrorGrid.ColumnWidth = {24, 24, 52, '1x', 80, '1x', 24};
+            app.VirtualApertureMirrorGrid.RowHeight = {24, 14};
+            app.VirtualApertureMirrorGrid.ColumnSpacing = 4;
+            app.VirtualApertureMirrorGrid.RowSpacing = 2;
+            app.VirtualApertureMirrorGrid.Padding = [0 0 0 0];
+            app.VirtualApertureMirrorGrid.Layout.Row = 2;
+            app.VirtualApertureMirrorGrid.Layout.Column = [1 4];
 
             % Create VirtualApertureMirror
-            self.VirtualApertureMirror = uibutton(self.VirtualApertureMirrorGrid, 'state');
-            self.VirtualApertureMirror.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureMirror.Tooltip = {'Mirrored'};
-            self.VirtualApertureMirror.Icon = 'mirrored.png';
-            self.VirtualApertureMirror.Text = '';
-            self.VirtualApertureMirror.Layout.Row = 1;
-            self.VirtualApertureMirror.Layout.Column = 1;
+            app.VirtualApertureMirror = uibutton(app.VirtualApertureMirrorGrid, 'state');
+            app.VirtualApertureMirror.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureMirror.Tooltip = {'Mirrored'};
+            app.VirtualApertureMirror.Icon = 'mirrored.png';
+            app.VirtualApertureMirror.Text = '';
+            app.VirtualApertureMirror.Layout.Row = 1;
+            app.VirtualApertureMirror.Layout.Column = 1;
 
             % Create VrApMirrRotLabel
-            self.VrApMirrRotLabel = uilabel(self.VirtualApertureMirrorGrid);
-            self.VrApMirrRotLabel.HorizontalAlignment = 'right';
-            self.VrApMirrRotLabel.Layout.Row = 1;
-            self.VrApMirrRotLabel.Layout.Column = [2 4];
-            self.VrApMirrRotLabel.Text = 'Mirror Rotation';
+            app.VrApMirrRotLabel = uilabel(app.VirtualApertureMirrorGrid);
+            app.VrApMirrRotLabel.HorizontalAlignment = 'right';
+            app.VrApMirrRotLabel.Layout.Row = 1;
+            app.VrApMirrRotLabel.Layout.Column = [2 4];
+            app.VrApMirrRotLabel.Text = 'Mirror Rotation';
 
             % Create VirtualApertureMirrorRotationSpinner
-            self.VirtualApertureMirrorRotationSpinner = uispinner(self.VirtualApertureMirrorGrid);
-            self.VirtualApertureMirrorRotationSpinner.Step = 4;
-            self.VirtualApertureMirrorRotationSpinner.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureMirrorRotationSpinner.Limits = [-180 180];
-            self.VirtualApertureMirrorRotationSpinner.ValueDisplayFormat = '%.2f';
-            self.VirtualApertureMirrorRotationSpinner.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureMirrorRotationSpinner.Layout.Row = 1;
-            self.VirtualApertureMirrorRotationSpinner.Layout.Column = 5;
+            app.VirtualApertureMirrorRotationSpinner = uispinner(app.VirtualApertureMirrorGrid);
+            app.VirtualApertureMirrorRotationSpinner.Step = 4;
+            app.VirtualApertureMirrorRotationSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureMirrorRotationSpinner.Limits = [-180 180];
+            app.VirtualApertureMirrorRotationSpinner.ValueDisplayFormat = '%.2f';
+            app.VirtualApertureMirrorRotationSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureMirrorRotationSpinner.Layout.Row = 1;
+            app.VirtualApertureMirrorRotationSpinner.Layout.Column = 5;
 
             % Create VrApMirrRot_NFLabel
-            self.VrApMirrRot_NFLabel = uilabel(self.VirtualApertureMirrorGrid);
-            self.VrApMirrRot_NFLabel.Layout.Row = 1;
-            self.VrApMirrRot_NFLabel.Layout.Column = 6;
-            self.VrApMirrRot_NFLabel.Text = '°';
+            app.VrApMirrRot_NFLabel = uilabel(app.VirtualApertureMirrorGrid);
+            app.VrApMirrRot_NFLabel.Layout.Row = 1;
+            app.VrApMirrRot_NFLabel.Layout.Column = 6;
+            app.VrApMirrRot_NFLabel.Text = '°';
 
             % Create VirtualApertureMirrorRotation
-            self.VirtualApertureMirrorRotation = uislider(self.VirtualApertureMirrorGrid);
-            self.VirtualApertureMirrorRotation.Limits = [-180 180];
-            self.VirtualApertureMirrorRotation.MajorTicks = [];
-            self.VirtualApertureMirrorRotation.ValueChangedFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureMirrorRotation.ValueChangingFcn = createCallbackFcn(self, @virtual_aperture_callbacks, true);
-            self.VirtualApertureMirrorRotation.Layout.Row = 2;
-            self.VirtualApertureMirrorRotation.Layout.Column = [1 7];
+            app.VirtualApertureMirrorRotation = uislider(app.VirtualApertureMirrorGrid);
+            app.VirtualApertureMirrorRotation.Limits = [-180 180];
+            app.VirtualApertureMirrorRotation.MajorTicks = [];
+            app.VirtualApertureMirrorRotation.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureMirrorRotation.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
+            app.VirtualApertureMirrorRotation.Layout.Row = 2;
+            app.VirtualApertureMirrorRotation.Layout.Column = [1 7];
 
             % Create CustomDetectorTab
-            self.CustomDetectorTab = uitab(self.ModeTabGroup);
-            self.CustomDetectorTab.Title = 'C';
+            app.CustomDetectorTab = uitab(app.ModeTabGroup);
+            app.CustomDetectorTab.Title = 'C';
 
             % Create CustomDetectorGrid
-            self.CustomDetectorGrid = uigridlayout(self.CustomDetectorTab);
-            self.CustomDetectorGrid.ColumnWidth = {'1x'};
-            self.CustomDetectorGrid.RowHeight = {'fit', 'fit', '1x', '0.8x'};
-            self.CustomDetectorGrid.ColumnSpacing = 4;
-            self.CustomDetectorGrid.RowSpacing = 0;
-            self.CustomDetectorGrid.Padding = [0 0 0 0];
+            app.CustomDetectorGrid = uigridlayout(app.CustomDetectorTab);
+            app.CustomDetectorGrid.ColumnWidth = {'1x'};
+            app.CustomDetectorGrid.RowHeight = {'fit', 'fit', '1x', '0.8x'};
+            app.CustomDetectorGrid.ColumnSpacing = 4;
+            app.CustomDetectorGrid.RowSpacing = 0;
+            app.CustomDetectorGrid.Padding = [0 0 0 0];
 
             % Create CustomDetectorNewMaskGrid
-            self.CustomDetectorNewMaskGrid = uigridlayout(self.CustomDetectorGrid);
-            self.CustomDetectorNewMaskGrid.ColumnWidth = {'1x', 28, 28, 28, 28, 28, 28, 28, 28, '1x'};
-            self.CustomDetectorNewMaskGrid.RowHeight = {28};
-            self.CustomDetectorNewMaskGrid.ColumnSpacing = 2;
-            self.CustomDetectorNewMaskGrid.RowSpacing = 4;
-            self.CustomDetectorNewMaskGrid.Padding = [4 0 4 4];
-            self.CustomDetectorNewMaskGrid.Layout.Row = 1;
-            self.CustomDetectorNewMaskGrid.Layout.Column = 1;
+            app.CustomDetectorNewMaskGrid = uigridlayout(app.CustomDetectorGrid);
+            app.CustomDetectorNewMaskGrid.ColumnWidth = {'1x', 28, 28, 28, 28, 28, 28, 28, 28, '1x'};
+            app.CustomDetectorNewMaskGrid.RowHeight = {28};
+            app.CustomDetectorNewMaskGrid.ColumnSpacing = 2;
+            app.CustomDetectorNewMaskGrid.RowSpacing = 4;
+            app.CustomDetectorNewMaskGrid.Padding = [4 0 4 4];
+            app.CustomDetectorNewMaskGrid.Layout.Row = 1;
+            app.CustomDetectorNewMaskGrid.Layout.Column = 1;
 
             % Create CustomDetectorNewCircle
-            self.CustomDetectorNewCircle = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewCircle.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewCircle.Icon = 'circle.png';
-            self.CustomDetectorNewCircle.Tooltip = {'Add circular mask'};
-            self.CustomDetectorNewCircle.Layout.Row = 1;
-            self.CustomDetectorNewCircle.Layout.Column = 2;
-            self.CustomDetectorNewCircle.Text = '';
+            app.CustomDetectorNewCircle = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewCircle.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewCircle.Icon = 'circle.png';
+            app.CustomDetectorNewCircle.Tooltip = {'Add circular mask'};
+            app.CustomDetectorNewCircle.Layout.Row = 1;
+            app.CustomDetectorNewCircle.Layout.Column = 2;
+            app.CustomDetectorNewCircle.Text = '';
 
             % Create CustomDetectorNewGrid
-            self.CustomDetectorNewGrid = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewGrid.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewGrid.Icon = fullfile(pathToMLAPP, 'icons', 'grid.png');
-            self.CustomDetectorNewGrid.Tooltip = {'Add grid mask'};
-            self.CustomDetectorNewGrid.Layout.Row = 1;
-            self.CustomDetectorNewGrid.Layout.Column = 3;
-            self.CustomDetectorNewGrid.Text = '';
+            app.CustomDetectorNewGrid = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewGrid.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewGrid.Icon = fullfile(pathToMLAPP, 'icons', 'grid.png');
+            app.CustomDetectorNewGrid.Tooltip = {'Add grid mask'};
+            app.CustomDetectorNewGrid.Layout.Row = 1;
+            app.CustomDetectorNewGrid.Layout.Column = 3;
+            app.CustomDetectorNewGrid.Text = '';
 
             % Create CustomDetectorNewBandpass
-            self.CustomDetectorNewBandpass = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewBandpass.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewBandpass.Icon = 'bandpass.png';
-            self.CustomDetectorNewBandpass.Tooltip = {'Add bandpass mask'};
-            self.CustomDetectorNewBandpass.Layout.Row = 1;
-            self.CustomDetectorNewBandpass.Layout.Column = 5;
-            self.CustomDetectorNewBandpass.Text = '';
+            app.CustomDetectorNewBandpass = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewBandpass.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewBandpass.Icon = 'bandpass.png';
+            app.CustomDetectorNewBandpass.Tooltip = {'Add bandpass mask'};
+            app.CustomDetectorNewBandpass.Layout.Row = 1;
+            app.CustomDetectorNewBandpass.Layout.Column = 5;
+            app.CustomDetectorNewBandpass.Text = '';
 
             % Create CustomDetectorNewWedge
-            self.CustomDetectorNewWedge = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewWedge.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewWedge.Icon = 'wedge.png';
-            self.CustomDetectorNewWedge.FontSize = 10;
-            self.CustomDetectorNewWedge.Tooltip = {'Add wedge mask'};
-            self.CustomDetectorNewWedge.Layout.Row = 1;
-            self.CustomDetectorNewWedge.Layout.Column = 6;
-            self.CustomDetectorNewWedge.Text = '';
+            app.CustomDetectorNewWedge = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewWedge.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewWedge.Icon = 'wedge.png';
+            app.CustomDetectorNewWedge.FontSize = 10;
+            app.CustomDetectorNewWedge.Tooltip = {'Add wedge mask'};
+            app.CustomDetectorNewWedge.Layout.Row = 1;
+            app.CustomDetectorNewWedge.Layout.Column = 6;
+            app.CustomDetectorNewWedge.Text = '';
 
             % Create CustomDetectorNewPolygon
-            self.CustomDetectorNewPolygon = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewPolygon.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewPolygon.Icon = 'poly.png';
-            self.CustomDetectorNewPolygon.Tooltip = {'Add polygon mask'};
-            self.CustomDetectorNewPolygon.Layout.Row = 1;
-            self.CustomDetectorNewPolygon.Layout.Column = 7;
-            self.CustomDetectorNewPolygon.Text = '';
+            app.CustomDetectorNewPolygon = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewPolygon.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewPolygon.Icon = 'poly.png';
+            app.CustomDetectorNewPolygon.Tooltip = {'Add polygon mask'};
+            app.CustomDetectorNewPolygon.Layout.Row = 1;
+            app.CustomDetectorNewPolygon.Layout.Column = 7;
+            app.CustomDetectorNewPolygon.Text = '';
 
             % Create CustomDetectorNewFromFile
-            self.CustomDetectorNewFromFile = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewFromFile.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewFromFile.Icon = 'openMask.png';
-            self.CustomDetectorNewFromFile.Tooltip = {'Add mask from file'};
-            self.CustomDetectorNewFromFile.Layout.Row = 1;
-            self.CustomDetectorNewFromFile.Layout.Column = 8;
-            self.CustomDetectorNewFromFile.Text = '';
+            app.CustomDetectorNewFromFile = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewFromFile.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewFromFile.Icon = 'openMask.png';
+            app.CustomDetectorNewFromFile.Tooltip = {'Add mask from file'};
+            app.CustomDetectorNewFromFile.Layout.Row = 1;
+            app.CustomDetectorNewFromFile.Layout.Column = 8;
+            app.CustomDetectorNewFromFile.Text = '';
 
             % Create CustomDetectorNewMath
-            self.CustomDetectorNewMath = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewMath.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewMath.Icon = 'math.png';
-            self.CustomDetectorNewMath.Tooltip = {'Add mask from formula'};
-            self.CustomDetectorNewMath.Layout.Row = 1;
-            self.CustomDetectorNewMath.Layout.Column = 9;
-            self.CustomDetectorNewMath.Text = '';
+            app.CustomDetectorNewMath = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewMath.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewMath.Icon = 'math.png';
+            app.CustomDetectorNewMath.Tooltip = {'Add mask from formula'};
+            app.CustomDetectorNewMath.Layout.Row = 1;
+            app.CustomDetectorNewMath.Layout.Column = 9;
+            app.CustomDetectorNewMath.Text = '';
 
             % Create CustomDetectorNewGridNoCenter
-            self.CustomDetectorNewGridNoCenter = uibutton(self.CustomDetectorNewMaskGrid, 'push');
-            self.CustomDetectorNewGridNoCenter.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorNewGridNoCenter.Icon = fullfile(pathToMLAPP, 'icons', 'grid_no_tb.png');
-            self.CustomDetectorNewGridNoCenter.Tooltip = {'Add grid mask without including transmitted beam'};
-            self.CustomDetectorNewGridNoCenter.Layout.Row = 1;
-            self.CustomDetectorNewGridNoCenter.Layout.Column = 4;
-            self.CustomDetectorNewGridNoCenter.Text = '';
+            app.CustomDetectorNewGridNoCenter = uibutton(app.CustomDetectorNewMaskGrid, 'push');
+            app.CustomDetectorNewGridNoCenter.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorNewGridNoCenter.Icon = fullfile(pathToMLAPP, 'icons', 'grid_no_tb.png');
+            app.CustomDetectorNewGridNoCenter.Tooltip = {'Add grid mask without including transmitted beam'};
+            app.CustomDetectorNewGridNoCenter.Layout.Row = 1;
+            app.CustomDetectorNewGridNoCenter.Layout.Column = 4;
+            app.CustomDetectorNewGridNoCenter.Text = '';
 
             % Create CustomDetectorInterMaskGrid
-            self.CustomDetectorInterMaskGrid = uigridlayout(self.CustomDetectorGrid);
-            self.CustomDetectorInterMaskGrid.ColumnWidth = {24, '1x', 'fit', 'fit', '1x', 24};
-            self.CustomDetectorInterMaskGrid.RowHeight = {24};
-            self.CustomDetectorInterMaskGrid.ColumnSpacing = 4;
-            self.CustomDetectorInterMaskGrid.RowSpacing = 6;
-            self.CustomDetectorInterMaskGrid.Padding = [4 4 4 4];
-            self.CustomDetectorInterMaskGrid.Layout.Row = 2;
-            self.CustomDetectorInterMaskGrid.Layout.Column = 1;
+            app.CustomDetectorInterMaskGrid = uigridlayout(app.CustomDetectorGrid);
+            app.CustomDetectorInterMaskGrid.ColumnWidth = {24, '1x', 'fit', 'fit', '1x', 24};
+            app.CustomDetectorInterMaskGrid.RowHeight = {24};
+            app.CustomDetectorInterMaskGrid.ColumnSpacing = 4;
+            app.CustomDetectorInterMaskGrid.RowSpacing = 6;
+            app.CustomDetectorInterMaskGrid.Padding = [4 4 4 4];
+            app.CustomDetectorInterMaskGrid.Layout.Row = 2;
+            app.CustomDetectorInterMaskGrid.Layout.Column = 1;
 
             % Create ShowDiffractionMaskWindow
-            self.ShowDiffractionMaskWindow = uibutton(self.CustomDetectorInterMaskGrid, 'push');
-            self.ShowDiffractionMaskWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowDiffractionMaskWindow.Tag = 'DiffractionMask';
-            self.ShowDiffractionMaskWindow.Icon = 'Aperture.png';
-            self.ShowDiffractionMaskWindow.Tooltip = {'Show Diffraction Mask Image'};
-            self.ShowDiffractionMaskWindow.Layout.Row = 1;
-            self.ShowDiffractionMaskWindow.Layout.Column = 1;
-            self.ShowDiffractionMaskWindow.Text = '';
+            app.ShowDiffractionMaskWindow = uibutton(app.CustomDetectorInterMaskGrid, 'push');
+            app.ShowDiffractionMaskWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowDiffractionMaskWindow.Tag = 'DiffractionMask';
+            app.ShowDiffractionMaskWindow.Icon = 'Aperture.png';
+            app.ShowDiffractionMaskWindow.Tooltip = {'Show Diffraction Mask Image'};
+            app.ShowDiffractionMaskWindow.Layout.Row = 1;
+            app.ShowDiffractionMaskWindow.Layout.Column = 1;
+            app.ShowDiffractionMaskWindow.Text = '';
 
             % Create IntermaskLabel
-            self.IntermaskLabel = uilabel(self.CustomDetectorInterMaskGrid);
-            self.IntermaskLabel.HorizontalAlignment = 'right';
-            self.IntermaskLabel.FontName = 'Arial';
-            self.IntermaskLabel.FontWeight = 'bold';
-            self.IntermaskLabel.Layout.Row = 1;
-            self.IntermaskLabel.Layout.Column = 3;
-            self.IntermaskLabel.Text = 'Inter-mask';
+            app.IntermaskLabel = uilabel(app.CustomDetectorInterMaskGrid);
+            app.IntermaskLabel.HorizontalAlignment = 'right';
+            app.IntermaskLabel.FontName = 'Arial';
+            app.IntermaskLabel.FontWeight = 'bold';
+            app.IntermaskLabel.Layout.Row = 1;
+            app.IntermaskLabel.Layout.Column = 3;
+            app.IntermaskLabel.Text = 'Inter-mask';
 
             % Create CustomDetectorInterMask
-            self.CustomDetectorInterMask = uidropdown(self.CustomDetectorInterMaskGrid);
-            self.CustomDetectorInterMask.Items = {'Color Mix', 'Union', 'Intersection', 'Additive', 'Current-only'};
-            self.CustomDetectorInterMask.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorInterMask.Tooltip = {'Combine different custom masks as:'; 'Union, e.g. Final = A ∪ B ∪ C;'; 'Intersection, e.g. Final = A ∩ B ∩ C;'; 'Additive, e.g. Final = A*WtA + B*WtB + C*WtC;'; 'Current-only, i.e. only the selected mask.'; 'Zero-weighted masks are always ignored. Weightings have no effect in Union and Intersection. Weightings are applied unnormalised in Additive and Current-only.'};
-            self.CustomDetectorInterMask.FontName = 'Arial';
-            self.CustomDetectorInterMask.FontWeight = 'bold';
-            self.CustomDetectorInterMask.Layout.Row = 1;
-            self.CustomDetectorInterMask.Layout.Column = 4;
-            self.CustomDetectorInterMask.Value = 'Color Mix';
+            app.CustomDetectorInterMask = uidropdown(app.CustomDetectorInterMaskGrid);
+            app.CustomDetectorInterMask.Items = {'Color Mix', 'Union', 'Intersection', 'Additive', 'Current-only'};
+            app.CustomDetectorInterMask.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorInterMask.Tooltip = {'Combine different custom masks as:'; 'Union, e.g. Final = A ∪ B ∪ C;'; 'Intersection, e.g. Final = A ∩ B ∩ C;'; 'Additive, e.g. Final = A*WtA + B*WtB + C*WtC;'; 'Current-only, i.e. only the selected mask.'; 'Zero-weighted masks are always ignored. Weightings have no effect in Union and Intersection. Weightings are applied unnormalised in Additive and Current-only.'};
+            app.CustomDetectorInterMask.FontName = 'Arial';
+            app.CustomDetectorInterMask.FontWeight = 'bold';
+            app.CustomDetectorInterMask.Layout.Row = 1;
+            app.CustomDetectorInterMask.Layout.Column = 4;
+            app.CustomDetectorInterMask.Value = 'Color Mix';
 
             % Create CustomDetectorDeleteMask
-            self.CustomDetectorDeleteMask = uibutton(self.CustomDetectorInterMaskGrid, 'push');
-            self.CustomDetectorDeleteMask.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorDeleteMask.Icon = 'delete.png';
-            self.CustomDetectorDeleteMask.FontWeight = 'bold';
-            self.CustomDetectorDeleteMask.Tooltip = {'Delete seleced mask'};
-            self.CustomDetectorDeleteMask.Layout.Row = 1;
-            self.CustomDetectorDeleteMask.Layout.Column = 6;
-            self.CustomDetectorDeleteMask.Text = '';
+            app.CustomDetectorDeleteMask = uibutton(app.CustomDetectorInterMaskGrid, 'push');
+            app.CustomDetectorDeleteMask.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorDeleteMask.Icon = 'delete.png';
+            app.CustomDetectorDeleteMask.FontWeight = 'bold';
+            app.CustomDetectorDeleteMask.Tooltip = {'Delete seleced mask'};
+            app.CustomDetectorDeleteMask.Layout.Row = 1;
+            app.CustomDetectorDeleteMask.Layout.Column = 6;
+            app.CustomDetectorDeleteMask.Text = '';
 
             % Create CustomDetectorTable
-            self.CustomDetectorTable = uitable(self.CustomDetectorGrid);
-            self.CustomDetectorTable.ColumnName = {'ID'; 'Type'; 'Label'; '✅'; '👁'; 'μ'};
-            self.CustomDetectorTable.RowName = {};
-            self.CustomDetectorTable.ColumnSortable = [false true true false false false];
-            self.CustomDetectorTable.ColumnEditable = [false false true true true true];
-            self.CustomDetectorTable.RowStriping = 'off';
-            self.CustomDetectorTable.CellEditCallback = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorTable.CellSelectionCallback = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorTable.Tooltip = {'✅: Enable mask.'; '👁: Show annotation on pattern.'; 'μ: Weighting.'};
-            self.CustomDetectorTable.FontName = 'MS Sans Serif';
-            self.CustomDetectorTable.Layout.Row = 3;
-            self.CustomDetectorTable.Layout.Column = 1;
+            app.CustomDetectorTable = uitable(app.CustomDetectorGrid);
+            app.CustomDetectorTable.ColumnName = {'ID'; 'Type'; 'Label'; '✅'; '👁'; 'μ'};
+            app.CustomDetectorTable.RowName = {};
+            app.CustomDetectorTable.ColumnSortable = [false true true false false false];
+            app.CustomDetectorTable.ColumnEditable = [false false true true true true];
+            app.CustomDetectorTable.RowStriping = 'off';
+            app.CustomDetectorTable.CellEditCallback = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorTable.CellSelectionCallback = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorTable.Tooltip = {'✅: Enable mask.'; '👁: Show annotation on pattern.'; 'μ: Weighting.'};
+            app.CustomDetectorTable.FontName = 'MS Sans Serif';
+            app.CustomDetectorTable.Layout.Row = 3;
+            app.CustomDetectorTable.Layout.Column = 1;
 
             % Create CustomDetectorDetailsPanel
-            self.CustomDetectorDetailsPanel = uipanel(self.CustomDetectorGrid);
-            self.CustomDetectorDetailsPanel.BorderType = 'none';
-            self.CustomDetectorDetailsPanel.TitlePosition = 'centertop';
-            self.CustomDetectorDetailsPanel.BackgroundColor = [1 1 1];
-            self.CustomDetectorDetailsPanel.Layout.Row = 4;
-            self.CustomDetectorDetailsPanel.Layout.Column = 1;
-            self.CustomDetectorDetailsPanel.FontWeight = 'bold';
+            app.CustomDetectorDetailsPanel = uipanel(app.CustomDetectorGrid);
+            app.CustomDetectorDetailsPanel.BorderType = 'none';
+            app.CustomDetectorDetailsPanel.TitlePosition = 'centertop';
+            app.CustomDetectorDetailsPanel.BackgroundColor = [1 1 1];
+            app.CustomDetectorDetailsPanel.Layout.Row = 4;
+            app.CustomDetectorDetailsPanel.Layout.Column = 1;
+            app.CustomDetectorDetailsPanel.FontWeight = 'bold';
 
             % Create CustomDetectorDetailsGrid
-            self.CustomDetectorDetailsGrid = uigridlayout(self.CustomDetectorDetailsPanel);
-            self.CustomDetectorDetailsGrid.ColumnWidth = {24, '1x', 24};
-            self.CustomDetectorDetailsGrid.RowHeight = {24, 24, 24, 24, '1x'};
-            self.CustomDetectorDetailsGrid.ColumnSpacing = 1;
-            self.CustomDetectorDetailsGrid.RowSpacing = 1;
-            self.CustomDetectorDetailsGrid.Padding = [1 1 1 1];
+            app.CustomDetectorDetailsGrid = uigridlayout(app.CustomDetectorDetailsPanel);
+            app.CustomDetectorDetailsGrid.ColumnWidth = {24, '1x', 24};
+            app.CustomDetectorDetailsGrid.RowHeight = {24, 24, 24, 24, '1x'};
+            app.CustomDetectorDetailsGrid.ColumnSpacing = 1;
+            app.CustomDetectorDetailsGrid.RowSpacing = 1;
+            app.CustomDetectorDetailsGrid.Padding = [1 1 1 1];
 
             % Create CustomDetectorRotationGrid
-            self.CustomDetectorRotationGrid = uigridlayout(self.CustomDetectorDetailsGrid);
-            self.CustomDetectorRotationGrid.ColumnWidth = {'fit', '1x', 1, 'fit', 24, 24};
-            self.CustomDetectorRotationGrid.RowHeight = {24};
-            self.CustomDetectorRotationGrid.ColumnSpacing = 1;
-            self.CustomDetectorRotationGrid.RowSpacing = 4;
-            self.CustomDetectorRotationGrid.Padding = [0 0 0 0];
-            self.CustomDetectorRotationGrid.Layout.Row = 1;
-            self.CustomDetectorRotationGrid.Layout.Column = [1 3];
+            app.CustomDetectorRotationGrid = uigridlayout(app.CustomDetectorDetailsGrid);
+            app.CustomDetectorRotationGrid.ColumnWidth = {'fit', '1x', 1, 'fit', 24, 24};
+            app.CustomDetectorRotationGrid.RowHeight = {24};
+            app.CustomDetectorRotationGrid.ColumnSpacing = 1;
+            app.CustomDetectorRotationGrid.RowSpacing = 4;
+            app.CustomDetectorRotationGrid.Padding = [0 0 0 0];
+            app.CustomDetectorRotationGrid.Layout.Row = 1;
+            app.CustomDetectorRotationGrid.Layout.Column = [1 3];
 
             % Create CDIntraCombLabel
-            self.CDIntraCombLabel = uilabel(self.CustomDetectorRotationGrid);
-            self.CDIntraCombLabel.HorizontalAlignment = 'center';
-            self.CDIntraCombLabel.Layout.Row = 1;
-            self.CDIntraCombLabel.Layout.Column = 1;
-            self.CDIntraCombLabel.Text = 'Intra-mask';
+            app.CDIntraCombLabel = uilabel(app.CustomDetectorRotationGrid);
+            app.CDIntraCombLabel.HorizontalAlignment = 'center';
+            app.CDIntraCombLabel.Layout.Row = 1;
+            app.CDIntraCombLabel.Layout.Column = 1;
+            app.CDIntraCombLabel.Text = 'Intra-mask';
 
             % Create CustomDetectorIntraMask
-            self.CustomDetectorIntraMask = uidropdown(self.CustomDetectorRotationGrid);
-            self.CustomDetectorIntraMask.Items = {'Union', 'Intersection', 'Additive'};
-            self.CustomDetectorIntraMask.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorIntraMask.Tooltip = {'Combine different regions in mask as:'; 'Union, e.g. A = A1 ∪ A2 ∪ A3;'; 'Intersection, e.g. A = A1 ∩ A2 ∩ A3;'; 'Additive, e.g. A = A1 + A2 + A3.'};
-            self.CustomDetectorIntraMask.Layout.Row = 1;
-            self.CustomDetectorIntraMask.Layout.Column = 2;
-            self.CustomDetectorIntraMask.Value = 'Union';
+            app.CustomDetectorIntraMask = uidropdown(app.CustomDetectorRotationGrid);
+            app.CustomDetectorIntraMask.Items = {'Union', 'Intersection', 'Additive'};
+            app.CustomDetectorIntraMask.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorIntraMask.Tooltip = {'Combine different regions in mask as:'; 'Union, e.g. A = A1 ∪ A2 ∪ A3;'; 'Intersection, e.g. A = A1 ∩ A2 ∩ A3;'; 'Additive, e.g. A = A1 + A2 + A3.'};
+            app.CustomDetectorIntraMask.Layout.Row = 1;
+            app.CustomDetectorIntraMask.Layout.Column = 2;
+            app.CustomDetectorIntraMask.Value = 'Union';
 
             % Create CustomDetectorRotationStep
-            self.CustomDetectorRotationStep = uidropdown(self.CustomDetectorRotationGrid);
-            self.CustomDetectorRotationStep.Items = {'180°', '90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°'};
-            self.CustomDetectorRotationStep.ItemsData = [180 90 60 45 30 22.5 10 5 2 1 0.5 0.25];
-            self.CustomDetectorRotationStep.Tooltip = {'Mask rotation step size'};
-            self.CustomDetectorRotationStep.Layout.Row = 1;
-            self.CustomDetectorRotationStep.Layout.Column = 4;
-            self.CustomDetectorRotationStep.Value = 90;
+            app.CustomDetectorRotationStep = uidropdown(app.CustomDetectorRotationGrid);
+            app.CustomDetectorRotationStep.Items = {'180°', '90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°'};
+            app.CustomDetectorRotationStep.ItemsData = [180 90 60 45 30 22.5 10 5 2 1 0.5 0.25];
+            app.CustomDetectorRotationStep.Tooltip = {'Mask rotation step size'};
+            app.CustomDetectorRotationStep.Layout.Row = 1;
+            app.CustomDetectorRotationStep.Layout.Column = 4;
+            app.CustomDetectorRotationStep.Value = 90;
 
             % Create CustomDetectorRotateCCW
-            self.CustomDetectorRotateCCW = uibutton(self.CustomDetectorRotationGrid, 'push');
-            self.CustomDetectorRotateCCW.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorRotateCCW.Icon = 'left_rotate.png';
-            self.CustomDetectorRotateCCW.Tooltip = {'Rotate mask'};
-            self.CustomDetectorRotateCCW.Layout.Row = 1;
-            self.CustomDetectorRotateCCW.Layout.Column = 5;
-            self.CustomDetectorRotateCCW.Text = '';
+            app.CustomDetectorRotateCCW = uibutton(app.CustomDetectorRotationGrid, 'push');
+            app.CustomDetectorRotateCCW.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorRotateCCW.Icon = 'left_rotate.png';
+            app.CustomDetectorRotateCCW.Tooltip = {'Rotate mask'};
+            app.CustomDetectorRotateCCW.Layout.Row = 1;
+            app.CustomDetectorRotateCCW.Layout.Column = 5;
+            app.CustomDetectorRotateCCW.Text = '';
 
             % Create CustomDetectorRotateCW
-            self.CustomDetectorRotateCW = uibutton(self.CustomDetectorRotationGrid, 'push');
-            self.CustomDetectorRotateCW.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorRotateCW.Icon = 'right_rotate.png';
-            self.CustomDetectorRotateCW.Tooltip = {'Rotate mask'};
-            self.CustomDetectorRotateCW.Layout.Row = 1;
-            self.CustomDetectorRotateCW.Layout.Column = 6;
-            self.CustomDetectorRotateCW.Text = '';
+            app.CustomDetectorRotateCW = uibutton(app.CustomDetectorRotationGrid, 'push');
+            app.CustomDetectorRotateCW.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorRotateCW.Icon = 'right_rotate.png';
+            app.CustomDetectorRotateCW.Tooltip = {'Rotate mask'};
+            app.CustomDetectorRotateCW.Layout.Row = 1;
+            app.CustomDetectorRotateCW.Layout.Column = 6;
+            app.CustomDetectorRotateCW.Text = '';
 
             % Create CustomDetectorMirror
-            self.CustomDetectorMirror = uibutton(self.CustomDetectorDetailsGrid, 'state');
-            self.CustomDetectorMirror.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorMirror.Tooltip = {'Mirrored'};
-            self.CustomDetectorMirror.Icon = 'mirrored.png';
-            self.CustomDetectorMirror.Text = '';
-            self.CustomDetectorMirror.Layout.Row = 2;
-            self.CustomDetectorMirror.Layout.Column = 1;
+            app.CustomDetectorMirror = uibutton(app.CustomDetectorDetailsGrid, 'state');
+            app.CustomDetectorMirror.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorMirror.Tooltip = {'Mirrored'};
+            app.CustomDetectorMirror.Icon = 'mirrored.png';
+            app.CustomDetectorMirror.Text = '';
+            app.CustomDetectorMirror.Layout.Row = 2;
+            app.CustomDetectorMirror.Layout.Column = 1;
 
             % Create CustomDetectorDetailsTable
-            self.CustomDetectorDetailsTable = uitable(self.CustomDetectorDetailsGrid);
-            self.CustomDetectorDetailsTable.ColumnName = {'X'; 'Y'; 'R'};
-            self.CustomDetectorDetailsTable.RowName = {};
-            self.CustomDetectorDetailsTable.ColumnSortable = true;
-            self.CustomDetectorDetailsTable.ColumnEditable = true;
-            self.CustomDetectorDetailsTable.CellEditCallback = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorDetailsTable.Layout.Row = [2 5];
-            self.CustomDetectorDetailsTable.Layout.Column = 2;
+            app.CustomDetectorDetailsTable = uitable(app.CustomDetectorDetailsGrid);
+            app.CustomDetectorDetailsTable.ColumnName = {'X'; 'Y'; 'R'};
+            app.CustomDetectorDetailsTable.RowName = {};
+            app.CustomDetectorDetailsTable.ColumnSortable = true;
+            app.CustomDetectorDetailsTable.ColumnEditable = true;
+            app.CustomDetectorDetailsTable.CellEditCallback = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorDetailsTable.Layout.Row = [2 5];
+            app.CustomDetectorDetailsTable.Layout.Column = 2;
 
             % Create CustomDetectorInvert
-            self.CustomDetectorInvert = uibutton(self.CustomDetectorDetailsGrid, 'state');
-            self.CustomDetectorInvert.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorInvert.Tooltip = {'Invert mask'};
-            self.CustomDetectorInvert.Icon = 'invertColors.png';
-            self.CustomDetectorInvert.Text = '';
-            self.CustomDetectorInvert.Layout.Row = 3;
-            self.CustomDetectorInvert.Layout.Column = 1;
+            app.CustomDetectorInvert = uibutton(app.CustomDetectorDetailsGrid, 'state');
+            app.CustomDetectorInvert.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorInvert.Tooltip = {'Invert mask'};
+            app.CustomDetectorInvert.Icon = 'invertColors.png';
+            app.CustomDetectorInvert.Text = '';
+            app.CustomDetectorInvert.Layout.Row = 3;
+            app.CustomDetectorInvert.Layout.Column = 1;
 
             % Create CustomDetectorColor
-            self.CustomDetectorColor = uibutton(self.CustomDetectorDetailsGrid, 'push');
-            self.CustomDetectorColor.ButtonPushedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorColor.Icon = 'colorPicker.png';
-            self.CustomDetectorColor.Tooltip = {'Change color of current mask display'};
-            self.CustomDetectorColor.Layout.Row = 4;
-            self.CustomDetectorColor.Layout.Column = 1;
-            self.CustomDetectorColor.Text = '';
+            app.CustomDetectorColor = uibutton(app.CustomDetectorDetailsGrid, 'push');
+            app.CustomDetectorColor.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorColor.Icon = 'colorPicker.png';
+            app.CustomDetectorColor.Tooltip = {'Change color of current mask display'};
+            app.CustomDetectorColor.Layout.Row = 4;
+            app.CustomDetectorColor.Layout.Column = 1;
+            app.CustomDetectorColor.Text = '';
 
             % Create CustomDetectorFlipHorizontal
-            self.CustomDetectorFlipHorizontal = uibutton(self.CustomDetectorDetailsGrid, 'state');
-            self.CustomDetectorFlipHorizontal.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorFlipHorizontal.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorHorz.png');
-            self.CustomDetectorFlipHorizontal.Text = '';
-            self.CustomDetectorFlipHorizontal.Layout.Row = 2;
-            self.CustomDetectorFlipHorizontal.Layout.Column = 3;
+            app.CustomDetectorFlipHorizontal = uibutton(app.CustomDetectorDetailsGrid, 'state');
+            app.CustomDetectorFlipHorizontal.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorFlipHorizontal.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorHorz.png');
+            app.CustomDetectorFlipHorizontal.Text = '';
+            app.CustomDetectorFlipHorizontal.Layout.Row = 2;
+            app.CustomDetectorFlipHorizontal.Layout.Column = 3;
 
             % Create CustomDetectorFlipVertical
-            self.CustomDetectorFlipVertical = uibutton(self.CustomDetectorDetailsGrid, 'state');
-            self.CustomDetectorFlipVertical.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorFlipVertical.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorVert.png');
-            self.CustomDetectorFlipVertical.Text = '';
-            self.CustomDetectorFlipVertical.Layout.Row = 3;
-            self.CustomDetectorFlipVertical.Layout.Column = 3;
+            app.CustomDetectorFlipVertical = uibutton(app.CustomDetectorDetailsGrid, 'state');
+            app.CustomDetectorFlipVertical.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorFlipVertical.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorVert.png');
+            app.CustomDetectorFlipVertical.Text = '';
+            app.CustomDetectorFlipVertical.Layout.Row = 3;
+            app.CustomDetectorFlipVertical.Layout.Column = 3;
 
             % Create CustomDetectorTranspose
-            self.CustomDetectorTranspose = uibutton(self.CustomDetectorDetailsGrid, 'state');
-            self.CustomDetectorTranspose.ValueChangedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CustomDetectorTranspose.Icon = fullfile(pathToMLAPP, 'icons', 'transpose.png');
-            self.CustomDetectorTranspose.Text = '';
-            self.CustomDetectorTranspose.Layout.Row = 4;
-            self.CustomDetectorTranspose.Layout.Column = 3;
+            app.CustomDetectorTranspose = uibutton(app.CustomDetectorDetailsGrid, 'state');
+            app.CustomDetectorTranspose.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CustomDetectorTranspose.Icon = fullfile(pathToMLAPP, 'icons', 'transpose.png');
+            app.CustomDetectorTranspose.Text = '';
+            app.CustomDetectorTranspose.Layout.Row = 4;
+            app.CustomDetectorTranspose.Layout.Column = 3;
 
             % Create Quant4D_FigGrid
-            self.Quant4D_FigGrid = uigridlayout(self.Quant4D_Fig);
-            self.Quant4D_FigGrid.ColumnWidth = {'1x'};
-            self.Quant4D_FigGrid.RowHeight = {'fit', 'fit', '1x', 'fit'};
-            self.Quant4D_FigGrid.ColumnSpacing = 0;
-            self.Quant4D_FigGrid.RowSpacing = 0;
-            self.Quant4D_FigGrid.Padding = [0 0 0 0];
+            app.Quant4D_FigGrid = uigridlayout(app.Quant4D_Fig);
+            app.Quant4D_FigGrid.ColumnWidth = {'1x'};
+            app.Quant4D_FigGrid.RowHeight = {'fit', 'fit', '1x', 'fit'};
+            app.Quant4D_FigGrid.ColumnSpacing = 0;
+            app.Quant4D_FigGrid.RowSpacing = 0;
+            app.Quant4D_FigGrid.Padding = [0 0 0 0];
 
             % Create ShortcutButtonGrid
-            self.ShortcutButtonGrid = uigridlayout(self.Quant4D_FigGrid);
-            self.ShortcutButtonGrid.ColumnWidth = {'1x', 24, 24, 24, 24, 24, 24};
-            self.ShortcutButtonGrid.RowHeight = {24};
-            self.ShortcutButtonGrid.ColumnSpacing = 4;
-            self.ShortcutButtonGrid.RowSpacing = 4;
-            self.ShortcutButtonGrid.Padding = [4 4 4 4];
-            self.ShortcutButtonGrid.Layout.Row = 1;
-            self.ShortcutButtonGrid.Layout.Column = 1;
+            app.ShortcutButtonGrid = uigridlayout(app.Quant4D_FigGrid);
+            app.ShortcutButtonGrid.ColumnWidth = {'1x', 24, 24, 24, 24, 24, 24};
+            app.ShortcutButtonGrid.RowHeight = {24};
+            app.ShortcutButtonGrid.ColumnSpacing = 4;
+            app.ShortcutButtonGrid.RowSpacing = 4;
+            app.ShortcutButtonGrid.Padding = [4 4 4 4];
+            app.ShortcutButtonGrid.Layout.Row = 1;
+            app.ShortcutButtonGrid.Layout.Column = 1;
 
             % Create ShowImportWindow
-            self.ShowImportWindow = uibutton(self.ShortcutButtonGrid, 'push');
-            self.ShowImportWindow.ButtonPushedFcn = createCallbackFcn(self, @import_callbacks, true);
-            self.ShowImportWindow.Icon = 'import.png';
-            self.ShowImportWindow.BackgroundColor = [0.702 1 0.702];
-            self.ShowImportWindow.FontName = 'arial';
-            self.ShowImportWindow.FontWeight = 'bold';
-            self.ShowImportWindow.Tooltip = {'Import Data'};
-            self.ShowImportWindow.Layout.Row = 1;
-            self.ShowImportWindow.Layout.Column = 1;
-            self.ShowImportWindow.Text = 'Import';
+            app.ShowImportWindow = uibutton(app.ShortcutButtonGrid, 'push');
+            app.ShowImportWindow.ButtonPushedFcn = createCallbackFcn(app, @import_callbacks, true);
+            app.ShowImportWindow.Icon = 'import.png';
+            app.ShowImportWindow.BackgroundColor = [0.702 1 0.702];
+            app.ShowImportWindow.FontName = 'arial';
+            app.ShowImportWindow.FontWeight = 'bold';
+            app.ShowImportWindow.Tooltip = {'Import Data'};
+            app.ShowImportWindow.Layout.Row = 1;
+            app.ShowImportWindow.Layout.Column = 1;
+            app.ShowImportWindow.Text = 'Import';
 
             % Create ShowSaveWindow
-            self.ShowSaveWindow = uibutton(self.ShortcutButtonGrid, 'push');
-            self.ShowSaveWindow.ButtonPushedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.ShowSaveWindow.Icon = 'save.png';
-            self.ShowSaveWindow.Tooltip = {'Open the Saving/Export window'};
-            self.ShowSaveWindow.Layout.Row = 1;
-            self.ShowSaveWindow.Layout.Column = 2;
-            self.ShowSaveWindow.Text = '';
+            app.ShowSaveWindow = uibutton(app.ShortcutButtonGrid, 'push');
+            app.ShowSaveWindow.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.ShowSaveWindow.Icon = 'save.png';
+            app.ShowSaveWindow.Tooltip = {'Open the Saving/Export window'};
+            app.ShowSaveWindow.Layout.Row = 1;
+            app.ShowSaveWindow.Layout.Column = 2;
+            app.ShowSaveWindow.Text = '';
 
             % Create AutoSaveImage
-            self.AutoSaveImage = uibutton(self.ShortcutButtonGrid, 'push');
-            self.AutoSaveImage.ButtonPushedFcn = createCallbackFcn(self, @save_callbacks, true);
-            self.AutoSaveImage.Icon = 'autoSave.png';
-            self.AutoSaveImage.Tooltip = {'Repeat Previous Image Saving Operation'};
-            self.AutoSaveImage.Layout.Row = 1;
-            self.AutoSaveImage.Layout.Column = 3;
-            self.AutoSaveImage.Text = '';
+            app.AutoSaveImage = uibutton(app.ShortcutButtonGrid, 'push');
+            app.AutoSaveImage.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
+            app.AutoSaveImage.Icon = 'autoSave.png';
+            app.AutoSaveImage.Tooltip = {'Repeat Previous Image Saving Operation'};
+            app.AutoSaveImage.Layout.Row = 1;
+            app.AutoSaveImage.Layout.Column = 3;
+            app.AutoSaveImage.Text = '';
 
             % Create UpdateImages
-            self.UpdateImages = uibutton(self.ShortcutButtonGrid, 'push');
-            self.UpdateImages.ButtonPushedFcn = createCallbackFcn(self, @update_images, true);
-            self.UpdateImages.Icon = 'refresh.png';
-            self.UpdateImages.Tooltip = {'Update Images (F5)'};
-            self.UpdateImages.Layout.Row = 1;
-            self.UpdateImages.Layout.Column = 4;
-            self.UpdateImages.Text = '';
+            app.UpdateImages = uibutton(app.ShortcutButtonGrid, 'push');
+            app.UpdateImages.ButtonPushedFcn = createCallbackFcn(app, @update_images, true);
+            app.UpdateImages.Icon = 'refresh.png';
+            app.UpdateImages.Tooltip = {'Update Images (F5)'};
+            app.UpdateImages.Layout.Row = 1;
+            app.UpdateImages.Layout.Column = 4;
+            app.UpdateImages.Text = '';
 
             % Create ShowSettingsWindow
-            self.ShowSettingsWindow = uibutton(self.ShortcutButtonGrid, 'push');
-            self.ShowSettingsWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowSettingsWindow.Tag = 'Settings';
-            self.ShowSettingsWindow.Icon = fullfile(pathToMLAPP, 'icons', 'settings.png');
-            self.ShowSettingsWindow.Tooltip = {'Show Detector Controls'};
-            self.ShowSettingsWindow.Layout.Row = 1;
-            self.ShowSettingsWindow.Layout.Column = 7;
-            self.ShowSettingsWindow.Text = '';
+            app.ShowSettingsWindow = uibutton(app.ShortcutButtonGrid, 'push');
+            app.ShowSettingsWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowSettingsWindow.Tag = 'Settings';
+            app.ShowSettingsWindow.Icon = fullfile(pathToMLAPP, 'icons', 'settings.png');
+            app.ShowSettingsWindow.Tooltip = {'Show Detector Controls'};
+            app.ShowSettingsWindow.Layout.Row = 1;
+            app.ShowSettingsWindow.Layout.Column = 7;
+            app.ShowSettingsWindow.Text = '';
 
             % Create ModeGrid
-            self.ModeGrid = uigridlayout(self.Quant4D_FigGrid);
-            self.ModeGrid.ColumnWidth = {'1x', 'fit', '1x'};
-            self.ModeGrid.RowHeight = {24};
-            self.ModeGrid.ColumnSpacing = 4;
-            self.ModeGrid.RowSpacing = 4;
-            self.ModeGrid.Padding = [0 0 0 0];
-            self.ModeGrid.Layout.Row = 2;
-            self.ModeGrid.Layout.Column = 1;
+            app.ModeGrid = uigridlayout(app.Quant4D_FigGrid);
+            app.ModeGrid.ColumnWidth = {'1x', 'fit', '1x'};
+            app.ModeGrid.RowHeight = {24};
+            app.ModeGrid.ColumnSpacing = 4;
+            app.ModeGrid.RowSpacing = 4;
+            app.ModeGrid.Padding = [0 0 0 0];
+            app.ModeGrid.Layout.Row = 2;
+            app.ModeGrid.Layout.Column = 1;
 
             % Create Mode
-            self.Mode = uidropdown(self.ModeGrid);
-            self.Mode.Items = {'Import', 'Alignment', 'Annular/Round', 'Segmented (DPC)', 'Center of Mass', 'Virtual Aperture', 'Custom Detectors'};
-            self.Mode.ItemsData = {'Preview', 'Alignment', 'Annular', 'DPC', 'CoM', 'Virtual', 'Custom'};
-            self.Mode.ValueChangedFcn = createCallbackFcn(self, @detector_mode_callbacks, true);
-            self.Mode.Tooltip = {'Diffraction Detector Mode'};
-            self.Mode.FontSize = 14;
-            self.Mode.FontWeight = 'bold';
-            self.Mode.Layout.Row = 1;
-            self.Mode.Layout.Column = 2;
-            self.Mode.Value = 'Preview';
+            app.Mode = uidropdown(app.ModeGrid);
+            app.Mode.Items = {'Import', 'Alignment', 'Annular/Round', 'Segmented (DPC)', 'Center of Mass', 'Virtual Aperture', 'Custom Detectors'};
+            app.Mode.ItemsData = {'Preview', 'Alignment', 'Annular', 'DPC', 'CoM', 'Virtual', 'Custom'};
+            app.Mode.ValueChangedFcn = createCallbackFcn(app, @detector_mode_callbacks, true);
+            app.Mode.Tooltip = {'Diffraction Detector Mode'};
+            app.Mode.FontSize = 14;
+            app.Mode.FontWeight = 'bold';
+            app.Mode.Layout.Row = 1;
+            app.Mode.Layout.Column = 2;
+            app.Mode.Value = 'Preview';
 
             % Create ModePanel
-            self.ModePanel = uipanel(self.Quant4D_FigGrid);
-            self.ModePanel.BorderType = 'none';
-            self.ModePanel.TitlePosition = 'centertop';
-            self.ModePanel.Layout.Row = 3;
-            self.ModePanel.Layout.Column = 1;
+            app.ModePanel = uipanel(app.Quant4D_FigGrid);
+            app.ModePanel.BorderType = 'none';
+            app.ModePanel.TitlePosition = 'centertop';
+            app.ModePanel.Layout.Row = 3;
+            app.ModePanel.Layout.Column = 1;
 
             % Create RealPanelGrid
-            self.RealPanelGrid = uigridlayout(self.Quant4D_FigGrid);
-            self.RealPanelGrid.ColumnWidth = {'1x'};
-            self.RealPanelGrid.RowHeight = {'fit'};
-            self.RealPanelGrid.ColumnSpacing = 4;
-            self.RealPanelGrid.RowSpacing = 4;
-            self.RealPanelGrid.Padding = [4 4 4 0];
-            self.RealPanelGrid.Layout.Row = 4;
-            self.RealPanelGrid.Layout.Column = 1;
+            app.RealPanelGrid = uigridlayout(app.Quant4D_FigGrid);
+            app.RealPanelGrid.ColumnWidth = {'1x'};
+            app.RealPanelGrid.RowHeight = {'fit'};
+            app.RealPanelGrid.ColumnSpacing = 4;
+            app.RealPanelGrid.RowSpacing = 4;
+            app.RealPanelGrid.Padding = [4 4 4 0];
+            app.RealPanelGrid.Layout.Row = 4;
+            app.RealPanelGrid.Layout.Column = 1;
 
             % Create RealPanel
-            self.RealPanel = uipanel(self.RealPanelGrid);
-            self.RealPanel.AutoResizeChildren = 'off';
-            self.RealPanel.Tooltip = {'Real-space region of interest (ROI)'};
-            self.RealPanel.BorderType = 'none';
-            self.RealPanel.TitlePosition = 'centertop';
-            self.RealPanel.Title = 'Real-space ROI';
-            self.RealPanel.Visible = 'off';
-            self.RealPanel.Layout.Row = 1;
-            self.RealPanel.Layout.Column = 1;
-            self.RealPanel.FontName = 'Arial';
-            self.RealPanel.FontWeight = 'bold';
-            self.RealPanel.FontSize = 14;
+            app.RealPanel = uipanel(app.RealPanelGrid);
+            app.RealPanel.AutoResizeChildren = 'off';
+            app.RealPanel.Tooltip = {'Real-space region of interest (ROI)'};
+            app.RealPanel.BorderType = 'none';
+            app.RealPanel.TitlePosition = 'centertop';
+            app.RealPanel.Title = 'Real-space ROI';
+            app.RealPanel.Visible = 'off';
+            app.RealPanel.Layout.Row = 1;
+            app.RealPanel.Layout.Column = 1;
+            app.RealPanel.FontName = 'Arial';
+            app.RealPanel.FontWeight = 'bold';
+            app.RealPanel.FontSize = 14;
 
             % Create RealGrid
-            self.RealGrid = uigridlayout(self.RealPanel);
-            self.RealGrid.ColumnWidth = {24, '1x', 24};
-            self.RealGrid.RowHeight = {24, 24};
-            self.RealGrid.ColumnSpacing = 4;
-            self.RealGrid.RowSpacing = 4;
-            self.RealGrid.Padding = [0 0 0 4];
+            app.RealGrid = uigridlayout(app.RealPanel);
+            app.RealGrid.ColumnWidth = {24, '1x', 24};
+            app.RealGrid.RowHeight = {24, 24};
+            app.RealGrid.ColumnSpacing = 4;
+            app.RealGrid.RowSpacing = 4;
+            app.RealGrid.Padding = [0 0 0 4];
 
             % Create RealROIInvert
-            self.RealROIInvert = uibutton(self.RealGrid, 'state');
-            self.RealROIInvert.ValueChangedFcn = createCallbackFcn(self, @realspace_ROI_callbacks, true);
-            self.RealROIInvert.Tooltip = {'Invert real-space mask'};
-            self.RealROIInvert.Icon = 'invertColors.png';
-            self.RealROIInvert.Text = '';
-            self.RealROIInvert.Layout.Row = 1;
-            self.RealROIInvert.Layout.Column = 3;
+            app.RealROIInvert = uibutton(app.RealGrid, 'state');
+            app.RealROIInvert.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
+            app.RealROIInvert.Tooltip = {'Invert real-space mask'};
+            app.RealROIInvert.Icon = 'invertColors.png';
+            app.RealROIInvert.Text = '';
+            app.RealROIInvert.Layout.Row = 1;
+            app.RealROIInvert.Layout.Column = 3;
 
             % Create ShowRealMaskWindow
-            self.ShowRealMaskWindow = uibutton(self.RealGrid, 'push');
-            self.ShowRealMaskWindow.ButtonPushedFcn = createCallbackFcn(self, @show_window, true);
-            self.ShowRealMaskWindow.Tag = 'RealMask';
-            self.ShowRealMaskWindow.Icon = 'Aperture.png';
-            self.ShowRealMaskWindow.Tooltip = {'Show Real-space Mask'};
-            self.ShowRealMaskWindow.Layout.Row = 1;
-            self.ShowRealMaskWindow.Layout.Column = 1;
-            self.ShowRealMaskWindow.Text = '';
+            app.ShowRealMaskWindow = uibutton(app.RealGrid, 'push');
+            app.ShowRealMaskWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
+            app.ShowRealMaskWindow.Tag = 'RealMask';
+            app.ShowRealMaskWindow.Icon = 'Aperture.png';
+            app.ShowRealMaskWindow.Tooltip = {'Show Real-space Mask'};
+            app.ShowRealMaskWindow.Layout.Row = 1;
+            app.ShowRealMaskWindow.Layout.Column = 1;
+            app.ShowRealMaskWindow.Text = '';
 
             % Create RealROIGrid
-            self.RealROIGrid = uigridlayout(self.RealGrid);
-            self.RealROIGrid.ColumnWidth = {'fit', 'fit', '1x', 'fit', '1x'};
-            self.RealROIGrid.RowHeight = {24};
-            self.RealROIGrid.ColumnSpacing = 4;
-            self.RealROIGrid.RowSpacing = 4;
-            self.RealROIGrid.Padding = [0 0 0 0];
-            self.RealROIGrid.Layout.Row = 2;
-            self.RealROIGrid.Layout.Column = [1 3];
+            app.RealROIGrid = uigridlayout(app.RealGrid);
+            app.RealROIGrid.ColumnWidth = {'fit', 'fit', '1x', 'fit', '1x'};
+            app.RealROIGrid.RowHeight = {24};
+            app.RealROIGrid.ColumnSpacing = 4;
+            app.RealROIGrid.RowSpacing = 4;
+            app.RealROIGrid.Padding = [0 0 0 0];
+            app.RealROIGrid.Layout.Row = 2;
+            app.RealROIGrid.Layout.Column = [1 3];
 
             % Create RealYLabel
-            self.RealYLabel = uilabel(self.RealROIGrid);
-            self.RealYLabel.HorizontalAlignment = 'right';
-            self.RealYLabel.Layout.Row = 1;
-            self.RealYLabel.Layout.Column = 4;
-            self.RealYLabel.Text = 'Y';
+            app.RealYLabel = uilabel(app.RealROIGrid);
+            app.RealYLabel.HorizontalAlignment = 'right';
+            app.RealYLabel.Layout.Row = 1;
+            app.RealYLabel.Layout.Column = 4;
+            app.RealYLabel.Text = 'Y';
 
             % Create RealROIFrameY
-            self.RealROIFrameY = uispinner(self.RealROIGrid);
-            self.RealROIFrameY.ValueChangingFcn = createCallbackFcn(self, @realspace_ROI_callbacks, true);
-            self.RealROIFrameY.RoundFractionalValues = 'on';
-            self.RealROIFrameY.ValueDisplayFormat = '%.0f';
-            self.RealROIFrameY.ValueChangedFcn = createCallbackFcn(self, @realspace_ROI_callbacks, true);
-            self.RealROIFrameY.Layout.Row = 1;
-            self.RealROIFrameY.Layout.Column = 5;
+            app.RealROIFrameY = uispinner(app.RealROIGrid);
+            app.RealROIFrameY.ValueChangingFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
+            app.RealROIFrameY.RoundFractionalValues = 'on';
+            app.RealROIFrameY.ValueDisplayFormat = '%.0f';
+            app.RealROIFrameY.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
+            app.RealROIFrameY.Layout.Row = 1;
+            app.RealROIFrameY.Layout.Column = 5;
 
             % Create RealXLabel
-            self.RealXLabel = uilabel(self.RealROIGrid);
-            self.RealXLabel.HorizontalAlignment = 'right';
-            self.RealXLabel.Layout.Row = 1;
-            self.RealXLabel.Layout.Column = 2;
-            self.RealXLabel.Text = 'X';
+            app.RealXLabel = uilabel(app.RealROIGrid);
+            app.RealXLabel.HorizontalAlignment = 'right';
+            app.RealXLabel.Layout.Row = 1;
+            app.RealXLabel.Layout.Column = 2;
+            app.RealXLabel.Text = 'X';
 
             % Create RealROIFrameX
-            self.RealROIFrameX = uispinner(self.RealROIGrid);
-            self.RealROIFrameX.ValueChangingFcn = createCallbackFcn(self, @realspace_ROI_callbacks, true);
-            self.RealROIFrameX.RoundFractionalValues = 'on';
-            self.RealROIFrameX.ValueDisplayFormat = '%.0f';
-            self.RealROIFrameX.ValueChangedFcn = createCallbackFcn(self, @realspace_ROI_callbacks, true);
-            self.RealROIFrameX.Layout.Row = 1;
-            self.RealROIFrameX.Layout.Column = 3;
+            app.RealROIFrameX = uispinner(app.RealROIGrid);
+            app.RealROIFrameX.ValueChangingFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
+            app.RealROIFrameX.RoundFractionalValues = 'on';
+            app.RealROIFrameX.ValueDisplayFormat = '%.0f';
+            app.RealROIFrameX.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
+            app.RealROIFrameX.Layout.Row = 1;
+            app.RealROIFrameX.Layout.Column = 3;
 
             % Create RealROIFrameLabel
-            self.RealROIFrameLabel = uilabel(self.RealROIGrid);
-            self.RealROIFrameLabel.HorizontalAlignment = 'right';
-            self.RealROIFrameLabel.Layout.Row = 1;
-            self.RealROIFrameLabel.Layout.Column = 1;
-            self.RealROIFrameLabel.Text = 'Frame';
+            app.RealROIFrameLabel = uilabel(app.RealROIGrid);
+            app.RealROIFrameLabel.HorizontalAlignment = 'right';
+            app.RealROIFrameLabel.Layout.Row = 1;
+            app.RealROIFrameLabel.Layout.Column = 1;
+            app.RealROIFrameLabel.Text = 'Frame';
 
             % Create RealROIShape
-            self.RealROIShape = uidropdown(self.RealGrid);
-            self.RealROIShape.Items = {'Full Image', 'Point', 'Ellipse', 'Rectangle', 'Draw Polygon', 'From File'};
-            self.RealROIShape.ItemsData = {'full', 'point', 'ellipse', 'rectangle', 'poly', 'file'};
-            self.RealROIShape.ValueChangedFcn = createCallbackFcn(self, @realspace_ROI_callbacks, true);
-            self.RealROIShape.Layout.Row = 1;
-            self.RealROIShape.Layout.Column = 2;
-            self.RealROIShape.Value = 'full';
+            app.RealROIShape = uidropdown(app.RealGrid);
+            app.RealROIShape.Items = {'Full Image', 'Point', 'Ellipse', 'Rectangle', 'Draw Polygon', 'From File'};
+            app.RealROIShape.ItemsData = {'full', 'point', 'ellipse', 'rectangle', 'poly', 'file'};
+            app.RealROIShape.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
+            app.RealROIShape.Layout.Row = 1;
+            app.RealROIShape.Layout.Column = 2;
+            app.RealROIShape.Value = 'full';
 
             % Create diffraction_dropdown
-            self.diffraction_dropdown = uidropdown(self.Quant4D_Fig);
-            self.diffraction_dropdown.Items = {'sum', 'mean', 'max', 'std', 'sqrt', 'ln', 'log10'};
-            self.diffraction_dropdown.Tooltip = {'Set how patterns are combined in real space. NOTE: max() and std() can be significantly slower when interactiving with a real space ROI!'};
-            self.diffraction_dropdown.Position = [-161 -4 65 22];
-            self.diffraction_dropdown.Value = 'sum';
+            app.diffraction_dropdown = uidropdown(app.Quant4D_Fig);
+            app.diffraction_dropdown.Items = {'sum', 'mean', 'max', 'std', 'sqrt', 'ln', 'log10'};
+            app.diffraction_dropdown.Tooltip = {'Set how patterns are combined in real space. NOTE: max() and std() can be significantly slower when interactiving with a real space ROI!'};
+            app.diffraction_dropdown.Position = [-161 -4 65 22];
+            app.diffraction_dropdown.Value = 'sum';
 
             % Create DebugContextMenu
-            self.DebugContextMenu = uicontextmenu(self.Quant4D_Fig);
+            app.DebugContextMenu = uicontextmenu(app.Quant4D_Fig);
 
             % Create Test1Menu
-            self.Test1Menu = uimenu(self.DebugContextMenu);
-            self.Test1Menu.MenuSelectedFcn = createCallbackFcn(self, @test1, true);
-            self.Test1Menu.Text = 'Test1';
+            app.Test1Menu = uimenu(app.DebugContextMenu);
+            app.Test1Menu.MenuSelectedFcn = createCallbackFcn(app, @test1, true);
+            app.Test1Menu.Text = 'Test1';
 
             % Create Test2Menu
-            self.Test2Menu = uimenu(self.DebugContextMenu);
-            self.Test2Menu.MenuSelectedFcn = createCallbackFcn(self, @test2, true);
-            self.Test2Menu.Text = 'Test2';
+            app.Test2Menu = uimenu(app.DebugContextMenu);
+            app.Test2Menu.MenuSelectedFcn = createCallbackFcn(app, @test2, true);
+            app.Test2Menu.Text = 'Test2';
 
             % Create SaveVecMenu
-            self.SaveVecMenu = uimenu(self.DebugContextMenu);
-            self.SaveVecMenu.MenuSelectedFcn = createCallbackFcn(self, @first_moment, true);
-            self.SaveVecMenu.Text = 'SaveVec';
+            app.SaveVecMenu = uimenu(app.DebugContextMenu);
+            app.SaveVecMenu.MenuSelectedFcn = createCallbackFcn(app, @first_moment, true);
+            app.SaveVecMenu.Text = 'SaveVec';
 
             % Create ReimportMenu
-            self.ReimportMenu = uimenu(self.DebugContextMenu);
-            self.ReimportMenu.MenuSelectedFcn = createCallbackFcn(self, @import_callbacks, true);
-            self.ReimportMenu.Text = 'Re-import';
+            app.ReimportMenu = uimenu(app.DebugContextMenu);
+            app.ReimportMenu.MenuSelectedFcn = createCallbackFcn(app, @import_callbacks, true);
+            app.ReimportMenu.Text = 'Re-import';
 
             % Create ResetQuant4DMenu
-            self.ResetQuant4DMenu = uimenu(self.DebugContextMenu);
-            self.ResetQuant4DMenu.MenuSelectedFcn = createCallbackFcn(self, @reset_Quant4D, true);
-            self.ResetQuant4DMenu.Text = 'ResetQuant4D';
+            app.ResetQuant4DMenu = uimenu(app.DebugContextMenu);
+            app.ResetQuant4DMenu.MenuSelectedFcn = createCallbackFcn(app, @reset_Quant4D, true);
+            app.ResetQuant4DMenu.Text = 'ResetQuant4D';
 
             % Create EnableallUIsMenu
-            self.EnableallUIsMenu = uimenu(self.DebugContextMenu);
-            self.EnableallUIsMenu.MenuSelectedFcn = createCallbackFcn(self, @enable_all_UI, true);
-            self.EnableallUIsMenu.Text = 'Enable all UIs';
+            app.EnableallUIsMenu = uimenu(app.DebugContextMenu);
+            app.EnableallUIsMenu.MenuSelectedFcn = createCallbackFcn(app, @enable_all_UI, true);
+            app.EnableallUIsMenu.Text = 'Enable all UIs';
             
-            % Assign self.DebugContextMenu
-            self.ShowImportWindow.ContextMenu = self.DebugContextMenu;
+            % Assign app.DebugContextMenu
+            app.ShowImportWindow.ContextMenu = app.DebugContextMenu;
 
             % Create CDDelContext
-            self.CDDelContext = uicontextmenu(self.Quant4D_Fig);
+            app.CDDelContext = uicontextmenu(app.Quant4D_Fig);
 
             % Create CDDelResetMenu
-            self.CDDelResetMenu = uimenu(self.CDDelContext);
-            self.CDDelResetMenu.MenuSelectedFcn = createCallbackFcn(self, @custom_detector_callbacks, true);
-            self.CDDelResetMenu.Text = 'Reset';
+            app.CDDelResetMenu = uimenu(app.CDDelContext);
+            app.CDDelResetMenu.MenuSelectedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
+            app.CDDelResetMenu.Text = 'Reset';
             
-            % Assign self.CDDelContext
-            self.CustomDetectorNewMaskGrid.ContextMenu = self.CDDelContext;
-            self.CustomDetectorDeleteMask.ContextMenu = self.CDDelContext;
+            % Assign app.CDDelContext
+            app.CustomDetectorNewMaskGrid.ContextMenu = app.CDDelContext;
+            app.CustomDetectorDeleteMask.ContextMenu = app.CDDelContext;
 
             % Show the figure after all components are created
-            self.Quant4D_Fig.Visible = 'on';
+            app.Quant4D_Fig.Visible = 'on';
         end
     end
 
     % App creation and deletion
     methods (Access = public)
 
-        % Construct self
-        function self = Quant4D(varargin)
+        % Construct app
+        function app = Quant4D(varargin)
 
             % Create UIFigure and components
-            createComponents(self)
+            createComponents(app)
 
-            % Register the self with App Designer
-            registerApp(self, self.Quant4D_Fig)
+            % Register the app with App Designer
+            registerApp(app, app.Quant4D_Fig)
 
             % Execute the startup function
-            runStartupFcn(self, @(self)startup_function(self, varargin{:}))
+            runStartupFcn(app, @(app)startup_function(app, varargin{:}))
 
             if nargout == 0
-                clear self
+                clear app
             end
         end
 
-        % Code that executes before self deletion
-        function delete(self)
+        % Code that executes before app deletion
+        function delete(app)
 
-            % Delete UIFigure when self is deleted
-            delete(self.Quant4D_Fig)
+            % Delete UIFigure when app is deleted
+            delete(app.Quant4D_Fig)
         end
     end
 end
