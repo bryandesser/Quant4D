@@ -123,9 +123,6 @@ classdef Quant4D < matlab.apps.AppBase
         VirtualApertureCoordinatesPanel  matlab.ui.container.Panel
         VirtualApertureCoordinatesGrid  matlab.ui.container.GridLayout
         VirtualApertureRotationGrid     matlab.ui.container.GridLayout
-        AnnularStepGrid_2               matlab.ui.container.GridLayout
-        AnnularStep_2                   matlab.ui.control.NumericEditField
-        AnnularIntegrationStepEditFieldLabel_2  matlab.ui.control.Label
         VirtualApertureInvert           matlab.ui.control.StateButton
         VirtualApertureRotateCW         matlab.ui.control.Button
         VirtualApertureRotationStep     matlab.ui.control.DropDown
@@ -457,7 +454,7 @@ classdef Quant4D < matlab.apps.AppBase
     properties (Access = public)
         debug = false                                                   % (bool) : Debug mode. false to disable; else enables timers/tracers
         data                                                            % (array) : Imported dataset, may be moved to GPU
-        memfile                                                         % (memmapfile) : Memory map file of the imported dataset
+        memfile                                                         % memmapfile : Memory map file of the imported dataset
         sys_constants                                                   % (struct) : Constants for system info that set at app startup
         tmp_variables                                                   % (struct) : Temporary global variables, e.g. for progress bar and import etc., should never be cleared
         dataset_parameters                                              % (struct) : Parameters of the current imported dataset; should be constants (except for data type conversion)
@@ -3498,8 +3495,13 @@ classdef Quant4D < matlab.apps.AppBase
             
             % For uninterruptible process:
             if ~interruptible
-                % Indeterminate progress bar
-                findall(wait_bar,"type","hgjavacomponent").JavaPeer.setIndeterminate(true);
+                % Indeterminate progress bar. "hgjavacomponent" seems to be
+                % discontinued in R2025a
+                try
+                    findall(wait_bar,"type","hgjavacomponent").JavaPeer.setIndeterminate(true);
+                catch
+                    set(findall(wait_bar,"type","uiprogressindicator"),"Indeterminate",false)
+                end
                 
                 % Disable the close function
                 wait_bar.CloseRequestFcn = [];
@@ -4536,6 +4538,12 @@ classdef Quant4D < matlab.apps.AppBase
             % Non-0 values if debugging
             app.debug = debug;
 
+            % make sure slider ticks are off
+            set(findobj(app.Quant4D_Fig,'Type','uirangeslider','-or','Type','uislider'),'MinorTicks',[])
+            set(findobj(app.Quant4D_Fig,'Type','uirangeslider','-or','Type','uislider'),'MajorTicks',[])
+            %set(findobj(app.figures.Settings,'Type','uirangeslider','-or','Type','uislider'),'MinorTicks',[])
+            %set(findobj(app.figures.Settings,'Type','uirangeslider','-or','Type','uislider'),'MajorTicks',[])
+
             % Hide until startup process is ready
             app.Quant4D_Fig.Visible = "off"; 
 
@@ -5332,7 +5340,7 @@ classdef Quant4D < matlab.apps.AppBase
                         app.SaveExport.Text = "Export Data";
 
                         % Draw ROIs & add listening functions for live updates on all Real and Diffraction space images
-                        for id = app.ui_groups.image_id(app.ui_groups.image_space ~= "ColorWheel" & app.ui_groups.image_type ~= "Mask")
+                        for id = app.ui_groups.image_id(app.ui_groups.image_space ~= "ColorWheel" & app.ui_groups.image_type ~= "Mask")'
                             app.annotations.Export.(id) = drawrectangle(app.image_axes.(id), ...
                                                                         "Position", [1 1 0 0], ...
                                                                         "Color", "y", ...
@@ -6470,7 +6478,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                 case app.AutoCurl
                     % display a progress dialog for user
-                    app.tmp_variables.progress_dialog = progress_dialog(app, sprintf('Automatically estimating scan \norientation my minimizing curl...'), "Auto scan orientation");
+                    app.tmp_variables.progress_dialog = progress_dialog(app, sprintf('Automatically estimating scan \norientation by minimizing curl...'), "Auto scan orientation");
                     
                     % minimize curl and update UI/ROIs twice for precision
                     for ii=1:2
@@ -10604,7 +10612,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayBrightness.MajorTickLabels = {};
             app.DisplayBrightness.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayBrightness.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayBrightness.MinorTicks = [0 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100];
+            app.DisplayBrightness.MinorTicks = [];
             app.DisplayBrightness.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayBrightness.Layout.Row = 1;
             app.DisplayBrightness.Layout.Column = 2;
@@ -10639,7 +10647,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayContrast.MajorTickLabels = {};
             app.DisplayContrast.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayContrast.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayContrast.MinorTicks = [0 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100];
+            app.DisplayContrast.MinorTicks = [];
             app.DisplayContrast.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayContrast.Layout.Row = 2;
             app.DisplayContrast.Layout.Column = 2;
@@ -10675,7 +10683,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayGamma.MajorTickLabels = {};
             app.DisplayGamma.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayGamma.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayGamma.MinorTicks = [0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2];
+            app.DisplayGamma.MinorTicks = [];
             app.DisplayGamma.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayGamma.Layout.Row = 3;
             app.DisplayGamma.Layout.Column = 2;
@@ -10709,7 +10717,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayMaskOpacitySlider.MajorTicks = [];
             app.DisplayMaskOpacitySlider.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayMaskOpacitySlider.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayMaskOpacitySlider.MinorTicks = [0 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100];
+            app.DisplayMaskOpacitySlider.MinorTicks = [];
             app.DisplayMaskOpacitySlider.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayMaskOpacitySlider.Tooltip = {'Mask opacity displayed on pattern'};
             app.DisplayMaskOpacitySlider.Layout.Row = 4;
@@ -10766,7 +10774,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.BandpassFilter.MajorTicks = [];
             app.BandpassFilter.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
             app.BandpassFilter.ValueChangingFcn = createCallbackFcn(app, @first_moment, true);
-            app.BandpassFilter.MinorTicks = [0 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100];
+            app.BandpassFilter.MinorTicks = [];
             app.BandpassFilter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BandpassFilter.Layout.Row = 1;
             app.BandpassFilter.Layout.Column = [1 2];
@@ -12025,9 +12033,10 @@ classdef Quant4D < matlab.apps.AppBase
             % Create TransBeamR
             app.TransBeamR = uislider(app.TransBeamAlignGrid);
             app.TransBeamR.MajorTicks = [];
+            app.TransBeamR.MajorTickLabels = {};
             app.TransBeamR.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamR.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamR.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.TransBeamR.MinorTicks = [];
             app.TransBeamR.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamR.Layout.Row = 4;
             app.TransBeamR.Layout.Column = [1 4];
@@ -12062,7 +12071,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamX.MajorTicks = [];
             app.TransBeamX.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamX.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamX.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.TransBeamX.MinorTicks = [];
             app.TransBeamX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamX.Layout.Row = 7;
             app.TransBeamX.Layout.Column = [1 4];
@@ -12097,7 +12106,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamY.MajorTicks = [];
             app.TransBeamY.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamY.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamY.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.TransBeamY.MinorTicks = [];
             app.TransBeamY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamY.Layout.Row = 10;
             app.TransBeamY.Layout.Column = [1 4];
@@ -12176,7 +12185,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.InnerAnnularRadius.MajorTicks = [];
             app.InnerAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.InnerAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.InnerAnnularRadius.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.InnerAnnularRadius.MinorTicks = [];
             app.InnerAnnularRadius.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.InnerAnnularRadius.Tag = 'AnnDetr RI';
             app.InnerAnnularRadius.Layout.Row = 2;
@@ -12225,7 +12234,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.OuterAnnularRadius.MajorTicks = [];
             app.OuterAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.OuterAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.OuterAnnularRadius.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.OuterAnnularRadius.MinorTicks = [];
             app.OuterAnnularRadius.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.OuterAnnularRadius.Tag = 'AnnDetr RO';
             app.OuterAnnularRadius.Layout.Row = 5;
@@ -12319,7 +12328,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ScanDirectionSlider.MajorTicks = [];
             app.ScanDirectionSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.ScanDirectionSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.ScanDirectionSlider.MinorTicks = [-180 -174 -168 -162 -156 -150 -144 -138 -132 -126 -120 -114 -108 -102 -96 -90 -84 -78 -72 -66 -60 -54 -48 -42 -36 -30 -24 -18 -12 -6 0 6 12 18 24 30 36 42 48 54 60 66 72 78 84 90 96 102 108 114 120 126 132 138 144 150 156 162 168 174 180];
+            app.ScanDirectionSlider.MinorTicks = [];
             app.ScanDirectionSlider.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDirectionSlider.Tag = 'ScanDir';
             app.ScanDirectionSlider.Layout.Row = 2;
@@ -12420,7 +12429,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorRotationSlider.MajorTicks = [];
             app.DetectorRotationSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.DetectorRotationSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.DetectorRotationSlider.MinorTicks = [-180 -174 -168 -162 -156 -150 -144 -138 -132 -126 -120 -114 -108 -102 -96 -90 -84 -78 -72 -66 -60 -54 -48 -42 -36 -30 -24 -18 -12 -6 0 6 12 18 24 30 36 42 48 54 60 66 72 78 84 90 96 102 108 114 120 126 132 138 144 150 156 162 168 174 180];
+            app.DetectorRotationSlider.MinorTicks = [];
             app.DetectorRotationSlider.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DetectorRotationSlider.Tag = 'SegDetr';
             app.DetectorRotationSlider.Layout.Row = [4 5];
@@ -12522,7 +12531,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureR.MajorTicks = [];
             app.VirtualApertureR.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureR.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureR.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.VirtualApertureR.MinorTicks = [];
             app.VirtualApertureR.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureR.Layout.Row = 2;
             app.VirtualApertureR.Layout.Column = [1 5];
@@ -12557,7 +12566,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureX.MajorTicks = [];
             app.VirtualApertureX.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureX.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureX.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.VirtualApertureX.MinorTicks = [];
             app.VirtualApertureX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureX.Layout.Row = 5;
             app.VirtualApertureX.Layout.Column = [1 5];
@@ -12592,7 +12601,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureY.MajorTicks = [];
             app.VirtualApertureY.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureY.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureY.MinorTicks = [0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100];
+            app.VirtualApertureY.MinorTicks = [];
             app.VirtualApertureY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureY.Layout.Row = 8;
             app.VirtualApertureY.Layout.Column = [1 5];
@@ -12661,34 +12670,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureInvert.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureInvert.Layout.Row = 1;
             app.VirtualApertureInvert.Layout.Column = 7;
-
-            % Create AnnularStepGrid_2
-            app.AnnularStepGrid_2 = uigridlayout(app.VirtualApertureRotationGrid);
-            app.AnnularStepGrid_2.ColumnWidth = {'1x', '4x', 60, '1x'};
-            app.AnnularStepGrid_2.RowHeight = {'1x'};
-            app.AnnularStepGrid_2.ColumnSpacing = 0;
-            app.AnnularStepGrid_2.RowSpacing = 0;
-            app.AnnularStepGrid_2.Padding = [0 0 0 0];
-            app.AnnularStepGrid_2.Layout.Row = 1;
-            app.AnnularStepGrid_2.Layout.Column = 2;
-            app.AnnularStepGrid_2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-
-            % Create AnnularIntegrationStepEditFieldLabel_2
-            app.AnnularIntegrationStepEditFieldLabel_2 = uilabel(app.AnnularStepGrid_2);
-            app.AnnularIntegrationStepEditFieldLabel_2.WordWrap = 'on';
-            app.AnnularIntegrationStepEditFieldLabel_2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.AnnularIntegrationStepEditFieldLabel_2.Layout.Row = 1;
-            app.AnnularIntegrationStepEditFieldLabel_2.Layout.Column = [1 2];
-            app.AnnularIntegrationStepEditFieldLabel_2.Text = 'Annular Integration Step';
-
-            % Create AnnularStep_2
-            app.AnnularStep_2 = uieditfield(app.AnnularStepGrid_2, 'numeric');
-            app.AnnularStep_2.Limits = [1e-05 Inf];
-            app.AnnularStep_2.ValueDisplayFormat = '%11.2f mrad';
-            app.AnnularStep_2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.AnnularStep_2.Layout.Row = 1;
-            app.AnnularStep_2.Layout.Column = [3 4];
-            app.AnnularStep_2.Value = 0.5;
 
             % Create VirtualApertureSymmetryPanel
             app.VirtualApertureSymmetryPanel = uipanel(app.VirtualApertureGrid);
@@ -12784,7 +12765,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureMirrorRotation.MajorTicks = [];
             app.VirtualApertureMirrorRotation.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureMirrorRotation.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureMirrorRotation.MinorTicks = [-180 -174 -168 -162 -156 -150 -144 -138 -132 -126 -120 -114 -108 -102 -96 -90 -84 -78 -72 -66 -60 -54 -48 -42 -36 -30 -24 -18 -12 -6 0 6 12 18 24 30 36 42 48 54 60 66 72 78 84 90 96 102 108 114 120 126 132 138 144 150 156 162 168 174 180];
+            app.VirtualApertureMirrorRotation.MinorTicks = [];
             app.VirtualApertureMirrorRotation.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureMirrorRotation.Layout.Row = 2;
             app.VirtualApertureMirrorRotation.Layout.Column = [1 7];
