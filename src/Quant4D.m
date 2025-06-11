@@ -452,27 +452,27 @@ classdef Quant4D < matlab.apps.AppBase
     end
 
     properties (Access = public)
-        debug = false                                                   % (bool) : Debug mode. false to disable; else enables timers/tracers
-        data                                                            % (array) : Imported dataset, may be moved to GPU
+        debug = false                                                   % bool : Debug mode. false to disable; else enables timers/tracers
+        data                                                            % array : Imported dataset, may be moved to GPU
         memfile                                                         % memmapfile : Memory map file of the imported dataset
-        sys_constants                                                   % (struct) : Constants for system info that set at app startup
-        tmp_variables                                                   % (struct) : Temporary global variables, e.g. for progress bar and import etc., should never be cleared
-        dataset_parameters                                              % (struct) : Parameters of the current imported dataset; should be constants (except for data type conversion)
-        common_parameters                                               % (struct) : Common parameters, should be cleared when a dataset is unloaded
-        previous_values                                                 % (struct) : Previous values, should be cleared when a dataset is unloaded
-        figures                                                         % (struct) : All figure windows excluding the Main UI
-        image_axes                                                      % (struct) : All image axes
-        images                                                          % (struct) : Arrays of raw data for the images/masks to be plotted/saved
-        image_displays                                                  % (struct) : Image objects with modified contrast for display, e.g. by ``app.image_displays.(id) = imagesc(...)``
-        annotations                                                     % (struct) : Image annotations on `axes` or `uiaxes`, excluding annotations on `figure` and `uifigure`
-        masks                                                           % (struct) : Real and Diffraction space masks applied to data
-        ui_groups                                                       % (struct) : Different groups of figures/axes/images; assigned just once at startup in create_other_windows()
-        center = [0 0];                                                 % ([int int]) : Central beam absolute pixel coordinates
-        center_rel = [0 0];                                             % ([int int]) : Relative position of center. [0 0] (when "Absolute" position) or center (when "Relative")
-        diff_scale = 1;                                                 % (double) : Diffraction pixel scale. 1 (when in pixel) or mrad/px (when in mrad)
-        real_scale = 1;                                                 % (double) : Real-space pixel scale. 1 (when in pixel) or nm/px (when in nm). Not implemented yet
-        variable_nodes                                                  % (struct) : uitree nodes to display variables for users
-        byte_size = struct("uint8", 1, ...                              % (struct) : size of each supported data type in bytes
+        sys_constants                                                   % struct : Constants for system info that set at app startup
+        tmp_variables                                                   % struct : Temporary global variables, e.g. for progress bar and import etc., should never be cleared
+        dataset_parameters                                              % struct : Parameters of the current imported dataset; should be constants (except for data type conversion)
+        common_parameters                                               % struct : Common parameters, should be cleared when a dataset is unloaded
+        previous_values                                                 % struct : Previous values, should be cleared when a dataset is unloaded
+        figures                                                         % struct : All figure windows excluding the Main UI
+        image_axes                                                      % struct : All image axes
+        images                                                          % struct : Arrays of raw data for the images/masks to be plotted/saved
+        image_displays                                                  % struct : Image objects with modified contrast for display, e.g. by ``app.image_displays.(id) = imagesc(...)``
+        annotations                                                     % struct : Image annotations on `axes` or `uiaxes`, excluding annotations on `figure` and `uifigure`
+        masks                                                           % struct : Real and Diffraction space masks applied to data
+        ui_groups                                                       % struct : Different groups of figures/axes/images; assigned just once at startup in create_other_windows()
+        center = [0 0];                                                 % [int int] : Central beam absolute pixel coordinates
+        center_rel = [0 0];                                             % [int int] : Relative position of center. [0 0] (when "Absolute" position) or center (when "Relative")
+        diff_scale = 1;                                                 % double : Diffraction pixel scale. 1 (when in pixel) or mrad/px (when in mrad)
+        real_scale = 1;                                                 % double : Real-space pixel scale. 1 (when in pixel) or nm/px (when in nm). Not implemented yet
+        variable_nodes                                                  % struct : uitree nodes to display variables for users
+        byte_size = struct("uint8", 1, ...                              % struct : size of each supported data type in bytes
                            "int8", 1, ...
                            "uint16", 2, ...
                            "int16", 2, ...
