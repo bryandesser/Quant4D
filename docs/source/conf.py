@@ -45,7 +45,8 @@ napoleon_preprocess_types = True
 # Configure the matlab extension
 primary_domain = "mat"
 this_dir = os.path.dirname(__file__)
-matlab_src_dir = os.path.abspath(os.path.join(this_dir, "..", "..", "src"))
+#matlab_src_dir = os.path.abspath(os.path.join(this_dir, "..", "..", "src"))
+matlab_src_dir = os.path.abspath(this_dir)
 matlab_short_links = True
 matlab_auto_link = "all"
 matlab_show_property_default_value = False
