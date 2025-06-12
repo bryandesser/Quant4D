@@ -132,8 +132,11 @@ Windows Tab
     :scale: 50%
 * **Show image windows**: Show image window or bring to front (i.e. if closed or 
   hidden).
-* **Diffraction/Real-space image windows**: set image window size; define x,y 
-orientation (i.e. origin location); rotate image; show/hide axes on image.
+* **Vector sampling**: Add vector arrows to real-space images in DPC or CoM
+  modes. Modify vector density/sampling and color. Show vector colorwheel.
+* **Window size and orientation**: Set image window size in real or diffraction
+  space; define x,y orientation (i.e. origin location); rotate image; show/hide
+  axes on image.
 
 Misc Tab
 ^^^^^^^^
