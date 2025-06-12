@@ -162,7 +162,7 @@ Misc Tab
   images. Smaller steps give finer control of annular detectors at the expense
   of larger memory usage.
 
-Info Tab
+Info and Variables Tabs
 ^^^^^^^^
 .. image:: ../_static/settings_info_tab.png
     :align: right
