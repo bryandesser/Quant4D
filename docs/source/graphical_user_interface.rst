@@ -36,7 +36,7 @@ Parameters
 * **Data type**: Data type of the 4D-STEM dataset (8-, 16-, 32-, or 64-bit;
   signed integer, unsigned integer, or floating point)
 * **Byte order**: Big or little endian ordering.
-* **Pixels (x,y)**: Number of detector pixels in each frame. 
+* **Pixels (x,y)**: Number of detector pixels in each diffraction pattern. 
 * **Frames (x,y)**: Number of probe positions.
 
 File information
