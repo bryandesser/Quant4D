@@ -141,7 +141,7 @@ Windows Tab
 Misc Tab
 ^^^^^^^^
 .. image:: ../_static/settings_misc_tab.png
-    :align: right
+    :align: left
     :scale: 50%
 * **Calculation Policy**: Active automatically updates all image displays as the
   user interacts with the GUI; Reduced updates all image displays after the user
