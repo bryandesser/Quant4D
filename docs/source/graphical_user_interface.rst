@@ -170,7 +170,12 @@ Info and Variables Tabs
 * **Dataset info**: All information and parameters used for the currently loaded 
   dataset. 
 * **Show all variables**: Display all important variables, constants, and UI
-  elements in a tree view on **Variables Tab**. Variables are read-only at this
+  elements on **Variables Tab**. 
+* **Variables Tab**: Variables tree view allowing the user to view the value of
+  and relative path to all of the important and relevant variables. Top level
+  tree nodes are first level children of the ``app``. For example, the
+  ``ColorWheel`` widow listed under the ``figures`` node can be found at
+  ``app.figures.ColorWheel``. All variables are displayed as read-only at this
   point. 
 
 Image Windows
