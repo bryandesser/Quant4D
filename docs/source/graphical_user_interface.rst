@@ -20,14 +20,14 @@ the file structure.
 
 * ``.raw`` files are assumed to be in the EMPAD file format with 128x128
   detector frames separated by a 1024 byte footer.
-* ``.dm3/.dm4`` and ``.hdf5`` files are scanned allowing the user to select the 
-  correct dataset.
+* ``.dm3/.dm4``, ``.hdf5``, and ``.hspy`` files are scanned allowing the user to
+  select the correct dataset.
 * ``.mib`` file metadata are scanned for the relevant parameters. 
 
 Parameters
 ^^^^^^^^^^
-* **Sub-dataset**: Choice of dataset in hierarchical datasets such as ``.hdf5`` 
-  and ``.dm3/.dm4`` files.
+* **Sub-dataset**: Choice of dataset in hierarchical datasets such as ``.hdf5``, 
+  ``.hspy``, and ``.dm3/.dm4`` files.
 * **Data offset**: Offset to the start of the 4D-STEM dataset in bytes.
 * **Frame header**: Header data size in bytes repeated before *each* image frame. 
 * **Frame footer**: Footer data size in bytes repeated after *each* image frame.
