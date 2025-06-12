@@ -175,7 +175,7 @@ Info and Variables Tabs
   and relative path to all of the important and relevant variables. Top level
   tree nodes are first level children of the ``app``. For example, the
   ``ColorWheel`` widow listed under the ``figures`` node can be found at
-  ``app.figures.ColorWheel``. All variables are displayed as read-only at this
+  ``app.figures.ColorWheel``. All variables are displayed read-only at this
   point. 
 
 Image Windows
