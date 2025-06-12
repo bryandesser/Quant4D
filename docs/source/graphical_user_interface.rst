@@ -2,7 +2,7 @@
 
 Graphical user interface
 ========================
-The graphical user interface (GUI) allows for intuitive interactions with the
+The graphical user interface (GUI) allows for intuitive interactions with
 4D-STEM data. The GUI consists of two main windows and several other windows as
 needed, as described below. 
 
