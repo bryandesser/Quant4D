@@ -8964,9 +8964,6 @@ classdef Quant4D < matlab.apps.AppBase
         % Create UIFigure and components
         function createComponents(app)
 
-            % Get the file path for locating images
-            pathToMLAPP = fileparts(mfilename('fullpath'));
-
             % Create Quant4D_Fig and hide until all components are created
             app.Quant4D_Fig = uifigure('Visible', 'off');
             app.Quant4D_Fig.AutoResizeChildren = 'off';
@@ -12811,7 +12808,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorNewGrid
             app.CustomDetectorNewGrid = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewGrid.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorNewGrid.Icon = fullfile(pathToMLAPP, 'icons', 'grid.png');
+            app.CustomDetectorNewGrid.Icon = 'grid.png';
             app.CustomDetectorNewGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorNewGrid.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewGrid.Tooltip = {'Add grid mask'};
@@ -12878,7 +12875,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorNewGridNoCenter
             app.CustomDetectorNewGridNoCenter = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewGridNoCenter.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorNewGridNoCenter.Icon = fullfile(pathToMLAPP, 'icons', 'grid_no_tb.png');
+            app.CustomDetectorNewGridNoCenter.Icon = 'grid_no_tb.png';
             app.CustomDetectorNewGridNoCenter.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorNewGridNoCenter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewGridNoCenter.Tooltip = {'Add grid mask without including transmitted beam'};
@@ -13090,7 +13087,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorFlipHorizontal
             app.CustomDetectorFlipHorizontal = uibutton(app.CustomDetectorDetailsGrid, 'state');
             app.CustomDetectorFlipHorizontal.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorFlipHorizontal.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorHorz.png');
+            app.CustomDetectorFlipHorizontal.Icon = 'mirrorHorz.png';
             app.CustomDetectorFlipHorizontal.Text = '';
             app.CustomDetectorFlipHorizontal.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorFlipHorizontal.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
@@ -13100,7 +13097,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorFlipVertical
             app.CustomDetectorFlipVertical = uibutton(app.CustomDetectorDetailsGrid, 'state');
             app.CustomDetectorFlipVertical.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorFlipVertical.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorVert.png');
+            app.CustomDetectorFlipVertical.Icon = 'mirrorVert.png';
             app.CustomDetectorFlipVertical.Text = '';
             app.CustomDetectorFlipVertical.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorFlipVertical.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
@@ -13110,7 +13107,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorTranspose
             app.CustomDetectorTranspose = uibutton(app.CustomDetectorDetailsGrid, 'state');
             app.CustomDetectorTranspose.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorTranspose.Icon = fullfile(pathToMLAPP, 'icons', 'transpose.png');
+            app.CustomDetectorTranspose.Icon = 'transpose.png';
             app.CustomDetectorTranspose.Text = '';
             app.CustomDetectorTranspose.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorTranspose.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
@@ -13187,7 +13184,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowSettingsWindow = uibutton(app.ShortcutButtonGrid, 'push');
             app.ShowSettingsWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowSettingsWindow.Tag = 'Settings';
-            app.ShowSettingsWindow.Icon = fullfile(pathToMLAPP, 'icons', 'settings.png');
+            app.ShowSettingsWindow.Icon = 'settings.png';
             app.ShowSettingsWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ShowSettingsWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowSettingsWindow.Tooltip = {'Show Detector Controls'};
