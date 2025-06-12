@@ -170,7 +170,8 @@ Info and Variables Tabs
 * **Dataset info**: All information and parameters used for the currently loaded 
   dataset. 
 * **Show all variables**: Display all important variables, constants, and UI
-  elements in a tree view. Variables are read-only. 
+  elements in a tree view on **Variables Tab**. Variables are read-only at this
+  point. 
 
 Image Windows
 *************
