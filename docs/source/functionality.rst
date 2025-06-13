@@ -10,26 +10,6 @@ Linux. The code is also GPU-accelerated when a GPU is present with enough
 virtual memory to hold the entire 4D-STEM dataset plus some overhead for
 additional data. 
 
-Features
---------
-
-.. Import
-    ******
-    File formats
-    ^^^^^^^^^^^^
-    The **Import Window** automatically attempts to determine the file type by
-    the file extension, with preset routines for several common file formats
-    (EMPAD, Gatan, Medipix, MRC, HDF5). Any file format can be opened if file
-    structure is known. The import parameters required are the offset to the
-    start of the data
-
-    Bin/crop
-    ^^^^^^^^
-    Subsample
-    ^^^^^^^^^
-    Memorymap
-    ^^^^^^^^^
-
 Alignment
 ---------
 Automatic transmitted beam fitting
@@ -65,6 +45,24 @@ for all detectors and masks generated.
 
 Annular/Round detectors
 -----------------------
+The most basic and intuitive detector format, this mode provides the user with a
+pair of circular annotations on the diffraction pattern, which are linked to
+slider bars and numerical inputs in the main UI. These can be used to form
+circular or annular detectors centered on the transmitted beam. The width of the
+detector can be fixed by enabling the |radius_link| icon between the two slider bars.
+This allows the user to change the inner and outer angles simultaneously.
+
+When the user first switches to this mode from the **Alignment** mode, a
+pre-calculation step is performed to improve display speeds upon interaction.
+Here we calculate a range of images with a given annular step size, defined by
+the **Annular Integration Step** field at the bottom of the panel in the main UI. 
+This way, when the user changes the detector range, the images can be directly 
+plotted, rather than calculated from the entire dataset. The initial value for 
+**Annular Integration Step** is set to one pixel step in diffraction space, or a
+maximum of 250 steps. This balances reasonably fine control of detector geometry
+and computational efficiency; however, the user can directly change this step
+size for finer/coarser control, at which point the pre-calculation is repeated
+with the new step size. 
 
 Virtual apertures
 -----------------
@@ -92,3 +90,7 @@ Annotated display quality data
 ******************************
 Bin/crop
 ********
+
+
+.. |radius_link| image:: ../../src/icons/link.png
+    :height: 2ex
