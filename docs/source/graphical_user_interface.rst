@@ -157,11 +157,6 @@ Misc Tab
   non-square datasets and CoM/DPC. Done in memory to avoid having to reimport
   the data.
 
-..
-  * **Annular integration step**: User-defined step size for pre-computed annular 
-  images. Smaller steps give finer control of annular detectors at the expense
-  of larger memory usage.
-
 Info and Variables Tabs
 ^^^^^^^^
 .. image:: ../_static/settings_info_tab.png
@@ -233,7 +228,7 @@ optionally be appended to the filename for convenience.
 
 * **Diffraction Partial Export**: diffraction space can be binned to reduce file 
   size; an ROI can be selected by changing the starting location
-  (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
+  (x\ :sub:`1`\, y\ :sub:`1`\) and the total number of pixels (X, Y).
 * **Real-space Partial Export**: real-space can be subsampled to reduce file 
   size; an ROI can be selected by changing the starting location
-  (x\ :sub:`1`\,y\ :sub:`1`\) and the total number of pixels (X,Y).
+  (x\ :sub:`1`\, y\ :sub:`1`\) and the total number of pixels (X, Y).
