@@ -9026,6 +9026,16 @@ classdef Quant4D < matlab.apps.AppBase
 
         % Menu selected function: AddToWorkspace
         function add_to_workspace(app, event)
+            % Function used to add `app` to the workspace to enable direct
+            % interaction by the user 
+            % 
+            % Parameters:
+            %    app (Quant4D)
+            %    event (event.EventData)
+            %
+            % Returns:
+            %    app (Quant4D) : to workspace
+
             assignin('base', 'app', app)
         end
     end
