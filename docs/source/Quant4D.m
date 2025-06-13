@@ -9025,7 +9025,7 @@ classdef Quant4D < matlab.apps.AppBase
         end
 
         % Menu selected function: AddToWorkspace
-        function add_to_wprkspace(app, event)
+        function add_to_workspace(app, event)
             assignin('base', 'app', app)
         end
     end
@@ -13478,7 +13478,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create AddToWorkspace
             app.AddToWorkspace = uimenu(app.DebugContextMenu);
-            app.AddToWorkspace.MenuSelectedFcn = createCallbackFcn(app, @add_to_wprkspace, true);
+            app.AddToWorkspace.MenuSelectedFcn = createCallbackFcn(app, @add_to_workspace, true);
             app.AddToWorkspace.Text = 'Add `app` to workspace';
             
             % Assign app.DebugContextMenu
