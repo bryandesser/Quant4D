@@ -49,8 +49,8 @@ The most basic and intuitive detector format, this mode provides the user with a
 pair of circular annotations on the diffraction pattern, which are linked to
 slider bars and numerical inputs in the main UI. These can be used to form
 circular or annular detectors centered on the transmitted beam. The width of the
-detector can be fixed by enabling the |radius_link| icon between the two slider bars.
-This allows the user to change the inner and outer angles simultaneously.
+detector can be fixed by enabling the |radius_link| icon between the two slider
+bars. This allows the user to change the inner and outer angles simultaneously.
 
 When the user first switches to this mode from the **Alignment** mode, a
 pre-calculation step is performed to improve display speeds upon interaction.
@@ -66,6 +66,7 @@ with the new step size.
 
 Virtual apertures
 -----------------
+This mode generates one or more round virtual apertures 
 
 DPC/CoM
 -------
