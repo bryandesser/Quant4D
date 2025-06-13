@@ -227,7 +227,7 @@ Export Dataset Tab
     :align: center
 
 The **Export Dataset Tab** allows the users to export the dataset as HDF5
-(`.h5`) or raw binary (`.raw`) format with options for selecting smaller ROIs in
+(``.h5``) or raw binary (``.raw``) format with options for selecting smaller ROIs in
 the diffraction and/or real-space dimensions. The output file dimensions can
 optionally be appended to the filename for convenience. 
 
