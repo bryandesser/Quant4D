@@ -32,11 +32,11 @@ classdef Quant4D < matlab.apps.AppBase
         PreviewFramePanel               matlab.ui.container.Panel
         PreviewButtonGrid               matlab.ui.container.GridLayout
         PreviewFrameGrid                matlab.ui.container.GridLayout
+        PreviewButton                   matlab.ui.control.Button
         PreviewFrameY                   matlab.ui.control.Spinner
         PvFrYLabel                      matlab.ui.control.Label
         PreviewFrameX                   matlab.ui.control.Spinner
         PvFrXLabel                      matlab.ui.control.Label
-        PreviewButton                   matlab.ui.control.Button
         PreviewFrame_X_Y                matlab.ui.control.Button
         PreviewFrame_X2_Y               matlab.ui.control.Button
         PreviewFrame_1_Y                matlab.ui.control.Button
@@ -447,6 +447,7 @@ classdef Quant4D < matlab.apps.AppBase
         ReimportMenu                    matlab.ui.container.Menu
         ResetQuant4DMenu                matlab.ui.container.Menu
         EnableallUIsMenu                matlab.ui.container.Menu
+        AddToWorkspace                  matlab.ui.container.Menu
         CDDelContext                    matlab.ui.container.ContextMenu
         CDDelResetMenu                  matlab.ui.container.Menu
     end
@@ -1320,7 +1321,7 @@ classdef Quant4D < matlab.apps.AppBase
             %
             % Returns:
             %    None
-
+            
             debug_time = tic;
             export_callbacks(app, event)
             debug_toc(app, event, "", debug_time)
@@ -2674,7 +2675,7 @@ classdef Quant4D < matlab.apps.AppBase
                  app.(space+"Partial"+action+"Y"); ...
                  app.(space+"Partial"+action+unit+"Dist")], ...
                 {"Limits"}, ...
-                num2cell([xy_start_limit n_points_limit min(data_size)]'.*[0 1],2), ...
+                num2cell([xy_start_limit n_points_limit min(data_size)]'.*[0, 1] + [1, 0], 2), ...
                 {"Value"}, ...
                 num2cell([xy_start n_points binning]'))
 
@@ -5327,9 +5328,9 @@ classdef Quant4D < matlab.apps.AppBase
                     % hide save window
                     app.figures.Save.Visible = "off";
 
-                case {app.SaveTabGroup app.ExportPartialPixels app.ExportPartialFrames} % Tab change or enable/disable partial export
-                     % Try to delete old ROIs
-                    delete(findobj(app.ui_groups.image_axes,'-regexp', "Tag",'Export .... ROI'))
+                case {app.SaveTabGroup, app.ExportPartialPixels, app.ExportPartialFrames} % Tab change or enable/disable partial export
+                    % Try to delete old ROIs
+                    delete(findobj(app.ui_groups.image_axes,'-regexp', "Tag",'Export .* ROI'))
 
                     % Try to update export range
                     if ~isempty(app.dataset_parameters)
@@ -5351,8 +5352,8 @@ classdef Quant4D < matlab.apps.AppBase
                             app.annotations.Export.(id).Tag = "Export " + app.image_axes.(id).UserData.space + " ROI";
                             
                             % add listeners for ROI annotation movement
-                            app.annotations.Export.(id).UserData.Move = addlistener(app.annotations.Export.(id), "MovingROI", @move_export_annotation);
-                            addlistener(app.annotations.Export.(id), "ROIMoved", @move_export_annotation);
+                            app.annotations.Export.(id).UserData.Move = addlistener(app.annotations.Export.(id), "MovingROI", @app.move_export_annotation);
+                            addlistener(app.annotations.Export.(id), "ROIMoved", @app.move_export_annotation);
                         end
 
                         % Force ROIs to update
@@ -5403,6 +5404,70 @@ classdef Quant4D < matlab.apps.AppBase
                         % pass along error message
                         rethrow(ME)
                     end
+                
+                case {app.DiffractionPartialExportXStart,...
+                      app.DiffractionPartialExportYStart,...
+                      app.DiffractionPartialExportX,...
+                      app.DiffractionPartialExportY}
+
+                    if ismember(event.Source, [app.DiffractionPartialExportXStart, app.DiffractionPartialExportYStart])
+                        % limit the number of export frames based on number
+                        % of total frames and starting frame number
+                        app.DiffractionPartialExportX.Value = clip(app.DiffractionPartialExportX.Value, 1, app.dataset_parameters.n_pixels(1) - app.DiffractionPartialExportXStart.Value + 1);
+                        app.DiffractionPartialExportY.Value = clip(app.DiffractionPartialExportY.Value, 1, app.dataset_parameters.n_pixels(2) - app.DiffractionPartialExportYStart.Value + 1);
+                    elseif app.DiffractionPartialExportX.Value + app.DiffractionPartialExportXStart.Value > app.dataset_parameters.n_pixels(1) + 1
+                        app.DiffractionPartialExportXStart.Value = app.dataset_parameters.n_pixels(1) - app.DiffractionPartialExportX.Value + 1;
+                    elseif app.DiffractionPartialExportY.Value + app.DiffractionPartialExportYStart.Value > app.dataset_parameters.n_pixels(2) + 1
+                        app.DiffractionPartialExportYStart.Value = app.dataset_parameters.n_pixels(2) - app.DiffractionPartialExportY.Value + 1;
+                    end
+
+                    pos = [app.DiffractionPartialExportXStart.Value,...
+                           app.DiffractionPartialExportYStart.Value,...
+                           app.DiffractionPartialExportX.Value,...
+                           app.DiffractionPartialExportY.Value];
+
+                    app.annotations.Export.Diffraction.Position  = pos;
+
+                
+                case {app.RealPartialExportXStart,...
+                      app.RealPartialExportYStart,...
+                      app.RealPartialExportX,...
+                      app.RealPartialExportY}
+                    
+                    if ismember(event.Source, [app.RealPartialExportXStart, app.RealPartialExportYStart])
+                        % limit the number of export frames based on number
+                        % of total frames and starting frame number
+                        app.RealPartialExportX.Value = clip(app.RealPartialExportX.Value, 1, app.dataset_parameters.n_frames(1) - app.RealPartialExportXStart.Value + 1);
+                        app.RealPartialExportY.Value = clip(app.RealPartialExportY.Value, 1, app.dataset_parameters.n_frames(2) - app.RealPartialExportYStart.Value + 1);
+                    elseif app.RealPartialExportX.Value + app.RealPartialExportXStart.Value > app.dataset_parameters.n_frames(1)
+                        app.RealPartialExportXStart.Value = app.dataset_parameters.n_frames(1) - app.RealPartialExportX.Value + 1;
+                    elseif app.RealPartialExportY.Value + app.RealPartialExportYStart.Value > app.dataset_parameters.n_frames(2)
+                        app.RealPartialExportYStart.Value = app.dataset_parameters.n_frames(2) - app.RealPartialExportY.Value + 1;
+                    end
+
+                    pos = [app.RealPartialExportXStart.Value,...
+                           app.RealPartialExportYStart.Value,...
+                           app.RealPartialExportX.Value,...
+                           app.RealPartialExportY.Value];
+
+                    app.annotations.Export.Real.Position  = pos;
+                    
+                case app.annotations.Export.Diffraction
+                    pos = round(event.Source.Position);
+                    pos = clip(pos,1,repmat(app.dataset_parameters.n_pixels,1,2));
+                    app.DiffractionPartialExportXStart.Value = pos(1);
+                    app.DiffractionPartialExportYStart.Value = pos(2);
+                    app.DiffractionPartialExportX.Value = pos(3);
+                    app.DiffractionPartialExportY.Value = pos(4);
+
+                otherwise % real-space export annotations
+                    pos = round(event.Source.Position);
+                    pos = clip(pos,1,repmat(app.dataset_parameters.n_frames,1,2));
+                    app.RealPartialExportXStart.Value = pos(1);
+                    app.RealPartialExportYStart.Value = pos(2);
+                    app.RealPartialExportX.Value = pos(3);
+                    app.RealPartialExportY.Value = pos(4);
+
             end
 
             debug_toc(app, event, "", debug_time)
@@ -8720,8 +8785,10 @@ classdef Quant4D < matlab.apps.AppBase
             % Returns:
             %    None
 
-            fprintf(""); % Can be used for debugging or interfacing with internal data.
-            % Just right click on the "Import" button and select Test2
+            % Can be used for debugging or interfacing with internal data.
+            % Add a breakpoint on the line below, run the program, then
+            % right click on the "Import" button and select Test2
+            fprintf("");
         end
 
         % Close request function: Quant4D_Fig
@@ -8956,6 +9023,11 @@ classdef Quant4D < matlab.apps.AppBase
                 
             end
         end
+
+        % Menu selected function: AddToWorkspace
+        function add_to_wprkspace(app, event)
+            assignin('base', 'app', app)
+        end
     end
 
     % Component initialization
@@ -8963,6 +9035,9 @@ classdef Quant4D < matlab.apps.AppBase
 
         % Create UIFigure and components
         function createComponents(app)
+
+            % Get the file path for locating images
+            pathToMLAPP = fileparts(mfilename('fullpath'));
 
             % Create Quant4D_Fig and hide until all components are created
             app.Quant4D_Fig = uifigure('Visible', 'off');
@@ -10740,7 +10815,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create WindowsTabGrid
             app.WindowsTabGrid = uigridlayout(app.WindowsTab);
             app.WindowsTabGrid.ColumnWidth = {'1x'};
-            app.WindowsTabGrid.RowHeight = {'2.5x', '1x', 108};
+            app.WindowsTabGrid.RowHeight = {'2.5x', '1x', 110};
             app.WindowsTabGrid.ColumnSpacing = 4;
             app.WindowsTabGrid.RowSpacing = 4;
             app.WindowsTabGrid.Padding = [4 4 4 4];
@@ -11380,7 +11455,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create MiscGrid
             app.MiscGrid = uigridlayout(app.MiscTab);
             app.MiscGrid.ColumnWidth = {'1x'};
-            app.MiscGrid.RowHeight = {24, 24, 'fit', 'fit'};
+            app.MiscGrid.RowHeight = {24, 24, 'fit', 24, '1x'};
             app.MiscGrid.ColumnSpacing = 4;
             app.MiscGrid.Padding = [4 4 4 4];
             app.MiscGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
@@ -11489,7 +11564,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DatasetOptionPanel.TitlePosition = 'centertop';
             app.DatasetOptionPanel.Title = 'Swap Dataset Byte Order and Dimensions';
             app.DatasetOptionPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DatasetOptionPanel.Layout.Row = 4;
+            app.DatasetOptionPanel.Layout.Row = 5;
             app.DatasetOptionPanel.Layout.Column = 1;
             app.DatasetOptionPanel.FontName = 'Arial';
             app.DatasetOptionPanel.FontWeight = 'bold';
@@ -11821,7 +11896,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create PreviewFrameGrid
             app.PreviewFrameGrid = uigridlayout(app.PreviewButtonGrid);
-            app.PreviewFrameGrid.ColumnWidth = {'1x', 'fit', '1x', 'fit', '1x'};
+            app.PreviewFrameGrid.ColumnWidth = {'0.25x', 'fit', '1x', 'fit', '1x', '0.25x'};
             app.PreviewFrameGrid.RowHeight = {24};
             app.PreviewFrameGrid.ColumnSpacing = 4;
             app.PreviewFrameGrid.RowSpacing = 4;
@@ -11829,17 +11904,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewFrameGrid.Layout.Row = 4;
             app.PreviewFrameGrid.Layout.Column = [1 3];
             app.PreviewFrameGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-
-            % Create PreviewButton
-            app.PreviewButton = uibutton(app.PreviewFrameGrid, 'push');
-            app.PreviewButton.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewButton.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.PreviewButton.FontName = 'Arial';
-            app.PreviewButton.FontWeight = 'bold';
-            app.PreviewButton.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.PreviewButton.Layout.Row = 1;
-            app.PreviewButton.Layout.Column = 1;
-            app.PreviewButton.Text = 'Preview';
 
             % Create PvFrXLabel
             app.PvFrXLabel = uilabel(app.PreviewFrameGrid);
@@ -11876,6 +11940,19 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewFrameY.Layout.Row = 1;
             app.PreviewFrameY.Layout.Column = 5;
             app.PreviewFrameY.Value = 1;
+
+            % Create PreviewButton
+            app.PreviewButton = uibutton(app.PreviewFrameGrid, 'push');
+            app.PreviewButton.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
+            app.PreviewButton.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
+            app.PreviewButton.FontName = 'Arial';
+            app.PreviewButton.FontWeight = 'bold';
+            app.PreviewButton.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
+            app.PreviewButton.Enable = 'off';
+            app.PreviewButton.Visible = 'off';
+            app.PreviewButton.Layout.Row = 1;
+            app.PreviewButton.Layout.Column = 1;
+            app.PreviewButton.Text = 'Preview';
 
             % Create AlignmentTab
             app.AlignmentTab = uitab(app.ModeTabGroup);
@@ -12808,7 +12885,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorNewGrid
             app.CustomDetectorNewGrid = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewGrid.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorNewGrid.Icon = 'grid.png';
+            app.CustomDetectorNewGrid.Icon = fullfile(pathToMLAPP, 'icons', 'grid.png');
             app.CustomDetectorNewGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorNewGrid.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewGrid.Tooltip = {'Add grid mask'};
@@ -12875,7 +12952,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorNewGridNoCenter
             app.CustomDetectorNewGridNoCenter = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewGridNoCenter.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorNewGridNoCenter.Icon = 'grid_no_tb.png';
+            app.CustomDetectorNewGridNoCenter.Icon = fullfile(pathToMLAPP, 'icons', 'grid_no_tb.png');
             app.CustomDetectorNewGridNoCenter.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorNewGridNoCenter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewGridNoCenter.Tooltip = {'Add grid mask without including transmitted beam'};
@@ -13087,7 +13164,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorFlipHorizontal
             app.CustomDetectorFlipHorizontal = uibutton(app.CustomDetectorDetailsGrid, 'state');
             app.CustomDetectorFlipHorizontal.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorFlipHorizontal.Icon = 'mirrorHorz.png';
+            app.CustomDetectorFlipHorizontal.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorHorz.png');
             app.CustomDetectorFlipHorizontal.Text = '';
             app.CustomDetectorFlipHorizontal.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorFlipHorizontal.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
@@ -13097,7 +13174,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorFlipVertical
             app.CustomDetectorFlipVertical = uibutton(app.CustomDetectorDetailsGrid, 'state');
             app.CustomDetectorFlipVertical.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorFlipVertical.Icon = 'mirrorVert.png';
+            app.CustomDetectorFlipVertical.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorVert.png');
             app.CustomDetectorFlipVertical.Text = '';
             app.CustomDetectorFlipVertical.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorFlipVertical.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
@@ -13107,7 +13184,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CustomDetectorTranspose
             app.CustomDetectorTranspose = uibutton(app.CustomDetectorDetailsGrid, 'state');
             app.CustomDetectorTranspose.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorTranspose.Icon = 'transpose.png';
+            app.CustomDetectorTranspose.Icon = fullfile(pathToMLAPP, 'icons', 'transpose.png');
             app.CustomDetectorTranspose.Text = '';
             app.CustomDetectorTranspose.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorTranspose.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
@@ -13184,7 +13261,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowSettingsWindow = uibutton(app.ShortcutButtonGrid, 'push');
             app.ShowSettingsWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowSettingsWindow.Tag = 'Settings';
-            app.ShowSettingsWindow.Icon = 'settings.png';
+            app.ShowSettingsWindow.Icon = fullfile(pathToMLAPP, 'icons', 'settings.png');
             app.ShowSettingsWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ShowSettingsWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowSettingsWindow.Tooltip = {'Show Detector Controls'};
@@ -13205,8 +13282,8 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create Mode
             app.Mode = uidropdown(app.ModeGrid);
-            app.Mode.Items = {'Import', 'Alignment', 'Annular/Round', 'Segmented (DPC)', 'Center of Mass', 'Virtual Aperture', 'Custom Detectors'};
-            app.Mode.ItemsData = {'Preview', 'Alignment', 'Annular', 'DPC', 'CoM', 'Virtual', 'Custom'};
+            app.Mode.Items = {'Import', 'Alignment', 'Annular/Round', 'Center of Mass', 'Segmented (DPC)', 'Virtual Aperture', 'Custom Detectors'};
+            app.Mode.ItemsData = {'Preview', 'Alignment', 'Annular', 'CoM', 'DPC', 'Virtual', 'Custom'};
             app.Mode.ValueChangedFcn = createCallbackFcn(app, @detector_mode_callbacks, true);
             app.Mode.Tooltip = {'Diffraction Detector Mode'};
             app.Mode.FontSize = 14;
@@ -13398,6 +13475,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.EnableallUIsMenu.MenuSelectedFcn = createCallbackFcn(app, @enable_all_UI, true);
             app.EnableallUIsMenu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.EnableallUIsMenu.Text = 'Enable all UIs';
+
+            % Create AddToWorkspace
+            app.AddToWorkspace = uimenu(app.DebugContextMenu);
+            app.AddToWorkspace.MenuSelectedFcn = createCallbackFcn(app, @add_to_wprkspace, true);
+            app.AddToWorkspace.Text = 'Add `app` to workspace';
             
             % Assign app.DebugContextMenu
             app.ShowImportWindow.ContextMenu = app.DebugContextMenu;
