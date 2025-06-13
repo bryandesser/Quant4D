@@ -12,6 +12,13 @@ Contents
    installation
    graphical_user_interface
    functionality
+   alignment
+   annular_round
+   virtual_apertures
+   dpc_com
+   custom_apertures
+   rois
+   export
    api
    license
    acknowledgements
