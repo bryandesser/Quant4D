@@ -32,11 +32,6 @@ Features
 
 Calibration
 ***********
-`Quant4D` can be calibrated in diffraction space by fitting the transmitted beam
-and reporting a known probe convergence angle in mrad, or by simply reporting a
-known scale in mrad/pixels, which is then propagated through the rest of the GUI
-for all detectors and masks generated. 
-
 Automatic transmitted beam fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 When a 4D-STEM dataset is first imported, `Quant4D` will attempt to find the
@@ -63,6 +58,10 @@ window.
 
 Diffraction scale
 ^^^^^^^^^^^^^^^^^
+`Quant4D` can be calibrated in diffraction space by fitting the transmitted beam
+and reporting a known probe convergence angle in mrad, or by simply reporting a
+known scale in mrad/pixels, which is then propagated through the rest of the GUI
+for all detectors and masks generated. 
 
 Annular/Round detectors
 ***********************
