@@ -23,3 +23,9 @@ maximum of 250 steps. This balances reasonably fine control of detector geometry
 and computational efficiency; however, the user can directly change this step
 size for finer/coarser control, at which point the pre-calculation is repeated
 with the new step size. 
+
+.. image:: ../_static/annular_round.gif
+    :scale: 100%
+    :width: 306
+    :height: 268
+    :align: right

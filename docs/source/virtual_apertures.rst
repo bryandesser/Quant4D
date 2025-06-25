@@ -2,4 +2,5 @@
 
 Virtual apertures
 -----------------
-This mode generates one or more round virtual apertures 
+This mode generates one or more round virtual apertures centered on the aligned
+transmitted beam

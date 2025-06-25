@@ -447,7 +447,6 @@ classdef Quant4D < matlab.apps.AppBase
         ReimportMenu                    matlab.ui.container.Menu
         ResetQuant4DMenu                matlab.ui.container.Menu
         EnableallUIsMenu                matlab.ui.container.Menu
-        AddToWorkspace                  matlab.ui.container.Menu
         CDDelContext                    matlab.ui.container.ContextMenu
         CDDelResetMenu                  matlab.ui.container.Menu
     end
@@ -3700,7 +3699,7 @@ classdef Quant4D < matlab.apps.AppBase
                                "gray", ...
                                [sum(app.figures.Settings.Position([1,3]))+1 app.Quant4D_Fig.Position(2) image_size image_size]); % next to Settings UI
                               %[horizontal_center-image_size/2 screen_top-image_size image_size image_size]); % Top-center
-                              
+
              % add dropdown to diffraction figure to control how
              % patterns are combined (sum, mean, max, std)
              app.diffraction_dropdown.Parent = app.figures.Diffraction;
@@ -3781,6 +3780,18 @@ classdef Quant4D < matlab.apps.AppBase
             % Variable names for all real-space-sized figures/axes/images AND THEN their Axes objects
             app.ui_groups.real_id = app.ui_groups.image_id(app.ui_groups.image_space == "Real");
             app.ui_groups.real_axes = arrayfun(@(x) app.image_axes.(x), app.ui_groups.real_id);
+
+            % set title bar icons
+            app.Quant4D_Fig.Icon = reshape(app.sys_constants.background_color,[1,1,3]);
+            app.figures.Settings.Icon = 'settings.png';
+            app.figures.Save.Icon = 'save.png';
+            app.figures.Import.Icon = 'import.png';
+            app.figures.ColorWheel.Icon = 'colorwheel.png';
+            set(arrayfun(@(x) app.figures.(x), app.ui_groups.real_id),'Icon','image.png')
+            app.figures.Diffraction.Icon = 'Diffraction_Pattern.png';
+            app.figures.Preview.Icon = 'Diffraction_Pattern.png';
+            app.figures.DiffractionMask.Icon = 'Aperture.png';
+            app.figures.RealMask.Icon = 'Aperture.png';
             
             % Group all "Show ... Window" buttons related to CoM/DPC
             app.ui_groups.CoM_buttons = [findobj(app.ShowImageWindowsGrid,'-regexp', "Tag",'CoM'); ...
@@ -4537,6 +4548,9 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_time = tic;
 
+            % add app to workspace for user interaction
+            assignin('base', 'app', app)
+
             % Non-0 values if debugging
             app.debug = debug;
 
@@ -4578,6 +4592,9 @@ classdef Quant4D < matlab.apps.AppBase
 
             % make main app UI visible
             app.Quant4D_Fig.Visible = "on";
+
+            % reset diffraction view type
+            app.diffraction_dropdown.Value = 'sum';
 
             % Plot axes display directions
             mock_UI_callbacks(app, app.ShowDiffractionAxes);
@@ -6722,8 +6739,8 @@ classdef Quant4D < matlab.apps.AppBase
                         app.masks.annular = mask_ann;
                         
                         % The plus 1 is because the array begins at 0, but is 1-indexed.
-                        adf_inner = clip(round(inner_radius*app.mradPx.Value/app.AnnularStep.Value) + 1, 1, app.common_parameters.max_radius);
-                        adf_outer = clip(round(outer_radius*app.mradPx.Value/app.AnnularStep.Value) + 1, 1, app.common_parameters.max_radius);
+                        adf_inner = clip(round(inner_radius*app.mradPx.Value/app.AnnularStep.Value) + 1, 1, size(app.images.annular_images,3));
+                        adf_outer = clip(round(outer_radius*app.mradPx.Value/app.AnnularStep.Value) + 1, 1, size(app.images.annular_images,3));
                         app.images.Real = gather(sum(app.images.annular_images(:, :,adf_inner:adf_outer), 3,'omitnan'));
                     end
 
@@ -7021,7 +7038,7 @@ classdef Quant4D < matlab.apps.AppBase
                 debug_time = tic;
                 
                 % Rerun the annular integration based on the newly aligned location of the transmitted disk
-                message = "Generating radial masks (takes a while) ...";
+                message = "Generating radial masks (may take a while)...";
                 
                 if is_different_to_previous(app,'B0',app.center) || (event.Source == app.AnnularStep && ~strcmp(app.Mode.Value,'Alignment'))
                     app.tmp_variables.progress_dialog = progress_dialog(app, sprintf("\n%s\n",message), "Annular Integration");
@@ -8815,6 +8832,9 @@ classdef Quant4D < matlab.apps.AppBase
                 try close(figs(ii)); catch; end
             end
             clear figs;
+
+            % remove `app` from base workspace as it is no longer valid
+            evalin('base', 'clear app')
         end
 
         % Callback function: ShowVariables, VariablesTree
@@ -9023,21 +9043,6 @@ classdef Quant4D < matlab.apps.AppBase
                 
             end
         end
-
-        % Menu selected function: AddToWorkspace
-        function add_to_workspace(app, event)
-            % Function used to add `app` to the workspace to enable direct
-            % interaction by the user 
-            % 
-            % Parameters:
-            %    app (Quant4D)
-            %    event (event.EventData)
-            %
-            % Returns:
-            %    app (Quant4D) : to workspace
-
-            assignin('base', 'app', app)
-        end
     end
 
     % Component initialization
@@ -9052,7 +9057,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create Quant4D_Fig and hide until all components are created
             app.Quant4D_Fig = uifigure('Visible', 'off');
             app.Quant4D_Fig.AutoResizeChildren = 'off';
-            app.Quant4D_Fig.Color = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.Quant4D_Fig.Position = [1 1 262 472];
             app.Quant4D_Fig.Name = 'Quant4D';
             app.Quant4D_Fig.Resize = 'off';
@@ -9061,9 +9065,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create SavePanel
             app.SavePanel = uipanel(app.Quant4D_Fig);
             app.SavePanel.AutoResizeChildren = 'off';
-            app.SavePanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SavePanel.BorderType = 'none';
-            app.SavePanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.SavePanel.FontWeight = 'bold';
             app.SavePanel.Position = [-697 -35 424 500];
 
@@ -9074,7 +9076,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveGrid.ColumnSpacing = 4;
             app.SaveGrid.RowSpacing = 0;
             app.SaveGrid.Padding = [0 0 0 0];
-            app.SaveGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SaveDirectoryGrid
             app.SaveDirectoryGrid = uigridlayout(app.SaveGrid);
@@ -9085,7 +9086,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveDirectoryGrid.Padding = [4 4 4 4];
             app.SaveDirectoryGrid.Layout.Row = 1;
             app.SaveDirectoryGrid.Layout.Column = 1;
-            app.SaveDirectoryGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SaveDirectoryButton
             app.SaveDirectoryButton = uibutton(app.SaveDirectoryGrid, 'push');
@@ -9093,7 +9093,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveDirectoryButton.BackgroundColor = [0.702 1 0.702];
             app.SaveDirectoryButton.FontName = 'arial';
             app.SaveDirectoryButton.FontWeight = 'bold';
-            app.SaveDirectoryButton.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveDirectoryButton.Tooltip = {'Select saving/export directory'};
             app.SaveDirectoryButton.Layout.Row = 1;
             app.SaveDirectoryButton.Layout.Column = 1;
@@ -9102,7 +9101,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create SaveDirectoryPath
             app.SaveDirectoryPath = uieditfield(app.SaveDirectoryGrid, 'text');
             app.SaveDirectoryPath.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
-            app.SaveDirectoryPath.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveDirectoryPath.Tooltip = {'Saving/Export directory'};
             app.SaveDirectoryPath.Layout.Row = 1;
             app.SaveDirectoryPath.Layout.Column = 2;
@@ -9118,8 +9116,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImagesTab = uitab(app.SaveTabGroup);
             app.SaveImagesTab.AutoResizeChildren = 'off';
             app.SaveImagesTab.Title = 'Save Images';
-            app.SaveImagesTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SaveImagesTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create SaveImagesGrid
             app.SaveImagesGrid = uigridlayout(app.SaveImagesTab);
@@ -9128,7 +9124,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImagesGrid.ColumnSpacing = 4;
             app.SaveImagesGrid.RowSpacing = 4;
             app.SaveImagesGrid.Padding = [4 4 4 4];
-            app.SaveImagesGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SaveImagePrefixGrid
             app.SaveImagePrefixGrid = uigridlayout(app.SaveImagesGrid);
@@ -9139,12 +9134,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImagePrefixGrid.Padding = [0 0 0 0];
             app.SaveImagePrefixGrid.Layout.Row = 1;
             app.SaveImagePrefixGrid.Layout.Column = 1;
-            app.SaveImagePrefixGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create FilenamePrefixLabel
             app.FilenamePrefixLabel = uilabel(app.SaveImagePrefixGrid);
             app.FilenamePrefixLabel.HorizontalAlignment = 'right';
-            app.FilenamePrefixLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FilenamePrefixLabel.Layout.Row = 1;
             app.FilenamePrefixLabel.Layout.Column = 1;
             app.FilenamePrefixLabel.Text = 'Filename Prefix';
@@ -9152,7 +9145,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create SaveImagePrefix
             app.SaveImagePrefix = uieditfield(app.SaveImagePrefixGrid, 'text');
             app.SaveImagePrefix.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
-            app.SaveImagePrefix.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImagePrefix.Layout.Row = 1;
             app.SaveImagePrefix.Layout.Column = 2;
 
@@ -9164,12 +9156,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.SavePrefixAngleGrid.Padding = [0 0 0 0];
             app.SavePrefixAngleGrid.Layout.Row = 2;
             app.SavePrefixAngleGrid.Layout.Column = 1;
-            app.SavePrefixAngleGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SavePrefixAngleLabel
             app.SavePrefixAngleLabel = uilabel(app.SavePrefixAngleGrid);
             app.SavePrefixAngleLabel.HorizontalAlignment = 'right';
-            app.SavePrefixAngleLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SavePrefixAngleLabel.Layout.Row = 1;
             app.SavePrefixAngleLabel.Layout.Column = 1;
             app.SavePrefixAngleLabel.Text = 'Include Annular Detector Angles in Filename';
@@ -9178,7 +9168,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SavePrefixAngleInner = uicheckbox(app.SavePrefixAngleGrid);
             app.SavePrefixAngleInner.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SavePrefixAngleInner.Text = 'Inner';
-            app.SavePrefixAngleInner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SavePrefixAngleInner.Layout.Row = 1;
             app.SavePrefixAngleInner.Layout.Column = 2;
 
@@ -9186,7 +9175,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SavePrefixAngleOuter = uicheckbox(app.SavePrefixAngleGrid);
             app.SavePrefixAngleOuter.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SavePrefixAngleOuter.Text = 'Outer';
-            app.SavePrefixAngleOuter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SavePrefixAngleOuter.Layout.Row = 1;
             app.SavePrefixAngleOuter.Layout.Column = 3;
 
@@ -9199,7 +9187,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImageListGrid.Padding = [0 0 0 0];
             app.SaveImageListGrid.Layout.Row = 3;
             app.SaveImageListGrid.Layout.Column = 1;
-            app.SaveImageListGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ImagestoSaveMultiselectwithCtrlShiftLabel
             app.ImagestoSaveMultiselectwithCtrlShiftLabel = uilabel(app.SaveImageListGrid);
@@ -9207,7 +9194,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImagestoSaveMultiselectwithCtrlShiftLabel.VerticalAlignment = 'bottom';
             app.ImagestoSaveMultiselectwithCtrlShiftLabel.FontName = 'Arial';
             app.ImagestoSaveMultiselectwithCtrlShiftLabel.FontWeight = 'bold';
-            app.ImagestoSaveMultiselectwithCtrlShiftLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImagestoSaveMultiselectwithCtrlShiftLabel.Layout.Row = 1;
             app.ImagestoSaveMultiselectwithCtrlShiftLabel.Layout.Column = [1 2];
             app.ImagestoSaveMultiselectwithCtrlShiftLabel.Text = 'Images to Save (Multi-select with Ctrl/Shift)';
@@ -9216,7 +9202,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImageSelectAll = uicheckbox(app.SaveImageListGrid);
             app.SaveImageSelectAll.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SaveImageSelectAll.Text = 'Select All';
-            app.SaveImageSelectAll.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImageSelectAll.Layout.Row = 1;
             app.SaveImageSelectAll.Layout.Column = 2;
 
@@ -9226,7 +9211,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImageList.Multiselect = 'on';
             app.SaveImageList.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SaveImageList.FontName = 'Arial';
-            app.SaveImageList.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImageList.Layout.Row = 2;
             app.SaveImageList.Layout.Column = [1 2];
             app.SaveImageList.Value = {};
@@ -9240,13 +9224,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImageFormatGrid.Padding = [0 0 0 0];
             app.SaveImageFormatGrid.Layout.Row = 4;
             app.SaveImageFormatGrid.Layout.Column = 1;
-            app.SaveImageFormatGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SaveImageTIFF
             app.SaveImageTIFF = uicheckbox(app.SaveImageFormatGrid);
             app.SaveImageTIFF.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SaveImageTIFF.Text = 'Raw data (single-precision), TIFF';
-            app.SaveImageTIFF.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImageTIFF.Layout.Row = 1;
             app.SaveImageTIFF.Layout.Column = 1;
             app.SaveImageTIFF.Value = true;
@@ -9260,13 +9242,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImagePNGGrid.Padding = [0 0 0 0];
             app.SaveImagePNGGrid.Layout.Row = 2;
             app.SaveImagePNGGrid.Layout.Column = 1;
-            app.SaveImagePNGGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SaveImagePNG
             app.SaveImagePNG = uicheckbox(app.SaveImagePNGGrid);
             app.SaveImagePNG.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SaveImagePNG.Text = 'As-displayed, PNG; ';
-            app.SaveImagePNG.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImagePNG.Layout.Row = 1;
             app.SaveImagePNG.Layout.Column = 1;
             app.SaveImagePNG.Value = true;
@@ -9275,14 +9255,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImageAnnotations = uicheckbox(app.SaveImagePNGGrid);
             app.SaveImageAnnotations.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.SaveImageAnnotations.Text = 'with annotations, e.g. ROIs,';
-            app.SaveImageAnnotations.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImageAnnotations.Layout.Row = 1;
             app.SaveImageAnnotations.Layout.Column = 2;
             app.SaveImageAnnotations.Value = true;
 
             % Create SaveImgAnnotDPILabel
             app.SaveImgAnnotDPILabel = uilabel(app.SaveImagePNGGrid);
-            app.SaveImgAnnotDPILabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImgAnnotDPILabel.Layout.Row = 1;
             app.SaveImgAnnotDPILabel.Layout.Column = 3;
             app.SaveImgAnnotDPILabel.Text = 'DPI';
@@ -9293,7 +9271,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveImageDPI.RoundFractionalValues = 'on';
             app.SaveImageDPI.ValueDisplayFormat = '%d';
             app.SaveImageDPI.ValueChangedFcn = createCallbackFcn(app, @save_callbacks, true);
-            app.SaveImageDPI.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveImageDPI.Layout.Row = 1;
             app.SaveImageDPI.Layout.Column = 4;
             app.SaveImageDPI.Value = 72;
@@ -9302,8 +9279,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportDatasetTab = uitab(app.SaveTabGroup);
             app.ExportDatasetTab.AutoResizeChildren = 'off';
             app.ExportDatasetTab.Title = 'Export Dataset';
-            app.ExportDatasetTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ExportDatasetTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create ExportGrid
             app.ExportGrid = uigridlayout(app.ExportDatasetTab);
@@ -9311,7 +9286,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportGrid.ColumnSpacing = 6;
             app.ExportGrid.RowSpacing = 4;
             app.ExportGrid.Padding = [4 4 4 4];
-            app.ExportGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ExportFileGrid
             app.ExportFileGrid = uigridlayout(app.ExportGrid);
@@ -9322,12 +9296,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportFileGrid.Padding = [0 0 0 0];
             app.ExportFileGrid.Layout.Row = 1;
             app.ExportFileGrid.Layout.Column = [1 2];
-            app.ExportFileGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create FilenameLabel
             app.FilenameLabel = uilabel(app.ExportFileGrid);
             app.FilenameLabel.HorizontalAlignment = 'right';
-            app.FilenameLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FilenameLabel.Layout.Row = 1;
             app.FilenameLabel.Layout.Column = 1;
             app.FilenameLabel.Text = 'Filename';
@@ -9335,7 +9307,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ExportFilename
             app.ExportFilename = uieditfield(app.ExportFileGrid, 'text');
             app.ExportFilename.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
-            app.ExportFilename.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ExportFilename.Layout.Row = 1;
             app.ExportFilename.Layout.Column = 2;
 
@@ -9344,7 +9315,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportDimensionSuffix.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.ExportDimensionSuffix.Tooltip = {'To suffix the filename with image stack''s dimensions'};
             app.ExportDimensionSuffix.Text = 'Dimensions suffix';
-            app.ExportDimensionSuffix.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ExportDimensionSuffix.Layout.Row = 1;
             app.ExportDimensionSuffix.Layout.Column = 3;
 
@@ -9353,8 +9323,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportDataType.Items = {'HDF5 (*.h5)', 'Raw binary (*.raw)'};
             app.ExportDataType.ItemsData = {'h5', 'raw'};
             app.ExportDataType.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
-            app.ExportDataType.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.ExportDataType.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ExportDataType.Layout.Row = 2;
             app.ExportDataType.Layout.Column = 1;
             app.ExportDataType.Value = 'h5';
@@ -9364,8 +9332,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportByteOrder.Items = {'Little Endian', 'Big Endian'};
             app.ExportByteOrder.ItemsData = {'l', 'b'};
             app.ExportByteOrder.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
-            app.ExportByteOrder.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.ExportByteOrder.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ExportByteOrder.Layout.Row = 2;
             app.ExportByteOrder.Layout.Column = 2;
             app.ExportByteOrder.Value = 'l';
@@ -9377,7 +9343,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportPartialPixels.Text = '    Diffraction Partial Export';
             app.ExportPartialPixels.FontName = 'Arial';
             app.ExportPartialPixels.FontWeight = 'bold';
-            app.ExportPartialPixels.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ExportPartialPixels.Layout.Row = 3;
             app.ExportPartialPixels.Layout.Column = 1;
 
@@ -9390,12 +9355,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialExportGrid.Padding = [0 0 0 0];
             app.DiffractionPartialExportGrid.Layout.Row = 4;
             app.DiffractionPartialExportGrid.Layout.Column = 1;
-            app.DiffractionPartialExportGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create BinningDistanceLabel_2
             app.BinningDistanceLabel_2 = uilabel(app.DiffractionPartialExportGrid);
             app.BinningDistanceLabel_2.HorizontalAlignment = 'right';
-            app.BinningDistanceLabel_2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BinningDistanceLabel_2.Layout.Row = 1;
             app.BinningDistanceLabel_2.Layout.Column = [1 3];
             app.BinningDistanceLabel_2.Text = 'Binning Distance';
@@ -9407,7 +9370,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialExportPixelsDist.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialExportPixelsDist.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.DiffractionPartialExportPixelsDist.Tag = 'Export Diffraction';
-            app.DiffractionPartialExportPixelsDist.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialExportPixelsDist.Tooltip = {'To bin n×n pixels into one (by averaging)'};
             app.DiffractionPartialExportPixelsDist.Layout.Row = 1;
             app.DiffractionPartialExportPixelsDist.Layout.Column = 4;
@@ -9416,7 +9378,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create xsub1Label_3
             app.xsub1Label_3 = uilabel(app.DiffractionPartialExportGrid);
             app.xsub1Label_3.HorizontalAlignment = 'right';
-            app.xsub1Label_3.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.xsub1Label_3.Layout.Row = 2;
             app.xsub1Label_3.Layout.Column = 1;
             app.xsub1Label_3.Interpreter = 'html';
@@ -9429,7 +9390,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialExportXStart.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialExportXStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.DiffractionPartialExportXStart.Tag = 'Export Diffraction';
-            app.DiffractionPartialExportXStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialExportXStart.Tooltip = {'Starting pixel on X (1st dimension of image stack) to import, in each frame'};
             app.DiffractionPartialExportXStart.Layout.Row = 2;
             app.DiffractionPartialExportXStart.Layout.Column = 2;
@@ -9438,7 +9398,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ysub1Label_3
             app.ysub1Label_3 = uilabel(app.DiffractionPartialExportGrid);
             app.ysub1Label_3.HorizontalAlignment = 'right';
-            app.ysub1Label_3.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ysub1Label_3.Layout.Row = 2;
             app.ysub1Label_3.Layout.Column = 3;
             app.ysub1Label_3.Interpreter = 'html';
@@ -9451,7 +9410,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialExportYStart.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialExportYStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.DiffractionPartialExportYStart.Tag = 'Export Diffraction';
-            app.DiffractionPartialExportYStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialExportYStart.Tooltip = {'Starting pixel on Y (2nd dimension of image stack) to import, in each frame'};
             app.DiffractionPartialExportYStart.Layout.Row = 2;
             app.DiffractionPartialExportYStart.Layout.Column = 4;
@@ -9460,7 +9418,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ENPxXl
             app.ENPxXl = uilabel(app.DiffractionPartialExportGrid);
             app.ENPxXl.HorizontalAlignment = 'right';
-            app.ENPxXl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ENPxXl.Layout.Row = 3;
             app.ENPxXl.Layout.Column = 1;
             app.ENPxXl.Text = 'X';
@@ -9472,7 +9429,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialExportX.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialExportX.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.DiffractionPartialExportX.Tag = 'Export Diffraction';
-            app.DiffractionPartialExportX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialExportX.Tooltip = {'Total pixels after binning on X (1st dimension of image stack), in each frame'};
             app.DiffractionPartialExportX.Layout.Row = 3;
             app.DiffractionPartialExportX.Layout.Column = 2;
@@ -9481,7 +9437,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ENPxYl
             app.ENPxYl = uilabel(app.DiffractionPartialExportGrid);
             app.ENPxYl.HorizontalAlignment = 'right';
-            app.ENPxYl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ENPxYl.Layout.Row = 3;
             app.ENPxYl.Layout.Column = 3;
             app.ENPxYl.Text = 'Y';
@@ -9493,7 +9448,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialExportY.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialExportY.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.DiffractionPartialExportY.Tag = 'Export Diffraction';
-            app.DiffractionPartialExportY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialExportY.Tooltip = {'Total pixels after binning on Y (2nd dimension of image stack), in each frame'};
             app.DiffractionPartialExportY.Layout.Row = 3;
             app.DiffractionPartialExportY.Layout.Column = 4;
@@ -9508,12 +9462,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialExportGrid.Padding = [0 0 0 0];
             app.RealPartialExportGrid.Layout.Row = 4;
             app.RealPartialExportGrid.Layout.Column = 2;
-            app.RealPartialExportGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create xsub1Label_4
             app.xsub1Label_4 = uilabel(app.RealPartialExportGrid);
             app.xsub1Label_4.HorizontalAlignment = 'right';
-            app.xsub1Label_4.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.xsub1Label_4.Layout.Row = 2;
             app.xsub1Label_4.Layout.Column = 1;
             app.xsub1Label_4.Interpreter = 'html';
@@ -9526,7 +9478,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialExportXStart.ValueDisplayFormat = '%.0f';
             app.RealPartialExportXStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.RealPartialExportXStart.Tag = 'Export Real';
-            app.RealPartialExportXStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialExportXStart.Tooltip = {'Starting frame on X (3rd dimension of image stack) to import'};
             app.RealPartialExportXStart.Layout.Row = 2;
             app.RealPartialExportXStart.Layout.Column = 2;
@@ -9535,7 +9486,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ysub1Label_4
             app.ysub1Label_4 = uilabel(app.RealPartialExportGrid);
             app.ysub1Label_4.HorizontalAlignment = 'right';
-            app.ysub1Label_4.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ysub1Label_4.Layout.Row = 2;
             app.ysub1Label_4.Layout.Column = 3;
             app.ysub1Label_4.Interpreter = 'html';
@@ -9548,7 +9498,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialExportYStart.ValueDisplayFormat = '%.0f';
             app.RealPartialExportYStart.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.RealPartialExportYStart.Tag = 'Export Real';
-            app.RealPartialExportYStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialExportYStart.Tooltip = {'Starting frame on Y (4th dimension of image stack) to import'};
             app.RealPartialExportYStart.Layout.Row = 2;
             app.RealPartialExportYStart.Layout.Column = 4;
@@ -9557,7 +9506,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ENFrXl
             app.ENFrXl = uilabel(app.RealPartialExportGrid);
             app.ENFrXl.HorizontalAlignment = 'right';
-            app.ENFrXl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ENFrXl.Layout.Row = 3;
             app.ENFrXl.Layout.Column = 1;
             app.ENFrXl.Text = 'X';
@@ -9569,7 +9517,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialExportX.ValueDisplayFormat = '%.0f';
             app.RealPartialExportX.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.RealPartialExportX.Tag = 'Export Real';
-            app.RealPartialExportX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialExportX.Tooltip = {'Total frames after sampling on X (3rd dimension of image stack)'};
             app.RealPartialExportX.Layout.Row = 3;
             app.RealPartialExportX.Layout.Column = 2;
@@ -9578,7 +9525,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ENFrYl
             app.ENFrYl = uilabel(app.RealPartialExportGrid);
             app.ENFrYl.HorizontalAlignment = 'right';
-            app.ENFrYl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ENFrYl.Layout.Row = 3;
             app.ENFrYl.Layout.Column = 3;
             app.ENFrYl.Text = 'Y';
@@ -9590,7 +9536,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialExportY.ValueDisplayFormat = '%.0f';
             app.RealPartialExportY.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.RealPartialExportY.Tag = 'Export Real';
-            app.RealPartialExportY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialExportY.Tooltip = {'Total frames after sampling on Y (4th dimension of image stack)'};
             app.RealPartialExportY.Layout.Row = 3;
             app.RealPartialExportY.Layout.Column = 4;
@@ -9599,7 +9544,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create SamplingIntervalLabel
             app.SamplingIntervalLabel = uilabel(app.RealPartialExportGrid);
             app.SamplingIntervalLabel.HorizontalAlignment = 'right';
-            app.SamplingIntervalLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SamplingIntervalLabel.Layout.Row = 1;
             app.SamplingIntervalLabel.Layout.Column = [1 3];
             app.SamplingIntervalLabel.Text = 'Sampling Interval';
@@ -9611,7 +9555,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialExportFramesDist.ValueDisplayFormat = '%.0f';
             app.RealPartialExportFramesDist.ValueChangedFcn = createCallbackFcn(app, @export_callbacks, true);
             app.RealPartialExportFramesDist.Tag = 'Export Real';
-            app.RealPartialExportFramesDist.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialExportFramesDist.Tooltip = {'Distance between sampling frames in both X & Y directions (neighboring frames have distance of 1)'};
             app.RealPartialExportFramesDist.Layout.Row = 1;
             app.RealPartialExportFramesDist.Layout.Column = 4;
@@ -9623,7 +9566,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SummaryLabel.VerticalAlignment = 'bottom';
             app.SummaryLabel.FontName = 'Arial';
             app.SummaryLabel.FontWeight = 'bold';
-            app.SummaryLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SummaryLabel.Layout.Row = 5;
             app.SummaryLabel.Layout.Column = [1 2];
             app.SummaryLabel.Text = 'Summary';
@@ -9632,7 +9574,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportNotes = uitextarea(app.ExportGrid);
             app.ExportNotes.Editable = 'off';
             app.ExportNotes.FontName = 'Arial';
-            app.ExportNotes.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ExportNotes.Layout.Row = 6;
             app.ExportNotes.Layout.Column = [1 2];
 
@@ -9643,7 +9584,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ExportPartialFrames.Text = '    Real-space Partial Export';
             app.ExportPartialFrames.FontName = 'Arial';
             app.ExportPartialFrames.FontWeight = 'bold';
-            app.ExportPartialFrames.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ExportPartialFrames.Layout.Row = 3;
             app.ExportPartialFrames.Layout.Column = 2;
 
@@ -9655,15 +9595,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.SaveExportButtonGrid.Padding = [4 4 4 4];
             app.SaveExportButtonGrid.Layout.Row = 3;
             app.SaveExportButtonGrid.Layout.Column = 1;
-            app.SaveExportButtonGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SaveExport
             app.SaveExport = uibutton(app.SaveExportButtonGrid, 'push');
             app.SaveExport.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
-            app.SaveExport.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.SaveExport.FontName = 'Arial';
             app.SaveExport.FontWeight = 'bold';
-            app.SaveExport.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveExport.Layout.Row = 1;
             app.SaveExport.Layout.Column = 1;
             app.SaveExport.Text = 'Save Images';
@@ -9671,10 +9608,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Create SaveCloseButton
             app.SaveCloseButton = uibutton(app.SaveExportButtonGrid, 'push');
             app.SaveCloseButton.ButtonPushedFcn = createCallbackFcn(app, @export_callbacks, true);
-            app.SaveCloseButton.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.SaveCloseButton.FontName = 'Arial';
             app.SaveCloseButton.FontWeight = 'bold';
-            app.SaveCloseButton.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveCloseButton.Layout.Row = 1;
             app.SaveCloseButton.Layout.Column = 3;
             app.SaveCloseButton.Text = 'Close';
@@ -9682,9 +9617,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ImportPanel
             app.ImportPanel = uipanel(app.Quant4D_Fig);
             app.ImportPanel.AutoResizeChildren = 'off';
-            app.ImportPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportPanel.BorderType = 'none';
-            app.ImportPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ImportPanel.FontWeight = 'bold';
             app.ImportPanel.Position = [548 -27 600 500];
 
@@ -9695,7 +9628,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportGrid.ColumnSpacing = 8;
             app.ImportGrid.RowSpacing = 4;
             app.ImportGrid.Padding = [4 4 4 4];
-            app.ImportGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ImportFileGrid
             app.ImportFileGrid = uigridlayout(app.ImportGrid);
@@ -9705,7 +9637,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFileGrid.Padding = [0 0 0 0];
             app.ImportFileGrid.Layout.Row = 1;
             app.ImportFileGrid.Layout.Column = [1 2];
-            app.ImportFileGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ImportFileSelect
             app.ImportFileSelect = uibutton(app.ImportFileGrid, 'push');
@@ -9714,7 +9645,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFileSelect.BackgroundColor = [0.702 1 0.702];
             app.ImportFileSelect.FontName = 'Arial';
             app.ImportFileSelect.FontWeight = 'bold';
-            app.ImportFileSelect.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportFileSelect.Layout.Row = 1;
             app.ImportFileSelect.Layout.Column = 1;
             app.ImportFileSelect.Text = 'Select';
@@ -9722,18 +9652,15 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ImportFilePath
             app.ImportFilePath = uieditfield(app.ImportFileGrid, 'text');
             app.ImportFilePath.ValueChangedFcn = createCallbackFcn(app, @import_select_file, true);
-            app.ImportFilePath.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportFilePath.Layout.Row = 1;
             app.ImportFilePath.Layout.Column = 2;
 
             % Create ImportDatasetInfoPanel
             app.ImportDatasetInfoPanel = uipanel(app.ImportGrid);
             app.ImportDatasetInfoPanel.AutoResizeChildren = 'off';
-            app.ImportDatasetInfoPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportDatasetInfoPanel.BorderType = 'none';
             app.ImportDatasetInfoPanel.TitlePosition = 'centertop';
             app.ImportDatasetInfoPanel.Title = 'Dataset Info';
-            app.ImportDatasetInfoPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ImportDatasetInfoPanel.Layout.Row = [2 3];
             app.ImportDatasetInfoPanel.Layout.Column = 1;
             app.ImportDatasetInfoPanel.FontName = 'Arial';
@@ -9747,17 +9674,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportDatasetInfoGrid.ColumnSpacing = 4;
             app.ImportDatasetInfoGrid.RowSpacing = 4;
             app.ImportDatasetInfoGrid.Padding = [0 0 0 4];
-            app.ImportDatasetInfoGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create FileTypeButtonGroup
             app.FileTypeButtonGroup = uibuttongroup(app.ImportDatasetInfoGrid);
             app.FileTypeButtonGroup.AutoResizeChildren = 'off';
             app.FileTypeButtonGroup.SelectionChangedFcn = createCallbackFcn(app, @import_file_type, true);
             app.FileTypeButtonGroup.Tooltip = {'EMPAD'; '128x128 pixels'; 'Header: 0 bytes'; 'Footer: 1024 bytes'; '32-bit Real, Little endian'; ''; 'MEDIPIX'; '256x256 pixels'; 'Header: 384 bytes'; 'Footer: 0 bytes'; 'Unsigned integer, Big endian'; ''; 'MRC'; 'variable # of pixels'; 'Header: 1024 bytes'; 'Footer: 0 bytes'; 'Signed integer, Little endian'};
-            app.FileTypeButtonGroup.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FileTypeButtonGroup.BorderType = 'none';
             app.FileTypeButtonGroup.TitlePosition = 'centertop';
-            app.FileTypeButtonGroup.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.FileTypeButtonGroup.Layout.Row = 1;
             app.FileTypeButtonGroup.Layout.Column = 1;
             app.FileTypeButtonGroup.FontWeight = 'bold';
@@ -9766,8 +9690,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.EMPAD = uitogglebutton(app.FileTypeButtonGroup);
             app.EMPAD.Tooltip = {'*.raw'; '128x128 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 1024 bytes'; '32-bit Real, Little Endian'};
             app.EMPAD.Text = 'EMPAD';
-            app.EMPAD.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.EMPAD.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.EMPAD.Position = [3 27 68 22];
             app.EMPAD.Value = true;
 
@@ -9775,40 +9697,30 @@ classdef Quant4D < matlab.apps.AppBase
             app.Medipix = uitogglebutton(app.FileTypeButtonGroup);
             app.Medipix.Tooltip = {'*.mib'; '256x256 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 384 bytes'; 'Frame Footer: 0 bytes'; 'Unsigned integer, Big Endian'};
             app.Medipix.Text = 'Medipix';
-            app.Medipix.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.Medipix.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.Medipix.Position = [71 27 68 22];
 
             % Create MRC
             app.MRC = uitogglebutton(app.FileTypeButtonGroup);
             app.MRC.Tooltip = {'*.mrc'; 'Data Offset: 1024 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 0 bytes'; 'Signed integer, Little Endian'};
             app.MRC.Text = 'MRC';
-            app.MRC.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.MRC.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.MRC.Position = [139 27 68 22];
 
             % Create DM34
             app.DM34 = uitogglebutton(app.FileTypeButtonGroup);
             app.DM34.Tooltip = {'Gatan *.dm3/*.dm4'};
             app.DM34.Text = 'DM3/4';
-            app.DM34.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DM34.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DM34.Position = [3 5 68 22];
 
             % Create HDF5
             app.HDF5 = uitogglebutton(app.FileTypeButtonGroup);
             app.HDF5.Tooltip = {'*.h5/*.hdf5'};
             app.HDF5.Text = 'HDF5';
-            app.HDF5.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.HDF5.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.HDF5.Position = [71 5 68 22];
 
             % Create Custom
             app.Custom = uitogglebutton(app.FileTypeButtonGroup);
             app.Custom.Tooltip = {'E.g. simulated/raw data'};
             app.Custom.Text = 'Custom';
-            app.Custom.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.Custom.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.Custom.Position = [139 5 68 22];
 
             % Create ImportDatasetStructureGrid
@@ -9820,12 +9732,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportDatasetStructureGrid.Padding = [0 0 0 0];
             app.ImportDatasetStructureGrid.Layout.Row = 2;
             app.ImportDatasetStructureGrid.Layout.Column = 1;
-            app.ImportDatasetStructureGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SubdatasetDropDownLabel
             app.SubdatasetDropDownLabel = uilabel(app.ImportDatasetStructureGrid);
             app.SubdatasetDropDownLabel.HorizontalAlignment = 'right';
-            app.SubdatasetDropDownLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SubdatasetDropDownLabel.Layout.Row = 1;
             app.SubdatasetDropDownLabel.Layout.Column = 1;
             app.SubdatasetDropDownLabel.Text = 'Sub-dataset';
@@ -9835,8 +9745,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SubDataset.Items = {};
             app.SubDataset.ValueChangedFcn = createCallbackFcn(app, @import_file_type, true);
             app.SubDataset.Tooltip = {'Some file formats (e.g. DM3, DM4 or HDF5) can contain multiple image-stacks in one file'};
-            app.SubDataset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.SubDataset.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.SubDataset.Layout.Row = 1;
             app.SubDataset.Layout.Column = 2;
             app.SubDataset.Value = {};
@@ -9844,7 +9752,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DataOffsetLabel
             app.DataOffsetLabel = uilabel(app.ImportDatasetStructureGrid);
             app.DataOffsetLabel.HorizontalAlignment = 'right';
-            app.DataOffsetLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DataOffsetLabel.Layout.Row = 2;
             app.DataOffsetLabel.Layout.Column = 1;
             app.DataOffsetLabel.Text = 'Data Offset';
@@ -9854,7 +9761,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DataOffset.Limits = [0 Inf];
             app.DataOffset.ValueDisplayFormat = '%d bytes';
             app.DataOffset.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.DataOffset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DataOffset.Tooltip = {'Number of bytes before the image stack in file (e.g. for metadata)'};
             app.DataOffset.Layout.Row = 2;
             app.DataOffset.Layout.Column = 2;
@@ -9862,7 +9768,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create FrameHeaderLabel
             app.FrameHeaderLabel = uilabel(app.ImportDatasetStructureGrid);
             app.FrameHeaderLabel.HorizontalAlignment = 'right';
-            app.FrameHeaderLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FrameHeaderLabel.Layout.Row = 3;
             app.FrameHeaderLabel.Layout.Column = 1;
             app.FrameHeaderLabel.Text = 'Frame Header';
@@ -9872,7 +9777,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.FrameHeader.Limits = [0 Inf];
             app.FrameHeader.ValueDisplayFormat = '%d bytes';
             app.FrameHeader.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.FrameHeader.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FrameHeader.Tooltip = {'Number of bytes before the actual pattern in each frame (e.g. for metadata)'};
             app.FrameHeader.Layout.Row = 3;
             app.FrameHeader.Layout.Column = 2;
@@ -9880,7 +9784,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create FrameFooterLabel
             app.FrameFooterLabel = uilabel(app.ImportDatasetStructureGrid);
             app.FrameFooterLabel.HorizontalAlignment = 'right';
-            app.FrameFooterLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FrameFooterLabel.Layout.Row = 4;
             app.FrameFooterLabel.Layout.Column = 1;
             app.FrameFooterLabel.Text = 'Frame Footer';
@@ -9890,7 +9793,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.FrameFooter.Limits = [0 Inf];
             app.FrameFooter.ValueDisplayFormat = '%d bytes';
             app.FrameFooter.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.FrameFooter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FrameFooter.Tooltip = {'Number of bytes after the actual pattern in each frame (e.g. for metadata)'};
             app.FrameFooter.Layout.Row = 4;
             app.FrameFooter.Layout.Column = 2;
@@ -9898,7 +9800,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DataTypeLabel
             app.DataTypeLabel = uilabel(app.ImportDatasetStructureGrid);
             app.DataTypeLabel.HorizontalAlignment = 'right';
-            app.DataTypeLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DataTypeLabel.Layout.Row = 5;
             app.DataTypeLabel.Layout.Column = 1;
             app.DataTypeLabel.Text = 'Data Type';
@@ -9907,8 +9808,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportDataType = uidropdown(app.ImportDatasetStructureGrid);
             app.ImportDataType.Items = {};
             app.ImportDataType.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.ImportDataType.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.ImportDataType.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ImportDataType.Layout.Row = 5;
             app.ImportDataType.Layout.Column = 2;
             app.ImportDataType.Value = {};
@@ -9916,7 +9815,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ByteOrderDropDownLabel
             app.ByteOrderDropDownLabel = uilabel(app.ImportDatasetStructureGrid);
             app.ByteOrderDropDownLabel.HorizontalAlignment = 'right';
-            app.ByteOrderDropDownLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ByteOrderDropDownLabel.Layout.Row = 6;
             app.ByteOrderDropDownLabel.Layout.Column = 1;
             app.ByteOrderDropDownLabel.Text = 'Byte Order';
@@ -9926,8 +9824,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportByteOrder.Items = {'Little Endian', 'Big Endian'};
             app.ImportByteOrder.ItemsData = {'l', 'b'};
             app.ImportByteOrder.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.ImportByteOrder.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.ImportByteOrder.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ImportByteOrder.Layout.Row = 6;
             app.ImportByteOrder.Layout.Column = 2;
             app.ImportByteOrder.Value = 'l';
@@ -9941,14 +9837,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportDimensionGrid.Padding = [0 0 0 0];
             app.ImportDimensionGrid.Layout.Row = 3;
             app.ImportDimensionGrid.Layout.Column = 1;
-            app.ImportDimensionGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ImportPixelsLabel
             app.ImportPixelsLabel = uilabel(app.ImportDimensionGrid);
             app.ImportPixelsLabel.HorizontalAlignment = 'center';
             app.ImportPixelsLabel.FontName = 'Arial';
             app.ImportPixelsLabel.FontWeight = 'bold';
-            app.ImportPixelsLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportPixelsLabel.Layout.Row = 1;
             app.ImportPixelsLabel.Layout.Column = 1;
             app.ImportPixelsLabel.Text = 'Pixels';
@@ -9956,7 +9850,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create XLabel_2
             app.XLabel_2 = uilabel(app.ImportDimensionGrid);
             app.XLabel_2.HorizontalAlignment = 'right';
-            app.XLabel_2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.XLabel_2.Layout.Row = 1;
             app.XLabel_2.Layout.Column = 2;
             app.XLabel_2.Text = 'X';
@@ -9969,7 +9862,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportPixelsX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.ImportPixelsX.Tag = 'Import Diffraction';
             app.ImportPixelsX.HorizontalAlignment = 'center';
-            app.ImportPixelsX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportPixelsX.Tooltip = {'Number of pixels on X axis in each frame (1st dimension of image stack)'};
             app.ImportPixelsX.Layout.Row = 1;
             app.ImportPixelsX.Layout.Column = 3;
@@ -9978,7 +9870,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create YLabel_2
             app.YLabel_2 = uilabel(app.ImportDimensionGrid);
             app.YLabel_2.HorizontalAlignment = 'right';
-            app.YLabel_2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.YLabel_2.Layout.Row = 1;
             app.YLabel_2.Layout.Column = 4;
             app.YLabel_2.Text = ' Y';
@@ -9991,7 +9882,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportPixelsY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.ImportPixelsY.Tag = 'Import Diffraction';
             app.ImportPixelsY.HorizontalAlignment = 'center';
-            app.ImportPixelsY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportPixelsY.Tooltip = {'Number of pixels on Y axis in each frame (2nd dimension of image stack)'};
             app.ImportPixelsY.Layout.Row = 1;
             app.ImportPixelsY.Layout.Column = 5;
@@ -10002,7 +9892,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFramesLabel.HorizontalAlignment = 'center';
             app.ImportFramesLabel.FontName = 'Arial';
             app.ImportFramesLabel.FontWeight = 'bold';
-            app.ImportFramesLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportFramesLabel.Layout.Row = 2;
             app.ImportFramesLabel.Layout.Column = 1;
             app.ImportFramesLabel.Text = 'Frames';
@@ -10010,7 +9899,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create XLabel
             app.XLabel = uilabel(app.ImportDimensionGrid);
             app.XLabel.HorizontalAlignment = 'right';
-            app.XLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.XLabel.Layout.Row = 2;
             app.XLabel.Layout.Column = 2;
             app.XLabel.Text = 'X';
@@ -10023,7 +9911,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFramesX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.ImportFramesX.Tag = 'Import Real';
             app.ImportFramesX.HorizontalAlignment = 'center';
-            app.ImportFramesX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportFramesX.Tooltip = {'Number of frames on X axis (3rd dimension of image stack)'};
             app.ImportFramesX.Layout.Row = 2;
             app.ImportFramesX.Layout.Column = 3;
@@ -10032,7 +9919,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create YLabel
             app.YLabel = uilabel(app.ImportDimensionGrid);
             app.YLabel.HorizontalAlignment = 'right';
-            app.YLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.YLabel.Layout.Row = 2;
             app.YLabel.Layout.Column = 4;
             app.YLabel.Text = ' Y';
@@ -10045,7 +9931,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFramesY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.ImportFramesY.Tag = 'Import Real';
             app.ImportFramesY.HorizontalAlignment = 'center';
-            app.ImportFramesY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportFramesY.Tooltip = {'Number of frames on Y axis (4th dimension of image stack)'};
             app.ImportFramesY.Layout.Row = 2;
             app.ImportFramesY.Layout.Column = 5;
@@ -10060,12 +9945,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFileSizeGrid.Padding = [0 0 0 0];
             app.ImportFileSizeGrid.Layout.Row = 4;
             app.ImportFileSizeGrid.Layout.Column = 1;
-            app.ImportFileSizeGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ImportActualFilesizeLabel
             app.ImportActualFilesizeLabel = uilabel(app.ImportFileSizeGrid);
             app.ImportActualFilesizeLabel.HorizontalAlignment = 'right';
-            app.ImportActualFilesizeLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportActualFilesizeLabel.Layout.Row = 1;
             app.ImportActualFilesizeLabel.Layout.Column = 1;
             app.ImportActualFilesizeLabel.Text = 'Size:';
@@ -10073,7 +9956,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ImportActualFilesize
             app.ImportActualFilesize = uilabel(app.ImportFileSizeGrid);
             app.ImportActualFilesize.HorizontalAlignment = 'center';
-            app.ImportActualFilesize.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportActualFilesize.Tooltip = {'Actual physical file size'};
             app.ImportActualFilesize.Layout.Row = 1;
             app.ImportActualFilesize.Layout.Column = 2;
@@ -10082,7 +9964,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ImportEstimatedFilesizeLabel
             app.ImportEstimatedFilesizeLabel = uilabel(app.ImportFileSizeGrid);
             app.ImportEstimatedFilesizeLabel.HorizontalAlignment = 'right';
-            app.ImportEstimatedFilesizeLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportEstimatedFilesizeLabel.Layout.Row = 2;
             app.ImportEstimatedFilesizeLabel.Layout.Column = 1;
             app.ImportEstimatedFilesizeLabel.Text = 'Est.:';
@@ -10090,7 +9971,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ImportEstimatedFilesize
             app.ImportEstimatedFilesize = uilabel(app.ImportFileSizeGrid);
             app.ImportEstimatedFilesize.HorizontalAlignment = 'center';
-            app.ImportEstimatedFilesize.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportEstimatedFilesize.Tooltip = {'File size calculated from info above. Size after the image stack (the "data tail") is implicit, thus may not be accurate'};
             app.ImportEstimatedFilesize.Layout.Row = 2;
             app.ImportEstimatedFilesize.Layout.Column = 2;
@@ -10102,7 +9982,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DatasetInfofromMetadataLabel.VerticalAlignment = 'bottom';
             app.DatasetInfofromMetadataLabel.FontName = 'Arial';
             app.DatasetInfofromMetadataLabel.FontWeight = 'bold';
-            app.DatasetInfofromMetadataLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DatasetInfofromMetadataLabel.Layout.Row = 5;
             app.DatasetInfofromMetadataLabel.Layout.Column = 1;
             app.DatasetInfofromMetadataLabel.Text = 'Dataset Info from Metadata';
@@ -10111,18 +9990,15 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFileMetadata = uitextarea(app.ImportDatasetInfoGrid);
             app.ImportFileMetadata.Editable = 'off';
             app.ImportFileMetadata.FontName = 'Arial';
-            app.ImportFileMetadata.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportFileMetadata.Layout.Row = 6;
             app.ImportFileMetadata.Layout.Column = 1;
 
             % Create ImportOptionsPanel
             app.ImportOptionsPanel = uipanel(app.ImportGrid);
             app.ImportOptionsPanel.AutoResizeChildren = 'off';
-            app.ImportOptionsPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportOptionsPanel.BorderType = 'none';
             app.ImportOptionsPanel.TitlePosition = 'centertop';
             app.ImportOptionsPanel.Title = 'Import Options';
-            app.ImportOptionsPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ImportOptionsPanel.Layout.Row = 2;
             app.ImportOptionsPanel.Layout.Column = 2;
             app.ImportOptionsPanel.FontName = 'Arial';
@@ -10135,7 +10011,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportOptionsGrid.ColumnSpacing = 6;
             app.ImportOptionsGrid.RowSpacing = 6;
             app.ImportOptionsGrid.Padding = [0 0 0 4];
-            app.ImportOptionsGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create MemoryGrid
             app.MemoryGrid = uigridlayout(app.ImportOptionsGrid);
@@ -10146,14 +10021,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.MemoryGrid.Padding = [0 0 0 0];
             app.MemoryGrid.Layout.Row = 1;
             app.MemoryGrid.Layout.Column = [1 2];
-            app.MemoryGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create MemoryType
             app.MemoryType = uidropdown(app.MemoryGrid);
             app.MemoryType.Items = {'Physical Memory', 'Virtual Mapping'};
             app.MemoryType.Tooltip = {'VIRTUAL MEMORY is best for most large datasets as it does not physically load the dataset into RAM. This can be significantly faster depending on drive speed and file size. HOWEVER - it is currently only beneficial for datasets with no header of footer.'; ''; 'Virtual mapping to the GPU is not recommended at this point. It is extremely fast to load, but still requires significant GPU memory resources.'};
-            app.MemoryType.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.MemoryType.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.MemoryType.Layout.Row = 1;
             app.MemoryType.Layout.Column = 1;
             app.MemoryType.Value = 'Physical Memory';
@@ -10163,8 +10035,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.GPU.Items = {'GPU off'};
             app.GPU.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.GPU.Tooltip = {'GPU acceleration'};
-            app.GPU.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.GPU.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.GPU.Layout.Row = 1;
             app.GPU.Layout.Column = 2;
             app.GPU.Value = 'GPU off';
@@ -10176,7 +10046,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportPartialPixels.Text = '    Diffraction Partial Import';
             app.ImportPartialPixels.FontName = 'Arial';
             app.ImportPartialPixels.FontWeight = 'bold';
-            app.ImportPartialPixels.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportPartialPixels.Layout.Row = 2;
             app.ImportPartialPixels.Layout.Column = 1;
 
@@ -10187,7 +10056,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportPartialFrames.Text = '    Real-space Partial Import';
             app.ImportPartialFrames.FontName = 'Arial';
             app.ImportPartialFrames.FontWeight = 'bold';
-            app.ImportPartialFrames.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportPartialFrames.Layout.Row = 2;
             app.ImportPartialFrames.Layout.Column = 2;
 
@@ -10200,12 +10068,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialImportGrid.Padding = [0 0 0 0];
             app.DiffractionPartialImportGrid.Layout.Row = 3;
             app.DiffractionPartialImportGrid.Layout.Column = 1;
-            app.DiffractionPartialImportGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create BinningDistanceLabel
             app.BinningDistanceLabel = uilabel(app.DiffractionPartialImportGrid);
             app.BinningDistanceLabel.HorizontalAlignment = 'right';
-            app.BinningDistanceLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BinningDistanceLabel.Enable = 'off';
             app.BinningDistanceLabel.Layout.Row = 1;
             app.BinningDistanceLabel.Layout.Column = [1 3];
@@ -10217,7 +10083,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialImportPixelsDist.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialImportPixelsDist.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.DiffractionPartialImportPixelsDist.Tag = 'Import Diffraction';
-            app.DiffractionPartialImportPixelsDist.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialImportPixelsDist.Enable = 'off';
             app.DiffractionPartialImportPixelsDist.Tooltip = {'To bin n×n pixels into one (by averaging)'};
             app.DiffractionPartialImportPixelsDist.Layout.Row = 1;
@@ -10227,7 +10092,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create xsub1Label_5
             app.xsub1Label_5 = uilabel(app.DiffractionPartialImportGrid);
             app.xsub1Label_5.HorizontalAlignment = 'right';
-            app.xsub1Label_5.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.xsub1Label_5.Enable = 'off';
             app.xsub1Label_5.Layout.Row = 2;
             app.xsub1Label_5.Layout.Column = 1;
@@ -10240,7 +10104,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialImportXStart.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialImportXStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.DiffractionPartialImportXStart.Tag = 'Import Diffraction';
-            app.DiffractionPartialImportXStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialImportXStart.Enable = 'off';
             app.DiffractionPartialImportXStart.Tooltip = {'Starting pixel on X (1st dimension of image stack) to import, in each frame'};
             app.DiffractionPartialImportXStart.Layout.Row = 2;
@@ -10250,7 +10113,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ysub1Label_5
             app.ysub1Label_5 = uilabel(app.DiffractionPartialImportGrid);
             app.ysub1Label_5.HorizontalAlignment = 'right';
-            app.ysub1Label_5.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ysub1Label_5.Enable = 'off';
             app.ysub1Label_5.Layout.Row = 2;
             app.ysub1Label_5.Layout.Column = 3;
@@ -10263,7 +10125,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialImportYStart.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialImportYStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.DiffractionPartialImportYStart.Tag = 'Import Diffraction';
-            app.DiffractionPartialImportYStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialImportYStart.Enable = 'off';
             app.DiffractionPartialImportYStart.Tooltip = {'Starting pixel on Y (2nd dimension of image stack) to import, in each frame'};
             app.DiffractionPartialImportYStart.Layout.Row = 2;
@@ -10273,7 +10134,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create XLabel_3
             app.XLabel_3 = uilabel(app.DiffractionPartialImportGrid);
             app.XLabel_3.HorizontalAlignment = 'right';
-            app.XLabel_3.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.XLabel_3.Enable = 'off';
             app.XLabel_3.Layout.Row = 3;
             app.XLabel_3.Layout.Column = 1;
@@ -10285,7 +10145,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialImportX.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialImportX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.DiffractionPartialImportX.Tag = 'Import Diffraction';
-            app.DiffractionPartialImportX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialImportX.Enable = 'off';
             app.DiffractionPartialImportX.Tooltip = {'Total pixels after binning on X (1st dimension of image stack), in each frame'};
             app.DiffractionPartialImportX.Layout.Row = 3;
@@ -10295,7 +10154,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create YLabel_3
             app.YLabel_3 = uilabel(app.DiffractionPartialImportGrid);
             app.YLabel_3.HorizontalAlignment = 'right';
-            app.YLabel_3.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.YLabel_3.Enable = 'off';
             app.YLabel_3.Layout.Row = 3;
             app.YLabel_3.Layout.Column = 3;
@@ -10307,7 +10165,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionPartialImportY.ValueDisplayFormat = '%.0f';
             app.DiffractionPartialImportY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.DiffractionPartialImportY.Tag = 'Import Diffraction';
-            app.DiffractionPartialImportY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionPartialImportY.Enable = 'off';
             app.DiffractionPartialImportY.Tooltip = {'Total pixels after binning on Y (2nd dimension of image stack), in each frame'};
             app.DiffractionPartialImportY.Layout.Row = 3;
@@ -10323,12 +10180,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialImportGrid.Padding = [0 0 0 0];
             app.RealPartialImportGrid.Layout.Row = 3;
             app.RealPartialImportGrid.Layout.Column = 2;
-            app.RealPartialImportGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SamplingIntervalLabel_2
             app.SamplingIntervalLabel_2 = uilabel(app.RealPartialImportGrid);
             app.SamplingIntervalLabel_2.HorizontalAlignment = 'right';
-            app.SamplingIntervalLabel_2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SamplingIntervalLabel_2.Enable = 'off';
             app.SamplingIntervalLabel_2.Layout.Row = 1;
             app.SamplingIntervalLabel_2.Layout.Column = [1 3];
@@ -10340,7 +10195,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialImportFramesDist.ValueDisplayFormat = '%.0f';
             app.RealPartialImportFramesDist.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.RealPartialImportFramesDist.Tag = 'Import Real';
-            app.RealPartialImportFramesDist.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialImportFramesDist.Enable = 'off';
             app.RealPartialImportFramesDist.Tooltip = {'Distance between sampling frames in both X & Y directions (neighboring frames have distance of 1)'};
             app.RealPartialImportFramesDist.Layout.Row = 1;
@@ -10350,7 +10204,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create xsub1Label_6
             app.xsub1Label_6 = uilabel(app.RealPartialImportGrid);
             app.xsub1Label_6.HorizontalAlignment = 'right';
-            app.xsub1Label_6.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.xsub1Label_6.Enable = 'off';
             app.xsub1Label_6.Layout.Row = 2;
             app.xsub1Label_6.Layout.Column = 1;
@@ -10363,7 +10216,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialImportXStart.ValueDisplayFormat = '%.0f';
             app.RealPartialImportXStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.RealPartialImportXStart.Tag = 'Import Real';
-            app.RealPartialImportXStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialImportXStart.Enable = 'off';
             app.RealPartialImportXStart.Tooltip = {'Starting frame on X (3rd dimension of image stack) to import'};
             app.RealPartialImportXStart.Layout.Row = 2;
@@ -10373,7 +10225,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ysub1Label_6
             app.ysub1Label_6 = uilabel(app.RealPartialImportGrid);
             app.ysub1Label_6.HorizontalAlignment = 'right';
-            app.ysub1Label_6.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ysub1Label_6.Enable = 'off';
             app.ysub1Label_6.Layout.Row = 2;
             app.ysub1Label_6.Layout.Column = 3;
@@ -10386,7 +10237,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialImportYStart.ValueDisplayFormat = '%.0f';
             app.RealPartialImportYStart.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.RealPartialImportYStart.Tag = 'Import Real';
-            app.RealPartialImportYStart.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialImportYStart.Enable = 'off';
             app.RealPartialImportYStart.Tooltip = {'Starting frame on Y (4th dimension of image stack) to import'};
             app.RealPartialImportYStart.Layout.Row = 2;
@@ -10396,7 +10246,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create INFrXl
             app.INFrXl = uilabel(app.RealPartialImportGrid);
             app.INFrXl.HorizontalAlignment = 'right';
-            app.INFrXl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.INFrXl.Enable = 'off';
             app.INFrXl.Layout.Row = 3;
             app.INFrXl.Layout.Column = 1;
@@ -10408,7 +10257,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialImportX.ValueDisplayFormat = '%.0f';
             app.RealPartialImportX.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.RealPartialImportX.Tag = 'Import Real';
-            app.RealPartialImportX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialImportX.Enable = 'off';
             app.RealPartialImportX.Tooltip = {'Total frames after sampling on X (3rd dimension of image stack)'};
             app.RealPartialImportX.Layout.Row = 3;
@@ -10418,7 +10266,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create INFrYl
             app.INFrYl = uilabel(app.RealPartialImportGrid);
             app.INFrYl.HorizontalAlignment = 'right';
-            app.INFrYl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.INFrYl.Enable = 'off';
             app.INFrYl.Layout.Row = 3;
             app.INFrYl.Layout.Column = 3;
@@ -10430,7 +10277,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPartialImportY.ValueDisplayFormat = '%.0f';
             app.RealPartialImportY.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.RealPartialImportY.Tag = 'Import Real';
-            app.RealPartialImportY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPartialImportY.Enable = 'off';
             app.RealPartialImportY.Tooltip = {'Total frames after sampling on Y (4th dimension of image stack)'};
             app.RealPartialImportY.Layout.Row = 3;
@@ -10443,7 +10289,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportSummaryLabel.VerticalAlignment = 'bottom';
             app.ImportSummaryLabel.FontName = 'Arial';
             app.ImportSummaryLabel.FontWeight = 'bold';
-            app.ImportSummaryLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportSummaryLabel.Layout.Row = 4;
             app.ImportSummaryLabel.Layout.Column = [1 2];
             app.ImportSummaryLabel.Text = 'Import Summary';
@@ -10452,7 +10297,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportSummary = uitextarea(app.ImportOptionsGrid);
             app.ImportSummary.Editable = 'off';
             app.ImportSummary.FontName = 'Arial';
-            app.ImportSummary.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportSummary.Layout.Row = 5;
             app.ImportSummary.Layout.Column = [1 2];
 
@@ -10465,15 +10309,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportButtonGrid.Padding = [0 0 0 0];
             app.ImportButtonGrid.Layout.Row = 3;
             app.ImportButtonGrid.Layout.Column = 2;
-            app.ImportButtonGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ImportData
             app.ImportData = uibutton(app.ImportButtonGrid, 'push');
             app.ImportData.ButtonPushedFcn = createCallbackFcn(app, @import_callbacks, true);
-            app.ImportData.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ImportData.FontName = 'Arial';
             app.ImportData.FontWeight = 'bold';
-            app.ImportData.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImportData.Layout.Row = 1;
             app.ImportData.Layout.Column = 1;
             app.ImportData.Text = 'Import Data';
@@ -10483,17 +10324,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.SwapDataset.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
             app.SwapDataset.Tooltip = {'Keep all current parameters/alignments/setups, and swap the already-imported dataset with another with exact (import) dimensions/datatype'};
             app.SwapDataset.Text = 'Swap Dataset';
-            app.SwapDataset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SwapDataset.Layout.Row = 1;
             app.SwapDataset.Layout.Column = 2;
 
             % Create CancelImport
             app.CancelImport = uibutton(app.ImportButtonGrid, 'push');
             app.CancelImport.ButtonPushedFcn = createCallbackFcn(app, @import_callbacks, true);
-            app.CancelImport.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CancelImport.FontName = 'Arial';
             app.CancelImport.FontWeight = 'bold';
-            app.CancelImport.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CancelImport.Layout.Row = 1;
             app.CancelImport.Layout.Column = 3;
             app.CancelImport.Text = 'Cancel';
@@ -10501,10 +10339,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Create SettingsPanel
             app.SettingsPanel = uipanel(app.Quant4D_Fig);
             app.SettingsPanel.AutoResizeChildren = 'off';
-            app.SettingsPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SettingsPanel.BorderType = 'none';
             app.SettingsPanel.TitlePosition = 'centertop';
-            app.SettingsPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.SettingsPanel.FontWeight = 'bold';
             app.SettingsPanel.Position = [280 1 260 470];
 
@@ -10515,7 +10351,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SettingsGrid.ColumnSpacing = 4;
             app.SettingsGrid.RowSpacing = 4;
             app.SettingsGrid.Padding = [0 0 0 0];
-            app.SettingsGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SettingsTabGroup
             app.SettingsTabGroup = uitabgroup(app.SettingsGrid);
@@ -10526,8 +10361,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DisplayTab
             app.DisplayTab = uitab(app.SettingsTabGroup);
             app.DisplayTab.Title = 'Display';
-            app.DisplayTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DisplayTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create DisplayGrid
             app.DisplayGrid = uigridlayout(app.DisplayTab);
@@ -10536,7 +10369,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayGrid.ColumnSpacing = 4;
             app.DisplayGrid.RowSpacing = 4;
             app.DisplayGrid.Padding = [4 4 4 4];
-            app.DisplayGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DisplayDropDownGrid
             app.DisplayDropDownGrid = uigridlayout(app.DisplayGrid);
@@ -10547,15 +10379,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayDropDownGrid.Padding = [0 0 0 0];
             app.DisplayDropDownGrid.Layout.Row = 1;
             app.DisplayDropDownGrid.Layout.Column = 1;
-            app.DisplayDropDownGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShowImageWindow
             app.ShowImageWindow = uibutton(app.DisplayDropDownGrid, 'push');
             app.ShowImageWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowImageWindow.Icon = 'frontWindow.png';
-            app.ShowImageWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ShowImageWindow.FontWeight = 'bold';
-            app.ShowImageWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowImageWindow.Tooltip = {'Bring selected image to front'};
             app.ShowImageWindow.Layout.Row = 1;
             app.ShowImageWindow.Layout.Column = 1;
@@ -10566,7 +10395,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImageLabel.HorizontalAlignment = 'right';
             app.ImageLabel.FontName = 'Arial';
             app.ImageLabel.FontWeight = 'bold';
-            app.ImageLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImageLabel.Layout.Row = 1;
             app.ImageLabel.Layout.Column = 2;
             app.ImageLabel.Text = 'Image';
@@ -10576,8 +10404,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayImage.Items = {};
             app.DisplayImage.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayImage.FontName = 'Arial';
-            app.DisplayImage.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.DisplayImage.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DisplayImage.Layout.Row = 1;
             app.DisplayImage.Layout.Column = 3;
             app.DisplayImage.Value = {};
@@ -10588,15 +10414,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayLock.Tooltip = {'Stop changing the selected image when clicking on a new image'};
             app.DisplayLock.Icon = 'link.png';
             app.DisplayLock.Text = '';
-            app.DisplayLock.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DisplayLock.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayLock.Layout.Row = 1;
             app.DisplayLock.Layout.Column = 4;
 
             % Create ColormapLabel
             app.ColormapLabel = uilabel(app.DisplayDropDownGrid);
             app.ColormapLabel.HorizontalAlignment = 'right';
-            app.ColormapLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ColormapLabel.Layout.Row = 2;
             app.ColormapLabel.Layout.Column = [1 2];
             app.ColormapLabel.Text = 'Colormap';
@@ -10605,8 +10428,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DispColorMap = uidropdown(app.DisplayDropDownGrid);
             app.DispColorMap.Items = {'gray', 'hsv', 'jet', 'parula', 'hot', 'cool', 'spring', 'summer', 'autumn', 'winter', 'bone', 'copper', 'pink'};
             app.DispColorMap.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DispColorMap.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.DispColorMap.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DispColorMap.Layout.Row = 2;
             app.DispColorMap.Layout.Column = 3;
             app.DispColorMap.Value = 'gray';
@@ -10617,8 +10438,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DispColorMapInvert.Tooltip = {'Invert colormap'};
             app.DispColorMapInvert.Icon = 'invertColors.png';
             app.DispColorMapInvert.Text = '';
-            app.DispColorMapInvert.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DispColorMapInvert.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DispColorMapInvert.Layout.Row = 2;
             app.DispColorMapInvert.Layout.Column = 4;
 
@@ -10628,7 +10447,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImageStatistics.FontName = 'Monospaced';
             app.ImageStatistics.FontSize = 11;
             app.ImageStatistics.FontWeight = 'bold';
-            app.ImageStatistics.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ImageStatistics.Layout.Row = 2;
             app.ImageStatistics.Layout.Column = 1;
 
@@ -10641,7 +10459,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.HistogramGrid.Padding = [0 0 0 0];
             app.HistogramGrid.Layout.Row = 3;
             app.HistogramGrid.Layout.Column = 1;
-            app.HistogramGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create HistogramAxes
             app.HistogramAxes = uiaxes(app.HistogramGrid);
@@ -10650,7 +10467,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.HistogramAxes.YTick = [];
             app.HistogramAxes.ZTick = [];
             app.HistogramAxes.Box = 'on';
-            app.HistogramAxes.TickDir = 'in';
             app.HistogramAxes.NextPlot = 'add';
             app.HistogramAxes.Layout.Row = [1 3];
             app.HistogramAxes.Layout.Column = [1 3];
@@ -10659,10 +10475,8 @@ classdef Quant4D < matlab.apps.AppBase
             app.HistogramLog = uibutton(app.HistogramGrid, 'state');
             app.HistogramLog.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.HistogramLog.Text = 'log';
-            app.HistogramLog.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.HistogramLog.FontName = 'Arial';
             app.HistogramLog.FontWeight = 'bold';
-            app.HistogramLog.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.HistogramLog.Layout.Row = 2;
             app.HistogramLog.Layout.Column = 2;
 
@@ -10675,15 +10489,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.DispContrastsGrid.Padding = [0 0 0 0];
             app.DispContrastsGrid.Layout.Row = 4;
             app.DispContrastsGrid.Layout.Column = 1;
-            app.DispContrastsGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DisplayBrightnessReset
             app.DisplayBrightnessReset = uibutton(app.DispContrastsGrid, 'push');
             app.DisplayBrightnessReset.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayBrightnessReset.Icon = 'brightness.png';
-            app.DisplayBrightnessReset.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DisplayBrightnessReset.FontWeight = 'bold';
-            app.DisplayBrightnessReset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayBrightnessReset.Tooltip = {'Reset Brightness'};
             app.DisplayBrightnessReset.Layout.Row = 1;
             app.DisplayBrightnessReset.Layout.Column = 1;
@@ -10695,8 +10506,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayBrightness.MajorTickLabels = {};
             app.DisplayBrightness.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayBrightness.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayBrightness.MinorTicks = [];
-            app.DisplayBrightness.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayBrightness.Layout.Row = 1;
             app.DisplayBrightness.Layout.Column = 2;
             app.DisplayBrightness.Value = 50;
@@ -10707,7 +10516,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayBrightnessSpinner.Limits = [0 100];
             app.DisplayBrightnessSpinner.ValueDisplayFormat = '%.4g%%';
             app.DisplayBrightnessSpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayBrightnessSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayBrightnessSpinner.Layout.Row = 1;
             app.DisplayBrightnessSpinner.Layout.Column = 3;
             app.DisplayBrightnessSpinner.Value = 50;
@@ -10716,9 +10524,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayContrastReset = uibutton(app.DispContrastsGrid, 'push');
             app.DisplayContrastReset.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayContrastReset.Icon = 'contrast.png';
-            app.DisplayContrastReset.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DisplayContrastReset.FontWeight = 'bold';
-            app.DisplayContrastReset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayContrastReset.Tooltip = {'Reset Contrast'};
             app.DisplayContrastReset.Layout.Row = 2;
             app.DisplayContrastReset.Layout.Column = 1;
@@ -10730,8 +10536,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayContrast.MajorTickLabels = {};
             app.DisplayContrast.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayContrast.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayContrast.MinorTicks = [];
-            app.DisplayContrast.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayContrast.Layout.Row = 2;
             app.DisplayContrast.Layout.Column = 2;
             app.DisplayContrast.Value = 50;
@@ -10742,7 +10546,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayContrastSpinner.Limits = [0 100];
             app.DisplayContrastSpinner.ValueDisplayFormat = '%.4g%%';
             app.DisplayContrastSpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayContrastSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayContrastSpinner.Layout.Row = 2;
             app.DisplayContrastSpinner.Layout.Column = 3;
             app.DisplayContrastSpinner.Value = 50;
@@ -10751,9 +10554,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayGammaReset = uibutton(app.DispContrastsGrid, 'push');
             app.DisplayGammaReset.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayGammaReset.Icon = 'gamma.png';
-            app.DisplayGammaReset.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DisplayGammaReset.FontWeight = 'bold';
-            app.DisplayGammaReset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayGammaReset.Tooltip = {'Reset Gamma'};
             app.DisplayGammaReset.Layout.Row = 3;
             app.DisplayGammaReset.Layout.Column = 1;
@@ -10766,8 +10567,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayGamma.MajorTickLabels = {};
             app.DisplayGamma.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayGamma.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayGamma.MinorTicks = [];
-            app.DisplayGamma.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayGamma.Layout.Row = 3;
             app.DisplayGamma.Layout.Column = 2;
             app.DisplayGamma.Value = 1;
@@ -10779,7 +10578,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayGammaSpinner.Limits = [0 2];
             app.DisplayGammaSpinner.ValueDisplayFormat = '%.5g';
             app.DisplayGammaSpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayGammaSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayGammaSpinner.Layout.Row = 3;
             app.DisplayGammaSpinner.Layout.Column = 3;
             app.DisplayGammaSpinner.Value = 1;
@@ -10788,8 +10586,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowMaskWindow = uibutton(app.DispContrastsGrid, 'push');
             app.ShowMaskWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowMaskWindow.Icon = 'Aperture.png';
-            app.ShowMaskWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowMaskWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowMaskWindow.Tooltip = {'Show Mask Image'};
             app.ShowMaskWindow.Layout.Row = 4;
             app.ShowMaskWindow.Layout.Column = 1;
@@ -10800,8 +10596,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayMaskOpacitySlider.MajorTicks = [];
             app.DisplayMaskOpacitySlider.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayMaskOpacitySlider.ValueChangingFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayMaskOpacitySlider.MinorTicks = [];
-            app.DisplayMaskOpacitySlider.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayMaskOpacitySlider.Tooltip = {'Mask opacity displayed on pattern'};
             app.DisplayMaskOpacitySlider.Layout.Row = 4;
             app.DisplayMaskOpacitySlider.Layout.Column = 2;
@@ -10812,15 +10606,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayMaskOpacitySpinner.Limits = [0 100];
             app.DisplayMaskOpacitySpinner.ValueDisplayFormat = '%.4g%%';
             app.DisplayMaskOpacitySpinner.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
-            app.DisplayMaskOpacitySpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayMaskOpacitySpinner.Layout.Row = 4;
             app.DisplayMaskOpacitySpinner.Layout.Column = 3;
 
             % Create WindowsTab
             app.WindowsTab = uitab(app.SettingsTabGroup);
             app.WindowsTab.Title = 'Windows';
-            app.WindowsTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.WindowsTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create WindowsTabGrid
             app.WindowsTabGrid = uigridlayout(app.WindowsTab);
@@ -10829,17 +10620,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.WindowsTabGrid.ColumnSpacing = 4;
             app.WindowsTabGrid.RowSpacing = 4;
             app.WindowsTabGrid.Padding = [4 4 4 4];
-            app.WindowsTabGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create BandpassFilterPanel
             app.BandpassFilterPanel = uipanel(app.WindowsTabGrid);
             app.BandpassFilterPanel.AutoResizeChildren = 'off';
             app.BandpassFilterPanel.Tooltip = {'Apply a bandpass, lowpass, or highpass filter. Units are in pixels applied in fourier space.'};
-            app.BandpassFilterPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BandpassFilterPanel.BorderType = 'none';
             app.BandpassFilterPanel.TitlePosition = 'centertop';
             app.BandpassFilterPanel.Title = 'iCoM / dCoM Bandpass Filter';
-            app.BandpassFilterPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.BandpassFilterPanel.Layout.Row = 2;
             app.BandpassFilterPanel.Layout.Column = 1;
             app.BandpassFilterPanel.FontWeight = 'bold';
@@ -10850,15 +10638,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.BandpassFilterGrid.ColumnSpacing = 4;
             app.BandpassFilterGrid.RowSpacing = 4;
             app.BandpassFilterGrid.Padding = [0 0 0 4];
-            app.BandpassFilterGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create BandpassFilter
             app.BandpassFilter = uislider(app.BandpassFilterGrid, 'range');
             app.BandpassFilter.MajorTicks = [];
             app.BandpassFilter.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
             app.BandpassFilter.ValueChangingFcn = createCallbackFcn(app, @first_moment, true);
-            app.BandpassFilter.MinorTicks = [];
-            app.BandpassFilter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BandpassFilter.Layout.Row = 1;
             app.BandpassFilter.Layout.Column = [1 2];
 
@@ -10869,7 +10654,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.BandpassFilterHigh.RoundFractionalValues = 'on';
             app.BandpassFilterHigh.ValueDisplayFormat = '%d px';
             app.BandpassFilterHigh.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
-            app.BandpassFilterHigh.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BandpassFilterHigh.Layout.Row = 2;
             app.BandpassFilterHigh.Layout.Column = 2;
             app.BandpassFilterHigh.Value = 100;
@@ -10881,18 +10665,15 @@ classdef Quant4D < matlab.apps.AppBase
             app.BandpassFilterLow.RoundFractionalValues = 'on';
             app.BandpassFilterLow.ValueDisplayFormat = '%d px';
             app.BandpassFilterLow.ValueChangedFcn = createCallbackFcn(app, @first_moment, true);
-            app.BandpassFilterLow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.BandpassFilterLow.Layout.Row = 2;
             app.BandpassFilterLow.Layout.Column = 1;
 
             % Create ShowImageWindowsPanel
             app.ShowImageWindowsPanel = uipanel(app.WindowsTabGrid);
             app.ShowImageWindowsPanel.AutoResizeChildren = 'off';
-            app.ShowImageWindowsPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowImageWindowsPanel.BorderType = 'none';
             app.ShowImageWindowsPanel.TitlePosition = 'centertop';
             app.ShowImageWindowsPanel.Title = 'Show Image Windows';
-            app.ShowImageWindowsPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ShowImageWindowsPanel.Layout.Row = 1;
             app.ShowImageWindowsPanel.Layout.Column = 1;
             app.ShowImageWindowsPanel.FontName = 'Arial';
@@ -10904,14 +10685,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowImageWindowsGrid.ColumnSpacing = 0;
             app.ShowImageWindowsGrid.RowSpacing = 0;
             app.ShowImageWindowsGrid.Padding = [0 0 0 4];
-            app.ShowImageWindowsGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShowDiffractionWindow
             app.ShowDiffractionWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowDiffractionWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowDiffractionWindow.Tag = 'Diffraction';
-            app.ShowDiffractionWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowDiffractionWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowDiffractionWindow.Tooltip = {'Show Diffraction Pattern'};
             app.ShowDiffractionWindow.Layout.Row = 1;
             app.ShowDiffractionWindow.Layout.Column = 1;
@@ -10922,8 +10700,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowDiffractionMaskWindow2.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowDiffractionMaskWindow2.Tag = 'DiffractionMask';
             app.ShowDiffractionMaskWindow2.Icon = 'Aperture.png';
-            app.ShowDiffractionMaskWindow2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowDiffractionMaskWindow2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowDiffractionMaskWindow2.Tooltip = {'Show Diffraction Mask'};
             app.ShowDiffractionMaskWindow2.Layout.Row = 1;
             app.ShowDiffractionMaskWindow2.Layout.Column = 2;
@@ -10933,8 +10709,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowRealWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowRealWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowRealWindow.Tag = 'Real';
-            app.ShowRealWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowRealWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowRealWindow.Tooltip = {'Show Real-space Image'};
             app.ShowRealWindow.Layout.Row = 2;
             app.ShowRealWindow.Layout.Column = 1;
@@ -10945,9 +10719,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowRealMaskWindow2.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowRealMaskWindow2.Tag = 'RealMask';
             app.ShowRealMaskWindow2.Icon = 'Aperture.png';
-            app.ShowRealMaskWindow2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ShowRealMaskWindow2.FontSize = 10;
-            app.ShowRealMaskWindow2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowRealMaskWindow2.Tooltip = {'Show Real-space Mask'};
             app.ShowRealMaskWindow2.Layout.Row = 2;
             app.ShowRealMaskWindow2.Layout.Column = 2;
@@ -10958,8 +10730,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowColorWheelWindow2.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowColorWheelWindow2.Tag = 'ColorWheel';
             app.ShowColorWheelWindow2.Icon = 'colorwheel.png';
-            app.ShowColorWheelWindow2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowColorWheelWindow2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowColorWheelWindow2.Tooltip = {'Show Color Wheel for Phase Vector Field Direction'};
             app.ShowColorWheelWindow2.Layout.Row = 5;
             app.ShowColorWheelWindow2.Layout.Column = 1;
@@ -10969,8 +10739,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowCoMPhaseMagnitudeWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowCoMPhaseMagnitudeWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowCoMPhaseMagnitudeWindow.Tag = 'CoMPhMag';
-            app.ShowCoMPhaseMagnitudeWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowCoMPhaseMagnitudeWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowCoMPhaseMagnitudeWindow.Tooltip = {'Show CoM/DPC Phase (Magnitude-shaded) Image'};
             app.ShowCoMPhaseMagnitudeWindow.Layout.Row = 5;
             app.ShowCoMPhaseMagnitudeWindow.Layout.Column = 2;
@@ -10980,8 +10748,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowCoMPhaseWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowCoMPhaseWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowCoMPhaseWindow.Tag = 'CoMPh';
-            app.ShowCoMPhaseWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowCoMPhaseWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowCoMPhaseWindow.Tooltip = {'Show CoM/DPC Phase Image'};
             app.ShowCoMPhaseWindow.Layout.Row = 4;
             app.ShowCoMPhaseWindow.Layout.Column = 2;
@@ -10991,8 +10757,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowCoMMagnitudeWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowCoMMagnitudeWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowCoMMagnitudeWindow.Tag = 'CoMMag';
-            app.ShowCoMMagnitudeWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowCoMMagnitudeWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowCoMMagnitudeWindow.Tooltip = {'Show CoM/DPC Magnitude Image'};
             app.ShowCoMMagnitudeWindow.Layout.Row = 4;
             app.ShowCoMMagnitudeWindow.Layout.Column = 1;
@@ -11002,8 +10766,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowCoMXWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowCoMXWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowCoMXWindow.Tag = 'CoMX';
-            app.ShowCoMXWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowCoMXWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowCoMXWindow.Tooltip = {'Show CoM/DPC X Image'};
             app.ShowCoMXWindow.Layout.Row = 3;
             app.ShowCoMXWindow.Layout.Column = 1;
@@ -11013,8 +10775,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowCoMYWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowCoMYWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowCoMYWindow.Tag = 'CoMY';
-            app.ShowCoMYWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowCoMYWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowCoMYWindow.Tooltip = {'Show CoM/DPC Y Image'};
             app.ShowCoMYWindow.Layout.Row = 3;
             app.ShowCoMYWindow.Layout.Column = 2;
@@ -11024,8 +10784,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowdCoMWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowdCoMWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowdCoMWindow.Tag = 'dCoM';
-            app.ShowdCoMWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowdCoMWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowdCoMWindow.Tooltip = {'Show dCoM/dDPC Image'};
             app.ShowdCoMWindow.Layout.Row = 6;
             app.ShowdCoMWindow.Layout.Column = 1;
@@ -11035,8 +10793,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowiCoMWindow = uibutton(app.ShowImageWindowsGrid, 'push');
             app.ShowiCoMWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowiCoMWindow.Tag = 'iCoM';
-            app.ShowiCoMWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowiCoMWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowiCoMWindow.Tooltip = {'Show iCoM/iDPC Image'};
             app.ShowiCoMWindow.Layout.Row = 6;
             app.ShowiCoMWindow.Layout.Column = 2;
@@ -11051,12 +10807,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.VectorSamplingGrid.Padding = [4 4 4 4];
             app.VectorSamplingGrid.Layout.Row = 7;
             app.VectorSamplingGrid.Layout.Column = [1 2];
-            app.VectorSamplingGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DispVecFieldLabel
             app.DispVecFieldLabel = uilabel(app.VectorSamplingGrid);
             app.DispVecFieldLabel.HorizontalAlignment = 'right';
-            app.DispVecFieldLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DispVecFieldLabel.Layout.Row = 1;
             app.DispVecFieldLabel.Layout.Column = 1;
             app.DispVecFieldLabel.Text = 'Vector Sampling:';
@@ -11067,8 +10821,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayVectorField.ItemsData = [0 1 2 4 8 16];
             app.DisplayVectorField.ValueChangedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayVectorField.Tooltip = {'Plot vector field on the current selected Real-space image'};
-            app.DisplayVectorField.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.DisplayVectorField.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DisplayVectorField.Layout.Row = 1;
             app.DisplayVectorField.Layout.Column = 2;
             app.DisplayVectorField.Value = 0;
@@ -11077,8 +10829,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DisplayVectorColor = uibutton(app.VectorSamplingGrid, 'push');
             app.DisplayVectorColor.ButtonPushedFcn = createCallbackFcn(app, @display_callbacks, true);
             app.DisplayVectorColor.Icon = 'colorPicker.png';
-            app.DisplayVectorColor.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DisplayVectorColor.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DisplayVectorColor.Tooltip = {'Change Vector Field color'};
             app.DisplayVectorColor.Layout.Row = 1;
             app.DisplayVectorColor.Layout.Column = 3;
@@ -11089,8 +10839,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowColorWheelWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowColorWheelWindow.Tag = 'ColorWheel';
             app.ShowColorWheelWindow.Icon = 'colorwheel.png';
-            app.ShowColorWheelWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowColorWheelWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowColorWheelWindow.Tooltip = {'Show Color Wheel for Phase Vector Field Direction'};
             app.ShowColorWheelWindow.Layout.Row = 1;
             app.ShowColorWheelWindow.Layout.Column = 4;
@@ -11098,11 +10846,9 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create WindowResizePanel
             app.WindowResizePanel = uipanel(app.WindowsTabGrid);
-            app.WindowResizePanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.WindowResizePanel.BorderType = 'none';
             app.WindowResizePanel.TitlePosition = 'centertop';
             app.WindowResizePanel.Title = 'Window size and orientation';
-            app.WindowResizePanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.WindowResizePanel.Layout.Row = 3;
             app.WindowResizePanel.Layout.Column = 1;
             app.WindowResizePanel.FontWeight = 'bold';
@@ -11114,7 +10860,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.WindowResizeGrid.ColumnSpacing = 0;
             app.WindowResizeGrid.RowSpacing = 0;
             app.WindowResizeGrid.Padding = [0 0 0 0];
-            app.WindowResizeGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create WindowResizeTabGroup
             app.WindowResizeTabGroup = uitabgroup(app.WindowResizeGrid);
@@ -11124,8 +10869,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DiffractionTab
             app.DiffractionTab = uitab(app.WindowResizeTabGroup);
             app.DiffractionTab.Title = 'Diffraction';
-            app.DiffractionTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.DiffractionTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create DiffractionTabGrid
             app.DiffractionTabGrid = uigridlayout(app.DiffractionTab);
@@ -11134,15 +10877,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionTabGrid.ColumnSpacing = 4;
             app.DiffractionTabGrid.RowSpacing = 4;
             app.DiffractionTabGrid.Padding = [4 4 4 4];
-            app.DiffractionTabGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DiffractionWindowPanel
             app.DiffractionWindowPanel = uipanel(app.DiffractionTabGrid);
             app.DiffractionWindowPanel.AutoResizeChildren = 'off';
-            app.DiffractionWindowPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionWindowPanel.BorderType = 'none';
             app.DiffractionWindowPanel.TitlePosition = 'centertop';
-            app.DiffractionWindowPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DiffractionWindowPanel.Layout.Row = 1;
             app.DiffractionWindowPanel.Layout.Column = 1;
             app.DiffractionWindowPanel.FontName = 'Arial';
@@ -11155,7 +10895,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionWindowGrid.ColumnSpacing = 4;
             app.DiffractionWindowGrid.RowSpacing = 4;
             app.DiffractionWindowGrid.Padding = [0 0 0 4];
-            app.DiffractionWindowGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DiffractionAxesGrid
             app.DiffractionAxesGrid = uigridlayout(app.DiffractionWindowGrid);
@@ -11166,7 +10905,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionAxesGrid.Padding = [0 0 0 0];
             app.DiffractionAxesGrid.Layout.Row = 1;
             app.DiffractionAxesGrid.Layout.Column = [1 7];
-            app.DiffractionAxesGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShowDiffractionAxes
             app.ShowDiffractionAxes = uibutton(app.DiffractionAxesGrid, 'state');
@@ -11175,8 +10913,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowDiffractionAxes.Tooltip = {'Show Axis Directions on Images'};
             app.ShowDiffractionAxes.Icon = 'axes.png';
             app.ShowDiffractionAxes.Text = '';
-            app.ShowDiffractionAxes.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowDiffractionAxes.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowDiffractionAxes.Layout.Row = 1;
             app.ShowDiffractionAxes.Layout.Column = 2;
             app.ShowDiffractionAxes.Value = true;
@@ -11188,9 +10924,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ReverseDiffractionX.Tooltip = {'Reverse X-axis Direction'};
             app.ReverseDiffractionX.Icon = 'axis-x.png';
             app.ReverseDiffractionX.Text = '';
-            app.ReverseDiffractionX.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ReverseDiffractionX.FontWeight = 'bold';
-            app.ReverseDiffractionX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ReverseDiffractionX.Layout.Row = 1;
             app.ReverseDiffractionX.Layout.Column = 3;
 
@@ -11201,9 +10935,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ReverseDiffractionY.Tooltip = {'Reverse Y-axis Direction'};
             app.ReverseDiffractionY.Icon = 'axis-y.png';
             app.ReverseDiffractionY.Text = '';
-            app.ReverseDiffractionY.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ReverseDiffractionY.FontWeight = 'bold';
-            app.ReverseDiffractionY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ReverseDiffractionY.Layout.Row = 1;
             app.ReverseDiffractionY.Layout.Column = 4;
             app.ReverseDiffractionY.Value = true;
@@ -11222,8 +10954,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RotateDiffraction.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
             app.RotateDiffraction.Tag = 'Diffraction';
             app.RotateDiffraction.Tooltip = {'Rotate Image Display'};
-            app.RotateDiffraction.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.RotateDiffraction.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.RotateDiffraction.Layout.Row = 1;
             app.RotateDiffraction.Layout.Column = 7;
             app.RotateDiffraction.Value = 0;
@@ -11231,7 +10961,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create WEditFieldLabel
             app.WEditFieldLabel = uilabel(app.DiffractionWindowGrid);
             app.WEditFieldLabel.HorizontalAlignment = 'right';
-            app.WEditFieldLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.WEditFieldLabel.Layout.Row = 2;
             app.WEditFieldLabel.Layout.Column = 1;
             app.WEditFieldLabel.Text = 'W';
@@ -11243,7 +10972,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetDiffractionWindowWidth.ValueDisplayFormat = '%.0f';
             app.SetDiffractionWindowWidth.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetDiffractionWindowWidth.Tag = 'Diffraction';
-            app.SetDiffractionWindowWidth.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetDiffractionWindowWidth.Layout.Row = 2;
             app.SetDiffractionWindowWidth.Layout.Column = 2;
             app.SetDiffractionWindowWidth.Value = 400;
@@ -11251,7 +10979,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create HEditFieldLabel
             app.HEditFieldLabel = uilabel(app.DiffractionWindowGrid);
             app.HEditFieldLabel.HorizontalAlignment = 'right';
-            app.HEditFieldLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.HEditFieldLabel.Layout.Row = 2;
             app.HEditFieldLabel.Layout.Column = 3;
             app.HEditFieldLabel.Text = 'H';
@@ -11263,7 +10990,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetDiffractionWindowHeight.ValueDisplayFormat = '%.0f';
             app.SetDiffractionWindowHeight.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetDiffractionWindowHeight.Tag = 'Diffraction';
-            app.SetDiffractionWindowHeight.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetDiffractionWindowHeight.Layout.Row = 2;
             app.SetDiffractionWindowHeight.Layout.Column = 4;
             app.SetDiffractionWindowHeight.Value = 400;
@@ -11272,8 +10998,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetDiffractionWindow = uibutton(app.DiffractionWindowGrid, 'push');
             app.SetDiffractionWindow.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetDiffractionWindow.Tag = 'Diffraction';
-            app.SetDiffractionWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SetDiffractionWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetDiffractionWindow.Layout.Row = 2;
             app.SetDiffractionWindow.Layout.Column = 6;
             app.SetDiffractionWindow.Text = 'Set';
@@ -11282,8 +11006,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetAllDiffractionWindows = uibutton(app.DiffractionWindowGrid, 'push');
             app.SetAllDiffractionWindows.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetAllDiffractionWindows.Tag = 'Diffraction';
-            app.SetAllDiffractionWindows.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SetAllDiffractionWindows.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetAllDiffractionWindows.Layout.Row = 2;
             app.SetAllDiffractionWindows.Layout.Column = 7;
             app.SetAllDiffractionWindows.Text = 'Set All';
@@ -11291,8 +11013,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create RealspaceTab
             app.RealspaceTab = uitab(app.WindowResizeTabGroup);
             app.RealspaceTab.Title = 'Real-space';
-            app.RealspaceTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.RealspaceTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create RealspaceTabGrid
             app.RealspaceTabGrid = uigridlayout(app.RealspaceTab);
@@ -11301,15 +11021,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealspaceTabGrid.ColumnSpacing = 4;
             app.RealspaceTabGrid.RowSpacing = 4;
             app.RealspaceTabGrid.Padding = [4 4 4 4];
-            app.RealspaceTabGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create RealWindowPanel
             app.RealWindowPanel = uipanel(app.RealspaceTabGrid);
             app.RealWindowPanel.AutoResizeChildren = 'off';
-            app.RealWindowPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealWindowPanel.BorderType = 'none';
             app.RealWindowPanel.TitlePosition = 'centertop';
-            app.RealWindowPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.RealWindowPanel.Layout.Row = 1;
             app.RealWindowPanel.Layout.Column = 1;
             app.RealWindowPanel.FontName = 'Arial';
@@ -11322,7 +11039,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealWindowGrid.ColumnSpacing = 4;
             app.RealWindowGrid.RowSpacing = 4;
             app.RealWindowGrid.Padding = [0 0 0 4];
-            app.RealWindowGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create RealAxesGrid
             app.RealAxesGrid = uigridlayout(app.RealWindowGrid);
@@ -11333,7 +11049,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealAxesGrid.Padding = [0 0 0 0];
             app.RealAxesGrid.Layout.Row = 1;
             app.RealAxesGrid.Layout.Column = [1 7];
-            app.RealAxesGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShowRealAxes
             app.ShowRealAxes = uibutton(app.RealAxesGrid, 'state');
@@ -11342,8 +11057,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowRealAxes.Tooltip = {'Show Axis Directions on Images'};
             app.ShowRealAxes.Icon = 'axes.png';
             app.ShowRealAxes.Text = '';
-            app.ShowRealAxes.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowRealAxes.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowRealAxes.Layout.Row = 1;
             app.ShowRealAxes.Layout.Column = 2;
             app.ShowRealAxes.Value = true;
@@ -11355,9 +11068,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ReverseRealX.Tooltip = {'Reverse X-axis Direction'};
             app.ReverseRealX.Icon = 'axis-x.png';
             app.ReverseRealX.Text = '';
-            app.ReverseRealX.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ReverseRealX.FontWeight = 'bold';
-            app.ReverseRealX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ReverseRealX.Layout.Row = 1;
             app.ReverseRealX.Layout.Column = 3;
 
@@ -11368,9 +11079,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ReverseRealY.Tooltip = {'Reverse Y-axis Direction'};
             app.ReverseRealY.Icon = 'axis-y.png';
             app.ReverseRealY.Text = '';
-            app.ReverseRealY.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ReverseRealY.FontWeight = 'bold';
-            app.ReverseRealY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ReverseRealY.Layout.Row = 1;
             app.ReverseRealY.Layout.Column = 4;
             app.ReverseRealY.Value = true;
@@ -11389,8 +11098,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RotateReal.ValueChangedFcn = createCallbackFcn(app, @axis_direction_callbacks, true);
             app.RotateReal.Tag = 'Real';
             app.RotateReal.Tooltip = {'Rotate Image Display'};
-            app.RotateReal.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.RotateReal.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.RotateReal.Layout.Row = 1;
             app.RotateReal.Layout.Column = 7;
             app.RotateReal.Value = 0;
@@ -11398,7 +11105,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create HEditField_2Label
             app.HEditField_2Label = uilabel(app.RealWindowGrid);
             app.HEditField_2Label.HorizontalAlignment = 'right';
-            app.HEditField_2Label.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.HEditField_2Label.Layout.Row = 2;
             app.HEditField_2Label.Layout.Column = 3;
             app.HEditField_2Label.Text = 'H';
@@ -11410,7 +11116,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetRealWindowHeight.ValueDisplayFormat = '%.0f';
             app.SetRealWindowHeight.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetRealWindowHeight.Tag = 'Real';
-            app.SetRealWindowHeight.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetRealWindowHeight.Layout.Row = 2;
             app.SetRealWindowHeight.Layout.Column = 4;
             app.SetRealWindowHeight.Value = 400;
@@ -11419,8 +11124,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetRealWindow = uibutton(app.RealWindowGrid, 'push');
             app.SetRealWindow.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetRealWindow.Tag = 'Real';
-            app.SetRealWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SetRealWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetRealWindow.Layout.Row = 2;
             app.SetRealWindow.Layout.Column = 6;
             app.SetRealWindow.Text = 'Set';
@@ -11429,8 +11132,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetAllRealWindows = uibutton(app.RealWindowGrid, 'push');
             app.SetAllRealWindows.ButtonPushedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetAllRealWindows.Tag = 'Real';
-            app.SetAllRealWindows.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SetAllRealWindows.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetAllRealWindows.Layout.Row = 2;
             app.SetAllRealWindows.Layout.Column = 7;
             app.SetAllRealWindows.Text = 'Set All';
@@ -11438,7 +11139,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create WEditField_2Label
             app.WEditField_2Label = uilabel(app.RealWindowGrid);
             app.WEditField_2Label.HorizontalAlignment = 'right';
-            app.WEditField_2Label.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.WEditField_2Label.Layout.Row = 2;
             app.WEditField_2Label.Layout.Column = 1;
             app.WEditField_2Label.Text = 'W';
@@ -11450,7 +11150,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SetRealWindowWidth.ValueDisplayFormat = '%.0f';
             app.SetRealWindowWidth.ValueChangedFcn = createCallbackFcn(app, @resize_window, true);
             app.SetRealWindowWidth.Tag = 'Real';
-            app.SetRealWindowWidth.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SetRealWindowWidth.Layout.Row = 2;
             app.SetRealWindowWidth.Layout.Column = 2;
             app.SetRealWindowWidth.Value = 400;
@@ -11459,8 +11158,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.MiscTab = uitab(app.SettingsTabGroup);
             app.MiscTab.AutoResizeChildren = 'off';
             app.MiscTab.Title = 'Misc';
-            app.MiscTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.MiscTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create MiscGrid
             app.MiscGrid = uigridlayout(app.MiscTab);
@@ -11468,7 +11165,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.MiscGrid.RowHeight = {24, 24, 'fit', 24, '1x'};
             app.MiscGrid.ColumnSpacing = 4;
             app.MiscGrid.Padding = [4 4 4 4];
-            app.MiscGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create LiveUpdateImagesGrid
             app.LiveUpdateImagesGrid = uigridlayout(app.MiscGrid);
@@ -11479,7 +11175,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.LiveUpdateImagesGrid.Padding = [0 0 0 0];
             app.LiveUpdateImagesGrid.Layout.Row = 1;
             app.LiveUpdateImagesGrid.Layout.Column = 1;
-            app.LiveUpdateImagesGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create CalculationPolicyIcon
             app.CalculationPolicyIcon = uiimage(app.LiveUpdateImagesGrid);
@@ -11493,7 +11188,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CalculationPolicyDropDownLabel.HorizontalAlignment = 'right';
             app.CalculationPolicyDropDownLabel.FontName = 'Arial';
             app.CalculationPolicyDropDownLabel.FontWeight = 'bold';
-            app.CalculationPolicyDropDownLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CalculationPolicyDropDownLabel.Tooltip = {''};
             app.CalculationPolicyDropDownLabel.Layout.Row = 1;
             app.CalculationPolicyDropDownLabel.Layout.Column = 3;
@@ -11505,8 +11199,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CalculationPolicy.ItemsData = [2 1 0];
             app.CalculationPolicy.ValueChangedFcn = createCallbackFcn(app, @update_images, true);
             app.CalculationPolicy.Tooltip = {'Policy to calculate/update images:'; '  1) Active - update in real-time.'; '  2) Reduced - update when interactions finish.'; '  3) Passive - update only when the "Update Images" Button (or F5) is pressed or "Diffraction Detector Mode" changes.'};
-            app.CalculationPolicy.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.CalculationPolicy.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CalculationPolicy.Layout.Row = 1;
             app.CalculationPolicy.Layout.Column = 4;
             app.CalculationPolicy.Value = 2;
@@ -11514,11 +11206,9 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DetectorCoordinatePanel
             app.DetectorCoordinatePanel = uipanel(app.MiscGrid);
             app.DetectorCoordinatePanel.AutoResizeChildren = 'off';
-            app.DetectorCoordinatePanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DetectorCoordinatePanel.BorderType = 'none';
             app.DetectorCoordinatePanel.TitlePosition = 'centertop';
             app.DetectorCoordinatePanel.Title = 'Detector Coordinate Options';
-            app.DetectorCoordinatePanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DetectorCoordinatePanel.Layout.Row = 3;
             app.DetectorCoordinatePanel.Layout.Column = 1;
             app.DetectorCoordinatePanel.FontName = 'Arial';
@@ -11531,15 +11221,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorCoordinateGrid.ColumnSpacing = 4;
             app.DetectorCoordinateGrid.RowSpacing = 4;
             app.DetectorCoordinateGrid.Padding = [0 0 0 4];
-            app.DetectorCoordinateGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DetectorCoordinateSystem
             app.DetectorCoordinateSystem = uidropdown(app.DetectorCoordinateGrid);
             app.DetectorCoordinateSystem.Items = {'Polar', 'Cartesian'};
             app.DetectorCoordinateSystem.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
             app.DetectorCoordinateSystem.Tooltip = {'Display diffraction coordinates with a Cartesian or polar system'};
-            app.DetectorCoordinateSystem.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.DetectorCoordinateSystem.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DetectorCoordinateSystem.Layout.Row = 1;
             app.DetectorCoordinateSystem.Layout.Column = 2;
             app.DetectorCoordinateSystem.Value = 'Polar';
@@ -11549,8 +11236,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorCoordinatePosition.Items = {'Relative', 'Absolute'};
             app.DetectorCoordinatePosition.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
             app.DetectorCoordinatePosition.Tooltip = {'Display diffraction coordinates as absolute positions or relative to the transmitted beam'};
-            app.DetectorCoordinatePosition.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.DetectorCoordinatePosition.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DetectorCoordinatePosition.Layout.Row = 1;
             app.DetectorCoordinatePosition.Layout.Column = 4;
             app.DetectorCoordinatePosition.Value = 'Relative';
@@ -11561,19 +11246,15 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorCoordinateUnit.ItemsData = {'mrad', 'px'};
             app.DetectorCoordinateUnit.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
             app.DetectorCoordinateUnit.Tooltip = {'Display diffraction coordinates in mrad or pixel'};
-            app.DetectorCoordinateUnit.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.DetectorCoordinateUnit.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DetectorCoordinateUnit.Layout.Row = 1;
             app.DetectorCoordinateUnit.Layout.Column = 6;
             app.DetectorCoordinateUnit.Value = 'mrad';
 
             % Create DatasetOptionPanel
             app.DatasetOptionPanel = uipanel(app.MiscGrid);
-            app.DatasetOptionPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DatasetOptionPanel.BorderType = 'none';
             app.DatasetOptionPanel.TitlePosition = 'centertop';
             app.DatasetOptionPanel.Title = 'Swap Dataset Byte Order and Dimensions';
-            app.DatasetOptionPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DatasetOptionPanel.Layout.Row = 5;
             app.DatasetOptionPanel.Layout.Column = 1;
             app.DatasetOptionPanel.FontName = 'Arial';
@@ -11586,13 +11267,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.DatasetOptionGrid.ColumnSpacing = 2;
             app.DatasetOptionGrid.RowSpacing = 4;
             app.DatasetOptionGrid.Padding = [0 0 0 4];
-            app.DatasetOptionGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SwapByteOrder
             app.SwapByteOrder = uibutton(app.DatasetOptionGrid, 'push');
             app.SwapByteOrder.ButtonPushedFcn = createCallbackFcn(app, @dataset_options_callbacks, true);
-            app.SwapByteOrder.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SwapByteOrder.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SwapByteOrder.Tooltip = {'Swap the X/Y dimension sizes of the diffraction images, without re-importing'};
             app.SwapByteOrder.Layout.Row = [2 3];
             app.SwapByteOrder.Layout.Column = 1;
@@ -11602,8 +11280,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SwapDiffractionXY = uibutton(app.DatasetOptionGrid, 'push');
             app.SwapDiffractionXY.ButtonPushedFcn = createCallbackFcn(app, @dataset_options_callbacks, true);
             app.SwapDiffractionXY.Tag = 'Diffraction';
-            app.SwapDiffractionXY.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SwapDiffractionXY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SwapDiffractionXY.Tooltip = {'Swap the X/Y dimension sizes of the diffraction images, without re-importing'};
             app.SwapDiffractionXY.Layout.Row = [1 2];
             app.SwapDiffractionXY.Layout.Column = [2 3];
@@ -11613,8 +11289,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.SwapRealXY = uibutton(app.DatasetOptionGrid, 'push');
             app.SwapRealXY.ButtonPushedFcn = createCallbackFcn(app, @dataset_options_callbacks, true);
             app.SwapRealXY.Tag = 'Real';
-            app.SwapRealXY.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.SwapRealXY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SwapRealXY.Tooltip = {'Swap the X/Y dimension sizes of the real-space images, without re-importing'};
             app.SwapRealXY.Layout.Row = [3 4];
             app.SwapRealXY.Layout.Column = [2 3];
@@ -11624,8 +11298,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.InfoTab = uitab(app.SettingsTabGroup);
             app.InfoTab.AutoResizeChildren = 'off';
             app.InfoTab.Title = 'Info';
-            app.InfoTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.InfoTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create InfoGrid
             app.InfoGrid = uigridlayout(app.InfoTab);
@@ -11634,7 +11306,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.InfoGrid.ColumnSpacing = 4;
             app.InfoGrid.RowSpacing = 4;
             app.InfoGrid.Padding = [4 4 4 4];
-            app.InfoGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DatasetInfoTextAreaLabel
             app.DatasetInfoTextAreaLabel = uilabel(app.InfoGrid);
@@ -11642,7 +11313,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DatasetInfoTextAreaLabel.VerticalAlignment = 'bottom';
             app.DatasetInfoTextAreaLabel.FontName = 'Arial';
             app.DatasetInfoTextAreaLabel.FontWeight = 'bold';
-            app.DatasetInfoTextAreaLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DatasetInfoTextAreaLabel.Layout.Row = 1;
             app.DatasetInfoTextAreaLabel.Layout.Column = 1;
             app.DatasetInfoTextAreaLabel.Text = 'Dataset Info';
@@ -11651,7 +11321,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DatasetInfo = uitextarea(app.InfoGrid);
             app.DatasetInfo.Editable = 'off';
             app.DatasetInfo.FontName = 'Arial';
-            app.DatasetInfo.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DatasetInfo.Layout.Row = 2;
             app.DatasetInfo.Layout.Column = 1;
 
@@ -11659,17 +11328,13 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowVariables = uibutton(app.InfoGrid, 'state');
             app.ShowVariables.ValueChangedFcn = createCallbackFcn(app, @variable_viewer, true);
             app.ShowVariables.Text = 'Show all variables';
-            app.ShowVariables.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ShowVariables.FontWeight = 'bold';
-            app.ShowVariables.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowVariables.Layout.Row = 3;
             app.ShowVariables.Layout.Column = 1;
 
             % Create MathTab
             app.MathTab = uitab(app.SettingsTabGroup);
             app.MathTab.Title = 'Math';
-            app.MathTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.MathTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create MathGrid
             app.MathGrid = uigridlayout(app.MathTab);
@@ -11678,7 +11343,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.MathGrid.ColumnSpacing = 4;
             app.MathGrid.RowSpacing = 4;
             app.MathGrid.Padding = [4 4 4 4];
-            app.MathGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create MathExampleGrid
             app.MathExampleGrid = uigridlayout(app.MathGrid);
@@ -11689,12 +11353,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.MathExampleGrid.Padding = [0 0 0 0];
             app.MathExampleGrid.Layout.Row = 1;
             app.MathExampleGrid.Layout.Column = 1;
-            app.MathExampleGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create MathExample
             app.MathExample = uilabel(app.MathExampleGrid);
             app.MathExample.FontName = 'Arial';
-            app.MathExample.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.MathExample.Layout.Row = [1 2];
             app.MathExample.Layout.Column = [1 2];
             app.MathExample.Interpreter = 'html';
@@ -11712,7 +11374,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.FormulaLabel.HorizontalAlignment = 'center';
             app.FormulaLabel.FontName = 'Arial';
             app.FormulaLabel.FontWeight = 'bold';
-            app.FormulaLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FormulaLabel.Layout.Row = 2;
             app.FormulaLabel.Layout.Column = 1;
             app.FormulaLabel.Text = 'Formula';
@@ -11720,7 +11381,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create MathFormula
             app.MathFormula = uitextarea(app.MathGrid);
             app.MathFormula.FontName = 'Arial';
-            app.MathFormula.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.MathFormula.Layout.Row = 3;
             app.MathFormula.Layout.Column = 1;
 
@@ -11733,14 +11393,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.EvaluateGrid.Padding = [0 0 0 0];
             app.EvaluateGrid.Layout.Row = 4;
             app.EvaluateGrid.Layout.Column = 1;
-            app.EvaluateGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create Evaluate
             app.Evaluate = uibutton(app.EvaluateGrid, 'push');
             app.Evaluate.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.Evaluate.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.Evaluate.FontName = 'Arial';
-            app.Evaluate.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.Evaluate.Layout.Row = 1;
             app.Evaluate.Layout.Column = 3;
             app.Evaluate.Text = 'Evaluate';
@@ -11748,28 +11405,22 @@ classdef Quant4D < matlab.apps.AppBase
             % Create VariablesTab
             app.VariablesTab = uitab(app.SettingsTabGroup);
             app.VariablesTab.Title = 'Variables';
-            app.VariablesTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.VariablesTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create VariablesGrid
             app.VariablesGrid = uigridlayout(app.VariablesTab);
             app.VariablesGrid.ColumnWidth = {'1x'};
-            app.VariablesGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create VariablesTable
             app.VariablesTable = uitable(app.VariablesGrid);
-            app.VariablesTable.BackgroundColor = [1 1 1;0.96078431372549 0.96078431372549 0.96078431372549];
             app.VariablesTable.ColumnName = {'Value'};
             app.VariablesTable.ColumnWidth = {'1x'};
             app.VariablesTable.RowName = {};
-            app.VariablesTable.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VariablesTable.Layout.Row = 2;
             app.VariablesTable.Layout.Column = 1;
 
             % Create VariablesTree
             app.VariablesTree = uitree(app.VariablesGrid);
             app.VariablesTree.SelectionChangedFcn = createCallbackFcn(app, @variable_viewer, true);
-            app.VariablesTree.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VariablesTree.Layout.Row = 1;
             app.VariablesTree.Layout.Column = 1;
 
@@ -11781,8 +11432,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewTab
             app.PreviewTab = uitab(app.ModeTabGroup);
             app.PreviewTab.Title = 'Pv';
-            app.PreviewTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.PreviewTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create PreviewGrid
             app.PreviewGrid = uigridlayout(app.PreviewTab);
@@ -11791,15 +11440,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewGrid.ColumnSpacing = 4;
             app.PreviewGrid.RowSpacing = 4;
             app.PreviewGrid.Padding = [4 4 4 4];
-            app.PreviewGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create PreviewFramePanel
             app.PreviewFramePanel = uipanel(app.PreviewGrid);
-            app.PreviewFramePanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFramePanel.BorderType = 'none';
             app.PreviewFramePanel.TitlePosition = 'centertop';
             app.PreviewFramePanel.Title = 'Preview Frame';
-            app.PreviewFramePanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFramePanel.Layout.Row = 1;
             app.PreviewFramePanel.Layout.Column = 1;
             app.PreviewFramePanel.FontName = 'Arial';
@@ -11812,14 +11458,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewButtonGrid.ColumnSpacing = 2;
             app.PreviewButtonGrid.RowSpacing = 2;
             app.PreviewButtonGrid.Padding = [0 0 0 4];
-            app.PreviewButtonGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create PreviewFrame_1_1
             app.PreviewFrame_1_1 = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_1_1.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_1_1.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_1_1.FontName = 'Consolas';
-            app.PreviewFrame_1_1.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_1_1.Layout.Row = 1;
             app.PreviewFrame_1_1.Layout.Column = 1;
             app.PreviewFrame_1_1.Text = '[1,1]';
@@ -11827,9 +11470,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_X2_1
             app.PreviewFrame_X2_1 = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_X2_1.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_X2_1.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_X2_1.FontName = 'Consolas';
-            app.PreviewFrame_X2_1.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_X2_1.Layout.Row = 1;
             app.PreviewFrame_X2_1.Layout.Column = 2;
             app.PreviewFrame_X2_1.Text = '[X/2,1]';
@@ -11837,9 +11478,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_X_1
             app.PreviewFrame_X_1 = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_X_1.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_X_1.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_X_1.FontName = 'Consolas';
-            app.PreviewFrame_X_1.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_X_1.Layout.Row = 1;
             app.PreviewFrame_X_1.Layout.Column = 3;
             app.PreviewFrame_X_1.Text = '[X,1]';
@@ -11847,9 +11486,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_1_Y2
             app.PreviewFrame_1_Y2 = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_1_Y2.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_1_Y2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_1_Y2.FontName = 'Consolas';
-            app.PreviewFrame_1_Y2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_1_Y2.Layout.Row = 2;
             app.PreviewFrame_1_Y2.Layout.Column = 1;
             app.PreviewFrame_1_Y2.Text = '[1,Y/2]';
@@ -11857,9 +11494,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_X2_Y2
             app.PreviewFrame_X2_Y2 = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_X2_Y2.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_X2_Y2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_X2_Y2.FontName = 'Consolas';
-            app.PreviewFrame_X2_Y2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_X2_Y2.Layout.Row = 2;
             app.PreviewFrame_X2_Y2.Layout.Column = 2;
             app.PreviewFrame_X2_Y2.Text = '[X/2,Y/2]';
@@ -11867,9 +11502,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_X_Y2
             app.PreviewFrame_X_Y2 = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_X_Y2.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_X_Y2.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_X_Y2.FontName = 'Consolas';
-            app.PreviewFrame_X_Y2.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_X_Y2.Layout.Row = 2;
             app.PreviewFrame_X_Y2.Layout.Column = 3;
             app.PreviewFrame_X_Y2.Text = '[X,Y/2]';
@@ -11877,9 +11510,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_1_Y
             app.PreviewFrame_1_Y = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_1_Y.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_1_Y.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_1_Y.FontName = 'Consolas';
-            app.PreviewFrame_1_Y.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_1_Y.Layout.Row = 3;
             app.PreviewFrame_1_Y.Layout.Column = 1;
             app.PreviewFrame_1_Y.Text = '[1,Y]';
@@ -11887,9 +11518,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_X2_Y
             app.PreviewFrame_X2_Y = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_X2_Y.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_X2_Y.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_X2_Y.FontName = 'Consolas';
-            app.PreviewFrame_X2_Y.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_X2_Y.Layout.Row = 3;
             app.PreviewFrame_X2_Y.Layout.Column = 2;
             app.PreviewFrame_X2_Y.Text = '[X/2,Y]';
@@ -11897,9 +11526,7 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewFrame_X_Y
             app.PreviewFrame_X_Y = uibutton(app.PreviewButtonGrid, 'push');
             app.PreviewFrame_X_Y.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrame_X_Y.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewFrame_X_Y.FontName = 'Consolas';
-            app.PreviewFrame_X_Y.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrame_X_Y.Layout.Row = 3;
             app.PreviewFrame_X_Y.Layout.Column = 3;
             app.PreviewFrame_X_Y.Text = '[X,Y]';
@@ -11913,12 +11540,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewFrameGrid.Padding = [0 0 0 4];
             app.PreviewFrameGrid.Layout.Row = 4;
             app.PreviewFrameGrid.Layout.Column = [1 3];
-            app.PreviewFrameGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create PvFrXLabel
             app.PvFrXLabel = uilabel(app.PreviewFrameGrid);
             app.PvFrXLabel.HorizontalAlignment = 'right';
-            app.PvFrXLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PvFrXLabel.Layout.Row = 1;
             app.PvFrXLabel.Layout.Column = 2;
             app.PvFrXLabel.Text = 'X';
@@ -11928,7 +11553,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewFrameX.RoundFractionalValues = 'on';
             app.PreviewFrameX.ValueDisplayFormat = '%.0f';
             app.PreviewFrameX.ValueChangedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrameX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrameX.Layout.Row = 1;
             app.PreviewFrameX.Layout.Column = 3;
             app.PreviewFrameX.Value = 1;
@@ -11936,7 +11560,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PvFrYLabel
             app.PvFrYLabel = uilabel(app.PreviewFrameGrid);
             app.PvFrYLabel.HorizontalAlignment = 'right';
-            app.PvFrYLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PvFrYLabel.Layout.Row = 1;
             app.PvFrYLabel.Layout.Column = 4;
             app.PvFrYLabel.Text = 'Y';
@@ -11946,7 +11569,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.PreviewFrameY.RoundFractionalValues = 'on';
             app.PreviewFrameY.ValueDisplayFormat = '%.0f';
             app.PreviewFrameY.ValueChangedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewFrameY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewFrameY.Layout.Row = 1;
             app.PreviewFrameY.Layout.Column = 5;
             app.PreviewFrameY.Value = 1;
@@ -11954,10 +11576,8 @@ classdef Quant4D < matlab.apps.AppBase
             % Create PreviewButton
             app.PreviewButton = uibutton(app.PreviewFrameGrid, 'push');
             app.PreviewButton.ButtonPushedFcn = createCallbackFcn(app, @preview_callbacks, true);
-            app.PreviewButton.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.PreviewButton.FontName = 'Arial';
             app.PreviewButton.FontWeight = 'bold';
-            app.PreviewButton.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.PreviewButton.Enable = 'off';
             app.PreviewButton.Visible = 'off';
             app.PreviewButton.Layout.Row = 1;
@@ -11968,7 +11588,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.AlignmentTab = uitab(app.ModeTabGroup);
             app.AlignmentTab.Title = 'Align';
             app.AlignmentTab.BackgroundColor = [0.9412 0.9412 0.9412];
-            app.AlignmentTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create AlignmentGrid
             app.AlignmentGrid = uigridlayout(app.AlignmentTab);
@@ -11977,15 +11596,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.AlignmentGrid.ColumnSpacing = 4;
             app.AlignmentGrid.RowSpacing = 4;
             app.AlignmentGrid.Padding = [4 4 4 4];
-            app.AlignmentGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create DiffractionCalibrationPanel
             app.DiffractionCalibrationPanel = uipanel(app.AlignmentGrid);
-            app.DiffractionCalibrationPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionCalibrationPanel.BorderType = 'none';
             app.DiffractionCalibrationPanel.TitlePosition = 'centertop';
             app.DiffractionCalibrationPanel.Title = 'Diffraction Calibration';
-            app.DiffractionCalibrationPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.DiffractionCalibrationPanel.Layout.Row = 1;
             app.DiffractionCalibrationPanel.Layout.Column = 1;
             app.DiffractionCalibrationPanel.FontName = 'Arial';
@@ -11998,12 +11614,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.DiffractionCalibrationGrid.ColumnSpacing = 4;
             app.DiffractionCalibrationGrid.RowSpacing = 4;
             app.DiffractionCalibrationGrid.Padding = [0 0 0 4];
-            app.DiffractionCalibrationGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ConvergenceAngleLabel
             app.ConvergenceAngleLabel = uilabel(app.DiffractionCalibrationGrid);
             app.ConvergenceAngleLabel.HorizontalAlignment = 'right';
-            app.ConvergenceAngleLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ConvergenceAngleLabel.Layout.Row = 1;
             app.ConvergenceAngleLabel.Layout.Column = [1 2];
             app.ConvergenceAngleLabel.Text = 'Convergence Angle';
@@ -12013,14 +11627,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.Alpha.Limits = [0 Inf];
             app.Alpha.ValueDisplayFormat = '%.2f';
             app.Alpha.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.Alpha.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.Alpha.Layout.Row = 1;
             app.Alpha.Layout.Column = 3;
             app.Alpha.Value = 12;
 
             % Create AlphaLabel
             app.AlphaLabel = uilabel(app.DiffractionCalibrationGrid);
-            app.AlphaLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AlphaLabel.Layout.Row = 1;
             app.AlphaLabel.Layout.Column = 4;
             app.AlphaLabel.Text = 'mrad';
@@ -12028,7 +11640,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DiffractionScaleLabel
             app.DiffractionScaleLabel = uilabel(app.DiffractionCalibrationGrid);
             app.DiffractionScaleLabel.HorizontalAlignment = 'right';
-            app.DiffractionScaleLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DiffractionScaleLabel.Layout.Row = 2;
             app.DiffractionScaleLabel.Layout.Column = [1 2];
             app.DiffractionScaleLabel.Text = 'Diffraction Scale';
@@ -12038,25 +11649,21 @@ classdef Quant4D < matlab.apps.AppBase
             app.mradPx.Limits = [0 Inf];
             app.mradPx.ValueDisplayFormat = '%.4g';
             app.mradPx.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.mradPx.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.mradPx.Layout.Row = 2;
             app.mradPx.Layout.Column = 3;
             app.mradPx.Value = 1;
 
             % Create mradPxLabel
             app.mradPxLabel = uilabel(app.DiffractionCalibrationGrid);
-            app.mradPxLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.mradPxLabel.Layout.Row = 2;
             app.mradPxLabel.Layout.Column = 4;
             app.mradPxLabel.Text = 'mrad/px';
 
             % Create TransBeamAlignPanel
             app.TransBeamAlignPanel = uipanel(app.AlignmentGrid);
-            app.TransBeamAlignPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamAlignPanel.BorderType = 'none';
             app.TransBeamAlignPanel.TitlePosition = 'centertop';
             app.TransBeamAlignPanel.Title = 'Transmitted Beam Position Alignment';
-            app.TransBeamAlignPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.TransBeamAlignPanel.Layout.Row = 2;
             app.TransBeamAlignPanel.Layout.Column = 1;
             app.TransBeamAlignPanel.FontName = 'Arial';
@@ -12069,13 +11676,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamAlignGrid.ColumnSpacing = 4;
             app.TransBeamAlignGrid.RowSpacing = 2;
             app.TransBeamAlignGrid.Padding = [0 0 0 4];
-            app.TransBeamAlignGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create TBAutoAlign
             app.TBAutoAlign = uibutton(app.TransBeamAlignGrid, 'push');
             app.TBAutoAlign.ButtonPushedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TBAutoAlign.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.TBAutoAlign.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBAutoAlign.Layout.Row = 1;
             app.TBAutoAlign.Layout.Column = [2 3];
             app.TBAutoAlign.Text = 'Auto Align';
@@ -12083,8 +11687,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create TBCrossAlign
             app.TBCrossAlign = uibutton(app.TransBeamAlignGrid, 'push');
             app.TBCrossAlign.ButtonPushedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TBCrossAlign.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.TBCrossAlign.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBCrossAlign.Tooltip = {'Align transmitted beam location as the crossing point of two lines'};
             app.TBCrossAlign.Layout.Row = 1;
             app.TBCrossAlign.Layout.Column = 4;
@@ -12093,7 +11695,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create TBRLabel
             app.TBRLabel = uilabel(app.TransBeamAlignGrid);
             app.TBRLabel.HorizontalAlignment = 'right';
-            app.TBRLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBRLabel.Layout.Row = 3;
             app.TBRLabel.Layout.Column = 2;
             app.TBRLabel.Text = 'Radius';
@@ -12104,13 +11705,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamRSpinner.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamRSpinner.ValueDisplayFormat = '%.2f';
             app.TransBeamRSpinner.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamRSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamRSpinner.Layout.Row = 3;
             app.TransBeamRSpinner.Layout.Column = 3;
 
             % Create TBR_NFLabel
             app.TBR_NFLabel = uilabel(app.TransBeamAlignGrid);
-            app.TBR_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBR_NFLabel.Layout.Row = 3;
             app.TBR_NFLabel.Layout.Column = 4;
             app.TBR_NFLabel.Text = 'px';
@@ -12121,15 +11720,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamR.MajorTickLabels = {};
             app.TransBeamR.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamR.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamR.MinorTicks = [];
-            app.TransBeamR.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamR.Layout.Row = 4;
             app.TransBeamR.Layout.Column = [1 4];
 
             % Create TBXLabel
             app.TBXLabel = uilabel(app.TransBeamAlignGrid);
             app.TBXLabel.HorizontalAlignment = 'right';
-            app.TBXLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBXLabel.Layout.Row = 6;
             app.TBXLabel.Layout.Column = 2;
             app.TBXLabel.Text = 'X';
@@ -12140,13 +11736,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamXSpinner.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamXSpinner.ValueDisplayFormat = '%.2f';
             app.TransBeamXSpinner.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamXSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamXSpinner.Layout.Row = 6;
             app.TransBeamXSpinner.Layout.Column = 3;
 
             % Create TBX_NFLabel
             app.TBX_NFLabel = uilabel(app.TransBeamAlignGrid);
-            app.TBX_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBX_NFLabel.Layout.Row = 6;
             app.TBX_NFLabel.Layout.Column = 4;
             app.TBX_NFLabel.Text = 'px';
@@ -12156,15 +11750,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamX.MajorTicks = [];
             app.TransBeamX.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamX.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamX.MinorTicks = [];
-            app.TransBeamX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamX.Layout.Row = 7;
             app.TransBeamX.Layout.Column = [1 4];
 
             % Create TBYLabel
             app.TBYLabel = uilabel(app.TransBeamAlignGrid);
             app.TBYLabel.HorizontalAlignment = 'right';
-            app.TBYLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBYLabel.Layout.Row = 9;
             app.TBYLabel.Layout.Column = 2;
             app.TBYLabel.Text = 'Y';
@@ -12175,13 +11766,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamYSpinner.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamYSpinner.ValueDisplayFormat = '%.2f';
             app.TransBeamYSpinner.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamYSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamYSpinner.Layout.Row = 9;
             app.TransBeamYSpinner.Layout.Column = 3;
 
             % Create TBY_NFLabel
             app.TBY_NFLabel = uilabel(app.TransBeamAlignGrid);
-            app.TBY_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TBY_NFLabel.Layout.Row = 9;
             app.TBY_NFLabel.Layout.Column = 4;
             app.TBY_NFLabel.Text = 'px';
@@ -12191,8 +11780,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.TransBeamY.MajorTicks = [];
             app.TransBeamY.ValueChangedFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
             app.TransBeamY.ValueChangingFcn = createCallbackFcn(app, @transmitted_beam_callbacks, true);
-            app.TransBeamY.MinorTicks = [];
-            app.TransBeamY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.TransBeamY.Layout.Row = 10;
             app.TransBeamY.Layout.Column = [1 4];
 
@@ -12207,7 +11794,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.AnnularDetectorTab = uitab(app.ModeTabGroup);
             app.AnnularDetectorTab.Title = 'Ann';
             app.AnnularDetectorTab.BackgroundColor = [0.9412 0.9412 0.9412];
-            app.AnnularDetectorTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create AnnularDetectorGrid
             app.AnnularDetectorGrid = uigridlayout(app.AnnularDetectorTab);
@@ -12216,15 +11802,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.AnnularDetectorGrid.ColumnSpacing = 4;
             app.AnnularDetectorGrid.RowSpacing = 4;
             app.AnnularDetectorGrid.Padding = [4 4 4 4];
-            app.AnnularDetectorGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create AnnularRadiiPanel
             app.AnnularRadiiPanel = uipanel(app.AnnularDetectorGrid);
-            app.AnnularRadiiPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnularRadiiPanel.BorderType = 'none';
             app.AnnularRadiiPanel.TitlePosition = 'centertop';
             app.AnnularRadiiPanel.Title = 'Annular Detector Radii';
-            app.AnnularRadiiPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.AnnularRadiiPanel.Layout.Row = 1;
             app.AnnularRadiiPanel.Layout.Column = 1;
             app.AnnularRadiiPanel.FontName = 'Arial';
@@ -12237,12 +11820,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.AnnularRadiiGrid.ColumnSpacing = 4;
             app.AnnularRadiiGrid.RowSpacing = 2;
             app.AnnularRadiiGrid.Padding = [0 0 0 4];
-            app.AnnularRadiiGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create AnnRiLabel
             app.AnnRiLabel = uilabel(app.AnnularRadiiGrid);
             app.AnnRiLabel.HorizontalAlignment = 'right';
-            app.AnnRiLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnRiLabel.Layout.Row = 1;
             app.AnnRiLabel.Layout.Column = [2 3];
             app.AnnRiLabel.Text = 'Inner Radius';
@@ -12254,13 +11835,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.InnerAnnularRadiusSpinner.ValueDisplayFormat = '%.2f';
             app.InnerAnnularRadiusSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.InnerAnnularRadiusSpinner.Tag = 'AnnDetr RI';
-            app.InnerAnnularRadiusSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.InnerAnnularRadiusSpinner.Layout.Row = 1;
             app.InnerAnnularRadiusSpinner.Layout.Column = 4;
 
             % Create AnnRi_NFLabel
             app.AnnRi_NFLabel = uilabel(app.AnnularRadiiGrid);
-            app.AnnRi_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnRi_NFLabel.Layout.Row = 1;
             app.AnnRi_NFLabel.Layout.Column = 5;
             app.AnnRi_NFLabel.Text = 'mrad';
@@ -12270,8 +11849,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.InnerAnnularRadius.MajorTicks = [];
             app.InnerAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.InnerAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.InnerAnnularRadius.MinorTicks = [];
-            app.InnerAnnularRadius.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.InnerAnnularRadius.Tag = 'AnnDetr RI';
             app.InnerAnnularRadius.Layout.Row = 2;
             app.InnerAnnularRadius.Layout.Column = [1 5];
@@ -12283,15 +11860,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.AnnularRadiusLink.Tooltip = {'Move inner/outer annular sliders together'};
             app.AnnularRadiusLink.Icon = 'link.png';
             app.AnnularRadiusLink.Text = '';
-            app.AnnularRadiusLink.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.AnnularRadiusLink.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnularRadiusLink.Layout.Row = 4;
             app.AnnularRadiusLink.Layout.Column = 1;
 
             % Create AnnRoLabel
             app.AnnRoLabel = uilabel(app.AnnularRadiiGrid);
             app.AnnRoLabel.HorizontalAlignment = 'right';
-            app.AnnRoLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnRoLabel.Layout.Row = 4;
             app.AnnRoLabel.Layout.Column = [2 3];
             app.AnnRoLabel.Text = 'Outer Radius';
@@ -12303,13 +11877,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.OuterAnnularRadiusSpinner.ValueDisplayFormat = '%.2f';
             app.OuterAnnularRadiusSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.OuterAnnularRadiusSpinner.Tag = 'AnnDetr RO';
-            app.OuterAnnularRadiusSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.OuterAnnularRadiusSpinner.Layout.Row = 4;
             app.OuterAnnularRadiusSpinner.Layout.Column = 4;
 
             % Create AnnRo_NFLabel
             app.AnnRo_NFLabel = uilabel(app.AnnularRadiiGrid);
-            app.AnnRo_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnRo_NFLabel.Layout.Row = 4;
             app.AnnRo_NFLabel.Layout.Column = 5;
             app.AnnRo_NFLabel.Text = 'mrad';
@@ -12319,20 +11891,16 @@ classdef Quant4D < matlab.apps.AppBase
             app.OuterAnnularRadius.MajorTicks = [];
             app.OuterAnnularRadius.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.OuterAnnularRadius.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.OuterAnnularRadius.MinorTicks = [];
-            app.OuterAnnularRadius.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.OuterAnnularRadius.Tag = 'AnnDetr RO';
             app.OuterAnnularRadius.Layout.Row = 5;
             app.OuterAnnularRadius.Layout.Column = [1 5];
 
             % Create ScanDirectionPanel
             app.ScanDirectionPanel = uipanel(app.AnnularDetectorGrid);
-            app.ScanDirectionPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDirectionPanel.BorderType = 'none';
             app.ScanDirectionPanel.TitlePosition = 'centertop';
             app.ScanDirectionPanel.Title = 'Scanning Direction';
             app.ScanDirectionPanel.Visible = 'off';
-            app.ScanDirectionPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ScanDirectionPanel.Layout.Row = 2;
             app.ScanDirectionPanel.Layout.Column = 1;
             app.ScanDirectionPanel.FontName = 'Arial';
@@ -12345,24 +11913,19 @@ classdef Quant4D < matlab.apps.AppBase
             app.ScanDirectionGrid.ColumnSpacing = 4;
             app.ScanDirectionGrid.RowSpacing = 2;
             app.ScanDirectionGrid.Padding = [0 0 0 4];
-            app.ScanDirectionGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ScanDirectionLock
             app.ScanDirectionLock = uibutton(app.ScanDirectionGrid, 'state');
             app.ScanDirectionLock.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.ScanDirectionLock.Tag = 'ScanDir';
-            app.ScanDirectionLock.Icon = 'unlock.png';
+            app.ScanDirectionLock.Icon = 'lock.png';
             app.ScanDirectionLock.Text = '';
-            app.ScanDirectionLock.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ScanDirectionLock.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDirectionLock.Layout.Row = 1;
             app.ScanDirectionLock.Layout.Column = 1;
 
             % Create AutoCurl
             app.AutoCurl = uibutton(app.ScanDirectionGrid, 'push');
             app.AutoCurl.ButtonPushedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.AutoCurl.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.AutoCurl.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AutoCurl.Layout.Row = 1;
             app.AutoCurl.Layout.Column = [2 3];
             app.AutoCurl.Text = 'Auto';
@@ -12370,7 +11933,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create ScanDirLabel
             app.ScanDirLabel = uilabel(app.ScanDirectionGrid);
             app.ScanDirLabel.HorizontalAlignment = 'right';
-            app.ScanDirLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDirLabel.Layout.Row = 1;
             app.ScanDirLabel.Layout.Column = [3 5];
             app.ScanDirLabel.Text = 'Angle';
@@ -12383,13 +11945,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.ScanDirectionSpinner.ValueDisplayFormat = '%.2f';
             app.ScanDirectionSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.ScanDirectionSpinner.Tag = 'ScanDir';
-            app.ScanDirectionSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDirectionSpinner.Layout.Row = 1;
             app.ScanDirectionSpinner.Layout.Column = 6;
 
             % Create ScanDir_NFLabel
             app.ScanDir_NFLabel = uilabel(app.ScanDirectionGrid);
-            app.ScanDir_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDir_NFLabel.Layout.Row = 1;
             app.ScanDir_NFLabel.Layout.Column = 7;
             app.ScanDir_NFLabel.Text = '°';
@@ -12401,9 +11961,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.FlipScanDirectionY.Tooltip = {'Flip Scan Y Direction'};
             app.FlipScanDirectionY.Icon = 'axis-y.png';
             app.FlipScanDirectionY.Text = '';
-            app.FlipScanDirectionY.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.FlipScanDirectionY.FontWeight = 'bold';
-            app.FlipScanDirectionY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.FlipScanDirectionY.Layout.Row = 1;
             app.FlipScanDirectionY.Layout.Column = 8;
 
@@ -12413,20 +11971,16 @@ classdef Quant4D < matlab.apps.AppBase
             app.ScanDirectionSlider.MajorTicks = [];
             app.ScanDirectionSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.ScanDirectionSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.ScanDirectionSlider.MinorTicks = [];
-            app.ScanDirectionSlider.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ScanDirectionSlider.Tag = 'ScanDir';
             app.ScanDirectionSlider.Layout.Row = 2;
             app.ScanDirectionSlider.Layout.Column = [1 8];
 
             % Create SegmentedDetectorPanel
             app.SegmentedDetectorPanel = uipanel(app.AnnularDetectorGrid);
-            app.SegmentedDetectorPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SegmentedDetectorPanel.BorderType = 'none';
             app.SegmentedDetectorPanel.TitlePosition = 'centertop';
             app.SegmentedDetectorPanel.Title = 'Segmented Detector Controls';
             app.SegmentedDetectorPanel.Visible = 'off';
-            app.SegmentedDetectorPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.SegmentedDetectorPanel.Layout.Row = 3;
             app.SegmentedDetectorPanel.Layout.Column = 1;
             app.SegmentedDetectorPanel.FontName = 'Arial';
@@ -12439,12 +11993,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.SegmentedDetectorGrid.ColumnSpacing = 4;
             app.SegmentedDetectorGrid.RowSpacing = 2;
             app.SegmentedDetectorGrid.Padding = [0 4 0 4];
-            app.SegmentedDetectorGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create SegmentsLabel
             app.SegmentsLabel = uilabel(app.SegmentedDetectorGrid);
             app.SegmentsLabel.HorizontalAlignment = 'right';
-            app.SegmentsLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SegmentsLabel.Layout.Row = [1 2];
             app.SegmentsLabel.Layout.Column = [1 2];
             app.SegmentsLabel.Text = 'Segments';
@@ -12456,7 +12008,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.NSeg.ValueDisplayFormat = '%d';
             app.NSeg.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.NSeg.Tag = 'SegDetr';
-            app.NSeg.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.NSeg.Layout.Row = [1 2];
             app.NSeg.Layout.Column = [3 4];
             app.NSeg.Value = 4;
@@ -12464,7 +12015,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create RungsLabel
             app.RungsLabel = uilabel(app.SegmentedDetectorGrid);
             app.RungsLabel.HorizontalAlignment = 'right';
-            app.RungsLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RungsLabel.Layout.Row = 1;
             app.RungsLabel.Layout.Column = 5;
             app.RungsLabel.Text = 'Rungs';
@@ -12476,7 +12026,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.NRung.ValueDisplayFormat = '%d';
             app.NRung.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.NRung.Tag = 'SegDetr';
-            app.NRung.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.NRung.Layout.Row = 1;
             app.NRung.Layout.Column = [6 7];
             app.NRung.Value = 1;
@@ -12484,7 +12033,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create DetRotLabel
             app.DetRotLabel = uilabel(app.SegmentedDetectorGrid);
             app.DetRotLabel.HorizontalAlignment = 'right';
-            app.DetRotLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DetRotLabel.Layout.Row = 3;
             app.DetRotLabel.Layout.Column = [1 4];
             app.DetRotLabel.Text = 'Rotation';
@@ -12497,13 +12045,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorRotationSpinner.ValueDisplayFormat = '%.2f';
             app.DetectorRotationSpinner.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.DetectorRotationSpinner.Tag = 'SegDetr';
-            app.DetectorRotationSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DetectorRotationSpinner.Layout.Row = [2 3];
             app.DetectorRotationSpinner.Layout.Column = [5 6];
 
             % Create DetRot_NFLabel
             app.DetRot_NFLabel = uilabel(app.SegmentedDetectorGrid);
-            app.DetRot_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DetRot_NFLabel.Layout.Row = [2 3];
             app.DetRot_NFLabel.Layout.Column = 7;
             app.DetRot_NFLabel.Text = '°';
@@ -12514,8 +12060,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.DetectorRotationSlider.MajorTicks = [];
             app.DetectorRotationSlider.ValueChangedFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
             app.DetectorRotationSlider.ValueChangingFcn = createCallbackFcn(app, @annular_detector_callbacks, true);
-            app.DetectorRotationSlider.MinorTicks = [];
-            app.DetectorRotationSlider.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.DetectorRotationSlider.Tag = 'SegDetr';
             app.DetectorRotationSlider.Layout.Row = [4 5];
             app.DetectorRotationSlider.Layout.Column = [1 8];
@@ -12529,12 +12073,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.AnnularStepGrid.Padding = [0 0 0 0];
             app.AnnularStepGrid.Layout.Row = 5;
             app.AnnularStepGrid.Layout.Column = 1;
-            app.AnnularStepGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create AnnularIntegrationStepEditFieldLabel
             app.AnnularIntegrationStepEditFieldLabel = uilabel(app.AnnularStepGrid);
             app.AnnularIntegrationStepEditFieldLabel.WordWrap = 'on';
-            app.AnnularIntegrationStepEditFieldLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnularIntegrationStepEditFieldLabel.Layout.Row = 1;
             app.AnnularIntegrationStepEditFieldLabel.Layout.Column = [1 4];
             app.AnnularIntegrationStepEditFieldLabel.Text = 'Annular Integration Step';
@@ -12544,7 +12086,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.AnnularStep.Limits = [1e-05 Inf];
             app.AnnularStep.ValueDisplayFormat = '%11.2f mrad';
             app.AnnularStep.ValueChangedFcn = createCallbackFcn(app, @detector_coordinates_callbacks, true);
-            app.AnnularStep.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AnnularStep.Tooltip = {'Set fine/coarse step size for annular integration (in mrad). '};
             app.AnnularStep.Layout.Row = 1;
             app.AnnularStep.Layout.Column = [3 4];
@@ -12553,8 +12094,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create VirtualApertureTab
             app.VirtualApertureTab = uitab(app.ModeTabGroup);
             app.VirtualApertureTab.Title = 'Vr';
-            app.VirtualApertureTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.VirtualApertureTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create VirtualApertureGrid
             app.VirtualApertureGrid = uigridlayout(app.VirtualApertureTab);
@@ -12563,15 +12102,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureGrid.ColumnSpacing = 4;
             app.VirtualApertureGrid.RowSpacing = 4;
             app.VirtualApertureGrid.Padding = [4 4 4 4];
-            app.VirtualApertureGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create VirtualApertureCoordinatesPanel
             app.VirtualApertureCoordinatesPanel = uipanel(app.VirtualApertureGrid);
-            app.VirtualApertureCoordinatesPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureCoordinatesPanel.BorderType = 'none';
             app.VirtualApertureCoordinatesPanel.TitlePosition = 'centertop';
             app.VirtualApertureCoordinatesPanel.Title = 'Aperture Coordinates';
-            app.VirtualApertureCoordinatesPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.VirtualApertureCoordinatesPanel.Layout.Row = 1;
             app.VirtualApertureCoordinatesPanel.Layout.Column = 1;
             app.VirtualApertureCoordinatesPanel.FontName = 'Arial';
@@ -12584,12 +12120,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureCoordinatesGrid.ColumnSpacing = 4;
             app.VirtualApertureCoordinatesGrid.RowSpacing = 2;
             app.VirtualApertureCoordinatesGrid.Padding = [0 0 0 4];
-            app.VirtualApertureCoordinatesGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create VrApRLabel
             app.VrApRLabel = uilabel(app.VirtualApertureCoordinatesGrid);
             app.VrApRLabel.HorizontalAlignment = 'right';
-            app.VrApRLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApRLabel.Layout.Row = 1;
             app.VrApRLabel.Layout.Column = [2 3];
             app.VrApRLabel.Text = 'Radius';
@@ -12600,13 +12134,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureRSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureRSpinner.ValueDisplayFormat = '%.2f';
             app.VirtualApertureRSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureRSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureRSpinner.Layout.Row = 1;
             app.VirtualApertureRSpinner.Layout.Column = 4;
 
             % Create VrApR_NFLabel
             app.VrApR_NFLabel = uilabel(app.VirtualApertureCoordinatesGrid);
-            app.VrApR_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApR_NFLabel.Layout.Row = 1;
             app.VrApR_NFLabel.Layout.Column = 5;
             app.VrApR_NFLabel.Text = 'mrad';
@@ -12616,15 +12148,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureR.MajorTicks = [];
             app.VirtualApertureR.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureR.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureR.MinorTicks = [];
-            app.VirtualApertureR.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureR.Layout.Row = 2;
             app.VirtualApertureR.Layout.Column = [1 5];
 
             % Create VrApXLabel
             app.VrApXLabel = uilabel(app.VirtualApertureCoordinatesGrid);
             app.VrApXLabel.HorizontalAlignment = 'right';
-            app.VrApXLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApXLabel.Layout.Row = 4;
             app.VrApXLabel.Layout.Column = [2 3];
             app.VrApXLabel.Text = 'X';
@@ -12635,13 +12164,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureXSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureXSpinner.ValueDisplayFormat = '%.2f';
             app.VirtualApertureXSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureXSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureXSpinner.Layout.Row = 4;
             app.VirtualApertureXSpinner.Layout.Column = 4;
 
             % Create VrApX_NFLabel
             app.VrApX_NFLabel = uilabel(app.VirtualApertureCoordinatesGrid);
-            app.VrApX_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApX_NFLabel.Layout.Row = 4;
             app.VrApX_NFLabel.Layout.Column = 5;
             app.VrApX_NFLabel.Text = 'mrad';
@@ -12651,15 +12178,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureX.MajorTicks = [];
             app.VirtualApertureX.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureX.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureX.MinorTicks = [];
-            app.VirtualApertureX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureX.Layout.Row = 5;
             app.VirtualApertureX.Layout.Column = [1 5];
 
             % Create VrApYLabel
             app.VrApYLabel = uilabel(app.VirtualApertureCoordinatesGrid);
             app.VrApYLabel.HorizontalAlignment = 'right';
-            app.VrApYLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApYLabel.Layout.Row = 7;
             app.VrApYLabel.Layout.Column = [2 3];
             app.VrApYLabel.Text = 'Y';
@@ -12670,13 +12194,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureYSpinner.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureYSpinner.ValueDisplayFormat = '%.2f';
             app.VirtualApertureYSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureYSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureYSpinner.Layout.Row = 7;
             app.VirtualApertureYSpinner.Layout.Column = 4;
 
             % Create VrApY_NFLabel
             app.VrApY_NFLabel = uilabel(app.VirtualApertureCoordinatesGrid);
-            app.VrApY_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApY_NFLabel.Layout.Row = 7;
             app.VrApY_NFLabel.Layout.Column = 5;
             app.VrApY_NFLabel.Text = 'mrad';
@@ -12686,8 +12208,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureY.MajorTicks = [];
             app.VirtualApertureY.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureY.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureY.MinorTicks = [];
-            app.VirtualApertureY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureY.Layout.Row = 8;
             app.VirtualApertureY.Layout.Column = [1 5];
 
@@ -12700,15 +12220,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureRotationGrid.Padding = [0 0 0 0];
             app.VirtualApertureRotationGrid.Layout.Row = 10;
             app.VirtualApertureRotationGrid.Layout.Column = [1 5];
-            app.VirtualApertureRotationGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create VirtualApertureReset
             app.VirtualApertureReset = uibutton(app.VirtualApertureRotationGrid, 'push');
             app.VirtualApertureReset.ButtonPushedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureReset.Icon = 'home.png';
-            app.VirtualApertureReset.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.VirtualApertureReset.FontWeight = 'bold';
-            app.VirtualApertureReset.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureReset.Tooltip = {'Home'};
             app.VirtualApertureReset.Layout.Row = 1;
             app.VirtualApertureReset.Layout.Column = 1;
@@ -12718,8 +12235,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureRotateCCW = uibutton(app.VirtualApertureRotationGrid, 'push');
             app.VirtualApertureRotateCCW.ButtonPushedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureRotateCCW.Icon = 'left_rotate.png';
-            app.VirtualApertureRotateCCW.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.VirtualApertureRotateCCW.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureRotateCCW.Layout.Row = 1;
             app.VirtualApertureRotateCCW.Layout.Column = 3;
             app.VirtualApertureRotateCCW.Text = '';
@@ -12729,8 +12244,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureRotationStep.Items = {'90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°'};
             app.VirtualApertureRotationStep.ItemsData = [90 60 45 30 22.5 10 5 2 1 0.5 0.25];
             app.VirtualApertureRotationStep.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureRotationStep.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.VirtualApertureRotationStep.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.VirtualApertureRotationStep.Layout.Row = 1;
             app.VirtualApertureRotationStep.Layout.Column = 4;
             app.VirtualApertureRotationStep.Value = 90;
@@ -12739,8 +12252,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureRotateCW = uibutton(app.VirtualApertureRotationGrid, 'push');
             app.VirtualApertureRotateCW.ButtonPushedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureRotateCW.Icon = 'right_rotate.png';
-            app.VirtualApertureRotateCW.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.VirtualApertureRotateCW.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureRotateCW.Layout.Row = 1;
             app.VirtualApertureRotateCW.Layout.Column = 5;
             app.VirtualApertureRotateCW.Text = '';
@@ -12751,18 +12262,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureInvert.Tooltip = {'Invert virtual aperture mask'};
             app.VirtualApertureInvert.Icon = 'invertColors.png';
             app.VirtualApertureInvert.Text = '';
-            app.VirtualApertureInvert.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.VirtualApertureInvert.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureInvert.Layout.Row = 1;
             app.VirtualApertureInvert.Layout.Column = 7;
 
             % Create VirtualApertureSymmetryPanel
             app.VirtualApertureSymmetryPanel = uipanel(app.VirtualApertureGrid);
-            app.VirtualApertureSymmetryPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureSymmetryPanel.BorderType = 'none';
             app.VirtualApertureSymmetryPanel.TitlePosition = 'centertop';
             app.VirtualApertureSymmetryPanel.Title = 'Symmetry Operations';
-            app.VirtualApertureSymmetryPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.VirtualApertureSymmetryPanel.Layout.Row = 2;
             app.VirtualApertureSymmetryPanel.Layout.Column = 1;
             app.VirtualApertureSymmetryPanel.FontName = 'Arial';
@@ -12775,12 +12282,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureSymmetryGrid.ColumnSpacing = 4;
             app.VirtualApertureSymmetryGrid.RowSpacing = 4;
             app.VirtualApertureSymmetryGrid.Padding = [0 0 0 6];
-            app.VirtualApertureSymmetryGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create VrApSymmLabel
             app.VrApSymmLabel = uilabel(app.VirtualApertureSymmetryGrid);
             app.VrApSymmLabel.HorizontalAlignment = 'right';
-            app.VrApSymmLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApSymmLabel.Layout.Row = 1;
             app.VrApSymmLabel.Layout.Column = 2;
             app.VrApSymmLabel.Text = 'Rotational Symmetry';
@@ -12790,8 +12295,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureSymmetry.Items = {'1', '2', '3', '4', '6'};
             app.VirtualApertureSymmetry.ItemsData = [1 2 3 4 6];
             app.VirtualApertureSymmetry.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureSymmetry.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.VirtualApertureSymmetry.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.VirtualApertureSymmetry.Layout.Row = 1;
             app.VirtualApertureSymmetry.Layout.Column = 3;
             app.VirtualApertureSymmetry.Value = 1;
@@ -12805,7 +12308,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureMirrorGrid.Padding = [0 0 0 0];
             app.VirtualApertureMirrorGrid.Layout.Row = 2;
             app.VirtualApertureMirrorGrid.Layout.Column = [1 4];
-            app.VirtualApertureMirrorGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create VirtualApertureMirror
             app.VirtualApertureMirror = uibutton(app.VirtualApertureMirrorGrid, 'state');
@@ -12813,15 +12315,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureMirror.Tooltip = {'Mirrored'};
             app.VirtualApertureMirror.Icon = 'mirrored.png';
             app.VirtualApertureMirror.Text = '';
-            app.VirtualApertureMirror.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.VirtualApertureMirror.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureMirror.Layout.Row = 1;
             app.VirtualApertureMirror.Layout.Column = 1;
 
             % Create VrApMirrRotLabel
             app.VrApMirrRotLabel = uilabel(app.VirtualApertureMirrorGrid);
             app.VrApMirrRotLabel.HorizontalAlignment = 'right';
-            app.VrApMirrRotLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApMirrRotLabel.Layout.Row = 1;
             app.VrApMirrRotLabel.Layout.Column = [2 4];
             app.VrApMirrRotLabel.Text = 'Mirror Rotation';
@@ -12833,13 +12332,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureMirrorRotationSpinner.Limits = [-180 180];
             app.VirtualApertureMirrorRotationSpinner.ValueDisplayFormat = '%.2f';
             app.VirtualApertureMirrorRotationSpinner.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureMirrorRotationSpinner.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureMirrorRotationSpinner.Layout.Row = 1;
             app.VirtualApertureMirrorRotationSpinner.Layout.Column = 5;
 
             % Create VrApMirrRot_NFLabel
             app.VrApMirrRot_NFLabel = uilabel(app.VirtualApertureMirrorGrid);
-            app.VrApMirrRot_NFLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VrApMirrRot_NFLabel.Layout.Row = 1;
             app.VrApMirrRot_NFLabel.Layout.Column = 6;
             app.VrApMirrRot_NFLabel.Text = '°';
@@ -12850,16 +12347,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.VirtualApertureMirrorRotation.MajorTicks = [];
             app.VirtualApertureMirrorRotation.ValueChangedFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
             app.VirtualApertureMirrorRotation.ValueChangingFcn = createCallbackFcn(app, @virtual_aperture_callbacks, true);
-            app.VirtualApertureMirrorRotation.MinorTicks = [];
-            app.VirtualApertureMirrorRotation.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.VirtualApertureMirrorRotation.Layout.Row = 2;
             app.VirtualApertureMirrorRotation.Layout.Column = [1 7];
 
             % Create CustomDetectorTab
             app.CustomDetectorTab = uitab(app.ModeTabGroup);
             app.CustomDetectorTab.Title = 'C';
-            app.CustomDetectorTab.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorTab.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
 
             % Create CustomDetectorGrid
             app.CustomDetectorGrid = uigridlayout(app.CustomDetectorTab);
@@ -12868,7 +12361,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorGrid.ColumnSpacing = 4;
             app.CustomDetectorGrid.RowSpacing = 0;
             app.CustomDetectorGrid.Padding = [0 0 0 0];
-            app.CustomDetectorGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create CustomDetectorNewMaskGrid
             app.CustomDetectorNewMaskGrid = uigridlayout(app.CustomDetectorGrid);
@@ -12879,14 +12371,11 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewMaskGrid.Padding = [4 0 4 4];
             app.CustomDetectorNewMaskGrid.Layout.Row = 1;
             app.CustomDetectorNewMaskGrid.Layout.Column = 1;
-            app.CustomDetectorNewMaskGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create CustomDetectorNewCircle
             app.CustomDetectorNewCircle = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewCircle.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewCircle.Icon = 'circle.png';
-            app.CustomDetectorNewCircle.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewCircle.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewCircle.Tooltip = {'Add circular mask'};
             app.CustomDetectorNewCircle.Layout.Row = 1;
             app.CustomDetectorNewCircle.Layout.Column = 2;
@@ -12896,8 +12385,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewGrid = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewGrid.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewGrid.Icon = fullfile(pathToMLAPP, 'icons', 'grid.png');
-            app.CustomDetectorNewGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewGrid.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewGrid.Tooltip = {'Add grid mask'};
             app.CustomDetectorNewGrid.Layout.Row = 1;
             app.CustomDetectorNewGrid.Layout.Column = 3;
@@ -12907,8 +12394,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewBandpass = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewBandpass.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewBandpass.Icon = 'bandpass.png';
-            app.CustomDetectorNewBandpass.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewBandpass.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewBandpass.Tooltip = {'Add bandpass mask'};
             app.CustomDetectorNewBandpass.Layout.Row = 1;
             app.CustomDetectorNewBandpass.Layout.Column = 5;
@@ -12918,9 +12403,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewWedge = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewWedge.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewWedge.Icon = 'wedge.png';
-            app.CustomDetectorNewWedge.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorNewWedge.FontSize = 10;
-            app.CustomDetectorNewWedge.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewWedge.Tooltip = {'Add wedge mask'};
             app.CustomDetectorNewWedge.Layout.Row = 1;
             app.CustomDetectorNewWedge.Layout.Column = 6;
@@ -12930,8 +12413,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewPolygon = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewPolygon.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewPolygon.Icon = 'poly.png';
-            app.CustomDetectorNewPolygon.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewPolygon.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewPolygon.Tooltip = {'Add polygon mask'};
             app.CustomDetectorNewPolygon.Layout.Row = 1;
             app.CustomDetectorNewPolygon.Layout.Column = 7;
@@ -12941,8 +12422,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewFromFile = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewFromFile.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewFromFile.Icon = 'openMask.png';
-            app.CustomDetectorNewFromFile.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewFromFile.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewFromFile.Tooltip = {'Add mask from file'};
             app.CustomDetectorNewFromFile.Layout.Row = 1;
             app.CustomDetectorNewFromFile.Layout.Column = 8;
@@ -12952,8 +12431,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewMath = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewMath.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewMath.Icon = 'math.png';
-            app.CustomDetectorNewMath.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewMath.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewMath.Tooltip = {'Add mask from formula'};
             app.CustomDetectorNewMath.Layout.Row = 1;
             app.CustomDetectorNewMath.Layout.Column = 9;
@@ -12963,8 +12440,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorNewGridNoCenter = uibutton(app.CustomDetectorNewMaskGrid, 'push');
             app.CustomDetectorNewGridNoCenter.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorNewGridNoCenter.Icon = fullfile(pathToMLAPP, 'icons', 'grid_no_tb.png');
-            app.CustomDetectorNewGridNoCenter.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorNewGridNoCenter.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorNewGridNoCenter.Tooltip = {'Add grid mask without including transmitted beam'};
             app.CustomDetectorNewGridNoCenter.Layout.Row = 1;
             app.CustomDetectorNewGridNoCenter.Layout.Column = 4;
@@ -12979,15 +12454,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorInterMaskGrid.Padding = [4 4 4 4];
             app.CustomDetectorInterMaskGrid.Layout.Row = 2;
             app.CustomDetectorInterMaskGrid.Layout.Column = 1;
-            app.CustomDetectorInterMaskGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShowDiffractionMaskWindow
             app.ShowDiffractionMaskWindow = uibutton(app.CustomDetectorInterMaskGrid, 'push');
             app.ShowDiffractionMaskWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowDiffractionMaskWindow.Tag = 'DiffractionMask';
             app.ShowDiffractionMaskWindow.Icon = 'Aperture.png';
-            app.ShowDiffractionMaskWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowDiffractionMaskWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowDiffractionMaskWindow.Tooltip = {'Show Diffraction Mask Image'};
             app.ShowDiffractionMaskWindow.Layout.Row = 1;
             app.ShowDiffractionMaskWindow.Layout.Column = 1;
@@ -12998,7 +12470,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.IntermaskLabel.HorizontalAlignment = 'right';
             app.IntermaskLabel.FontName = 'Arial';
             app.IntermaskLabel.FontWeight = 'bold';
-            app.IntermaskLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.IntermaskLabel.Layout.Row = 1;
             app.IntermaskLabel.Layout.Column = 3;
             app.IntermaskLabel.Text = 'Inter-mask';
@@ -13010,8 +12481,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorInterMask.Tooltip = {'Combine different custom masks as:'; 'Union, e.g. Final = A ∪ B ∪ C;'; 'Intersection, e.g. Final = A ∩ B ∩ C;'; 'Additive, e.g. Final = A*WtA + B*WtB + C*WtC;'; 'Current-only, i.e. only the selected mask.'; 'Zero-weighted masks are always ignored. Weightings have no effect in Union and Intersection. Weightings are applied unnormalised in Additive and Current-only.'};
             app.CustomDetectorInterMask.FontName = 'Arial';
             app.CustomDetectorInterMask.FontWeight = 'bold';
-            app.CustomDetectorInterMask.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.CustomDetectorInterMask.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorInterMask.Layout.Row = 1;
             app.CustomDetectorInterMask.Layout.Column = 4;
             app.CustomDetectorInterMask.Value = 'Color Mix';
@@ -13020,9 +12489,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorDeleteMask = uibutton(app.CustomDetectorInterMaskGrid, 'push');
             app.CustomDetectorDeleteMask.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorDeleteMask.Icon = 'delete.png';
-            app.CustomDetectorDeleteMask.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorDeleteMask.FontWeight = 'bold';
-            app.CustomDetectorDeleteMask.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorDeleteMask.Tooltip = {'Delete seleced mask'};
             app.CustomDetectorDeleteMask.Layout.Row = 1;
             app.CustomDetectorDeleteMask.Layout.Column = 6;
@@ -13030,7 +12497,6 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create CustomDetectorTable
             app.CustomDetectorTable = uitable(app.CustomDetectorGrid);
-            app.CustomDetectorTable.BackgroundColor = [1 1 1;0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorTable.ColumnName = {'ID'; 'Type'; 'Label'; '✅'; '👁'; 'μ'};
             app.CustomDetectorTable.RowName = {};
             app.CustomDetectorTable.ColumnSortable = [false true true false false false];
@@ -13039,14 +12505,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorTable.CellEditCallback = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorTable.CellSelectionCallback = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorTable.Tooltip = {'✅: Enable mask.'; '👁: Show annotation on pattern.'; 'μ: Weighting.'};
-            app.CustomDetectorTable.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorTable.FontName = 'MS Sans Serif';
             app.CustomDetectorTable.Layout.Row = 3;
             app.CustomDetectorTable.Layout.Column = 1;
 
             % Create CustomDetectorDetailsPanel
             app.CustomDetectorDetailsPanel = uipanel(app.CustomDetectorGrid);
-            app.CustomDetectorDetailsPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorDetailsPanel.BorderType = 'none';
             app.CustomDetectorDetailsPanel.TitlePosition = 'centertop';
             app.CustomDetectorDetailsPanel.BackgroundColor = [1 1 1];
@@ -13061,7 +12525,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorDetailsGrid.ColumnSpacing = 1;
             app.CustomDetectorDetailsGrid.RowSpacing = 1;
             app.CustomDetectorDetailsGrid.Padding = [1 1 1 1];
-            app.CustomDetectorDetailsGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create CustomDetectorRotationGrid
             app.CustomDetectorRotationGrid = uigridlayout(app.CustomDetectorDetailsGrid);
@@ -13072,12 +12535,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorRotationGrid.Padding = [0 0 0 0];
             app.CustomDetectorRotationGrid.Layout.Row = 1;
             app.CustomDetectorRotationGrid.Layout.Column = [1 3];
-            app.CustomDetectorRotationGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create CDIntraCombLabel
             app.CDIntraCombLabel = uilabel(app.CustomDetectorRotationGrid);
             app.CDIntraCombLabel.HorizontalAlignment = 'center';
-            app.CDIntraCombLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CDIntraCombLabel.Layout.Row = 1;
             app.CDIntraCombLabel.Layout.Column = 1;
             app.CDIntraCombLabel.Text = 'Intra-mask';
@@ -13087,8 +12548,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorIntraMask.Items = {'Union', 'Intersection', 'Additive'};
             app.CustomDetectorIntraMask.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorIntraMask.Tooltip = {'Combine different regions in mask as:'; 'Union, e.g. A = A1 ∪ A2 ∪ A3;'; 'Intersection, e.g. A = A1 ∩ A2 ∩ A3;'; 'Additive, e.g. A = A1 + A2 + A3.'};
-            app.CustomDetectorIntraMask.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.CustomDetectorIntraMask.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorIntraMask.Layout.Row = 1;
             app.CustomDetectorIntraMask.Layout.Column = 2;
             app.CustomDetectorIntraMask.Value = 'Union';
@@ -13098,8 +12557,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorRotationStep.Items = {'180°', '90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°'};
             app.CustomDetectorRotationStep.ItemsData = [180 90 60 45 30 22.5 10 5 2 1 0.5 0.25];
             app.CustomDetectorRotationStep.Tooltip = {'Mask rotation step size'};
-            app.CustomDetectorRotationStep.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.CustomDetectorRotationStep.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorRotationStep.Layout.Row = 1;
             app.CustomDetectorRotationStep.Layout.Column = 4;
             app.CustomDetectorRotationStep.Value = 90;
@@ -13108,8 +12565,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorRotateCCW = uibutton(app.CustomDetectorRotationGrid, 'push');
             app.CustomDetectorRotateCCW.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorRotateCCW.Icon = 'left_rotate.png';
-            app.CustomDetectorRotateCCW.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorRotateCCW.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorRotateCCW.Tooltip = {'Rotate mask'};
             app.CustomDetectorRotateCCW.Layout.Row = 1;
             app.CustomDetectorRotateCCW.Layout.Column = 5;
@@ -13119,8 +12574,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorRotateCW = uibutton(app.CustomDetectorRotationGrid, 'push');
             app.CustomDetectorRotateCW.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorRotateCW.Icon = 'right_rotate.png';
-            app.CustomDetectorRotateCW.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorRotateCW.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorRotateCW.Tooltip = {'Rotate mask'};
             app.CustomDetectorRotateCW.Layout.Row = 1;
             app.CustomDetectorRotateCW.Layout.Column = 6;
@@ -13132,20 +12585,16 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorMirror.Tooltip = {'Mirrored'};
             app.CustomDetectorMirror.Icon = 'mirrored.png';
             app.CustomDetectorMirror.Text = '';
-            app.CustomDetectorMirror.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorMirror.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorMirror.Layout.Row = 2;
             app.CustomDetectorMirror.Layout.Column = 1;
 
             % Create CustomDetectorDetailsTable
             app.CustomDetectorDetailsTable = uitable(app.CustomDetectorDetailsGrid);
-            app.CustomDetectorDetailsTable.BackgroundColor = [1 1 1;0.96078431372549 0.96078431372549 0.96078431372549];
             app.CustomDetectorDetailsTable.ColumnName = {'X'; 'Y'; 'R'};
             app.CustomDetectorDetailsTable.RowName = {};
             app.CustomDetectorDetailsTable.ColumnSortable = true;
             app.CustomDetectorDetailsTable.ColumnEditable = true;
             app.CustomDetectorDetailsTable.CellEditCallback = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CustomDetectorDetailsTable.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorDetailsTable.Layout.Row = [2 5];
             app.CustomDetectorDetailsTable.Layout.Column = 2;
 
@@ -13155,8 +12604,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorInvert.Tooltip = {'Invert mask'};
             app.CustomDetectorInvert.Icon = 'invertColors.png';
             app.CustomDetectorInvert.Text = '';
-            app.CustomDetectorInvert.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorInvert.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorInvert.Layout.Row = 3;
             app.CustomDetectorInvert.Layout.Column = 1;
 
@@ -13164,8 +12611,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorColor = uibutton(app.CustomDetectorDetailsGrid, 'push');
             app.CustomDetectorColor.ButtonPushedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorColor.Icon = 'colorPicker.png';
-            app.CustomDetectorColor.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorColor.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorColor.Tooltip = {'Change color of current mask display'};
             app.CustomDetectorColor.Layout.Row = 4;
             app.CustomDetectorColor.Layout.Column = 1;
@@ -13176,8 +12621,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorFlipHorizontal.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorFlipHorizontal.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorHorz.png');
             app.CustomDetectorFlipHorizontal.Text = '';
-            app.CustomDetectorFlipHorizontal.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorFlipHorizontal.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorFlipHorizontal.Layout.Row = 2;
             app.CustomDetectorFlipHorizontal.Layout.Column = 3;
 
@@ -13186,8 +12629,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorFlipVertical.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorFlipVertical.Icon = fullfile(pathToMLAPP, 'icons', 'mirrorVert.png');
             app.CustomDetectorFlipVertical.Text = '';
-            app.CustomDetectorFlipVertical.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorFlipVertical.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorFlipVertical.Layout.Row = 3;
             app.CustomDetectorFlipVertical.Layout.Column = 3;
 
@@ -13196,8 +12637,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.CustomDetectorTranspose.ValueChangedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
             app.CustomDetectorTranspose.Icon = fullfile(pathToMLAPP, 'icons', 'transpose.png');
             app.CustomDetectorTranspose.Text = '';
-            app.CustomDetectorTranspose.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.CustomDetectorTranspose.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CustomDetectorTranspose.Layout.Row = 4;
             app.CustomDetectorTranspose.Layout.Column = 3;
 
@@ -13208,7 +12647,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.Quant4D_FigGrid.ColumnSpacing = 0;
             app.Quant4D_FigGrid.RowSpacing = 0;
             app.Quant4D_FigGrid.Padding = [0 0 0 0];
-            app.Quant4D_FigGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShortcutButtonGrid
             app.ShortcutButtonGrid = uigridlayout(app.Quant4D_FigGrid);
@@ -13219,7 +12657,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShortcutButtonGrid.Padding = [4 4 4 4];
             app.ShortcutButtonGrid.Layout.Row = 1;
             app.ShortcutButtonGrid.Layout.Column = 1;
-            app.ShortcutButtonGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create ShowImportWindow
             app.ShowImportWindow = uibutton(app.ShortcutButtonGrid, 'push');
@@ -13228,7 +12665,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowImportWindow.BackgroundColor = [0.702 1 0.702];
             app.ShowImportWindow.FontName = 'arial';
             app.ShowImportWindow.FontWeight = 'bold';
-            app.ShowImportWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowImportWindow.Tooltip = {'Import Data'};
             app.ShowImportWindow.Layout.Row = 1;
             app.ShowImportWindow.Layout.Column = 1;
@@ -13238,8 +12674,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowSaveWindow = uibutton(app.ShortcutButtonGrid, 'push');
             app.ShowSaveWindow.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.ShowSaveWindow.Icon = 'save.png';
-            app.ShowSaveWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowSaveWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowSaveWindow.Tooltip = {'Open the Saving/Export window'};
             app.ShowSaveWindow.Layout.Row = 1;
             app.ShowSaveWindow.Layout.Column = 2;
@@ -13249,8 +12683,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.AutoSaveImage = uibutton(app.ShortcutButtonGrid, 'push');
             app.AutoSaveImage.ButtonPushedFcn = createCallbackFcn(app, @save_callbacks, true);
             app.AutoSaveImage.Icon = 'autoSave.png';
-            app.AutoSaveImage.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.AutoSaveImage.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.AutoSaveImage.Tooltip = {'Repeat Previous Image Saving Operation'};
             app.AutoSaveImage.Layout.Row = 1;
             app.AutoSaveImage.Layout.Column = 3;
@@ -13260,8 +12692,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.UpdateImages = uibutton(app.ShortcutButtonGrid, 'push');
             app.UpdateImages.ButtonPushedFcn = createCallbackFcn(app, @update_images, true);
             app.UpdateImages.Icon = 'refresh.png';
-            app.UpdateImages.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.UpdateImages.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.UpdateImages.Tooltip = {'Update Images (F5)'};
             app.UpdateImages.Layout.Row = 1;
             app.UpdateImages.Layout.Column = 4;
@@ -13272,8 +12702,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowSettingsWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowSettingsWindow.Tag = 'Settings';
             app.ShowSettingsWindow.Icon = fullfile(pathToMLAPP, 'icons', 'settings.png');
-            app.ShowSettingsWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowSettingsWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowSettingsWindow.Tooltip = {'Show Detector Controls'};
             app.ShowSettingsWindow.Layout.Row = 1;
             app.ShowSettingsWindow.Layout.Column = 7;
@@ -13288,7 +12716,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ModeGrid.Padding = [0 0 0 0];
             app.ModeGrid.Layout.Row = 2;
             app.ModeGrid.Layout.Column = 1;
-            app.ModeGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create Mode
             app.Mode = uidropdown(app.ModeGrid);
@@ -13298,18 +12725,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.Mode.Tooltip = {'Diffraction Detector Mode'};
             app.Mode.FontSize = 14;
             app.Mode.FontWeight = 'bold';
-            app.Mode.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.Mode.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.Mode.Layout.Row = 1;
             app.Mode.Layout.Column = 2;
             app.Mode.Value = 'Preview';
 
             % Create ModePanel
             app.ModePanel = uipanel(app.Quant4D_FigGrid);
-            app.ModePanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ModePanel.BorderType = 'none';
             app.ModePanel.TitlePosition = 'centertop';
-            app.ModePanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.ModePanel.Layout.Row = 3;
             app.ModePanel.Layout.Column = 1;
 
@@ -13322,18 +12745,15 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealPanelGrid.Padding = [4 4 4 0];
             app.RealPanelGrid.Layout.Row = 4;
             app.RealPanelGrid.Layout.Column = 1;
-            app.RealPanelGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create RealPanel
             app.RealPanel = uipanel(app.RealPanelGrid);
             app.RealPanel.AutoResizeChildren = 'off';
             app.RealPanel.Tooltip = {'Real-space region of interest (ROI)'};
-            app.RealPanel.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealPanel.BorderType = 'none';
             app.RealPanel.TitlePosition = 'centertop';
             app.RealPanel.Title = 'Real-space ROI';
             app.RealPanel.Visible = 'off';
-            app.RealPanel.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.RealPanel.Layout.Row = 1;
             app.RealPanel.Layout.Column = 1;
             app.RealPanel.FontName = 'Arial';
@@ -13347,7 +12767,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealGrid.ColumnSpacing = 4;
             app.RealGrid.RowSpacing = 4;
             app.RealGrid.Padding = [0 0 0 4];
-            app.RealGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create RealROIInvert
             app.RealROIInvert = uibutton(app.RealGrid, 'state');
@@ -13355,8 +12774,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealROIInvert.Tooltip = {'Invert real-space mask'};
             app.RealROIInvert.Icon = 'invertColors.png';
             app.RealROIInvert.Text = '';
-            app.RealROIInvert.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.RealROIInvert.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealROIInvert.Layout.Row = 1;
             app.RealROIInvert.Layout.Column = 3;
 
@@ -13365,8 +12782,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.ShowRealMaskWindow.ButtonPushedFcn = createCallbackFcn(app, @show_window, true);
             app.ShowRealMaskWindow.Tag = 'RealMask';
             app.ShowRealMaskWindow.Icon = 'Aperture.png';
-            app.ShowRealMaskWindow.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
-            app.ShowRealMaskWindow.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ShowRealMaskWindow.Tooltip = {'Show Real-space Mask'};
             app.ShowRealMaskWindow.Layout.Row = 1;
             app.ShowRealMaskWindow.Layout.Column = 1;
@@ -13381,12 +12796,10 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealROIGrid.Padding = [0 0 0 0];
             app.RealROIGrid.Layout.Row = 2;
             app.RealROIGrid.Layout.Column = [1 3];
-            app.RealROIGrid.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
 
             % Create RealYLabel
             app.RealYLabel = uilabel(app.RealROIGrid);
             app.RealYLabel.HorizontalAlignment = 'right';
-            app.RealYLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealYLabel.Layout.Row = 1;
             app.RealYLabel.Layout.Column = 4;
             app.RealYLabel.Text = 'Y';
@@ -13397,14 +12810,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealROIFrameY.RoundFractionalValues = 'on';
             app.RealROIFrameY.ValueDisplayFormat = '%.0f';
             app.RealROIFrameY.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
-            app.RealROIFrameY.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealROIFrameY.Layout.Row = 1;
             app.RealROIFrameY.Layout.Column = 5;
 
             % Create RealXLabel
             app.RealXLabel = uilabel(app.RealROIGrid);
             app.RealXLabel.HorizontalAlignment = 'right';
-            app.RealXLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealXLabel.Layout.Row = 1;
             app.RealXLabel.Layout.Column = 2;
             app.RealXLabel.Text = 'X';
@@ -13415,14 +12826,12 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealROIFrameX.RoundFractionalValues = 'on';
             app.RealROIFrameX.ValueDisplayFormat = '%.0f';
             app.RealROIFrameX.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
-            app.RealROIFrameX.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealROIFrameX.Layout.Row = 1;
             app.RealROIFrameX.Layout.Column = 3;
 
             % Create RealROIFrameLabel
             app.RealROIFrameLabel = uilabel(app.RealROIGrid);
             app.RealROIFrameLabel.HorizontalAlignment = 'right';
-            app.RealROIFrameLabel.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.RealROIFrameLabel.Layout.Row = 1;
             app.RealROIFrameLabel.Layout.Column = 1;
             app.RealROIFrameLabel.Text = 'Frame';
@@ -13432,8 +12841,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.RealROIShape.Items = {'Full Image', 'Point', 'Ellipse', 'Rectangle', 'Draw Polygon', 'From File'};
             app.RealROIShape.ItemsData = {'full', 'point', 'ellipse', 'rectangle', 'poly', 'file'};
             app.RealROIShape.ValueChangedFcn = createCallbackFcn(app, @realspace_ROI_callbacks, true);
-            app.RealROIShape.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.RealROIShape.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.RealROIShape.Layout.Row = 1;
             app.RealROIShape.Layout.Column = 2;
             app.RealROIShape.Value = 'full';
@@ -13442,8 +12849,6 @@ classdef Quant4D < matlab.apps.AppBase
             app.diffraction_dropdown = uidropdown(app.Quant4D_Fig);
             app.diffraction_dropdown.Items = {'sum', 'mean', 'max', 'std', 'sqrt', 'ln', 'log10'};
             app.diffraction_dropdown.Tooltip = {'Set how patterns are combined in real space. NOTE: max() and std() can be significantly slower when interactiving with a real space ROI!'};
-            app.diffraction_dropdown.FontColor = [0.129411764705882 0.129411764705882 0.129411764705882];
-            app.diffraction_dropdown.BackgroundColor = [0.96078431372549 0.96078431372549 0.96078431372549];
             app.diffraction_dropdown.Position = [-161 -4 65 22];
             app.diffraction_dropdown.Value = 'sum';
 
@@ -13453,43 +12858,32 @@ classdef Quant4D < matlab.apps.AppBase
             % Create Test1Menu
             app.Test1Menu = uimenu(app.DebugContextMenu);
             app.Test1Menu.MenuSelectedFcn = createCallbackFcn(app, @test1, true);
-            app.Test1Menu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.Test1Menu.Text = 'Test1';
 
             % Create Test2Menu
             app.Test2Menu = uimenu(app.DebugContextMenu);
             app.Test2Menu.MenuSelectedFcn = createCallbackFcn(app, @test2, true);
-            app.Test2Menu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.Test2Menu.Text = 'Test2';
 
             % Create SaveVecMenu
             app.SaveVecMenu = uimenu(app.DebugContextMenu);
             app.SaveVecMenu.MenuSelectedFcn = createCallbackFcn(app, @first_moment, true);
-            app.SaveVecMenu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.SaveVecMenu.Text = 'SaveVec';
 
             % Create ReimportMenu
             app.ReimportMenu = uimenu(app.DebugContextMenu);
             app.ReimportMenu.MenuSelectedFcn = createCallbackFcn(app, @import_callbacks, true);
-            app.ReimportMenu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ReimportMenu.Text = 'Re-import';
 
             % Create ResetQuant4DMenu
             app.ResetQuant4DMenu = uimenu(app.DebugContextMenu);
             app.ResetQuant4DMenu.MenuSelectedFcn = createCallbackFcn(app, @reset_Quant4D, true);
-            app.ResetQuant4DMenu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.ResetQuant4DMenu.Text = 'ResetQuant4D';
 
             % Create EnableallUIsMenu
             app.EnableallUIsMenu = uimenu(app.DebugContextMenu);
             app.EnableallUIsMenu.MenuSelectedFcn = createCallbackFcn(app, @enable_all_UI, true);
-            app.EnableallUIsMenu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.EnableallUIsMenu.Text = 'Enable all UIs';
-
-            % Create AddToWorkspace
-            app.AddToWorkspace = uimenu(app.DebugContextMenu);
-            app.AddToWorkspace.MenuSelectedFcn = createCallbackFcn(app, @add_to_workspace, true);
-            app.AddToWorkspace.Text = 'Add `app` to workspace';
             
             % Assign app.DebugContextMenu
             app.ShowImportWindow.ContextMenu = app.DebugContextMenu;
@@ -13500,7 +12894,6 @@ classdef Quant4D < matlab.apps.AppBase
             % Create CDDelResetMenu
             app.CDDelResetMenu = uimenu(app.CDDelContext);
             app.CDDelResetMenu.MenuSelectedFcn = createCallbackFcn(app, @custom_detector_callbacks, true);
-            app.CDDelResetMenu.ForegroundColor = [0.129411764705882 0.129411764705882 0.129411764705882];
             app.CDDelResetMenu.Text = 'Reset';
             
             % Assign app.CDDelContext
