@@ -26,6 +26,4 @@ with the new step size.
 
 .. image:: ../_static/annular_round.gif
     :scale: 100%
-    :width: 306
-    :height: 268
-    :align: right
+    :align: centered
