@@ -11,6 +11,6 @@ symmetry, generating multiple apertures at equal angles around the transmitted
 beam. Finally an interactive mirror plane can be added for additional symmetry
 operations.
 
-.. figure:: /_static/virtual_apertures.gif
+.. image:: /_static/virtual_apertures.gif
    :width: 100%
    :align: center
