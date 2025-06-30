@@ -41,3 +41,5 @@ probe positions.
 .. video:: ../_static/rois.mp4
     :width: 100%
     :autoplay:
+    :loop:
+    :controlslist: ['nodownload', 'nofullscreen', 'noremoteplayback']
