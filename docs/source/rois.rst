@@ -42,4 +42,5 @@ probe positions.
     :width: 100%
     :autoplay:
     :loop:
-    :controlslist: `nodownload`
+    :controlslist: nodownload
+    :controlslist: nofullscreen
