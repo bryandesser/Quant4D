@@ -99,14 +99,14 @@ iDPC/iCoM
 *********
 Integrated DPC/CoM images are generated automatically using the detector chosen
 by the user. Integration of the DPC/CoM signal retrieves the phase of the
-specimen transmission function. The maths are thoroughly described by `Lazić *et
-al.*`_.
+specimen transmission function. The maths are thoroughly described by Lazić *et
+al.* `[1]`_
 
 dDPC/dCoM
 *********
 Differentiated DPC/CoM images are generated automatically using the detector
 chose by the user. Differentiation of the DPC/CoM signal retrieves the charge
-density distribution of the specimen transmission.
+density distribution of the specimen transmission. `[1]`_
 
 Filtering
 *********
@@ -118,6 +118,6 @@ cutoff values (in pixels) to apply a bandpass, lowpass, or highpass filter. The
 filter is only applied to the iCoM/iDPC and dCoM/dDPC images.
 
 
-.. _Lazić *et al.*: Ivan Lazić, Eric G. T. Bosch, and Sorin Lazar. "Phase contrast STEM for
+.. _[1]: Ivan Lazić, Eric G. T. Bosch, and Sorin Lazar. "Phase contrast STEM for
   thin samples: Integrated differential phase contrast." Ultramicroscopy 160
   (2016): 265-280. https://doi.org/10.1016/j.ultramic.2015.10.011
