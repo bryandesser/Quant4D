@@ -69,10 +69,11 @@ The name of the images will automatically update to reflect the current mode
     :height: 2ex
 
 * |diffraction| - Main diffraction space image.
-* |diffraction_mask| **Diff. Mask** - Diffraction space mask used to generate images.
+* |diffraction_mask| - Diffraction space mask used to generate images.
 * |bfdf| - Main real space image.
 * |bfdf_mask| - Real space mask (i.e. if an ROI is used)
-* |CoMX|, |CoMY| - CoM/DPC image in the x- and y-direction, respectively.
+* |CoMX| - CoM/DPC image in the x-direction.
+* |CoMY| - CoM/DPC image in the y-direction.
 * |CoM_magnitude| - CoM/DPC magnitude image.
 * |CoM_phase| - CoM/DPC phase image.
 * |colorwheel| - Color wheel legend for phase images.
