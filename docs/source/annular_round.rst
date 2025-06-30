@@ -27,3 +27,5 @@ with the new step size.
 .. video:: ../_static/annular_round.mp4
     :width: 100%
     :autoplay:
+    :loop:
+    :controlslist: nodownload,noremoteplayback

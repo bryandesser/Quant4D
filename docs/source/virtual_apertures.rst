@@ -14,3 +14,5 @@ operations.
 .. video:: ../_static/virtual_apertures.mp4
     :width: 100%
     :autoplay:
+    :loop:
+    :controlslist: nodownload,noremoteplayback
