@@ -12,7 +12,5 @@ beam. Finally an interactive mirror plane can be added for additional symmetry
 operations.
 
 .. video:: ../_static/virtual_apertures.mp4
-    :width: 503
-    :height: 209
-    :nocontrols:
+    :width: 100%
     :autoplay:
