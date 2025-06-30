@@ -95,19 +95,29 @@ vector field is highly oversampled compared to its rate of change.
 Additionally, the user can change the color of the vector overlay independently
 on each image using the |colorpicker| icon next to the vector sampling dropdown.
 
-.. [Lazić] Lazić, I., and Bosch, E. G. T., and Lazar, S. "Phase contrast STEM
-  for thin samples: Integrated differential phase contrast." Ultramicroscopy
-  160 (2016): 265-280. https://doi.org/10.1016/j.ultramic.2015.10.011
-
 iDPC/iCoM
 *********
 Integrated DPC/CoM images are generated automatically using the detector chosen
 by the user. Integration of the DPC/CoM signal retrieves the phase of the
-specimen transmission function. The maths are thoroughly described by [Lazić]_.
+specimen transmission function. The maths are thoroughly described by Lazić *et
+al*. [1]_
 
 dDPC/dCoM
 *********
-
+Differentiated DPC/CoM images are generated automatically using the detector
+chose by the user. Differentiation of the DPC/CoM signal retrieves the charge
+density distribution of the specimen transmission. [1]_
 
 Filtering
 *********
+Because the integration step can amplify noise at low spatial frequencies,
+while differentiation can suffer from noise at high spatial frequencies, a
+bandpass filter is made available to the user in the **Windows** tab of the
+**Settings** UI. The user can independently change the low and high frequency
+cutoff values (in pixels) to apply a bandpass, lowpass, or highpass filter. The
+filter is only applied to the iCoM/iDPC and dCoM/dDPC images.
+
+
+.. [1] Ivan Lazić, Eric G. T. Bosch, and Sorin Lazar. "Phase contrast STEM for
+  thin samples: Integrated differential phase contrast." Ultramicroscopy 160
+  (2016): 265-280. https://doi.org/10.1016/j.ultramic.2015.10.011
