@@ -65,9 +65,6 @@ The name of the images will automatically update to reflect the current mode
 .. |iCoM| image:: ../_static/iCoM.png
     :height: 2ex
 
-.. |colorpicker| image:: ../../src/icons/colorPicker.png
-    :height: 2ex
-
 * |diffraction| - Main diffraction space image.
 * |diffraction_mask| - Diffraction space mask used to generate images.
 * |bfdf| - Main real space image.
@@ -83,6 +80,9 @@ The name of the images will automatically update to reflect the current mode
 
 Vector overlays
 ***************
+.. |colorpicker| image:: ../../src/icons/colorPicker.png
+    :height: 2ex
+
 DPC and CoM imaging generates a vector field, which can be selectively overlaid
 on any/all real space images. The user should first select the desired image by
 either clicking the relevant button above, clicking within the image window
@@ -95,11 +95,19 @@ vector field is highly oversampled compared to its rate of change.
 Additionally, the user can change the color of the vector overlay independently
 on each image using the |colorpicker| icon next to the vector sampling dropdown.
 
+.. [Lazić] Lazić, I., and Bosch, E. G. T., and Lazar, S. "Phase contrast STEM
+  for thin samples: Integrated differential phase contrast." Ultramicroscopy
+  160 (2016): 265-280. https://doi.org/10.1016/j.ultramic.2015.10.011
+
 iDPC/iCoM
 *********
+Integrated DPC/CoM images are generated automatically using the detector chosen
+by the user. Integration of the DPC/CoM signal retrieves the phase of the
+specimen transmission function. The maths are thoroughly described by [Lazić]_.
 
 dDPC/dCoM
 *********
+
 
 Filtering
 *********
