@@ -28,4 +28,4 @@ with the new step size.
     :width: 100%
     :autoplay:
     :loop:
-    :controlslist: nodownload,noremoteplayback 
+    :controlslist: nodownload,noremoteplayback
