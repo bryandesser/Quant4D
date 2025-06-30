@@ -100,13 +100,13 @@ iDPC/iCoM
 Integrated DPC/CoM images are generated automatically using the detector chosen
 by the user. Integration of the DPC/CoM signal retrieves the phase of the
 specimen transmission function. The maths are thoroughly described by Lazić *et
-al*. [`1`_]
+al*. `1`_
 
 dDPC/dCoM
 *********
 Differentiated DPC/CoM images are generated automatically using the detector
 chose by the user. Differentiation of the DPC/CoM signal retrieves the charge
-density distribution of the specimen transmission. [`1`_]
+density distribution of the specimen transmission. `1`_
 
 Filtering
 *********
