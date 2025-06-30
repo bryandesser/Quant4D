@@ -34,6 +34,7 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.githubpages',
     'sphinx_autodoc_typehints',
+    'sphinxcontrib.video',
 ]
 
 napoleon_numpy_docstring = True
