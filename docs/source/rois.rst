@@ -37,3 +37,7 @@ probe positions.
 .. _Ellipse : https://mathworks.com/help/images/ref/images.roi.ellipse.html
 .. _Rectangle : https://mathworks.com/help/images/ref/images.roi.rectangle.html
 .. _Polygon : https://mathworks.com/help/images/ref/images.roi.polygon.html
+
+.. video:: ../_static/rois.mp4
+    :width: 100%
+    :autoplay:

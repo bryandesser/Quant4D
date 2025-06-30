@@ -24,6 +24,6 @@ and computational efficiency; however, the user can directly change this step
 size for finer/coarser control, at which point the pre-calculation is repeated
 with the new step size. 
 
-.. image:: ../_static/annular_round.gif
-    :scale: 100%
-    :align: center
+.. video:: ../_static/annular_round.mp4
+    :width: 100%
+    :autoplay:

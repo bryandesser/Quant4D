@@ -7,21 +7,10 @@ from datetime import datetime
 
 sys.path.insert(0, "../src")
 
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
 project = 'Quant4D'
 copyright = f"{datetime.today().year}, Bryan D Esser"
 author = 'Bryan D Esser'
 release = '2025.03.17'
-
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx_rtd_theme",
@@ -42,11 +31,8 @@ napoleon_custom_sections = [('Returns', 'params_style')]
 napoleon_use_param = True
 napoleon_preprocess_types = True
 
-
-# Configure the matlab extension
 primary_domain = "mat"
 this_dir = os.path.dirname(__file__)
-#matlab_src_dir = os.path.abspath(os.path.join(this_dir, "..", "..", "src"))
 matlab_src_dir = os.path.abspath(this_dir)
 matlab_short_links = True
 matlab_auto_link = "all"
@@ -63,16 +49,10 @@ autodoc_default_options = {
     "special-members": "__init__",
 }
 
-# Include todo items/lists
 todo_include_todos = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
-
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ['_static']
