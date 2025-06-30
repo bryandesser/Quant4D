@@ -118,6 +118,8 @@ cutoff values (in pixels) to apply a bandpass, lowpass, or highpass filter. The
 filter is only applied to the iCoM/iDPC and dCoM/dDPC images.
 
 
-.. _[1]: Ivan Lazić, Eric G. T. Bosch, and Sorin Lazar. "Phase contrast STEM for
+.. _[1]: https://doi.org/10.1016/j.ultramic.2015.10.011
+
+[1] Ivan Lazić, Eric G. T. Bosch, and Sorin Lazar. "Phase contrast STEM for
   thin samples: Integrated differential phase contrast." Ultramicroscopy 160
   (2016): 265-280. https://doi.org/10.1016/j.ultramic.2015.10.011
