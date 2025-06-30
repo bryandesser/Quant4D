@@ -26,9 +26,10 @@ inverts the y-axis scan direction.
 
 .. |lock| image:: ../../src/icons/lock.png
     :height: 2ex
-
+    :class: no-scaled-link
 .. |swap_y| image:: ../../src/icons/axis-y.png
     :height: 2ex
+    :class: no-scaled-link
 
 Images
 ******
@@ -42,28 +43,40 @@ The name of the images will automatically update to reflect the current mode
 
 .. |diffraction| image:: ../_static/diffraction.png
     :height: 2ex
+    :class: no-scaled-link
 .. |diffraction_mask| image:: ../_static/diffraction_mask.png
     :height: 2ex
+    :class: no-scaled-link
 .. |bfdf| image:: ../_static/bfdf.png
     :height: 2ex
+    :class: no-scaled-link
 .. |bfdf_mask| image:: ../_static/bfdf_mask.png
     :height: 2ex
+    :class: no-scaled-link
 .. |CoMX| image:: ../_static/CoMX.png
     :height: 2ex
+    :class: no-scaled-link
 .. |CoMY| image:: ../_static/CoMY.png
     :height: 2ex
+    :class: no-scaled-link
 .. |CoM_magnitude| image:: ../_static/CoM_magnitude.png
     :height: 2ex
+    :class: no-scaled-link
 .. |CoM_phase| image:: ../_static/CoM_phase.png
     :height: 2ex
+    :class: no-scaled-link
 .. |colorwheel| image:: ../_static/colorwheel.png
     :height: 2ex
+    :class: no-scaled-link
 .. |CoM_phase_mag| image:: ../_static/CoM_phase_mag.png
     :height: 2ex
+    :class: no-scaled-link
 .. |dCoM| image:: ../_static/dCoM.png
     :height: 2ex
+    :class: no-scaled-link
 .. |iCoM| image:: ../_static/iCoM.png
     :height: 2ex
+    :class: no-scaled-link
 
 * |diffraction| - Main diffraction space image.
 * |diffraction_mask| - Diffraction space mask used to generate images.
@@ -82,6 +95,7 @@ Vector overlays
 ***************
 .. |colorpicker| image:: ../../src/icons/colorPicker.png
     :height: 2ex
+    :class: no-scaled-link
 
 DPC and CoM imaging generates a vector field, which can be selectively overlaid
 on any/all real space images. The user should first select the desired image by
