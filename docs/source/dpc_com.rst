@@ -27,7 +27,7 @@ inverts the y-axis scan direction.
 .. |lock| image:: ../../src/icons/lock.png
     :height: 2ex
 
-.. |lock| image:: ../../src/icons/axis-y.png
+.. |swap_y| image:: ../../src/icons/axis-y.png
     :height: 2ex
 
 Images
@@ -40,26 +40,45 @@ When the user is enters DPC or CoM mode, this tab is automatically activated.
 The name of the images will automatically update to reflect the current mode
 (i.e. CoMx or DPCx, etc.).
 
-.. |mask| image:: ../../src/icons/Aperture.png
+.. |diffraction| image:: ../_static/diffraction.png
     :height: 2ex
-
-.. |colorwheel| image:: ../../src/icons/colorwheel.png
+.. |diffraction_mask| image:: ../_static/diffraction_mask.png
+    :height: 2ex
+.. |bfdf| image:: ../_static/bfdf.png
+    :height: 2ex
+.. |bfdf_mask| image:: ../_static/bfdf_mask.png
+    :height: 2ex
+.. |CoMX| image:: ../_static/CoMX.png
+    :height: 2ex
+.. |CoMY| image:: ../_static/CoMY.png
+    :height: 2ex
+.. |CoM_magnitude| image:: ../_static/CoM_magnitude.png
+    :height: 2ex
+.. |CoM_phase| image:: ../_static/CoM_phase.png
+    :height: 2ex
+.. |colorwheel| image:: ../_static/colorwheel.png
+    :height: 2ex
+.. |CoM_phase_mag| image:: ../_static/CoM_phase_mag.png
+    :height: 2ex
+.. |dCoM| image:: ../_static/dCoM.png
+    :height: 2ex
+.. |iCoM| image:: ../_static/iCoM.png
     :height: 2ex
 
 .. |colorpicker| image:: ../../src/icons/colorPicker.png
     :height: 2ex
 
-* **Diffraction** - Main diffraction space image.
-* |mask| **Diff. Mask** - Diffraction space mask used to generate images.
-* **BF/DF** - Main real space image.
-* |mask| **BF/DF Mask** - Real space mask (i.e. if an ROI is used)
-* **CoM X**, **CoM Y** - CoM/DPC image in the x- and y-direction, respectively.
-* **|CoM|** - CoM/DPC magnitude image.
-* **CoM φ** - CoM/DPC phase image.
-* |colorwheel| **φ** - Color wheel legend for phase images.
-* **|CoM| φ** - CoM/DPC phase image with opacity based on the magnitude image
-* **dCoM** - Differential CoM/DPC image.
-* **iCoM** - Integrated CoM/DPC image. 
+* |diffraction| - Main diffraction space image.
+* |diffraction_mask| **Diff. Mask** - Diffraction space mask used to generate images.
+* |bfdf| - Main real space image.
+* |bfdf_mask| - Real space mask (i.e. if an ROI is used)
+* |CoMX|, |CoMY| - CoM/DPC image in the x- and y-direction, respectively.
+* |CoM_magnitude| - CoM/DPC magnitude image.
+* |CoM_phase| - CoM/DPC phase image.
+* |colorwheel| - Color wheel legend for phase images.
+* |CoM_phase_mag| - CoM/DPC phase image with opacity based on the magnitude image
+* |dCoM| - Differential CoM/DPC image.
+* |iCoM| - Integrated CoM/DPC image. 
 
 Vector overlays
 ***************
