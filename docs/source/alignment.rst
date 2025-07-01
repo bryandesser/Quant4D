@@ -32,3 +32,9 @@ Diffraction scale
 and reporting a known probe convergence angle in mrad, or by simply reporting a
 known scale in mrad/pixels, which is then propagated through the rest of the GUI
 for all detectors and masks generated. 
+
+.. video:: ../_static/alignment.mp4
+    :width: 100%
+    :autoplay:
+    :loop:
+    :controlslist: nodownload,noremoteplayback
