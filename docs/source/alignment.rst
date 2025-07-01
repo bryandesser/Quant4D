@@ -36,5 +36,4 @@ for all detectors and masks generated.
 .. video:: ../_static/alignment.mp4
     :width: 100%
     :autoplay:
-    :loop:
     :controlslist: nodownload,noremoteplayback
