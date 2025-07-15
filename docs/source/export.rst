@@ -2,16 +2,19 @@
 
 .. |save_icon| image:: ../../src/icons/save.png
     :height: 2ex
+    :class: no-scaled-link
+
 
 .. |image_toolbar| image:: ../_static/image_toolbar.png
     :height: 2ex
+    :class: no-scaled-link
 
 ===========
 Save/Export
 ===========
 Quant4D allows the user to save and export data in various formats. The Save/
 Export dialog can be accessed by clicking the |save_icon| icon in the main UI,
-pressing ctrl+s at any point, or selecting "Export -> Save as" on the toolbar
+pressing ctrl+s at any point, or selecting "Export > Save as" on the toolbar
 in any image window, |image_toolbar|. 
 
 Save Images
