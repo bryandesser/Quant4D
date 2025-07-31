@@ -89,6 +89,7 @@ intra-mask level.
 Inter-mask
 ========== 
 This controls the interaction between all enabled detector masks.
+
 * **Color Mix**: Images generated from each detector mask are added together
   with their automatically assigned color, which can also be changed by the
   user. (Default)
@@ -107,6 +108,7 @@ Intra-mask
 ==========
 Similar to inter-mask operations, some detector masks can result in overlapping
 components, requiring well-defined behavior. 
+
 * **Union**: Logical `or` operation for all components within the selected
   mask. Resultant mask is binary 0 or 1. (Default)
 * **Intersection**: Logical `and` operation for all components within the
