@@ -48,6 +48,13 @@
     :height: 2ex
     :class: no-scaled-link
 
+.. |transpose| image:: ../../src/icons/transpose.png
+    :height: 2ex
+    :class: no-scaled-link
+.. |transpose| image:: ../../src/icons/transpose.png
+    :height: 2ex
+    :class: no-scaled-link
+
 ================
 Custom Detectors
 ================
@@ -73,6 +80,16 @@ At present, all pre-defined masks are centered on the transmitted beam.
   diffraction space.
 | |poly| - User-drawn polygon shaped diffraction mask.
 | |openMask| - Import a mask image from file.
+
+In the detector mask table, each mask has attributes listed as described below:
+
+* **ID** : A letter-based ID used in the software for addressing each mask.
+* **Type** : Mask class (Circle, Grid, GridNoCenter, Bandpass, Wedge, Polygon,
+  File)
+* **Label** : User-defined label for easy data-specific context.
+* **✅** : Enable/disable mask (disable also hides the mask annotation).
+* **👁** : Show/hide mask annotation (does not affect enable/disable state).
+* **μ** : Mask weighting (default = 1; limits = (-Inf, Inf))
 
 *Tip:* to use the pre-defined detector masks centered on a different region of
 diffraction space, return to **Alignment** mode and shift the position of the
