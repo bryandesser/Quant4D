@@ -2,7 +2,7 @@
 
 API
 ===
-This is a test of automatic api documentation.
+This is automatically generated API documentation.
 
 .. module:: .
 
