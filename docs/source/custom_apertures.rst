@@ -2,51 +2,51 @@
 
 
 .. |circle| image:: ../../src/icons/circle.png
-    :height: 2ex
-    :class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |grid| image:: ../../src/icons/grid.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |grid_no_tb| image:: ../../src/icons/grid_no_tb.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |bandpass| image:: ../../src/icons/bandpass.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |wedge| image:: ../../src/icons/wedge.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |polygon| image:: ../../src/icons/polygon.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |openMask| image:: ../../src/icons/openMask.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 
 .. |mirrored| image:: ../../src/icons/mirrored.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |invertColors| image:: ../../src/icons/invertColors.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |colorPicker| image:: ../../src/icons/colorPicker.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |left_rotate| image:: ../../src/icons/left_rotate.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |right_rotate| image:: ../../src/icons/right_rotate.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |mirrorHorz| image:: ../../src/icons/mirrorHorz.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |mirrorVert| image:: ../../src/icons/mirrorVert.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 .. |transpose| image:: ../../src/icons/transpose.png
-:height: 2ex
-:class: no-scaled-link
+  :height: 2ex
+  :class: no-scaled-link
 
 ================
 Custom Detectors
