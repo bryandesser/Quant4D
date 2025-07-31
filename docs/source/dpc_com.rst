@@ -99,15 +99,15 @@ Vector overlays
 
 DPC and CoM imaging generates a vector field, which can be selectively overlaid
 on any/all real space images. The user should first select the desired image by
-either clicking the relevant button above, clicking within the image window
-(i.e. *not* the title bar), or selecting the image from the **Image** dropdown
-on the Display tab in the **Settings** UI. After the desired image is selected,
-the user can click the **Vector Sampling** dropdown in the **Windows** tab of
-the **Settings** UI. Vectors can be displayed at each pixel (1:1), or
-subsampled by a factor of 2, 4, 8, or 16. This is especially helpful when the
-vector field is highly oversampled compared to its rate of change.
-Additionally, the user can change the color of the vector overlay independently
-on each image using the |colorpicker| icon next to the vector sampling dropdown.
+either clicking the relevant button above, clicking the image window, or
+selecting the image from the **Image** dropdown on the Display tab in the
+**Settings** UI. After the desired image is selected, the user can click the
+**Vector Sampling** dropdown in the **Windows** tab of the **Settings** UI.
+Vectors can be displayed at each pixel (1:1), or subsampled by a factor of 2,
+4, 8, or 16. This is especially helpful when the vector field is highly
+oversampled compared to its rate of change. Additionally, the user can change
+the color of the vector overlay independently on each image using the
+|colorpicker| icon next to the vector sampling dropdown.
 
 iDPC/iCoM
 *********
