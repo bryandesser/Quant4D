@@ -16,7 +16,7 @@
 .. |wedge| image:: ../../src/icons/wedge.png
     :height: 2ex
     :class: no-scaled-link
-.. |polygon| image:: ../../src/icons/polygon.png
+.. |poly| image:: ../../src/icons/poly.png
     :height: 2ex
     :class: no-scaled-link
 .. |openMask| image:: ../../src/icons/openMask.png
@@ -72,7 +72,7 @@ At present, all pre-defined masks are centered on the transmitted beam.
   diffraction pattern. Default is mirrored across the transmitted beam;
   however, this can be turned off to only capture scattering on one side of
   diffraction space.
-* |polygon| - User-drawn polygon shaped diffraction mask.
+* |poly| - User-drawn polygon shaped diffraction mask.
 * |openMask| - 
 
 *Tip:* to use the pre-defined detector masks centered on a different region of
