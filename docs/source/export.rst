@@ -61,14 +61,7 @@ the endianness of the data to export, though Little Endian is generally
 recommended as it is the most common memory ordering. 
 
 If the user would like to reduce the size of the dataset, there are options to 
-export ROIs in both diffraction- and real-space, as well as to bin diffraction
-patterns or subsample real-space. When the user selects either of these
-options, a yellow rectangular ROI will appear on the respective image window.
-
-Diffraction Partial Export
-==========================
-If the user
-
-
-Real-space Partial Export
-=========================
+export ROIs in both diffraction- and/or real-space, as well as to bin
+diffraction patterns or subsample real-space. When the user selects either of
+these options, a yellow rectangular ROI will appear on the respective image
+window.
