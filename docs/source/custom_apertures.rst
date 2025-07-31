@@ -84,10 +84,10 @@ At present, all pre-defined masks are centered on the transmitted beam.
 In the detector mask table, each mask has attributes listed as described below:
 
 * **ID** : A letter-based ID used in the software for addressing each mask.
-* **Type** : Mask class (Circle, Grid, GridNoCenter, Bandpass, Wedge, Polygon,
-  File)
+* **Type** : Mask class (``Circle``, ``Grid``, ``GridNoCenter``, ``Bandpass``,
+  ``Wedge``, ``Polygon``, ``File``)
 * **Label** : User-defined label for easy data-specific context.
-* **✅** : Enable/disable mask (disable also hides the mask annotation).
+* **✅** : Enable/disable mask (disabled mask annotations are hidden).
 * **👁** : Show/hide mask annotation (does not affect enable/disable state).
 * **μ** : Mask weighting (default = 1; limits = (-Inf, Inf))
 
