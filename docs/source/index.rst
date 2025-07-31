@@ -22,3 +22,4 @@ Contents
    export
    api
    license
+   acknowledgement
