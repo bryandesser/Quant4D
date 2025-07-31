@@ -61,18 +61,18 @@ There currently six pre-defined detector mask options, as listed below, with
 the added ability to import a pre-calculated diffraction mask (with caveats).
 At present, all pre-defined masks are centered on the transmitted beam.
 
-* |circle| - Circular aperture (can be mirrored for a pair of apertures).
-* |grid| - Grid of circular apertures
-* |grid_no_tb| - Grid of circular apertures, excluding the transmitted beam,
+| |circle| - Circular aperture (can be mirrored for a pair of apertures).
+| |grid| - Grid of circular apertures
+| |grid_no_tb| - Grid of circular apertures, excluding the transmitted beam,
   as well as every 2nd lattice location. Especially useful when interrogating
   superlattice reflections, whilst ignoring Bragg reflections from the matrix. 
-* |bandpass| - Bandpass mask.
-* |wedge| - Wedge mask extending from the transmitted beam to the edges of the
+| |bandpass| - Bandpass mask.
+| |wedge| - Wedge mask extending from the transmitted beam to the edges of the
   diffraction pattern. Default is mirrored across the transmitted beam;
   however, this can be turned off to only capture scattering on one side of
   diffraction space.
-* |poly| - User-drawn polygon shaped diffraction mask.
-* |openMask| - Import a mask image from file.
+| |poly| - User-drawn polygon shaped diffraction mask.
+| |openMask| - Import a mask image from file.
 
 *Tip:* to use the pre-defined detector masks centered on a different region of
 diffraction space, return to **Alignment** mode and shift the position of the
@@ -120,13 +120,13 @@ Mask-specific options
 Several mask transformation options exist depending on the specifics of the
 selected mask geometry. Not all options are available at all times. 
 
-* |mirrored| - mirror the mask across the transmitted beam.
-* |invertColors| - invert the mask ([True, False] -> [False, True]).
-* |colorPicker| - change mask display color.
-* |left_rotate|, |right_rotate| - rotate mask by angle in the dropdown.
-* |mirrorHorz| - mirror the mask across the horizontal plane ([x, y] -> [x, -y]).
-* |mirrorVert| - mirror the mask across the vertical plane ([x, y] -> [-x, y]).
-* |transpose| - transpose the mask ([x, y] -> [y, x])
+| |mirrored| - mirror the mask across the transmitted beam.
+| |invertColors| - invert the mask ([True, False] -> [False, True]).
+| |colorPicker| - change mask display color.
+| |left_rotate|, |right_rotate| - rotate mask by angle in the dropdown.
+| |mirrorHorz| - mirror the mask across the horizontal plane ([x, y] -> [x, -y]).
+| |mirrorVert| - mirror the mask across the vertical plane ([x, y] -> [-x, y]).
+| |transpose| - transpose the mask ([x, y] -> [y, x])
 
 Mask maths
 **************
