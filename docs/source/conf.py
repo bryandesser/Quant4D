@@ -66,6 +66,6 @@ html_context = {
    'github_repo': 'Quant4D',
 }
 
-readme_src_files = ["index", "/docs/source/installation.rst", "/docs/source/acknowledgement.rst"]
+readme_src_files = ["index", "installation.rst", "acknowledgement.rst"]
 
 readme_docs_url_type = "code"
