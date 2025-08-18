@@ -24,6 +24,7 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx_autodoc_typehints',
     'sphinxcontrib.video',
+    'sphinx_readme',
 ]
 
 napoleon_numpy_docstring = True
