@@ -36,11 +36,11 @@ Parameters
 * **Data type**: Data type of the 4D-STEM dataset (8-, 16-, 32-, or 64-bit;
   signed integer, unsigned integer, or floating point)
 * **Byte order**: Big or little endian ordering.
-* **Axis order**: Order of the data axes as saved on disk. **k_x** and **k_y**
-  represent detector axes (i.e. camera pixels); whereas, **r_x** and **r_y**
-  represent the scan axes (i.e. real space probe positions). Default is
-  (**k_x**, **k_y**, **r_x**, **r_y**) where detector images (**k_x**, **k_y**)
-  are contiguous in memory.
+* **Axis order**: Order of the data axes as saved on disk. k\ :sub:`x` and
+  k\ :sub:`y` represent detector axes (i.e. camera pixels); whereas,
+  r\ :sub:`x` and r\ :sub:`y` represent the scan axes (i.e. real space probe
+  positions). Default is (k\ :sub:`x`, k\ :sub:`y`, r\ :sub:`x`, r\ :sub:`y`)
+  where detector images (k\ :sub:`x`, k\ :sub:`y`) are contiguous in memory.
 * **Pixels (x,y)**: Number of detector pixels in each diffraction pattern. 
 * **Frames (x,y)**: Number of probe positions.
 
