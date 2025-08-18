@@ -4753,30 +4753,6 @@ classdef Quant4D < matlab.apps.AppBase
             end
         end
 
-        function dims = check_axis_ordering(app, dims)
-            switch app.ImportAxisOrder.Value
-                case 'kr'
-                    % kx ky rx ry
-                    % standard case, do nothing
-
-                case 'kr_inv'
-                    % ky kx ry rx
-                    % x,y inversion on both axes
-                    dims = dims([2 1 4 3]);
-
-                case 'rk'
-                    % rx ry kx ky
-                    % real axes before diffraction axes
-                    dims = dims([3 4 1 2]);
-
-                case 'rk_inv'
-                    % kx ky rx ry
-                    % real axes before diffraction axes plus x,y inversion
-                    dims = dims([4 3 2 1]);
-            end
-
-        end
-
         function [frame, err] = preview_frame(app, probe_position)
             % Function to import a single detector frame for previewing
             %
