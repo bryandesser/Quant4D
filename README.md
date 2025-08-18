@@ -3,4 +3,5 @@
 # Welcome to the Quant4D documentation
 *Quant4D* is an open source graphical interface for quickly and intuitively opening, interacting with, and performing basic analysis of 4D-STEM data.
 
-/docs/_static/screenshot.png
+![Screenshot of the Quant4D graphical user interface.](/docs/_static/screenshot.png)
+
