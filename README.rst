@@ -14,4 +14,3 @@ opening, interacting with, and performing basic analysis of 4D-STEM data.
 .. include::  /docs/source/installation.rst
 
 .. include::  /docs/source/acknowledgement.rst
-
