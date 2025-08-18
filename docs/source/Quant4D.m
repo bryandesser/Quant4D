@@ -347,12 +347,10 @@ classdef Quant4D < matlab.apps.AppBase
         YLabel                          matlab.ui.control.Label
         ImportFramesX                   matlab.ui.control.NumericEditField
         XLabel                          matlab.ui.control.Label
-        ImportFramesLabel               matlab.ui.control.Label
         ImportPixelsY                   matlab.ui.control.NumericEditField
         YLabel_2                        matlab.ui.control.Label
         ImportPixelsX                   matlab.ui.control.NumericEditField
         XLabel_2                        matlab.ui.control.Label
-        ImportPixelsLabel               matlab.ui.control.Label
         ImportDatasetStructureGrid      matlab.ui.container.GridLayout
         ImportAxisOrder                 matlab.ui.control.DropDown
         AxisOrderingLabel               matlab.ui.control.Label
@@ -360,11 +358,11 @@ classdef Quant4D < matlab.apps.AppBase
         ByteOrderDropDownLabel          matlab.ui.control.Label
         ImportDataType                  matlab.ui.control.DropDown
         DataTypeLabel                   matlab.ui.control.Label
-        FrameFooter                     matlab.ui.control.NumericEditField
+        DataFooter                      matlab.ui.control.NumericEditField
         FrameFooterLabel                matlab.ui.control.Label
-        FrameHeader                     matlab.ui.control.NumericEditField
+        DataHeader                      matlab.ui.control.NumericEditField
         FrameHeaderLabel                matlab.ui.control.Label
-        DataOffset                      matlab.ui.control.NumericEditField
+        DatasetOffset                   matlab.ui.control.NumericEditField
         DataOffsetLabel                 matlab.ui.control.Label
         SubDataset                      matlab.ui.control.DropDown
         SubdatasetDropDownLabel         matlab.ui.control.Label
@@ -1101,8 +1099,8 @@ classdef Quant4D < matlab.apps.AppBase
                     + sprintf("Real-spaces size (X×Y): %d×%d\n\n",params.n_frames) ...
                     + "# Data Structure in File #\n" ...
                     + "Data Offset: " + previous_params.offset + " bytes\n" ...
-                    + "Frame Header: " + previous_params.frame_header + "bytes\n" ...
-                    + "Frame Footer: " + previous_params.frame_footer + " bytes\n" ...
+                    + "Data Header: " + previous_params.header + "bytes\n" ...
+                    + "Data Footer: " + previous_params.footer + " bytes\n" ...
                     + "Byte Order: " + app.sys_constants.endian_text.(previous_params.byte_orer) + "\n"...
                     + "Data Type: "+ previous_params.data_type + "\n"...
                     + "Byte Size: " + app.byte_size.(previous_params.data_type) + " bytes" ...
@@ -1617,8 +1615,8 @@ classdef Quant4D < matlab.apps.AppBase
             %    None
 
             if app.ImportPixelsX.Value > 1 && app.ImportPixelsY.Value > 1
-                x = sqrt((app.tmp_variables.FileSize-app.DataOffset.Value-app.tmp_variables.fileTail) ...
-                    /(app.ImportPixelsX.Value*app.ImportPixelsY.Value*app.byte_size.(app.ImportDataType.Value)+app.FrameHeader.Value+app.FrameFooter.Value));
+                x = sqrt((app.tmp_variables.FileSize-app.DatasetOffset.Value-app.tmp_variables.fileTail) ...
+                    /(app.ImportPixelsX.Value*app.ImportPixelsY.Value*app.byte_size.(app.ImportDataType.Value)+app.DataHeader.Value+app.DataFooter.Value));
 
                 set([app.ImportFramesX, ...
                     app.ImportFramesY], ...
@@ -1709,28 +1707,22 @@ classdef Quant4D < matlab.apps.AppBase
             debug_time = tic;
             err = false;
 
-            % Use local variables, which is faster
+            % Use local variables
+            ordering = app.ImportAxisOrder.Value;
             offset = app.dataset_parameters.offset;
-            frame_header = app.dataset_parameters.frame_header;
-            frame_footer = app.dataset_parameters.frame_footer;
+            header = app.dataset_parameters.header;
+            footer = app.dataset_parameters.footer;
             byte_order = app.dataset_parameters.byte_orer;
             dtype = app.dataset_parameters.data_type;
             b_size = app.dataset_parameters.byte_size;
-            n_pixels_x0 = app.dataset_parameters.n_pixels_file(1);
-            n_pixels_y0 = app.dataset_parameters.n_pixels_file(2);
-            pixel_binning = app.dataset_parameters.pixels_binning;
-            n_frames_x0 = app.dataset_parameters.n_frames_file(1);
-            n_frames_y0 = app.dataset_parameters.n_frames_file(2);
+            n_pixels_total = app.dataset_parameters.n_pixels_total;
+            pixels_binning = app.dataset_parameters.pixels_binning;
+            n_frames_total = app.dataset_parameters.n_frames_total;
             frames_sampling = app.dataset_parameters.frames_sampling;
-            pixel_start_x = app.dataset_parameters.pixels_start(1);
-            pixel_start_y = app.dataset_parameters.pixels_start(2);
-            n_pixels_x = app.dataset_parameters.n_pixels(1);
-            n_pixels_y = app.dataset_parameters.n_pixels(2);
-            frames_start_x = app.dataset_parameters.frames_start(1);
-            frames_start_y = app.dataset_parameters.frames_start(2);
-            n_frames_x = app.dataset_parameters.n_frames(1);
-            n_frames_y = app.dataset_parameters.n_frames(2);
-            frame_size = n_pixels_x*n_pixels_y*pixel_binning^2*b_size;
+            pixels_start = app.dataset_parameters.pixels_start;
+            n_pixels = app.dataset_parameters.n_pixels;
+            frames_start = app.dataset_parameters.frames_start;
+            n_frames = app.dataset_parameters.n_frames;
 
             % convert to single/double if int/uint
             dtype1 = dtype;
@@ -1745,23 +1737,29 @@ classdef Quant4D < matlab.apps.AppBase
                 app.dataset_parameters.data_type = dtype1;
                 app.dataset_parameters.byte_size = bsize1;
             end
-
-            [app.tmp_variables.progress_dialog, app.tmp_variables.tmr] = import_export_progress(app, "Import", prod(app.dataset_parameters.n_frames), frame_size);
+                
+            if startsWith(app.ImportAxisOrder.Value, "kr")
+                frame_size = prod(n_pixels)*pixels_binning^2*b_size;
+                [app.tmp_variables.progress_dialog, app.tmp_variables.tmr] = import_export_progress(app, "Import", prod(n_frames), frame_size);
+            else
+                frame_size = prod(n_frames_total)*b_size;
+                [app.tmp_variables.progress_dialog, app.tmp_variables.tmr] = import_export_progress(app, "Import", prod(n_pixels), frame_size);
+            end
 
             if ~isempty(app.dataset_parameters.h5ds) % HDF5 import
                 % Preallocate array
-                data_tmp = zeros(n_pixels_x, n_pixels_y, n_frames_x, n_frames_y, dtype1);
+                data_tmp = zeros(n_pixels(1), n_pixels(2), n_frames(1), n_frames(2), dtype1);
                 fid = H5F.open(app.dataset_parameters.file_path);
                 dset_id = H5D.open(fid, app.dataset_parameters.h5ds);
-                file_space_id = H5S.create_simple(4, [n_frames_y0 n_frames_x0 n_pixels_y0 n_pixels_x0], []);
-                mem_space_id = H5S.create_simple(2, [n_pixels_y*pixel_binning n_pixels_x*pixel_binning], []);
+                file_space_id = H5S.create_simple(4, [n_frames_total(2) n_frames_total(1) n_pixels_total(2) n_pixels_total(2)], []);
+                mem_space_id = H5S.create_simple(2, [n_pixels(2)*pixels_binning n_pixels(1)*pixels_binning], []);
 
                 % Read whole
                 % data = H5D.read(dset_id,'H5ML_DEFAULT','H5S_ALL','H5S_ALL','H5P_DEFAULT');
 
                 % Read frame by frame
-                for ify = 1:n_frames_y
-                    for ifx = 1:n_frames_x
+                for ify = 1:n_frames(2)
+                    for ifx = 1:n_frames(1)
                         % Cancel if progress window closed
                         if ~isvalid(app.tmp_variables.progress_dialog)
                             err = -1;
@@ -1769,18 +1767,17 @@ classdef Quant4D < matlab.apps.AppBase
                         end
 
                         % Update processed Frame Number for progress update
-                        app.tmp_variables.frame_number(1) = (ify-1)*n_frames_x + ifx;
+                        app.tmp_variables.frame_number(1) = (ify-1)*n_frames(1) + ifx;
 
                         % Read 1 frame at a time; C-like array indices for H5 low-level APIs
-                        H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', [frames_start_y+(ify-1)*frames_sampling, frames_start_x+(ifx-1)*frames_sampling, pixel_start_y, pixel_start_x]-1, [],[], [1 1 n_pixels_y*pixel_binning n_pixels_x*pixel_binning]);
+                        H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', [frames_start(2) + (ify-1)*frames_sampling, frames_start(1) + (ifx-1)*frames_sampling, pixels_start(2), pixels_start(1)]-1, [],[], [1 1 n_pixels(2)*pixels_binning n_pixels(1)*pixels_binning]);
 
                         frame = H5D.read(dset_id, 'H5ML_DEFAULT', mem_space_id, file_space_id, 'H5P_DEFAULT');
 
                         % Pixel binning
-                        if pixel_binning > 1
-                            frame = squeeze(sum(reshape(frame, [pixel_binning n_pixels_x pixel_binning n_pixels_y]), [1 3]),'omitnan');
+                        if pixels_binning > 1
+                            frame = squeeze(sum(reshape(frame, [pixels_binning n_pixels(1) pixels_binning n_pixels(2)]), [1 3]),'omitnan');
                         end
-
 
                         % Store frame
                         data_tmp(:, :, ifx, ify) = frame;
@@ -1799,42 +1796,110 @@ classdef Quant4D < matlab.apps.AppBase
                 H5F.close(fid);
 
                 % Make dataset a 2D array
-                app.data = reshape(data_tmp, prod(app.dataset_parameters.n_pixels), prod(app.dataset_parameters.n_frames));
+                app.data = reshape(data_tmp, prod(n_pixels), prod(n_frames));
 
             elseif app.dataset_parameters.memory_type== "Physical Memory"
                 % General reading method; read data into physical memory
 
-                % file id
-                fid = fopen(app.dataset_parameters.file_path,"r");
-
-                switch app.ImportAxisOrder.Value
-                    case 'kr'
-                        % first two axes are diffraction information
-                        % (kx, ky, rx, ry)
-                        data_tmp = import_by_frames();
-
-                    case 'kr_inv'
-                        % first two axes are diffraction information
-                        % (ky, kx, ry, rx) -> (kx, ky, rx, ry)
-                        data_tmp = import_by_frames();
-                        data_tmp = permute(data_tmp, [2 1 4 3]);
-
-                    case 'rk'
-                        % first two axes are real space information
-                        data_tmp = import_by_pixels();
-                        data_tmp = permute(data_tmp, [3 4 1 2]);
-
-                    case 'rk_inv'
-                        % first two axes are real space information
-                        data_tmp = import_by_pixels();
-                        data_tmp = permute(data_tmp, [4 3 2 1]);
+                % if 'rk' or 'rk_inv', swap n_pixels and n_frames
+                if startsWith(ordering, 'rk')
+                    [n_pixels, n_frames] = deal(n_frames, n_pixels);
+                    [n_pixels_total, n_frames_total] = deal(n_frames_total, n_pixels_total);
+                    [pixels_start, frames_start] = deal(frames_start, pixels_start);
+                    [pixels_binning, frames_sampling] = deal(frames_sampling, pixels_binning);
                 end
 
-                % close file id
-                fclose(fid);
+                % probe positions list for the entire original scan area
+                [probe_positions(:,:,2), probe_positions(:,:,1)] = meshgrid(1:n_frames_total(2), 1:n_frames_total(1));
+                
+                % crop probe positions to ROI
+                probe_positions = probe_positions(frames_start(1):frames_start(1)+n_frames(1)*frames_sampling-1,frames_start(2):frames_start(2)+n_frames(2)*frames_sampling-1,:);
+                
+                % separate out probe positions between sample points into
+                % another axis for later use
+                probe_positions = reshape(permute(reshape(probe_positions,[frames_sampling n_frames(1) frames_sampling n_frames(2) 2]),[2 4 1 3 5]),[prod(n_frames) frames_sampling^2 2]);
+
+                % invert parameters before import if "_inv"
+                if endsWith(ordering, '_inv')
+                    probe_positions = flip(probe_positions,3);
+                    n_frames_total = fliplr(n_frames_total);
+                    n_pixels_total = fliplr(n_pixels_total);
+                    n_frames = fliplr(n_frames);
+                    n_pixels = fliplr(n_pixels);
+                    frames_start = fliplr(frames_start);
+                    pixels_start = fliplr(pixels_start);
+                end
+
+                % frame start location in bytes from start of file (`bof`)
+                frame_start = offset + (header + prod(n_pixels_total)*4 + footer) * ((probe_positions(:,:,2) - 1)*n_frames_total(1) + probe_positions(:,:,1) - 1) + header;
+
+                % update probe_positions range to reflect smaller field of
+                % view
+                probe_positions = squeeze(probe_positions(:,1,:)-reshape(frames_start,[1 1 2]))/frames_sampling+1;
+
+                % preallocate data array
+                data_tmp = zeros([n_pixels, n_frames], dtype);
+
+                % read file frame by frame
+                fid = fopen(app.dataset_parameters.file_path, "r");
+                for i_frame = 1:size(frame_start,1)
+                    % Cancel if progress window closed
+                    if ~isvalid(app.tmp_variables.progress_dialog)
+                        err = -1;
+                        break;
+                    end
+
+                    % Update processed Frame Number for progress update
+                    app.tmp_variables.frame_number(1) = i_frame;
+
+                    % initialize current frame
+                    frame = 0;
+
+                    % allow for diffraction space binning in 'rk' or 'rk_inv'
+                    for bin_frame = 1:size(frame_start,2)
+                        fseek(fid, frame_start(i_frame, bin_frame), 'bof');
+                        frame = frame + fread(fid, n_pixels_total, "*"+dtype, 0, "l");
+                    end
+
+                    % Crop frame to bounds of pixels_start : pixels_start + n_pixels*pixels_binning
+                    if any(n_pixels*pixels_binning ~= n_pixels_total)
+                        frame = frame(pixels_start(1):pixels_start(1)+n_pixels(1)*pixels_binning-1, pixels_start(2):pixels_start(2)+n_pixels(2)*pixels_binning-1);
+                    end
+
+                    % Pixel binning (sums over the binned pixel group) in 'kr' and 'kr_inv'
+                    if pixels_binning > 1
+                        frame = squeeze(sum(reshape(frame, [pixels_binning, n_pixels(1), pixels_binning, n_pixels(2)]), [1, 3],'omitnan'));
+                    end
+
+                    data_tmp(:, :, probe_positions(i_frame,1), probe_positions(i_frame,2)) = frame;
+                end
+
+                % close file identifier
+                fclose(fid); clear fid ans
+
+                % revert dimensions after import if '_inv'
+                if endsWith(ordering, '_inv')
+                    n_frames = fliplr(n_frames);
+                    n_pixels = fliplr(n_pixels);
+                end
+
+                % if 'rk' or 'rk_inv', swap back n_pixels and n_frames
+                if startsWith(ordering, 'rk')
+                    [n_pixels, n_frames] = deal(n_frames, n_pixels);
+                end
+
+                % permute axes to match original dataset
+                switch ordering
+                    case 'kr_inv'
+                        data_tmp = permute(data_tmp,[2 1 4 3]);
+                    case 'rk'
+                        data_tmp = permute(data_tmp,[3 4 1 2]);
+                    case 'rk_inv'
+                        data_tmp = permute(data_tmp,[4 3 2 1]);
+                end
 
                 % Make dataset a 2D array
-                app.data = reshape(data_tmp,prod(app.dataset_parameters.n_pixels),prod(app.dataset_parameters.n_frames));
+                app.data = reshape(data_tmp,prod(n_pixels), prod(n_frames));
 
             elseif app.dataset_parameters.memory_type== "Virtual Mapping"
                 % Virtual memory mapping
@@ -1844,11 +1909,11 @@ classdef Quant4D < matlab.apps.AppBase
                     error("Dataset's endianness is different to that of the system!")
                 end
 
-                if frame_header == 0 && frame_footer == 0
+                if header == 0 && footer == 0
                     app.memfile = memmapfile(app.dataset_parameters.file_path, ...
-                        'Offset',offset, ...
-                        'Format',{dtype1,[prod(app.dataset_parameters.n_pixels), prod(app.dataset_parameters.n_frames)],'data'}, ...
-                        'Repeat',1);
+                        'Offset', offset, ...
+                        'Format', {dtype1,[prod(n_pixels), prod(n_frames)],'data'}, ...
+                        'Repeat', 1);
                     app.data = app.memfile.Data.data;
                 else
                     error("Virtual memory with header/footer > 0 not supported yet.")
@@ -1876,82 +1941,6 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_toc(app, event, "", debug_time)
 
-            function data_tmp = import_by_frames()
-                % Import data frame by frame, i.e. loop over probe
-                % positions when diffraction patterns are stored
-                % contiguously in memory (k, r).
-                %
-                % Parameters:
-                %    app (Quant4D)
-                %
-                % Returns:
-                %    data_tmp (:,:,:,:) : 4D-STEM dataset
-
-                % Pre-allocate array
-                data_tmp = zeros(n_pixels_x, n_pixels_y, n_frames_x, n_frames_y, dtype1);
-                
-                % frame size including header/footer
-                dfrSize = frame_header+n_pixels_x0*n_pixels_y0*b_size+frame_footer;
-                
-                for ify = 1:n_frames_y
-                    for ifx = 1:n_frames_x
-                        % Cancel if progress window closed
-                        if ~isvalid(app.tmp_variables.progress_dialog)
-                            err = -1;
-                            break;
-                        end
-                
-                        % Update processed Frame Number for progress update
-                        app.tmp_variables.frame_number(1) = (ify-1)*n_frames_x + ifx;
-                
-                        % Read 1 frame at a time; move cursor to
-                        % "frame offset" + "pixel Y offset" in file dataset
-                        % Frame indices in dataset file
-                        dfx = frames_start_x + (ifx-1)*frames_sampling;
-                        dfy = frames_start_y + (ify-1)*frames_sampling;
-                
-                        fseek(fid, offset + (dfx-1 + (dfy-1)*n_frames_x0) * dfrSize + frame_header + ((pixel_start_x-1) + (pixel_start_y-1)*n_pixels_x0) * b_size, 'bof');
-                        % Read including "pixel X offset"
-                        frame = fread(fid, [n_pixels_x0, n_pixels_y*pixel_binning], dtype, 0, byte_order);
-                
-                        % Crop "pixel X offset" off from array memory
-                        if n_pixels_x*pixel_binning ~= n_pixels_x0
-                            frame = frame(pixel_start_x:pixel_start_x+n_pixels_x*pixel_binning-1, :);
-                        end
-                
-                        % Pixel binning (sums over the binned pixel group)
-                        if pixel_binning > 1
-                            frame = squeeze(sum(reshape(frame, [pixel_binnin, n_pixels_x, pixel_binning, n_pixels_y]), [1 3],'omitnan'));
-                        end
-                
-                        % Store frame
-                        data_tmp(:, :, ifx, ify) = frame;
-                    end
-                
-                    % break on error
-                    if err == -1
-                        break;
-                    end
-                end
-
-
-            end
-            
-            function data_tmp = import_by_pixels()
-                % Import data pixel by pixel, i.e. loop over diffraction
-                % pattern pixel location when real space data are stored
-                % contiguously in memory (r, k).
-                %
-                % Parameters:
-                %    app (Quant4D)
-                %
-                % Returns:
-                %    data_tmp (:,:,:,:) : 4D-STEM dataset
-
-
-
-
-            end
         end
 
         function prepare_data(app, event)
@@ -2118,9 +2107,9 @@ classdef Quant4D < matlab.apps.AppBase
             d.subimage = app.SubDataset.Value;
 
             % BYTES offset of: 1) the dataset from the beginning of file, 2) before and 3) after each frame
-            d.offset = app.DataOffset.Value;
-            d.frame_header = app.FrameHeader.Value;
-            d.frame_footer = app.FrameFooter.Value;
+            d.offset = app.DatasetOffset.Value;
+            d.header = app.DataHeader.Value;
+            d.footer = app.DataFooter.Value;
 
             % Endianness (big "b" or little "l"), Data type of the dataset and Size in bytes of the data type
             d.byte_orer = app.ImportByteOrder.Value;
@@ -2137,8 +2126,8 @@ classdef Quant4D < matlab.apps.AppBase
             end
 
             % Dimensions of pixels/frames in file and import binning/sampling distance
-            d.n_pixels_file = [app.ImportPixelsX.Value, app.ImportPixelsY.Value];
-            d.n_frames_file = [app.ImportFramesX.Value, app.ImportFramesY.Value];
+            d.n_pixels_total = [app.ImportPixelsX.Value, app.ImportPixelsY.Value];
+            d.n_frames_total = [app.ImportFramesX.Value, app.ImportFramesY.Value];
             d.pixels_binning= app.DiffractionPartialImportPixelsDist.Value;
             d.frames_sampling = app.RealPartialImportFramesDist.Value;
 
@@ -2572,8 +2561,8 @@ classdef Quant4D < matlab.apps.AppBase
         % ******************** app.dataset parameters *********************
         %
         % DATASET DIMENSIONS IN FILE ON DISK:
-        %   app.dataset_parameters.n_pixels_file
-        %   app.dataset_parameters.n_frames_file
+        %   app.dataset_parameters.n_pixels_total
+        %   app.dataset_parameters.n_frames_total
         %
         % IMPORT DIMENSIONS (AFTER BINNING/SAMPLING/CROPPING):
         %   app.dataset_parameters.n_pixels
@@ -4258,7 +4247,7 @@ classdef Quant4D < matlab.apps.AppBase
                 message = "There are NaN/Inf values in the data! Which may " + ...
                           "indicate the data structure is not correctly set " + ...
                           "(e.g. wrong Data Type, Byte Order, Data Offset, " + ...
-                          "Frame Header/Footer, etc).\n\nIf any data are " + ...
+                          "Data Header/Footer, etc).\n\nIf any data are " + ...
                           "corrupt, NaNs can be set to 0.";
 
                 % For preview only
@@ -4269,7 +4258,7 @@ classdef Quant4D < matlab.apps.AppBase
                                                     title_text, ...
                                                     ["Continue", "Set NaNs to 0"]);
 
-                elseif app.dataset_parameters.pixel_binning > 1 || (app.dataset_parameters.frame_footer + app.dataset_parameters.frame_header) > 0
+                elseif app.dataset_parameters.pixel_binning > 1 || (app.dataset_parameters.footer + app.dataset_parameters.header) > 0
                     selection = notification_dialog(app, ...
                                                     'quest', ...
                                                     sprintf(message+"\n\nRe-importing with corrected configuration is suggested."), ...
@@ -4784,12 +4773,92 @@ classdef Quant4D < matlab.apps.AppBase
                     % kx ky rx ry
                     % real axes before diffraction axes plus x,y inversion
                     dims = dims([4 3 2 1]);
-
             end
 
         end
 
-    end
+        function [frame, err] = preview_frame(app, probe_position)
+            % Function to import a single detector frame for previewing
+            %
+            % Parameters:
+            %    app (Quant4D)
+            %    probe_position ([int int]) : probe position to be previewed
+            %
+            % Returns:
+            %    frame (array) : detector frame, cropped and binned as set by the user
+            %    err (int) : fseek status for error handling
+
+            % get dataset parameters
+            ordering = app.ImportAxisOrder.Value;
+            n_frames_total = app.tmp_variables.Preview.n_frames_total;
+            n_pixels = app.tmp_variables.Preview.n_pixels;
+            n_pixels_total = app.tmp_variables.Preview.n_pixels_total;
+            pixels_start = app.tmp_variables.Preview.pixels_start;
+            pixels_binning = app.tmp_variables.Preview.pixels_binning;
+            offset = app.tmp_variables.Preview.offset;
+            header = app.tmp_variables.Preview.header;
+            footer = app.tmp_variables.Preview.footer;
+            b_size = app.tmp_variables.Preview.byte_size;
+
+            % invert before import if "_inv"
+            if endsWith(ordering, '_inv')
+                probe_position = fliplr(probe_position);
+                n_frames_total = fliplr(n_frames_total);
+                n_pixels_total = fliplr(n_pixels_total);
+                n_pixels = fliplr(n_pixels);
+                pixels_start = fliplr(pixels_start);
+            end
+
+            % frame start location in bytes from start of file (`bof`)
+            if startsWith(ordering, "kr")
+                frame_start = offset + (header + prod(n_pixels_total)*b_size + footer) * ((probe_position(2) - 1)*n_frames_total(1) + probe_position(1) - 1) + header;
+            else
+                frame_start = offset + header + ((probe_position(2) - 1)*n_frames_total(1) + probe_position(1) - 1)*b_size;
+            end
+
+            % set stride if rk or rk_inv, else data is contiguous
+            if startsWith(ordering, "rk")
+                skip = (prod(n_frames_total) - 1)*b_size + footer + header;
+            else
+                skip = 0;
+            end
+
+            % open file identifier
+            fid = fopen(app.ImportFilePath.Value,"r");
+
+            % move to data start
+            err = fseek(fid, frame_start, 'bof');
+            
+            % exit on error
+            if err ~= 0
+                frame = [];
+                return
+            end
+
+            % import the frame to be previewed
+            frame = fread(fid, n_pixels_total, "*"+app.tmp_variables.Preview.data_type, skip, "l");
+
+            % Crop frame to bounds of pixels_start : pixels_start + n_pixels*pixels_binning
+            if any(n_pixels*pixels_binning ~= n_pixels_total)
+                frame = frame(pixels_start(1):pixels_start(1)+n_pixels(1)*pixels_binning-1, pixels_start(2):pixels_start(2)+n_pixels(2)*pixels_binning-1);
+            end
+
+            % Pixel binning (sums over the binned pixel group) in 'kr' and 'kr_inv'
+            if pixels_binning > 1
+                frame = squeeze(sum(reshape(frame, [pixels_binning, n_pixels(1), pixels_binning, n_pixels(2)]), [1, 3],'omitnan'));
+            end
+
+            % close file identifier
+            fclose(fid);
+
+            % permute axes to match original dataset
+            if endsWith(ordering, "_inv")
+                frame = frame';
+            end
+
+        end
+
+    end       
 
 
     % Callbacks that handle component events
@@ -5085,7 +5154,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             app.tmp_variables.dm = [];
             app.tmp_variables.h5 = [];
-            set([app.DataOffset app.FrameHeader app.FrameFooter], "Value",0)
+            set([app.DatasetOffset app.DataHeader app.DataFooter], "Value",0)
             app.tmp_variables.fileTail = 0;
             app.ImportByteOrder.Value = "l";
             app.ImportDataType.Value = "unknown";
@@ -5097,7 +5166,7 @@ classdef Quant4D < matlab.apps.AppBase
             if isfile(app.ImportFilePath.Value)
                 switch app.FileTypeButtonGroup.SelectedObject
                     case app.EMPAD
-                        app.FrameFooter.Value = 1024;
+                        app.DataFooter.Value = 1024;
                         app.ImportDataType.Value = "single";
                         app.ImportPixelsX.Value = 128;
                         app.ImportPixelsY.Value = 128;
@@ -5109,12 +5178,12 @@ classdef Quant4D < matlab.apps.AppBase
                         % file), or if it suits better to set FrameHeader,
                         % FrameFoot, and DataOffset to 0 (i.e. a .raw
                         % binary file from simulation or other)
-                        file_size = app.DataOffset.Value ...
-                                    + (app.FrameHeader.Value...
+                        file_size = app.DatasetOffset.Value ...
+                                    + (app.DataHeader.Value...
                                        + app.ImportPixelsX.Value ...
                                        * app.ImportPixelsY.Value ...
                                        * app.byte_size.(app.ImportDataType.Value) ...
-                                       + app.FrameFooter.Value ...
+                                       + app.DataFooter.Value ...
                                        ) ...
                                     * (app.ImportFramesX.Value* app.ImportFramesX.Value);
                         if file_size > dir(app.ImportFilePath.Value).bytes
@@ -5125,9 +5194,9 @@ classdef Quant4D < matlab.apps.AppBase
                                         app.byte_size.(app.ImportDataType.Value);
                             if test_size == dir(app.ImportFilePath.Value).bytes
                                 app.Custom.Value = 1;
-                                app.FrameFooter.Value = 0;
-                                app.FrameHeader.Value = 0;
-                                app.DataOffset.Value = 0;
+                                app.DataFooter.Value = 0;
+                                app.DataHeader.Value = 0;
+                                app.DatasetOffset.Value = 0;
                             end
                         end
 
@@ -5154,12 +5223,12 @@ classdef Quant4D < matlab.apps.AppBase
                                 end
                             end
                             
-                            app.FrameHeader.Value = str2double(fmeta{3});
+                            app.DataHeader.Value = str2double(fmeta{3});
                             app.ImportByteOrder.Value = "b";
                             app.ImportPixelsX.Value = str2double(fmeta{5});
                             app.ImportPixelsY.Value = str2double(fmeta{6});
                             notes = sprintf(['Dim: X = %s, Y = %s\nData type: %s\nPixel depth: %d bit\n' ...
-                                             'Frame header: %s bytes\nBig endian'], fmeta{5}, fmeta{6}, fmeta{7}, bitsize, fmeta{3});
+                                             'Data header: %s bytes\nBig endian'], fmeta{5}, fmeta{6}, fmeta{7}, bitsize, fmeta{3});
                             guess_frames_from_size(app);
                             get_dims_from_name(app, app.ImportFilePath.Value)
                         
@@ -5234,7 +5303,7 @@ classdef Quant4D < matlab.apps.AppBase
                                     tnote = "Uknown data type";
                             end
 
-                            app.DataOffset.Value = 1024;
+                            app.DatasetOffset.Value = 1024;
                             notes = sprintf('Dim: X = %d, Y = %d, Z = %d\n%s, %s\n** MRC files have a 1024-byte data offset', ...
                                 dim, tnote, bo);
                         else
@@ -5278,9 +5347,6 @@ classdef Quant4D < matlab.apps.AppBase
                                 end
                             end
 
-                            % check axis ordering
-                            dims = check_axis_ordering(app, dims);
-
                             set([app.ImportPixelsX, ...
                                  app.ImportPixelsY, ...
                                  app.ImportFramesX, ...
@@ -5288,7 +5354,7 @@ classdef Quant4D < matlab.apps.AppBase
                                 {"Value"}, dims)
                             
                             % Find offset, file tail, data type, byte-order of dataset
-                            app.DataOffset.Value = dm.Data.offset;
+                            app.DatasetOffset.Value = dm.Data.offset;
                             try app.ImportDataType.Value = dm.Data.dataType; catch;end
                             app.tmp_variables.fileTail = finfo.fileSize - dm.Data.offset - dm.Data.size;
                             
@@ -5353,9 +5419,6 @@ classdef Quant4D < matlab.apps.AppBase
                                     dims(i) = 1;
                                 end
                             end
-
-                            % check axis ordering
-                            dims = check_axis_ordering(app, dims);
                             
                             % set Import UI values
                             set([app.ImportPixelsX; ...
@@ -5366,14 +5429,14 @@ classdef Quant4D < matlab.apps.AppBase
                             
                             % Find offset, file tail, data type, byte-order of dataset
                             if h5i.offset == -1
-                                app.DataOffset.Value = 0;
+                                app.DatasetOffset.Value = 0;
                                 noteoffs = 'This dataset is not "contiguous", thus data offset is unknown.';
                             else
-                                app.DataOffset.Value = h5i.offset;
+                                app.DatasetOffset.Value = h5i.offset;
                                 noteoffs = "Selected dataset's offset is "+h5i.offset+" bytes.";
                             end
 
-                            app.tmp_variables.fileTail = app.tmp_variables.h5(end).size - app.DataOffset.Value - h5i.size;
+                            app.tmp_variables.fileTail = app.tmp_variables.h5(end).size - app.DatasetOffset.Value - h5i.size;
                             
                             % If data type is unknown
                             if ~isempty(h5i.type)
@@ -5423,8 +5486,8 @@ classdef Quant4D < matlab.apps.AppBase
             import_box_input(app, event)
         end
 
-        % Value changed function: DataOffset, 
-        % ...and 23 other components
+        % Value changed function: DataFooter, DataHeader, DatasetOffset, 
+        % ...and 21 other components
         function import_box_input(app, event)
             % Function called when the user interacts with the Import UI
             % 
@@ -5437,6 +5500,40 @@ classdef Quant4D < matlab.apps.AppBase
 
             debug_time = tic;
             
+            % if the user changes the axis order dropdown, reflect that in
+            % the order of axis sizes in their respective numerical inputs
+            if event.Source == app.ImportAxisOrder
+                m = [1 2 3 4;  % kr
+                     2 1 4 3;  % kr_inv
+                     3 4 1 2;  % rk
+                     4 3 2 1]; % rk_inv
+
+                t = array2table(num2cell(m,2), ...
+                    "RowNames", ["kr";"kr_inv";"rk";"rk_inv"], ...
+                    "VariableNames", "axis_order");
+
+                % get current dataset size as displayed
+                sz = [app.ImportPixelsX.Value, ...
+                      app.ImportPixelsY.Value, ...
+                      app.ImportFramesX.Value, ...
+                      app.ImportFramesY.Value];
+
+                % figure out how it should be rearranged to match the new
+                % axis ordering chosen in the dropdown
+                [~,sort_idx] = sort(t.axis_order{event.PreviousValue});
+                sz = sz(t.axis_order{event.Value}(sort_idx));
+
+                % update dataset sizes based on new axis ordering
+                app.ImportPixelsX.Value = sz(1);
+                app.ImportPixelsY.Value = sz(2);
+                app.ImportFramesX.Value = sz(3);
+                app.ImportFramesY.Value = sz(4);
+
+                % Reset import range selections
+                range_import_export(app, struct("Source", app.ImportPixelsX, "EventName", []));
+                range_import_export(app, struct("Source", app.ImportFramesX, "EventName", []));
+            end
+
             % initialize parameters
             app.ImportEstimatedFilesize.Text = "";
             notes = "";
@@ -5464,8 +5561,8 @@ classdef Quant4D < matlab.apps.AppBase
                 irng = [n_pixels n_frames];
                 
                 % Allow for virtual memory mapping in some situations
-                if app.FrameHeader.Value == 0 && app.FrameFooter.Value == 0 ...
-                        && (~app.HDF5.Value || app.DataOffset.Value) ...
+                if app.DataHeader.Value == 0 && app.DataFooter.Value == 0 ...
+                        && (~app.HDF5.Value || app.DatasetOffset.Value) ...
                         && app.ImportByteOrder.Value == app.sys_constants.system_endianness && ~contains(app.ImportDataType.Value,'int') ...
                         && isequal([app.ImportPixelsX.Value app.ImportPixelsY.Value app.ImportFramesX.Value app.ImportFramesY.Value], irng)
                     app.MemoryType.Enable = "on";
@@ -5477,9 +5574,16 @@ classdef Quant4D < matlab.apps.AppBase
                 % Calculate dataset size and memory usage
                 if app.ImportDataType.Value ~= "unknown"
                     bytesize = app.byte_size.(app.ImportDataType.Value);
-                    app.tmp_variables.EstSize = app.DataOffset.Value + app.tmp_variables.fileTail ...
-                        + (app.FrameHeader.Value+app.ImportPixelsX.Value*app.ImportPixelsY.Value*bytesize+app.FrameFooter.Value) ...
-                        * app.ImportFramesX.Value*app.ImportFramesY.Value;
+                    if startsWith(app.ImportAxisOrder.Value, "kr")
+                        app.tmp_variables.EstSize = app.DatasetOffset.Value + ...
+                                                    app.tmp_variables.fileTail + ...
+                                                    (app.DataHeader.Value + app.ImportPixelsX.Value*app.ImportPixelsY.Value*bytesize + app.DataFooter.Value) * app.ImportFramesX.Value*app.ImportFramesY.Value;
+                    else
+                        app.tmp_variables.EstSize = app.DatasetOffset.Value + ...
+                                                    app.tmp_variables.fileTail + ...
+                                                    (app.DataHeader.Value + app.ImportFramesX.Value*app.ImportFramesY.Value*bytesize + app.DataFooter.Value) * app.ImportPixelsX.Value*app.ImportPixelsY.Value;
+                    end
+
                     app.ImportEstimatedFilesize.Text = sprintf('%d bytes, %.1f GiB',app.tmp_variables.EstSize,app.tmp_variables.EstSize/1024^3);
 
                     if contains(app.ImportDataType.Value,'int')
@@ -6537,7 +6641,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                     % Swap X/Y dimensions
                     
-                    % n_pixels_file or n_frames_file
+                    % n_pixels_total or n_frames_total
                     app.dataset_parameters.("n_"+unit+"_file") = fliplr(app.dataset_parameters.("n_"+unit+"_file"));
                     
                     % n_pixels or n_frames
@@ -6633,12 +6737,10 @@ classdef Quant4D < matlab.apps.AppBase
                     frame_y = app.PreviewFrameY.Value-1;
 
                     if ~isempty(params)
-                        n_pixels_x = params.n_pixels_file(1);
-                        n_pixels_y = params.n_pixels_file(2);
-                        n_frames_x = params.n_frames_file(1);
-                        n_frames_y = params.n_frames_file(2);
+                        n_pixels = params.n_pixels_total;
+                        n_frames = params.n_frames_total;
 
-                        app.common_parameters.PreviewAxLim = [0.51, n_pixels_x + .49, 0.51, n_pixels_y + .49];
+                        app.common_parameters.PreviewAxLim = [0.51, n_pixels(1) + .49, 0.51, n_pixels(2) + .49];
                         set(app.image_axes.Preview, ...
                             "XLim", app.common_parameters.PreviewAxLim(1:2), ...
                             "YLim", app.common_parameters.PreviewAxLim(3:4));
@@ -6647,26 +6749,30 @@ classdef Quant4D < matlab.apps.AppBase
                             if ~isempty(params.h5ds) % Preview HDF5
                                 file_id = H5F.open(params.file_path);
                                 dataset_id = H5D.open(file_id, params.h5ds);
-                                file_space_id = H5S.create_simple(4, [n_frames_y n_frames_x n_pixels_y n_pixels_x], []);
-                                memory_space_id = H5S.create_simple(2, [n_pixels_y n_pixels_x], []);
+                                file_space_id = H5S.create_simple(4, [n_frames(2) n_frames(1) n_pixels(2) n_pixels(1)], []);
+                                memory_space_id = H5S.create_simple(2, [n_pixels(2) n_pixels(1)], []);
                                 
                                 % C-like array indices for H5 low-level APIs
-                                H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', [frame_y frame_x 0 0], [], [], [1 1 n_pixels_y n_pixels_x]);
+                                H5S.select_hyperslab(file_space_id, 'H5S_SELECT_SET', [frame_y frame_x 0 0], [], [], [1 1 n_pixels(2) n_pixels(1)]);
                                 frame = H5D.read(dataset_id, 'H5ML_DEFAULT', memory_space_id, file_space_id, 'H5P_DEFAULT');
 
                             else % Preview others
-                                file_id = fopen(params.file_path, "r");
+                                %file_id = fopen(params.file_path, "r");
                                 
                                 % Move cursor to end of the to-be-read frame, for testing
-                                err = fseek(file_id, params.offset + (1 + frame_x + frame_y*n_frames_x)*(params.frame_header + n_pixels_x*n_pixels_y*params.byte_size + params.frame_footer), 'bof');
+                                %err = fseek(file_id, params.offset + (1 + frame_x + frame_y*n_frames(1))*(params.header + n_pixels(1)*n_pixels(2)*params.byte_size + params.footer), 'bof');
                                 
+                                % import a single detector frame for
+                                % previewing
+                                [frame, err] = preview_frame(app, [frame_x, frame_y]+1);
+
                                 if err == -1
                                     throw(MException("",""));
                                 end
                                 
                                 % Move cursor to start of the to-be-read frame
-                                fseek(file_id, -(n_pixels_x*n_pixels_y*params.byte_size + params.frame_footer), 'cof');
-                                frame = fread(file_id, [n_pixels_x, n_pixels_y], params.data_type, 0, params.byte_orer);
+                                %fseek(file_id, -(n_pixels(1)*n_pixels(2)*params.byte_size + params.footer), 'cof');
+                                %frame = fread(file_id, [n_pixels(1), n_pixels(2)], params.data_type, 0, params.byte_orer);
                             end
 
                             app.images.Preview = frame;
@@ -6692,7 +6798,7 @@ classdef Quant4D < matlab.apps.AppBase
                                 H5D.close(dataset_id);
                                 H5F.close(file_id);
                             else
-                                fclose(file_id);
+                                %fclose(file_id);
                             end
                         catch
                         end
@@ -9994,20 +10100,20 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create EMPAD
             app.EMPAD = uitogglebutton(app.FileTypeButtonGroup);
-            app.EMPAD.Tooltip = {'*.raw'; '128x128 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 1024 bytes'; '32-bit Real, Little Endian'};
+            app.EMPAD.Tooltip = {'*.raw'; '128x128 pixels'; 'Data Offset: 0 bytes'; 'Data Header: 0 bytes'; 'Data Footer: 1024 bytes'; '32-bit Real, Little Endian'};
             app.EMPAD.Text = 'EMPAD';
             app.EMPAD.Position = [3 27 68 22];
             app.EMPAD.Value = true;
 
             % Create Medipix
             app.Medipix = uitogglebutton(app.FileTypeButtonGroup);
-            app.Medipix.Tooltip = {'*.mib'; '256x256 pixels'; 'Data Offset: 0 bytes'; 'Frame Header: 384 bytes'; 'Frame Footer: 0 bytes'; 'Unsigned integer, Big Endian'};
+            app.Medipix.Tooltip = {'*.mib'; '256x256 pixels'; 'Data Offset: 0 bytes'; 'Data Header: 384 bytes'; 'Data Footer: 0 bytes'; 'Unsigned integer, Big Endian'};
             app.Medipix.Text = 'Medipix';
             app.Medipix.Position = [71 27 68 22];
 
             % Create MRC
             app.MRC = uitogglebutton(app.FileTypeButtonGroup);
-            app.MRC.Tooltip = {'*.mrc'; 'Data Offset: 1024 bytes'; 'Frame Header: 0 bytes'; 'Frame Footer: 0 bytes'; 'Signed integer, Little Endian'};
+            app.MRC.Tooltip = {'*.mrc'; 'Data Offset: 1024 bytes'; 'Data Header: 0 bytes'; 'Data Footer: 0 bytes'; 'Signed integer, Little Endian'};
             app.MRC.Text = 'MRC';
             app.MRC.Position = [139 27 68 22];
 
@@ -10062,14 +10168,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.DataOffsetLabel.Layout.Column = 1;
             app.DataOffsetLabel.Text = 'Dataset Offset';
 
-            % Create DataOffset
-            app.DataOffset = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
-            app.DataOffset.Limits = [0 Inf];
-            app.DataOffset.ValueDisplayFormat = '%d bytes';
-            app.DataOffset.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.DataOffset.Tooltip = {'Number of bytes before the image stack in file (e.g. for metadata)'};
-            app.DataOffset.Layout.Row = 2;
-            app.DataOffset.Layout.Column = 2;
+            % Create DatasetOffset
+            app.DatasetOffset = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
+            app.DatasetOffset.Limits = [0 Inf];
+            app.DatasetOffset.ValueDisplayFormat = '%d bytes';
+            app.DatasetOffset.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DatasetOffset.Tooltip = {'Number of bytes before the image stack in file (e.g. for metadata)'};
+            app.DatasetOffset.Layout.Row = 2;
+            app.DatasetOffset.Layout.Column = 2;
 
             % Create FrameHeaderLabel
             app.FrameHeaderLabel = uilabel(app.ImportDatasetStructureGrid);
@@ -10078,14 +10184,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.FrameHeaderLabel.Layout.Column = 1;
             app.FrameHeaderLabel.Text = 'Data Header';
 
-            % Create FrameHeader
-            app.FrameHeader = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
-            app.FrameHeader.Limits = [0 Inf];
-            app.FrameHeader.ValueDisplayFormat = '%d bytes';
-            app.FrameHeader.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.FrameHeader.Tooltip = {'Number of bytes before each image in the dataset (e.g. for metadata)'};
-            app.FrameHeader.Layout.Row = 3;
-            app.FrameHeader.Layout.Column = 2;
+            % Create DataHeader
+            app.DataHeader = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
+            app.DataHeader.Limits = [0 Inf];
+            app.DataHeader.ValueDisplayFormat = '%d bytes';
+            app.DataHeader.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DataHeader.Tooltip = {'Number of bytes before each image in the dataset (e.g. for metadata)'};
+            app.DataHeader.Layout.Row = 3;
+            app.DataHeader.Layout.Column = 2;
 
             % Create FrameFooterLabel
             app.FrameFooterLabel = uilabel(app.ImportDatasetStructureGrid);
@@ -10094,14 +10200,14 @@ classdef Quant4D < matlab.apps.AppBase
             app.FrameFooterLabel.Layout.Column = 1;
             app.FrameFooterLabel.Text = 'DataFooter';
 
-            % Create FrameFooter
-            app.FrameFooter = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
-            app.FrameFooter.Limits = [0 Inf];
-            app.FrameFooter.ValueDisplayFormat = '%d bytes';
-            app.FrameFooter.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
-            app.FrameFooter.Tooltip = {'Number of bytes after each image in the dataset (e.g. for metadata)'};
-            app.FrameFooter.Layout.Row = 4;
-            app.FrameFooter.Layout.Column = 2;
+            % Create DataFooter
+            app.DataFooter = uieditfield(app.ImportDatasetStructureGrid, 'numeric');
+            app.DataFooter.Limits = [0 Inf];
+            app.DataFooter.ValueDisplayFormat = '%d bytes';
+            app.DataFooter.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.DataFooter.Tooltip = {'Number of bytes after each image in the dataset (e.g. for metadata)'};
+            app.DataFooter.Layout.Row = 4;
+            app.DataFooter.Layout.Column = 2;
 
             % Create DataTypeLabel
             app.DataTypeLabel = uilabel(app.ImportDatasetStructureGrid);
@@ -10146,6 +10252,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportAxisOrder.Items = {'(kₓ kᵧ rₓ rᵧ)', '(kᵧ kₓ rᵧ rₓ)', '(rₓ rᵧ kₓ kᵧ)', '(rᵧ rₓ kᵧ kₓ)'};
             app.ImportAxisOrder.ItemsData = {'kr', 'kr_inv', 'rk', 'rk_inv'};
             app.ImportAxisOrder.ValueChangedFcn = createCallbackFcn(app, @import_box_input, true);
+            app.ImportAxisOrder.Tooltip = {'Select ordering of data on disk. kₓ and kᵧ describe pixels in the detector (generally diffraction space). rₓ and rᵧ describe probe positions in real space.'};
             app.ImportAxisOrder.FontWeight = 'bold';
             app.ImportAxisOrder.Layout.Row = 7;
             app.ImportAxisOrder.Layout.Column = 2;
@@ -10153,7 +10260,7 @@ classdef Quant4D < matlab.apps.AppBase
 
             % Create ImportDimensionGrid
             app.ImportDimensionGrid = uigridlayout(app.ImportDatasetInfoGrid);
-            app.ImportDimensionGrid.ColumnWidth = {'fit', 'fit', '1x', 'fit', '1x'};
+            app.ImportDimensionGrid.ColumnWidth = {'fit', '1x', 'fit', '1x'};
             app.ImportDimensionGrid.RowHeight = {24, 24};
             app.ImportDimensionGrid.ColumnSpacing = 4;
             app.ImportDimensionGrid.RowSpacing = 4;
@@ -10161,21 +10268,13 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportDimensionGrid.Layout.Row = 3;
             app.ImportDimensionGrid.Layout.Column = 1;
 
-            % Create ImportPixelsLabel
-            app.ImportPixelsLabel = uilabel(app.ImportDimensionGrid);
-            app.ImportPixelsLabel.HorizontalAlignment = 'center';
-            app.ImportPixelsLabel.FontName = 'Arial';
-            app.ImportPixelsLabel.FontWeight = 'bold';
-            app.ImportPixelsLabel.Layout.Row = 1;
-            app.ImportPixelsLabel.Layout.Column = 1;
-            app.ImportPixelsLabel.Text = 'Diffraction';
-
             % Create XLabel_2
             app.XLabel_2 = uilabel(app.ImportDimensionGrid);
             app.XLabel_2.HorizontalAlignment = 'right';
             app.XLabel_2.Layout.Row = 1;
-            app.XLabel_2.Layout.Column = 2;
-            app.XLabel_2.Text = 'X';
+            app.XLabel_2.Layout.Column = 1;
+            app.XLabel_2.Interpreter = 'tex';
+            app.XLabel_2.Text = 'k_x';
 
             % Create ImportPixelsX
             app.ImportPixelsX = uieditfield(app.ImportDimensionGrid, 'numeric');
@@ -10187,15 +10286,16 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportPixelsX.HorizontalAlignment = 'center';
             app.ImportPixelsX.Tooltip = {'Number of pixels on X axis in each frame (1st dimension of image stack)'};
             app.ImportPixelsX.Layout.Row = 1;
-            app.ImportPixelsX.Layout.Column = 3;
+            app.ImportPixelsX.Layout.Column = 2;
             app.ImportPixelsX.Value = 1;
 
             % Create YLabel_2
             app.YLabel_2 = uilabel(app.ImportDimensionGrid);
             app.YLabel_2.HorizontalAlignment = 'right';
             app.YLabel_2.Layout.Row = 1;
-            app.YLabel_2.Layout.Column = 4;
-            app.YLabel_2.Text = ' Y';
+            app.YLabel_2.Layout.Column = 3;
+            app.YLabel_2.Interpreter = 'tex';
+            app.YLabel_2.Text = 'k_y';
 
             % Create ImportPixelsY
             app.ImportPixelsY = uieditfield(app.ImportDimensionGrid, 'numeric');
@@ -10207,24 +10307,16 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportPixelsY.HorizontalAlignment = 'center';
             app.ImportPixelsY.Tooltip = {'Number of pixels on Y axis in each frame (2nd dimension of image stack)'};
             app.ImportPixelsY.Layout.Row = 1;
-            app.ImportPixelsY.Layout.Column = 5;
+            app.ImportPixelsY.Layout.Column = 4;
             app.ImportPixelsY.Value = 1;
-
-            % Create ImportFramesLabel
-            app.ImportFramesLabel = uilabel(app.ImportDimensionGrid);
-            app.ImportFramesLabel.HorizontalAlignment = 'center';
-            app.ImportFramesLabel.FontName = 'Arial';
-            app.ImportFramesLabel.FontWeight = 'bold';
-            app.ImportFramesLabel.Layout.Row = 2;
-            app.ImportFramesLabel.Layout.Column = 1;
-            app.ImportFramesLabel.Text = 'Real';
 
             % Create XLabel
             app.XLabel = uilabel(app.ImportDimensionGrid);
             app.XLabel.HorizontalAlignment = 'right';
             app.XLabel.Layout.Row = 2;
-            app.XLabel.Layout.Column = 2;
-            app.XLabel.Text = 'X';
+            app.XLabel.Layout.Column = 1;
+            app.XLabel.Interpreter = 'tex';
+            app.XLabel.Text = 'r_x';
 
             % Create ImportFramesX
             app.ImportFramesX = uieditfield(app.ImportDimensionGrid, 'numeric');
@@ -10236,15 +10328,16 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFramesX.HorizontalAlignment = 'center';
             app.ImportFramesX.Tooltip = {'Number of frames on X axis (3rd dimension of image stack)'};
             app.ImportFramesX.Layout.Row = 2;
-            app.ImportFramesX.Layout.Column = 3;
+            app.ImportFramesX.Layout.Column = 2;
             app.ImportFramesX.Value = 1;
 
             % Create YLabel
             app.YLabel = uilabel(app.ImportDimensionGrid);
             app.YLabel.HorizontalAlignment = 'right';
             app.YLabel.Layout.Row = 2;
-            app.YLabel.Layout.Column = 4;
-            app.YLabel.Text = ' Y';
+            app.YLabel.Layout.Column = 3;
+            app.YLabel.Interpreter = 'tex';
+            app.YLabel.Text = 'r_y';
 
             % Create ImportFramesY
             app.ImportFramesY = uieditfield(app.ImportDimensionGrid, 'numeric');
@@ -10256,7 +10349,7 @@ classdef Quant4D < matlab.apps.AppBase
             app.ImportFramesY.HorizontalAlignment = 'center';
             app.ImportFramesY.Tooltip = {'Number of frames on Y axis (4th dimension of image stack)'};
             app.ImportFramesY.Layout.Row = 2;
-            app.ImportFramesY.Layout.Column = 5;
+            app.ImportFramesY.Layout.Column = 4;
             app.ImportFramesY.Value = 1;
 
             % Create ImportFileSizeGrid

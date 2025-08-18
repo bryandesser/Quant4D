@@ -29,13 +29,18 @@ Parameters
 * **Sub-dataset**: Choice of dataset in hierarchical datasets such as ``.hdf5``, 
   ``.hspy``, and ``.dm3/.dm4`` files.
 * **Data offset**: Offset to the start of the 4D-STEM dataset in bytes.
-* **Frame header**: Header data size in bytes repeated before *each* diffraction
-  pattern. 
-* **Frame footer**: Footer data size in bytes repeated after *each* diffraction
-  pattern.
+* **Data header**: Header data size in bytes repeated before *each* contiguous
+  chunk of data. 
+* **Data footer**: Footer data size in bytes repeated after *each* contiguous
+  chunk of data.
 * **Data type**: Data type of the 4D-STEM dataset (8-, 16-, 32-, or 64-bit;
   signed integer, unsigned integer, or floating point)
 * **Byte order**: Big or little endian ordering.
+* **Axis order**: Order of the data axes as saved on disk. **k_x** and **k_y**
+  represent detector axes (i.e. camera pixels); whereas, **r_x** and **r_y**
+  represent the scan axes (i.e. real space probe positions). Default is
+  (**k_x**, **k_y**, **r_x**, **r_y**) where detector images (**k_x**, **k_y**)
+  are contiguous in memory.
 * **Pixels (x,y)**: Number of detector pixels in each diffraction pattern. 
 * **Frames (x,y)**: Number of probe positions.
 
