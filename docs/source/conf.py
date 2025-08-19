@@ -65,3 +65,5 @@ html_context = {
    'github_repo': 'Quant4D',
    'conf_py_path': "/source/",
 }
+
+# generate README.rst for GitHub
