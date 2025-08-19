@@ -63,5 +63,4 @@ html_context = {
    'display_github': True,
    'github_user': 'bryandesser',
    'github_repo': 'Quant4D',
-   'conf_py_path': "/source/",
 }
