@@ -11,10 +11,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: run auto_readme.py
-        run:  |
-          dir
-          python ./.github/workflows/auto_readme.py
-          dir
+        run: python ./.github/workflows/auto_readme.py
       
       - name: commit files
         id: commit
