@@ -70,3 +70,14 @@ html_context = {
 readme_src_files = "README.rst"
 
 readme_docs_url_type = "code"
+
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+
+# Blob to use when linking to GitHub source code
+if on_rtd or bool(os.getenv('local')):
+    readme_blob = 'last_tag'
+else:
+    # For gh-pages, don't need to generate README
+    extensions.remove('sphinx_readme')
+    # Use sphinx-github-style for linkcode
+    linkcode_blob = 'main'
