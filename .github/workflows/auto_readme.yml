@@ -12,3 +12,8 @@ jobs:
         run: python ./.github/workflows/auto_readme.py
       - name: Create file in root
         run: echo "This is a generated file." > output.txt
+      - name: Upload artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-file
+          path: output.txt
