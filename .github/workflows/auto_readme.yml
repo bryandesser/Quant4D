@@ -1,0 +1,13 @@
+name: Automatically generate README.rst
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-auto-readme:
+    runs-on: ubuntu-latest
+    steps:
+    - name: run auto_readme.py
+      run: python auto_readme.py
