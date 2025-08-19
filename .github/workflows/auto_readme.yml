@@ -14,7 +14,6 @@ jobs:
         run: python ./.github/workflows/auto_readme.py
       
       - name: commit files
-        if: git diff --exit-code
         id: commit
         run: |
           git config --local user.email "action@github.com"
