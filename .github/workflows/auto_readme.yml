@@ -7,4 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: run auto_readme.py
-      run: python /.github/workflows/auto_readme.py
+      run: python ./.github/workflows/auto_readme.py
