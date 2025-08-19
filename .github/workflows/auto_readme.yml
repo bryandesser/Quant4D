@@ -21,11 +21,14 @@ jobs:
           git add --all
           if [ -z "$(git status --porcelain)" ]; then
             echo "push=false" >> $GITHUB_OUTPUT
+            echo 0
           elif [ "$(git diff --quiet)" ]; then
             git commit -m "Update README.rst" -a
             echo "push=true" >> $GITHUB_OUTPUT
+            echo 1
           else
             echo "push=false" >> $GITHUB_OUTPUT
+            echo 2
           fi
         shell: bash
 
