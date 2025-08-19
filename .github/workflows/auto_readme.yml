@@ -6,6 +6,7 @@ jobs:
   run-auto-readme:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
       - name: run auto_readme.py
-      run: python ./.github/workflows/auto_readme.py
+        run: python ./.github/workflows/auto_readme.py
