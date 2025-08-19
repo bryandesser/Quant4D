@@ -67,7 +67,7 @@ html_context = {
 }
 
 # generate README.rst for GitHub
-file_list = ["/docs/source/index.rst", "/docs/source/installation.rst", "/docs/source/acknowledgement.rst"]
+file_list = ["index.rst", "installation.rst", "acknowledgement.rst"]
 
 with open(file = "../../README.rst", mode = "w") as outfile:
     for filename in file_list:
