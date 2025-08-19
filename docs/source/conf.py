@@ -78,6 +78,6 @@ if on_rtd or bool(os.getenv('local')):
     readme_blob = 'last_tag'
 else:
     # For gh-pages, don't need to generate README
-    extensions.remove('sphinx_readme')
+    #extensions.remove('sphinx_readme')
     # Use sphinx-github-style for linkcode
     linkcode_blob = 'main'
