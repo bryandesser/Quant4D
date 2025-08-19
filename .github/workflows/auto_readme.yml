@@ -19,11 +19,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "github-actions"
           git add --all
-          echo $(git status --porcelain)
-          echo "$(git status --porcelain)"
-          if [ -z "$(git status --porcelain)" ]; then
+          if [[ -z "$(git status --porcelain)" ]]; then
             echo "::set-output name=push::false"
-          elif [ git diff --quiet ]; then
+          elif [[ git diff --quiet ]]; then
             git commit -m "Update README.rst" -a
             echo "::set-output name=push::true"
           else
