@@ -21,7 +21,7 @@ jobs:
           git add --all
           if [ -z "$(git status --porcelain)" ]; then
             echo "::set-output name=push::false"
-          elseif [git diff --quiet]
+          elif [git diff --quiet]; then
             git commit -m "Update README.rst" -a
             echo "::set-output name=push::true"
           else
