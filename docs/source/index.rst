@@ -1,3 +1,4 @@
+.. _index:
 Welcome to the Quant4D documentation
 ====================================
 
