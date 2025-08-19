@@ -5,7 +5,7 @@ Welcome to the Quant4D documentation
 `Quant4D` is an open source graphical interface for quickly and intuitively
 opening, interacting with, and performing basic analysis of 4D-STEM data.
 
-.. image:: ../_static/screenshot.png
+.. image:: ./docs/_static/screenshot.png
    :align: center
    :width: 100%
    :class: no-scaled-link
@@ -43,7 +43,7 @@ More info can be found on the
 
 Installing Quant4D App
 ----------------------
-.. image:: ../_static/app_install.png
+.. image:: ./docs/_static/app_install.png
     :scale: 50%
     :align: right
     
@@ -72,7 +72,7 @@ button in the **Designer** Tab under the **Run** section. This will start the
 `Quant4D` app, whilst still allowing the user to debug, insert breakpoints, and
 modify code as desired.
 
-.. image:: ../_static/add_to_path.png
+.. image:: ./docs/_static/add_to_path.png
     :width: 382
     :height: 260
     :align: center
