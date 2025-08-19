@@ -2,4 +2,3 @@ sphinx_rtd_theme
 sphinxcontrib-matlabdomain
 sphinx_autodoc_typehints
 sphinxcontrib-video
-sphinx_readme

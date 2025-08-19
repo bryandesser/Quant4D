@@ -24,7 +24,6 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx_autodoc_typehints',
     'sphinxcontrib.video',
-    'sphinx_readme',
 ]
 
 napoleon_numpy_docstring = True
@@ -66,18 +65,3 @@ html_context = {
    'github_repo': 'Quant4D',
    'conf_py_path': "/source/",
 }
-
-readme_src_files = "README.rst"
-
-readme_docs_url_type = "code"
-
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
-
-# Blob to use when linking to GitHub source code
-if on_rtd or bool(os.getenv('local')):
-    readme_blob = 'last_tag'
-else:
-    # For gh-pages, don't need to generate README
-    #extensions.remove('sphinx_readme')
-    # Use sphinx-github-style for linkcode
-    linkcode_blob = 'main'
