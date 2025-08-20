@@ -24,7 +24,7 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx_autodoc_typehints',
     'sphinxcontrib.video',
-    'sphinx-new-tab-link',
+    'sphinx_new_tab_link',
 ]
 
 napoleon_numpy_docstring = True
