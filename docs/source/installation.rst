@@ -3,9 +3,6 @@
 Installation
 ============
 
-.. contents:: Table of Contents
-    :depth: 4
-
 MATLAB Requirements
 -------------------
 
