@@ -1,8 +1,11 @@
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.15493504.svg
+  :target: https://doi.org/10.5281/zenodo.15493504
+
 .. _index:
 Welcome to the Quant4D documentation
 ====================================
 
-`Quant4D` is an open source graphical interface for quickly and intuitively
+`Quant4D` is an open source graphical interface for quickly and intuitively 
 opening, interacting with, and performing basic analysis of 4D-STEM data.
 
 .. image:: ./docs/_static/screenshot.png
@@ -84,7 +87,7 @@ Acknowledgement
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.15493504.svg
   :target: https://doi.org/10.5281/zenodo.15493504
-
+  
 If you use the Quant4D software for your 4D-STEM related research, 
 please cite the software using the Zenodo DOI.
 
