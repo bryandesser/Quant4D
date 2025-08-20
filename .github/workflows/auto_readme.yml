@@ -30,7 +30,9 @@ jobs:
             echo "push=false" >> $GITHUB_OUTPUT
             echo 2
           fi
+          echo GITHUB_OUTPUT: 
           echo $GITHUB_OUTPUT
+          echo commit files finished
         shell: bash
 
       - name: Push changes
