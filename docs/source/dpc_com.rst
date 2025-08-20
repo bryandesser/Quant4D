@@ -120,7 +120,7 @@ dDPC/dCoM
 *********
 Differentiated DPC/CoM images are generated automatically using the detector
 chose by the user. Differentiation of the DPC/CoM signal retrieves the charge
-density distribution of the specimen transmission. `[1]`_
+density distribution of the specimen. `[1]`_
 
 Filtering
 *********
