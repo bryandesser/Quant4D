@@ -34,8 +34,8 @@ The simplest way to install `Quant4D` is via the application installer file
 (`Quant4D.mlappinstall <https://github.com/bryandesser/Quant4D/blob/master/app_installer/Quant4D.mlappinstall>`_).
 Download and open the file, which will open MATLAB and ask to install `Quant4D`
 into **My Apps** (see below). Click `Install` and then open the app from the
-**Apps** tab on the MATLAB Toolstrip. The app may be buried on the list - if so,
-click the drop-down arrow on the far right of the toolstrip.
+**Apps** tab on the MATLAB Toolstrip. The app may be buried on the list - if
+so, click the drop-down arrow on the far right of the toolstrip.
 
 Running Quant4D code directly
 -----------------------------
@@ -43,7 +43,7 @@ Running Quant4D code directly
 `Quant4D` can also be run directly from the source code, which gives access to
 debugging and live user interaction with the underlying experimental data for
 additional functionality. To do this, first download the
-`source code <https://github.com/bryandesser/Quant4D/tree/master/source_code>`_.
+`source code <https://github.com/bryandesser/Quant4D/tree/master/src>`_.
 Then open MATLAB, navigate to the downloaded source code directory, and add the
 directory and subdirectories to the MATLAB path by right-clicking on the parent
 directory and clicking `Add to Path > Selected Folders and Subfolders`.
