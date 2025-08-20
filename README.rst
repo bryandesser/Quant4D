@@ -15,13 +15,15 @@ opening, interacting with, and performing basic analysis of 4D-STEM data.
 
 
 
+Documentation
+=============
+
+Quant4D documentation is `available here <https://quant4d.readthedocs.io/en/latest>`_.
+
 .. _installation:
 
 Installation
 ============
-
-.. contents:: Table of Contents
-    :depth: 4
 
 MATLAB Requirements
 -------------------
@@ -46,7 +48,7 @@ More info can be found on the
 
 Installing Quant4D App
 ----------------------
-.. image:: ./docs/_static/app_install.png
+.. image:: ../_static/app_install.png
     :scale: 50%
     :align: right
     
@@ -75,7 +77,7 @@ button in the **Designer** Tab under the **Run** section. This will start the
 `Quant4D` app, whilst still allowing the user to debug, insert breakpoints, and
 modify code as desired.
 
-.. image:: ./docs/_static/add_to_path.png
+.. image:: ../_static/add_to_path.png
     :width: 382
     :height: 260
     :align: center
@@ -100,4 +102,3 @@ complete.
 Please also watch the
 `Quant4D repository <https://github.com/bryandesser/Quant4D>`_ on GitHub for
 future updates.
-
