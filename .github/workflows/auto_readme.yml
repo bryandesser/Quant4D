@@ -16,8 +16,8 @@ jobs:
       - name: commit files
         id: commit
         run: |
-          echo git diff --quiet:
-          echo $(git diff --quiet)
+          echo [ -z git diff --quiet ]:
+          echo [ -z $(git diff --quiet)]
           git config --local user.email "action@github.com"
           git config --local user.name "github-actions"
           git add --all
