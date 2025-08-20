@@ -16,25 +16,17 @@ jobs:
       - name: commit files
         id: commit
         run: |
-          echo git diff --quiet:
-          echo [ $(git diff --quiet) ]
           git config --local user.email "action@github.com"
           git config --local user.name "github-actions"
           git add --all
           if [ -z "$(git status --porcelain)" ]; then
             echo "push=false" >> $GITHUB_OUTPUT
-            echo 0
           elif [ "$(git diff --quiet) -ne 0" ]; then
             git commit -m "Update README.rst" -a
             echo "push=true" >> $GITHUB_OUTPUT
-            echo 1
           else
             echo "push=false" >> $GITHUB_OUTPUT
-            echo 2
           fi
-          echo GITHUB_OUTPUT: 
-          echo $GITHUB_OUTPUT
-          echo commit files finished
         shell: bash
 
       - name: Push changes

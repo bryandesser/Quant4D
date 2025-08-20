@@ -18,9 +18,9 @@ with open(file = "./README.rst", mode = "w") as outfile:
 
     # include installation documentation
     with open(file = "./docs/source/installation.rst", mode = "r") as infile:
-        outfile.write(infile.read())
+        outfile.write(infile.read().replace("../_static", "./docs/_static"))
         outfile.write("\n\n")
 
     # include acknowledgement documentation
     with open(file = "./docs/source/acknowledgement.rst", mode = "r") as infile:
-        outfile.write(infile.read())
+        outfile.write(infile.read().replace("../_static", "./docs/_static"))
