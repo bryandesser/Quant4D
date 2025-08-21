@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<toolset id="user_apps_toolset" template="false">
+   <tool app_file_path="./" handler_class="com.mathworks.appmanagement.desktop.ToolboxToolSetExtensionHandler" id="df80b7c3-a1c3-4e87-8d50-e9bb0d53dde3" label="4D-STEM_Quant" toolset_id="user_apps_toolset">
+      <callback>matlab.apputil.run('4DSTEM_QuantAPP')</callback>
+      <parent_tool id="my_apps" toolset_id="apps_toolset"/>
+   </tool>
+</toolset>
