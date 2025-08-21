@@ -1,0 +1,109 @@
+<deployment-project plugin="plugin.apptool" plugin-version="1.0">
+  <configuration build-checksum="2629539780" file="C:\Users\bess0001\Documents\dataStorage\research\code\Quant4D\Quant4D-master\Quant4D\Quant4D.prj" location="C:\Users\bess0001\Documents\dataStorage\research\code\Quant4D\Quant4D-master\Quant4D" name="Quant4D" target="target.mlapps" target-name="Package App">
+    <param.appname>Quant4D</param.appname>
+    <param.authnamewatermark>Bryan D Esser</param.authnamewatermark>
+    <param.email />
+    <param.company />
+    <param.icon />
+    <param.icons />
+    <param.summary>This app is designed to allow for rapid manipulation of large experimental or simulated 4DSTEM datasets.</param.summary>
+    <param.description>Features include: round, annular, segmented, center-of-mass, and virtual aperture detectors. Images can be formed very rapidly for quickly analyzing 4DSTEM datasets. Data can be loaded into physical memory, or as a memory-mapped file for systems with limited memory, or especially large datasets.</param.description>
+    <param.screenshot>C:\Users\bess0001\AppData\Local\Temp\tpe77d94a0_394b_4812_992d_25f3a25ae462.png</param.screenshot>
+    <param.version>2025.03.17</param.version>
+    <param.products.name />
+    <param.products.id />
+    <param.products.version />
+    <param.platforms />
+    <param.output>${PROJECT_ROOT}</param.output>
+    <param.guid>51edde85-0c83-45b9-990b-e9e95c6a6be5</param.guid>
+    <unset>
+      <param.email />
+      <param.company />
+      <param.icon />
+      <param.icons />
+      <param.products.name />
+      <param.products.id />
+      <param.products.version />
+      <param.platforms />
+      <param.output />
+    </unset>
+    <fileset.main>
+      <file>${PROJECT_ROOT}\Quant4D.mlapp</file>
+    </fileset.main>
+    <fileset.depfun>
+      <file>${PROJECT_ROOT}\dmInfo.m</file>
+      <file>${PROJECT_ROOT}\icons\Aperture.png</file>
+      <file>${PROJECT_ROOT}\icons\autoSave.png</file>
+      <file>${PROJECT_ROOT}\icons\axes.png</file>
+      <file>${PROJECT_ROOT}\icons\axis-x.png</file>
+      <file>${PROJECT_ROOT}\icons\axis-y.png</file>
+      <file>${PROJECT_ROOT}\icons\bandpass.png</file>
+      <file>${PROJECT_ROOT}\icons\brightness.png</file>
+      <file>${PROJECT_ROOT}\icons\circle.png</file>
+      <file>${PROJECT_ROOT}\icons\colorPicker.png</file>
+      <file>${PROJECT_ROOT}\icons\colorwheel.png</file>
+      <file>${PROJECT_ROOT}\icons\contrast.png</file>
+      <file>${PROJECT_ROOT}\icons\delete.png</file>
+      <file>${PROJECT_ROOT}\icons\frontWindow.png</file>
+      <file>${PROJECT_ROOT}\icons\gamma.png</file>
+      <file>${PROJECT_ROOT}\icons\grid.png</file>
+      <file>${PROJECT_ROOT}\icons\help.png</file>
+      <file>${PROJECT_ROOT}\icons\home.png</file>
+      <file>${PROJECT_ROOT}\icons\import.png</file>
+      <file>${PROJECT_ROOT}\icons\invertColors.png</file>
+      <file>${PROJECT_ROOT}\icons\left_rotate.png</file>
+      <file>${PROJECT_ROOT}\icons\link.png</file>
+      <file>${PROJECT_ROOT}\icons\math.png</file>
+      <file>${PROJECT_ROOT}\icons\mirrored.png</file>
+      <file>${PROJECT_ROOT}\icons\mirrorHorz.png</file>
+      <file>${PROJECT_ROOT}\icons\mirrorVert.png</file>
+      <file>${PROJECT_ROOT}\icons\openMask.png</file>
+      <file>${PROJECT_ROOT}\icons\poly.png</file>
+      <file>${PROJECT_ROOT}\icons\refresh.png</file>
+      <file>${PROJECT_ROOT}\icons\right_rotate.png</file>
+      <file>${PROJECT_ROOT}\icons\save.png</file>
+      <file>${PROJECT_ROOT}\icons\settings.png</file>
+      <file>${PROJECT_ROOT}\icons\transpose.png</file>
+      <file>${PROJECT_ROOT}\icons\unlock.png</file>
+      <file>${PROJECT_ROOT}\icons\wedge.png</file>
+    </fileset.depfun>
+    <fileset.resources />
+    <fileset.package />
+    <build-deliverables>
+      <file location="C:\Users\bess0001\Documents\dataStorage\research\code\Quant4D\Quant4D-master" name="Quant4D" optional="false">C:\Users\bess0001\Documents\dataStorage\research\code\Quant4D\Quant4D-master\Quant4D</file>
+    </build-deliverables>
+    <workflow />
+    <matlab>
+      <root>C:\Program Files\MATLAB\R2024a</root>
+      <toolboxes>
+        <toolbox name="matlabcoder" />
+        <toolbox name="gpucoder" />
+      </toolboxes>
+      <toolbox>
+        <matlabcoder>
+          <enabled>true</enabled>
+        </matlabcoder>
+      </toolbox>
+      <toolbox>
+        <gpucoder>
+          <enabled>true</enabled>
+        </gpucoder>
+      </toolbox>
+    </matlab>
+    <platform>
+      <unix>false</unix>
+      <mac>false</mac>
+      <windows>true</windows>
+      <win2k>false</win2k>
+      <winxp>false</winxp>
+      <vista>false</vista>
+      <linux>false</linux>
+      <solaris>false</solaris>
+      <osver>10.0</osver>
+      <os32>false</os32>
+      <os64>true</os64>
+      <arch>win64</arch>
+      <matlab>true</matlab>
+    </platform>
+  </configuration>
+</deployment-project>
