@@ -1,0 +1,116 @@
+<deployment-project plugin="plugin.apptool" plugin-version="1.0">
+  <configuration build-checksum="1278112513" file="/home/bess0001/Downloads/quant4d/2021-11-02/Quant4D.prj" location="/home/bess0001/Downloads/quant4d/2021-11-02" name="Quant4D" target="target.mlapps" target-name="Package App">
+    <param.appname>Quant4D</param.appname>
+    <param.authnamewatermark>Bryan D Esser</param.authnamewatermark>
+    <param.email />
+    <param.company />
+    <param.icon />
+    <param.icons />
+    <param.summary>This app is designed to allow for rapid manipulation of large experimental or simulated 4DSTEM datasets.</param.summary>
+    <param.description>Features include: round, annular, segmented, center-of-mass, and virtual aperture detectors. Images can be formed very rapidly for quickly analyzing 4DSTEM datasets. Data can be loaded into physical memory, or as a memory-mapped file for systems with limited memory, or especially large datasets.</param.description>
+    <param.screenshot>/tmp/tpeaa6a931_b104_4cc3_8d20_2e57c38c87d7.png</param.screenshot>
+    <param.version>2022.10.06</param.version>
+    <param.products.name />
+    <param.products.id />
+    <param.products.version />
+    <param.platforms />
+    <param.output>${PROJECT_ROOT}</param.output>
+    <param.guid>d6b64d36-0129-467b-b6c0-2959ae837c5a</param.guid>
+    <unset>
+      <param.email />
+      <param.company />
+      <param.icon />
+      <param.icons />
+      <param.products.name />
+      <param.products.id />
+      <param.products.version />
+      <param.platforms />
+      <param.output />
+    </unset>
+    <fileset.main>
+      <file>${PROJECT_ROOT}/Quant4D.mlapp</file>
+    </fileset.main>
+    <fileset.depfun>
+      <file>/home/bess0001/Downloads/checkNaN.m</file>
+      <file>${PROJECT_ROOT}/dmInfo.m</file>
+      <file>${PROJECT_ROOT}/h5datasets.m</file>
+      <file>${PROJECT_ROOT}/isStaticEvt.m</file>
+      <file>${PROJECT_ROOT}/rotMatD.m</file>
+      <file>${PROJECT_ROOT}/setExSrc.m</file>
+      <file>${PROJECT_ROOT}/switchOnOff.m</file>
+      <file>/home/bess0001/Downloads/quant4d/getGraphicsConfiguration.m</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/autoSave.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/help.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/import.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/invertColors.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/left_rotate.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/link.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/mirrorHorz.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/mirrorVert.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/right_rotate.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/save.png</file>
+      <file>/home/bess0001/research/code/Quant4D/icons/transpose.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/Aperture.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/axes.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/axis-x.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/axis-y.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/bandpass.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/brightness.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/circle.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/colorPicker.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/colorwheel.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/contrast.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/delete.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/frontWindow.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/gamma.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/grid.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/home.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/math.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/mirrored.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/openMask.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/poly.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/refresh.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/settings.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/unlock.png</file>
+      <file>/home/bess0001/research/code/pyQuant4D/Quant4D/icons/wedge.png</file>
+    </fileset.depfun>
+    <fileset.resources />
+    <fileset.package />
+    <build-deliverables>
+      <file location="/home/bess0001/Downloads/quant4d" name="2021-11-02" optional="false">/home/bess0001/Downloads/quant4d/2021-11-02</file>
+    </build-deliverables>
+    <workflow />
+    <matlab>
+      <root>/usr/local/MATLAB/R2022a</root>
+      <toolboxes>
+        <toolbox name="matlabcoder" />
+        <toolbox name="gpucoder" />
+      </toolboxes>
+      <toolbox>
+        <matlabcoder>
+          <enabled>true</enabled>
+        </matlabcoder>
+      </toolbox>
+      <toolbox>
+        <gpucoder>
+          <enabled>true</enabled>
+        </gpucoder>
+      </toolbox>
+    </matlab>
+    <platform>
+      <unix>true</unix>
+      <mac>false</mac>
+      <windows>false</windows>
+      <win2k>false</win2k>
+      <winxp>false</winxp>
+      <vista>false</vista>
+      <linux>true</linux>
+      <solaris>false</solaris>
+      <osver>5.15.0-46-generic</osver>
+      <os32>false</os32>
+      <os64>true</os64>
+      <arch>glnxa64</arch>
+      <matlab>true</matlab>
+    </platform>
+  </configuration>
+</deployment-project>
