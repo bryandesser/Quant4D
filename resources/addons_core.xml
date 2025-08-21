@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addonCore>
-  <label>4D-STEM_Quant</label>
+  <label>Quant4D</label>
   <version>1.0</version>
   <type>app</type>
-  <packagedBy>(R2018a)</packagedBy>
-  <identifier>df80b7c3-a1c3-4e87-8d50-e9bb0d53dde3</identifier>
-  <createdBy name="Bryan D Esser" email="bryan.d.esser@gmail.com"/>
+  <packagedBy>(R2018b)</packagedBy>
+  <identifier>2a71191e-515a-4b73-a8d2-d3f9a5d0c219</identifier>
+  <description>22 Feb 2019</description>
+  <createdBy name="Bryan Esser" email="bryan.d.esser@gmail.com"/>
+  <image>resources/screenshot.png</image>
   <icons>
     <icon tag="0">resources/icon_48.png</icon>
     <icon tag="1">resources/icon_24.png</icon>
