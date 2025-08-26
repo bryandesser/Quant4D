@@ -50,3 +50,8 @@ def convert_mlapp_to_m(source_file: str | os.PathLike) -> Tuple[List, str]:
     
 file_path = "./src/Quant4D.mlapp"
 code, status = convert_mlapp_to_m(file_path)
+
+# check status in GitHub Actions
+print(status)
+if code is not None:
+    print(f"Code is {len(code.split("\n")):d} lines\n")
