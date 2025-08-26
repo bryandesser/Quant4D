@@ -1,0 +1,36 @@
+name: Automatically convert Quant4D.mlapp to Quant4D.m
+
+on: push
+
+jobs:
+  run-convert-mlapp-to-m:
+    runs-on: ubuntu-latest
+    steps:
+      
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: run convert_mlapp_to_m.py
+        run: python ./.github/workflows/convert_mlapp_to_m.py
+      
+      - name: commit files
+        id: commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "github-actions"
+          git add --all
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "push=false" >> $GITHUB_OUTPUT
+          elif [ "$(git diff --quiet) -ne 0" ]; then
+            git commit -m "Update Quant4D.m" -a
+            echo "push=true" >> $GITHUB_OUTPUT
+          else
+            echo "push=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Push changes
+        if: steps.commit.outputs.push == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
