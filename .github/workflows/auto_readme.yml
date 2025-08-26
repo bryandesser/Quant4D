@@ -1,6 +1,9 @@
 name: Automatically generate README.rst
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   run-auto-readme:
