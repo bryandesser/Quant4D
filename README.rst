@@ -14,8 +14,6 @@ opening, interacting with, and performing basic analysis of 4D-STEM data.
    :class: no-scaled-link
 
 |
-|
-
 
 
 Documentation
