@@ -3,7 +3,7 @@ name: Automatic push actions
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   run-push-actions:
