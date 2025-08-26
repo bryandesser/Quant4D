@@ -1,17 +1,23 @@
-name: Automatically convert Quant4D.mlapp to Quant4D.m
+name: Automatic push actions
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  run-convert-mlapp-to-m:
+  run-push-actions:
     runs-on: ubuntu-latest
     steps:
       
       - name: Checkout repo
         uses: actions/checkout@v4
-
+      
       - name: run convert_mlapp_to_m.py
         run: python ./.github/workflows/convert_mlapp_to_m.py
+      
+      - name: run auto_readme.py
+        run: python ./.github/workflows/auto_readme.py
       
       - name: commit files
         id: commit
@@ -22,7 +28,7 @@ jobs:
           if [ -z "$(git status --porcelain)" ]; then
             echo "push=false" >> $GITHUB_OUTPUT
           elif [ "$(git diff --quiet) -ne 0" ]; then
-            git commit -m "Update Quant4D.m" -a
+            git commit -m "Update README.rst" -a
             echo "push=true" >> $GITHUB_OUTPUT
           else
             echo "push=false" >> $GITHUB_OUTPUT
