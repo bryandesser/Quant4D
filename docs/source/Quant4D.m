@@ -1187,7 +1187,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                         % Pixel Binning
                         if pixels_dist > 1
-                            frame = squeeze(sum(reshape(frame, [pixels_dist, n_pixels(1), pixels_dist, n_pixels(2)]), [1 3]),'omitnan');
+                            frame = squeeze(sum(reshape(frame, [pixels_dist, n_pixels(1), pixels_dist, n_pixels(2)]), [1 3],'omitnan'));
                         end
 
                         H5D.write(dataset_id, 'H5ML_DEFAULT', memory_space_id, file_space_id, 'H5P_DEFAULT', frame);
@@ -1225,7 +1225,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                         % Pixel binning
                         if pixels_dist > 1
-                            frame = squeeze(sum(reshape(frame, [pixels_dist, n_pixels(1), pixels_dist, n_pixels(2)]), [1 3]),'omitnan');
+                            frame = squeeze(sum(reshape(frame, [pixels_dist, n_pixels(1), pixels_dist, n_pixels(2)]), [1 3],'omitnan'));
                         end
 
                         fwrite(file_id, frame, data_type, byte_order);
@@ -1776,7 +1776,7 @@ classdef Quant4D < matlab.apps.AppBase
 
                         % Pixel binning
                         if pixels_binning > 1
-                            frame = squeeze(sum(reshape(frame, [pixels_binning n_pixels(1) pixels_binning n_pixels(2)]), [1 3]),'omitnan');
+                            frame = squeeze(sum(reshape(frame, [pixels_binning n_pixels(1) pixels_binning n_pixels(2)]), [1 3],'omitnan'));
                         end
 
                         % Store frame
