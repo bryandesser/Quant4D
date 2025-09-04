@@ -22,7 +22,6 @@
 .. |openMask| image:: ../../src/icons/openMask.png
     :height: 2ex
     :class: no-scaled-link
-
 .. |mirrored| image:: ../../src/icons/mirrored.png
     :height: 2ex
     :class: no-scaled-link
