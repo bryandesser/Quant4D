@@ -14,7 +14,7 @@ with open(file = "./README.rst", mode = "w") as outfile:
     # add a link to Read the Docs
     outfile.write("Documentation\n")
     outfile.write("=============\n\n")
-    outfile.write("Quant4D documentation is `available here <https://quant4d.readthedocs.io/en/latest>`_.\n\n")
+    outfile.write("Quant4D documentation is available at `quant4d.readthedocs.io <https://quant4d.readthedocs.io/en/latest>`_.\n\n")
 
     # include installation documentation
     with open(file = "./docs/source/installation.rst", mode = "r") as infile:
