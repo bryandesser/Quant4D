@@ -19,7 +19,7 @@ opening, interacting with, and performing basic analysis of 4D-STEM data.
 Documentation
 =============
 
-Quant4D documentation is `available here <https://quant4d.readthedocs.io/en/latest>`_.
+Quant4D documentation is available at `quant4d.readthedocs.io <https://quant4d.readthedocs.io/en/latest>`_.
 
 .. _installation:
 
