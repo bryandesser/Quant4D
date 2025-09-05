@@ -115,6 +115,7 @@ Display Tab
 .. image:: ../_static/settings_display_tab.png
     :align: right
     :scale: 50%
+
 * **Image**: Currently selected image window. Dropdown allows selection of any 
   currently available image window. 
 * **Show image**: Bring currently selected image window to the front (or show if
@@ -136,6 +137,7 @@ Windows Tab
 .. image:: ../_static/settings_windows_tab.png
     :align: right
     :scale: 50%
+
 * **Show image windows**: Show image window or bring to front (i.e. if closed or 
   hidden).
 * **Vector sampling**: Add vector arrows to real-space images in DPC or CoM
@@ -149,6 +151,7 @@ Misc Tab
 .. image:: ../_static/settings_misc_tab.png
     :align: left
     :scale: 50%
+
 * **Calculation Policy**: Active automatically updates all image displays as the
   user interacts with the GUI; Reduced updates all image displays after the user
   is finished interacting with the GUI; Passive only updates image displays when
@@ -168,6 +171,7 @@ Info and Variables Tabs
 .. image:: ../_static/settings_info_tab.png
     :align: right
     :scale: 50%
+
 * **Dataset info**: All information and parameters used for the currently loaded 
   dataset. 
 * **Show all variables**: Display all important variables, constants, and UI
@@ -187,6 +191,7 @@ Image Windows
 .. image:: ../_static/image_windows.png
     :align: center
     :scale: 50%
+
 Individual windows are created for all images, including diffraction space,
 real-space, ROI masks, and vector colorwheel. All image windows that view the
 same space respond simultaneously to any changes in zoom and pan to unify their
