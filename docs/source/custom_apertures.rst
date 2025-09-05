@@ -47,10 +47,6 @@
     :height: 2ex
     :class: no-scaled-link
 
-.. |transpose| image:: ../../src/icons/transpose.png
-    :height: 2ex
-    :class: no-scaled-link
-
 ================
 Custom Detectors
 ================
