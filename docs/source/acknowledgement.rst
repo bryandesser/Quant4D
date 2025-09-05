@@ -1,7 +1,7 @@
 .. _acknowledgement:
 
 Acknowledgement
-=======
+===============
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.15493504.svg
   :target: https://doi.org/10.5281/zenodo.15493504

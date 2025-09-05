@@ -167,7 +167,7 @@ Misc Tab
   the data.
 
 Info and Variables Tabs
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 .. image:: ../_static/settings_info_tab.png
     :align: right
     :scale: 50%
@@ -201,7 +201,7 @@ vector graphic), query pixel intensities, pan, zoom in/out, and reset the field
 of view.
 
 Save/Export Window
-*************
+******************
 The **Save/Export** window allows users to save images or export a cropped
 and/or binned subset of the original 4D-STEM dataset.
 
