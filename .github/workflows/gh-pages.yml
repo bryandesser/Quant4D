@@ -44,8 +44,9 @@ jobs:
       - name: Run ghp-import
         run: |
           pwd
-          dir
-          ghp-import -n -p -f docs/_site/_build/html
+          ls
+          ls docs
+          ghp-import -n -p -f ./docs/_site/_build/html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
