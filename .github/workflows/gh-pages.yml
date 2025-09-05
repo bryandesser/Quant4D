@@ -43,13 +43,7 @@ jobs:
           find ./docs/_site -name "*.html" -exec sudo sed -i "s|</head>|$META_TAG\n</head>|g" {} +
       - name: Run ghp-import
         run: |
-          pwd
-          ls
-          echo 999
-          ls docs
-          echo 999
-          ls docs/_site
-          ghp-import -n -p -f ./docs/_site/_build/html
+          ghp-import -n -p -f build/html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
