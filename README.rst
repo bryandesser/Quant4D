@@ -2,6 +2,7 @@
   :target: https://doi.org/10.5281/zenodo.15493504
 
 .. _index:
+
 Welcome to the Quant4D documentation
 ====================================
 
@@ -14,6 +15,7 @@ opening, interacting with, and performing basic analysis of 4D-STEM data.
    :class: no-scaled-link
 
 |
+
 
 
 Documentation
@@ -86,7 +88,7 @@ modify code as desired.
 .. _acknowledgement:
 
 Acknowledgement
-=======
+===============
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.15493504.svg
   :target: https://doi.org/10.5281/zenodo.15493504
