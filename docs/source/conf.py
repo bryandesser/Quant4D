@@ -61,9 +61,11 @@ html_theme_path = ["_themes", ]
 html_baseurl = "https://quant4d.readthedocs.io/en/latest"
 
 html_context = {
-    'display_github': True,
-    'github_user': 'bryandesser',
-    'github_repo': 'Quant4D',
-    'github_version': 'master',
-    'conf_py_path': '/docs/source/',
+    "display_github": True,
+    "github_user": "bryandesser",
+    "github_repo": "Quant4D",
+    "github_version": "master",
+    "conf_py_path": "/docs/source/",
+    "edit_on_github_text": "View on GitHub"
 }
+
