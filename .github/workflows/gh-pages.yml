@@ -34,12 +34,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./docs/requirements.txt
       - name: Build HTML
-        # move to docs folder, make html files, delete CNAME if generated as we
-        # do not need to point to a custom domain rm -rf build/html/CNAME || true
         run: |
           cd docs
           make html
-          
+        # `rm -rf build/html/CNAME || true` to remove CNAME auto redirect
       - name: Inject Google Site Verification Meta Tag
         run: |
           META_TAG='<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />'

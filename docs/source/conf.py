@@ -58,7 +58,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = "sphinx_rtd_theme"
 html_static_path = [os.path.abspath(this_dir) + "/../_static"]
 html_theme_path = ["_themes", ]
-#html_baseurl = "https://quant4d.readthedocs.io/en/latest"
+
+# html_baseurl will automatically generate CNAME file on GitHub Pages during
+# the Generate and Deploy GitHub Pages workflow on GitHub Actions (make html),
+# which will automatically point bryandesser.github.io/quant4d to
+# quant4d.readthedocs.io
+html_baseurl = "https://quant4d.readthedocs.io/en/latest"
 
 html_context = {
     "display_github": True,
