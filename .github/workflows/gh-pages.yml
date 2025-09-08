@@ -35,9 +35,6 @@ jobs:
           pip install -r ./docs/requirements.txt
       - name: Build HTML
         run: |
-          cd docs
-          echo ls docs
-          ls
           make html
           echo make html
           echo ls docs
@@ -45,6 +42,10 @@ jobs:
           echo
           echo ls docs/build
           ls build
+          echo
+          echo ls build/html
+          ls build/html
+          echo
       - name: Inject Google Site Verification Meta Tag
         run: |
           META_TAG='<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />'
