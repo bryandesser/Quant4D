@@ -35,6 +35,7 @@ jobs:
           pip install -r ./docs/requirements.txt
       - name: Build HTML
         run: |
+          cd docs
           make html
           echo make html
           echo ls docs
