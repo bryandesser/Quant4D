@@ -43,8 +43,10 @@ jobs:
           find ./docs/_site -name "*.html" -exec sudo sed -i "s|</head>|$META_TAG\n</head>|g" {} +
       - name: Run ghp-import
         run: |
-          echo ls docs/build
+          echo ls docs
+          ls docs
           echo
+          echo ls docs/build
           ls docs/build
           echo
           ghp-import -n -p -f docs/build/html
