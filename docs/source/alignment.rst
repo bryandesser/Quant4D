@@ -10,8 +10,8 @@ This is done using a
 `circular Hough transform <https://mathworks.com/help/images/ref/imfindcircles.html>`_,
 giving preference to the strongest circular feature nearest the center of the
 diffraction pattern. If this routine fails outright or incorrectly fits the
-transmitted beam, the user can manually fit the transmitted beam using either an
-interactive circular annotation on the diffraction pattern, slider bars, or
+transmitted beam, the user can manually fit the transmitted beam using either
+an interactive circular annotation on the diffraction pattern, slider bars, or
 numerical inputs (x, y, radius). All of these UI elements are linked and update
 automatically.
 
@@ -28,10 +28,10 @@ window.
 
 Diffraction scale
 *****************
-`Quant4D` can be calibrated in diffraction space by fitting the transmitted beam
-and reporting a known probe convergence angle in mrad, or by simply reporting a
-known scale in mrad/pixels, which is then propagated through the rest of the GUI
-for all detectors and masks generated. 
+`Quant4D` can be calibrated in diffraction space by fitting the transmitted
+beam and reporting a known probe convergence angle in mrad, or by simply
+reporting a known scale in mrad/pixels, which is then propagated through the
+rest of the GUI for all detectors and masks generated. 
 
 .. video:: ../_static/alignment.mp4
     :width: 100%
