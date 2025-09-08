@@ -40,19 +40,19 @@ jobs:
       - name: Inject Google Site Verification Meta Tag
         run: |
           META_TAG='<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />'
-          find ./docs/_site -name "*.html" -exec sudo sed -i "s|</head>|$META_TAG\n</head>|g" {} +
+          find ./docs/build -name "*.html" -exec sudo sed -i "s|</head>|$META_TAG\n</head>|g" {} +
           echo pwd
           pwd
           echo
           echo ls
           ls
           echo
-          echo ls ./docs
-          ls ./docs
+          echo ls ./docs/build
+          ls ./docs/build
           echo
-          find ./docs/_site -name "*.html"
+          find ./docs/build -name "*.html"
           echo
-          ls ./docs/_site
+          ls ./docs/build
           echo
           echo Done
       - name: Run ghp-import
