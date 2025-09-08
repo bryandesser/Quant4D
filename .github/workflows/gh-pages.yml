@@ -39,7 +39,8 @@ jobs:
           echo ls docs
           ls
           make html
-          echo make html; ls docs
+          echo make html
+          echo ls docs
           ls 
           echo
           echo ls docs/build
