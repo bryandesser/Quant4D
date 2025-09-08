@@ -1,0 +1,140 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Annular/Round detectors &mdash; Quant4D 2025.03.17 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://quant4d.readthedocs.io/en/latest/annular_round.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=0423a653"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Virtual apertures" href="virtual_apertures.html" />
+    <link rel="prev" title="Alignment" href="alignment.html" /> 
+<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Quant4D
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphical_user_interface.html">Graphical user interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functionality.html">Functionality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="alignment.html">Alignment</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Annular/Round detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_apertures.html">Virtual apertures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpc_com.html">DPC/CoM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_apertures.html">Custom Detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rois.html">ROIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">Save/Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgement.html">Acknowledgement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Quant4D</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="functionality.html">Functionality</a></li>
+      <li class="breadcrumb-item active">Annular/Round detectors</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/bryandesser/Quant4D/blob/master/docs/source/annular_round.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="annular-round"></span><section id="annular-round-detectors">
+<h1>Annular/Round detectors<a class="headerlink" href="#annular-round-detectors" title="Link to this heading"></a></h1>
+<p>The most basic and intuitive detector format, this mode provides the user with a
+pair of circular annotations on the diffraction pattern, which are linked to
+slider bars and numerical inputs in the main UI. These can be used to form
+circular or annular detectors centered on the transmitted beam. The width of the
+detector can be fixed by enabling the <a class="reference internal" href="_images/link.png"><img alt="radius_link" src="_images/link.png" style="height: 2ex;" /></a> icon between the two slider
+bars. This allows the user to change the inner and outer angles simultaneously.</p>
+<p>When the user first switches to this mode from the <strong>Alignment</strong> mode, a
+pre-calculation step is performed to improve display speeds upon interaction.
+Here we calculate a range of images with a given annular step size, defined by
+the <strong>Annular Integration Step</strong> field at the bottom of the panel in the main UI.
+This way, when the user changes the detector range, the images can be directly
+plotted, rather than calculated from the entire dataset. The initial value for
+<strong>Annular Integration Step</strong> is set to one pixel step in diffraction space, or a
+maximum of 250 steps. This balances reasonably fine control of detector geometry
+and computational efficiency; however, the user can directly change this step
+size for finer/coarser control, at which point the pre-calculation is repeated
+with the new step size.</p>
+<div  class="sphinx-contrib-video-container align-left"><video autoplay="True" controls="True" loop="True" preload="auto" width="100%" controlslist="noremoteplayback nodownload"><source src="_images/annular_round.mp4" type="video/mp4"></video></div></section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="alignment.html" class="btn btn-neutral float-left" title="Alignment" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="virtual_apertures.html" class="btn btn-neutral float-right" title="Virtual apertures" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Bryan D Esser.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

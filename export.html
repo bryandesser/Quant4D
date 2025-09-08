@@ -1,0 +1,185 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Save/Export &mdash; Quant4D 2025.03.17 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://quant4d.readthedocs.io/en/latest/export.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=0423a653"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API" href="api.html" />
+    <link rel="prev" title="ROIs" href="rois.html" /> 
+<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Quant4D
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphical_user_interface.html">Graphical user interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functionality.html">Functionality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="alignment.html">Alignment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annular_round.html">Annular/Round detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_apertures.html">Virtual apertures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpc_com.html">DPC/CoM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_apertures.html">Custom Detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rois.html">ROIs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Save/Export</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#save-images">Save Images</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#data-formats">Data formats</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#raw-data">Raw data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#annotated-display-quality-data">Annotated display quality data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#export-dataset">Export Dataset</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgement.html">Acknowledgement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Quant4D</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="functionality.html">Functionality</a></li>
+      <li class="breadcrumb-item active">Save/Export</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/bryandesser/Quant4D/blob/master/docs/source/export.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="export"></span><section id="save-export">
+<h1>Save/Export<a class="headerlink" href="#save-export" title="Link to this heading"></a></h1>
+<p>Quant4D allows the user to save and export data in various formats. The Save/
+Export dialog can be accessed by clicking the <img alt="save_icon" class="no-scaled-link" src="_images/save.png" style="height: 2ex;" /> icon in the main UI,
+pressing ctrl+s at any point, or selecting “Export &gt; Save as” on the left hand
+side of the toolbar in any image window, <img alt="image_toolbar" class="no-scaled-link" src="_images/image_toolbar.png" style="height: 2ex;" />.</p>
+<section id="save-images">
+<h2>Save Images<a class="headerlink" href="#save-images" title="Link to this heading"></a></h2>
+<p>In the <strong>Save Images</strong> tab, the user may set a <cite>Filename Prefix</cite> that will be
+prepended to all saved images. Additionally, tick boxes are provided to include
+the inner and/or outer annular detector angles in the filename. A list of
+available images is shown where the user can select one or more images.</p>
+<p><em>Tip:</em> To select specific images, hold down the control key (ctrl) while
+clicking the desired images. To select a range of images, hold the shift key
+and click the first and last image in the range.</p>
+<section id="data-formats">
+<h3>Data formats<a class="headerlink" href="#data-formats" title="Link to this heading"></a></h3>
+<p>After selecting the desired images, the user can choose the format in which the
+images are saved. By default, both options are selected, but the user can
+select one or both independently.</p>
+<section id="raw-data">
+<h4>Raw data<a class="headerlink" href="#raw-data" title="Link to this heading"></a></h4>
+<p>When the <strong>Raw data</strong> option is selected, data are saved as TIFF files at the
+resolution of the original 4D-STEM dataset with raw intensity values directly
+from the data as processed in the UI. This format is most useful for direct
+quantitative analysis of the data, as it preserves the original pixel density
+and counts scale.</p>
+</section>
+<section id="annotated-display-quality-data">
+<h4>Annotated display quality data<a class="headerlink" href="#annotated-display-quality-data" title="Link to this heading"></a></h4>
+<p>When the <strong>As-displayed</strong> option is selected, data are saved as PNG files at
+the desired resolution set by the user in the <strong>DPI</strong> field. Additionally, the
+user can choose to include any annotations such as detectors, ROIs, axis
+labels, etc. This format is most useful for presentation, publication, and
+later reference as it provides a clear visualization of detectors and ROIs used
+to generate the images, and can be saved at artificially higher resolution than
+the original data.</p>
+</section>
+</section>
+</section>
+<section id="export-dataset">
+<h2>Export Dataset<a class="headerlink" href="#export-dataset" title="Link to this heading"></a></h2>
+<p>In the <strong>Export Dataset</strong> tab, the user is able to export the dataset to either
+<cite>.h5</cite> or <cite>.raw</cite> binary format. This can be helpful when the original data is in
+a proprietary format or is part of a larger dataset. The user can also select
+the endianness of the data to export, though Little Endian is generally
+recommended as it is the most common memory ordering.</p>
+<p>If the user would like to reduce the size of the dataset, there are options to
+export ROIs in both diffraction- and/or real-space, as well as to bin
+diffraction patterns or subsample real-space. When the user selects either of
+these options, a yellow rectangular ROI will appear on the respective image
+window.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="rois.html" class="btn btn-neutral float-left" title="ROIs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Bryan D Esser.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

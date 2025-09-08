@@ -1,0 +1,376 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graphical user interface &mdash; Quant4D 2025.03.17 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://quant4d.readthedocs.io/en/latest/graphical_user_interface.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=0423a653"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Functionality" href="functionality.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Quant4D
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Graphical user interface</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#import-window">Import Window</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#parameters">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#file-information">File information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#import-options">Import Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#preview-window">Preview Window</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#main-window">Main Window</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#settings-window">Settings Window</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#display-tab">Display Tab</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#windows-tab">Windows Tab</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#misc-tab">Misc Tab</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#info-and-variables-tabs">Info and Variables Tabs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#image-windows">Image Windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#save-export-window">Save/Export Window</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#save-images-tab">Save Images Tab</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#export-dataset-tab">Export Dataset Tab</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="functionality.html">Functionality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="alignment.html">Alignment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annular_round.html">Annular/Round detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_apertures.html">Virtual apertures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpc_com.html">DPC/CoM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_apertures.html">Custom Detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rois.html">ROIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">Save/Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgement.html">Acknowledgement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Quant4D</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Graphical user interface</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/bryandesser/Quant4D/blob/master/docs/source/graphical_user_interface.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="graphical-user-interface">
+<span id="id1"></span><h1>Graphical user interface<a class="headerlink" href="#graphical-user-interface" title="Link to this heading"></a></h1>
+<p>The graphical user interface (GUI) allows for intuitive interactions with
+4D-STEM data. The GUI consists of two main windows and several other windows as
+needed, as described below.</p>
+<section id="import-window">
+<h2>Import Window<a class="headerlink" href="#import-window" title="Link to this heading"></a></h2>
+<img alt="_images/import_window.png" class="no-scaled-link align-right" src="_images/import_window.png" style="width: 306.0px; height: 268.0px;" />
+<p>The import window allows the user to import several common file formats (EMPAD,
+Gatan, Medipix, MRC, HDF5) as well as any file format for which the user knows
+the file structure.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.raw</span></code> files are assumed to be in the EMPAD file format with 128x128
+detector frames separated by a 1024 byte footer.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.dm3/.dm4</span></code>, <code class="docutils literal notranslate"><span class="pre">.hdf5</span></code>, and <code class="docutils literal notranslate"><span class="pre">.hspy</span></code> files are scanned allowing the user to
+select the correct dataset.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.mib</span></code> file metadata are scanned for the relevant parameters.</p></li>
+</ul>
+<section id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Sub-dataset</strong>: Choice of dataset in hierarchical datasets such as <code class="docutils literal notranslate"><span class="pre">.hdf5</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.hspy</span></code>, and <code class="docutils literal notranslate"><span class="pre">.dm3/.dm4</span></code> files.</p></li>
+<li><p><strong>Data offset</strong>: Offset to the start of the 4D-STEM dataset in bytes.</p></li>
+<li><p><strong>Data header</strong>: Header data size in bytes repeated before <em>each</em> contiguous
+chunk of data.</p></li>
+<li><p><strong>Data footer</strong>: Footer data size in bytes repeated after <em>each</em> contiguous
+chunk of data.</p></li>
+<li><p><strong>Data type</strong>: Data type of the 4D-STEM dataset (8-, 16-, 32-, or 64-bit;
+signed integer, unsigned integer, or floating point)</p></li>
+<li><p><strong>Byte order</strong>: Big or little endian ordering.</p></li>
+<li><p><strong>Axis order</strong>: Order of the data axes as saved on disk. k<sub>x</sub> and
+k<sub>y</sub> represent detector axes (i.e. camera pixels); whereas,
+r<sub>x</sub> and r<sub>y</sub> represent the scan axes (i.e. real space probe
+positions). Default is (k<sub>x</sub>, k<sub>y</sub>, r<sub>x</sub>, r<sub>y</sub>)
+where detector images (k<sub>x</sub>, k<sub>y</sub>) are contiguous in memory.</p></li>
+<li><p><strong>Pixels (x,y)</strong>: Number of detector pixels in each diffraction pattern.</p></li>
+<li><p><strong>Frames (x,y)</strong>: Number of probe positions.</p></li>
+</ul>
+</section>
+<section id="file-information">
+<h3>File information<a class="headerlink" href="#file-information" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Size</strong>: Actual file size in GiB.</p></li>
+<li><p><strong>Estimated size</strong>: Estimated dataset size in GiB based on the above
+parameters. If the two agree, the text will be shown in green; if not, it will
+show in red.</p></li>
+<li><p><strong>Dataset Info from Metadata</strong>: Information automatically detected from the
+file metadata.</p></li>
+</ul>
+</section>
+<section id="import-options">
+<h3>Import Options<a class="headerlink" href="#import-options" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Memory</strong>: Physical Memory reads the dataset into RAM (assuming there is
+sufficient memory available); Virtual Memory generates a
+<a class="reference external" href="https://www.mathworks.com/help/matlab/ref/memmapfile.html" rel="noreferrer" target="_blank">memmapfile</a> for
+lazy loading. Virtual memory option is only available for contiguous datasets
+(i.e. no frame headers or footers), and is not particularly efficient on
+Windows systems.</p></li>
+<li><p><strong>GPU</strong>: Selected CUDA-capable GPU (if available with sufficient memory).</p></li>
+<li><p><strong>Diffraction Partial Import</strong>: Bin and/or crop each diffraction pattern.</p></li>
+<li><p><strong>Real-space Partial Import</strong>: Subsample and/or crop the 4D-STEM dataset probe
+positions.</p></li>
+<li><p><strong>Import Summary</strong>: Summarized import options.</p></li>
+</ul>
+</section>
+</section>
+<section id="preview-window">
+<h2>Preview Window<a class="headerlink" href="#preview-window" title="Link to this heading"></a></h2>
+<a class="reference internal image-reference" href="_images/import_preview.png"><img alt="_images/import_preview.png" class="align-center" src="_images/import_preview.png" style="width: 411.75px; height: 273.75px;" />
+</a>
+<p>Upon file selection, but before clicking <strong>Import Data</strong> in the <strong>Import
+Window</strong>, the user can view individual frames from the dataset to ensure that
+the file parameters are correct. If parameters like header, footer, offset, or
+data type are incorrect, frames will display incorrectly especially further into
+the dataset. Preset buttons are available for the first, middle, and final probe
+positions in x and y, and the user can enter any given probe position as desired.
+Image statistics automatically update and the user is given access to image
+display controls (brightness/contrast/gamma).</p>
+</section>
+<section id="main-window">
+<h2>Main Window<a class="headerlink" href="#main-window" title="Link to this heading"></a></h2>
+<a class="reference external image-reference" href="http://quant4d.readthedocs.io/en/latest/_images/main_window.png" rel="noreferrer" target="_blank"><img alt="_images/main_window.png" class="align-center" src="_images/main_window.png" />
+</a>
+<p>The main window of the GUI has several different pages with mode-specific
+controls. The pages are as follows:</p>
+<ul class="simple">
+<li><p><strong>Import Preview</strong>: for previewing individual diffraction frames before
+importing the entire dataset.</p></li>
+<li><p><strong>Alignment</strong>: fit and calibrate transmitted beam centering and radius,
+including automatic alignment procedure.</p></li>
+<li><p><strong>Annular/Round</strong>: control simple annulus mask for BF/DF imaging.</p></li>
+<li><p><strong>Segmented (DPC)</strong>: generate a segmented annular/round detector and compute
+DPC-related images.</p></li>
+<li><p><strong>Center of Mass</strong>: compute CoM-related images from an annular/round detector
+mask.</p></li>
+<li><p><strong>Virtual Aperture</strong>: control a round virtual aperture with rotational and/or
+mirror symmetry operations.</p></li>
+<li><p><strong>Custom Detectors</strong>: generate any number of additional detector masks or
+import your own from file.</p></li>
+</ul>
+</section>
+<section id="settings-window">
+<h2>Settings Window<a class="headerlink" href="#settings-window" title="Link to this heading"></a></h2>
+<section id="display-tab">
+<h3>Display Tab<a class="headerlink" href="#display-tab" title="Link to this heading"></a></h3>
+<a class="reference internal image-reference" href="_images/settings_display_tab.png"><img alt="_images/settings_display_tab.png" class="align-right" src="_images/settings_display_tab.png" style="width: 132.0px; height: 252.0px;" />
+</a>
+<ul class="simple">
+<li><p><strong>Image</strong>: Currently selected image window. Dropdown allows selection of any
+currently available image window.</p></li>
+<li><p><strong>Show image</strong>: Bring currently selected image window to the front (or show if
+currently closed).</p></li>
+<li><p><strong>Image lock</strong>: Lock current image window selection; helps keeps focus on
+image statistics for the selected image window.</p></li>
+<li><p><strong>Colormap</strong>: Change the displayed colormap for the selected image window.</p></li>
+<li><p><strong>Invert</strong>: Invert selected colormap.</p></li>
+<li><p><strong>Image stats</strong>: Statistics for the currently selected image window.</p></li>
+<li><p><strong>Histogram</strong>: Display histogram for currently selected image window. Allows
+for interactive brightness/contrast and log/linear view.</p></li>
+<li><p><strong>Brightness/Contrast/Gamma</strong>: Controlled via sliderbar or numerical input;
+reset via the icon at the left.</p></li>
+<li><p><strong>Mask</strong>: Modify mask opacity used on currently selected image window (i.e.
+diffraction pattern mask or real-space ROI). Display mask via icon at the left.</p></li>
+</ul>
+</section>
+<section id="windows-tab">
+<h3>Windows Tab<a class="headerlink" href="#windows-tab" title="Link to this heading"></a></h3>
+<a class="reference internal image-reference" href="_images/settings_windows_tab.png"><img alt="_images/settings_windows_tab.png" class="align-right" src="_images/settings_windows_tab.png" style="width: 132.0px; height: 252.0px;" />
+</a>
+<ul class="simple">
+<li><p><strong>Show image windows</strong>: Show image window or bring to front (i.e. if closed or
+hidden).</p></li>
+<li><p><strong>Vector sampling</strong>: Add vector arrows to real-space images in DPC or CoM
+modes. Modify vector density/sampling and color. Show vector colorwheel.</p></li>
+<li><p><strong>Window size and orientation</strong>: Set image window size in real or diffraction
+space; define x,y orientation (i.e. origin location); rotate image; show/hide
+axes on image.</p></li>
+</ul>
+</section>
+<section id="misc-tab">
+<h3>Misc Tab<a class="headerlink" href="#misc-tab" title="Link to this heading"></a></h3>
+<a class="reference internal image-reference" href="_images/settings_misc_tab.png"><img alt="_images/settings_misc_tab.png" class="align-left" src="_images/settings_misc_tab.png" style="width: 132.0px; height: 252.0px;" />
+</a>
+<ul class="simple">
+<li><p><strong>Calculation Policy</strong>: Active automatically updates all image displays as the
+user interacts with the GUI; Reduced updates all image displays after the user
+is finished interacting with the GUI; Passive only updates image displays when
+the user clicks the Refresh button on the Main Window.</p></li>
+<li><p><strong>Detector coordinate options</strong>: Polar or cartesian coordinates; locations
+displayed in absolute or relative to transmitted beam center; pixel or angular
+units.</p></li>
+<li><p><strong>Swap byte order</strong>: Swap big endian &lt;-&gt; little endian in case incorrectly
+selected on import. Done in memory to avoid having to reimport the data.</p></li>
+<li><p><strong>Swap Diffraction/Real-space X/Y</strong>: Swap x,y axes for diffraction and/or
+real-space in case incorrectly selected on import. This is most useful for
+non-square datasets and CoM/DPC. Done in memory to avoid having to reimport
+the data.</p></li>
+</ul>
+</section>
+<section id="info-and-variables-tabs">
+<h3>Info and Variables Tabs<a class="headerlink" href="#info-and-variables-tabs" title="Link to this heading"></a></h3>
+<a class="reference internal image-reference" href="_images/settings_info_tab.png"><img alt="_images/settings_info_tab.png" class="align-right" src="_images/settings_info_tab.png" style="width: 279.0px; height: 262.0px;" />
+</a>
+<ul class="simple">
+<li><p><strong>Dataset info</strong>: All information and parameters used for the currently loaded
+dataset.</p></li>
+<li><p><strong>Show all variables</strong>: Display all important variables, constants, and UI
+elements on <strong>Variables Tab</strong>.</p></li>
+<li><p><strong>Variables Tab</strong>: Variables tree view allowing the user to view the value of
+and relative path to all of the important and relevant variables. Top level
+tree nodes are first level children of the <code class="docutils literal notranslate"><span class="pre">app</span></code>. For example, the
+<code class="docutils literal notranslate"><span class="pre">ColorWheel</span></code> widow listed under the <code class="docutils literal notranslate"><span class="pre">figures</span></code> node can be found at
+<code class="docutils literal notranslate"><span class="pre">app.figures.ColorWheel</span></code>. All variables are displayed read-only at this
+point.</p></li>
+</ul>
+</section>
+</section>
+<section id="image-windows">
+<h2>Image Windows<a class="headerlink" href="#image-windows" title="Link to this heading"></a></h2>
+<a class="reference internal image-reference" href="_images/image_windows.png"><img alt="_images/image_windows.png" class="align-center" src="_images/image_windows.png" style="width: 592.0px; height: 314.0px;" />
+</a>
+<p>Individual windows are created for all images, including diffraction space,
+real-space, ROI masks, and vector colorwheel. All image windows that view the
+same space respond simultaneously to any changes in zoom and pan to unify their
+field of view. All image windows come with a toolbar <a class="reference internal" href="_images/image_toolbar.png"><img alt="image_toolbar" src="_images/image_toolbar.png" style="height: 2ex;" /></a> in the
+upper righthand corner that allows the user to export (save, copy, or copy as
+vector graphic), query pixel intensities, pan, zoom in/out, and reset the field
+of view.</p>
+</section>
+<section id="save-export-window">
+<h2>Save/Export Window<a class="headerlink" href="#save-export-window" title="Link to this heading"></a></h2>
+<p>The <strong>Save/Export</strong> window allows users to save images or export a cropped
+and/or binned subset of the original 4D-STEM dataset.</p>
+<section id="save-images-tab">
+<h3>Save Images Tab<a class="headerlink" href="#save-images-tab" title="Link to this heading"></a></h3>
+<a class="reference internal image-reference" href="_images/save_window.png"><img alt="_images/save_window.png" class="align-right" src="_images/save_window.png" style="width: 321.0px; height: 400.5px;" />
+</a>
+<p>The <strong>Save Images Tab</strong> displays all images available for saving for the current
+imaging mode. The user can select a filename prefix that will be prepended to
+all images selected for saving. Additionally, annular collection angles can be
+added to the filename, if desired. Multiple images can be selected by holding
+<strong>ctrl</strong> whilst clicking, while holding <strong>shift</strong> will select a continuous range
+of images for saving.</p>
+<ul class="simple">
+<li><p><strong>Raw data</strong>: data will be saved in the same intensity units and pixel density
+as the original dataset in single precision TIFF file format.</p></li>
+<li><p><strong>As-displayed</strong>: data will be saved as-displayed on the screen in PNG file
+format</p></li>
+<li><p><strong>with annotations</strong>: PNG files will include all visible image annotations
+(i.e. detectors, ROIs, axes, etc.)</p></li>
+<li><p><strong>DPI</strong>: user-defined dots per inch resolution of the PNG file (default 72
+DPI).</p></li>
+</ul>
+</section>
+<section id="export-dataset-tab">
+<h3>Export Dataset Tab<a class="headerlink" href="#export-dataset-tab" title="Link to this heading"></a></h3>
+<img alt="_images/export_window.png" class="align-center" src="_images/export_window.png" />
+<p>The <strong>Export Dataset Tab</strong> allows the users to export the dataset as HDF5
+(<code class="docutils literal notranslate"><span class="pre">.h5</span></code>) or raw binary (<code class="docutils literal notranslate"><span class="pre">.raw</span></code>) format with options for selecting smaller ROIs in
+the diffraction and/or real-space dimensions. The output file dimensions can
+optionally be appended to the filename for convenience.</p>
+<ul class="simple">
+<li><p><strong>Diffraction Partial Export</strong>: diffraction space can be binned to reduce file
+size; an ROI can be selected by changing the starting location
+(x<sub>1</sub>, y<sub>1</sub>) and the total number of pixels (X, Y).</p></li>
+<li><p><strong>Real-space Partial Export</strong>: real-space can be subsampled to reduce file
+size; an ROI can be selected by changing the starting location
+(x<sub>1</sub>, y<sub>1</sub>) and the total number of pixels (X, Y).</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="functionality.html" class="btn btn-neutral float-right" title="Functionality" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Bryan D Esser.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

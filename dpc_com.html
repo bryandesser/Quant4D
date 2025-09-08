@@ -1,0 +1,217 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DPC/CoM &mdash; Quant4D 2025.03.17 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://quant4d.readthedocs.io/en/latest/dpc_com.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=0423a653"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Custom Detectors" href="custom_apertures.html" />
+    <link rel="prev" title="Virtual apertures" href="virtual_apertures.html" /> 
+<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Quant4D
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphical_user_interface.html">Graphical user interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functionality.html">Functionality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="alignment.html">Alignment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annular_round.html">Annular/Round detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_apertures.html">Virtual apertures</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DPC/CoM</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#scan-rotation-estimation">Scan rotation estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#images">Images</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vector-overlays">Vector overlays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#idpc-icom">iDPC/iCoM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ddpc-dcom">dDPC/dCoM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#filtering">Filtering</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="custom_apertures.html">Custom Detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rois.html">ROIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">Save/Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgement.html">Acknowledgement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Quant4D</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="functionality.html">Functionality</a></li>
+      <li class="breadcrumb-item active">DPC/CoM</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/bryandesser/Quant4D/blob/master/docs/source/dpc_com.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="dpc-com">
+<span id="id1"></span><h1>DPC/CoM<a class="headerlink" href="#dpc-com" title="Link to this heading"></a></h1>
+<p>Quant4D can generate Differential Phase Contrast (DPC) and Center of Mass (CoM)
+images from the 4D-STEM dataset. In CoM mode, the center of mass is calculated
+from within the circular or round mask on the diffraction pattern. In DPC mode,
+the circular/annular mask is subdivided into a user-defined number of sectors
+both radially and azimuthally (default = 4 quadrants).</p>
+<section id="scan-rotation-estimation">
+<h2>Scan rotation estimation<a class="headerlink" href="#scan-rotation-estimation" title="Link to this heading"></a></h2>
+<p>It is critical to estimate the rotation angle between the scan direction in
+real space and the diffraction pattern on the detector. The user can explicitly
+set this angle in the main UI window, or it can be estimated automatically by
+minimizing the curl as a function of the rotation angle. When the user first
+enters either DPC or CoM mode, the <strong>Scanning Direction</strong> panel on the main UI
+window will be highlighted in orange, indicating that the angle has not yet
+been set. The user can enter or estimate the angle by first clicking the <img alt="lock" class="no-scaled-link" src="_images/lock.png" style="height: 2ex;" />
+icon to enable the inputs. If the user clicks the <strong>Auto</strong> button, the curl
+minimization routine will run, using the estimated rotation angle and
+automatically locking the <strong>Scanning Direction</strong> panel to avoid accidental
+changes. In addition to the rotation angle, the handedness of the scan
+direction can be swapped by enabling or disabling the <img alt="swap_y" class="no-scaled-link" src="_images/axis-y.png" style="height: 2ex;" /> icon, which
+inverts the y-axis scan direction.</p>
+</section>
+<section id="images">
+<h2>Images<a class="headerlink" href="#images" title="Link to this heading"></a></h2>
+<p>Many images are calculated in DPC/CoM modes; however, most are not immediately
+made visible to the user to avoid opening too many windows at once. The user
+can show any/all of the following images by clicking the corresponding icon in
+the <strong>Show Image Windows</strong> panel of  <strong>Windows</strong> tab in the <strong>Settings</strong> UI.
+When the user is enters DPC or CoM mode, this tab is automatically activated.
+The name of the images will automatically update to reflect the current mode
+(i.e. CoMx or DPCx, etc.).</p>
+<div class="line-block">
+<div class="line"><img alt="diffraction" class="no-scaled-link" src="_images/diffraction.png" style="height: 2ex;" /> - Main diffraction space image.</div>
+<div class="line"><img alt="diffraction_mask" class="no-scaled-link" src="_images/diffraction_mask.png" style="height: 2ex;" /> - Diffraction space mask used to generate images.</div>
+<div class="line"><img alt="bfdf" class="no-scaled-link" src="_images/bfdf.png" style="height: 2ex;" /> - Main real space image.</div>
+<div class="line"><img alt="bfdf_mask" class="no-scaled-link" src="_images/bfdf_mask.png" style="height: 2ex;" /> - Real space mask (i.e. if an ROI is used)</div>
+<div class="line"><img alt="CoMX" class="no-scaled-link" src="_images/CoMX.png" style="height: 2ex;" /> - CoM/DPC image in the x-direction.</div>
+<div class="line"><img alt="CoMY" class="no-scaled-link" src="_images/CoMY.png" style="height: 2ex;" /> - CoM/DPC image in the y-direction.</div>
+<div class="line"><img alt="CoM_magnitude" class="no-scaled-link" src="_images/CoM_magnitude.png" style="height: 2ex;" /> - CoM/DPC magnitude image.</div>
+<div class="line"><img alt="CoM_phase" class="no-scaled-link" src="_images/CoM_phase.png" style="height: 2ex;" /> - CoM/DPC phase image.</div>
+<div class="line"><img alt="colorwheel" class="no-scaled-link" src="_images/colorwheel.png" style="height: 2ex;" /> - Color wheel legend for phase images.</div>
+<div class="line"><img alt="CoM_phase_mag" class="no-scaled-link" src="_images/CoM_phase_mag.png" style="height: 2ex;" /> - CoM/DPC phase image with opacity based on the magnitude image</div>
+<div class="line"><img alt="dCoM" class="no-scaled-link" src="_images/dCoM.png" style="height: 2ex;" /> - Differential CoM/DPC image.</div>
+<div class="line"><img alt="iCoM" class="no-scaled-link" src="_images/iCoM.png" style="height: 2ex;" /> - Integrated CoM/DPC image.</div>
+</div>
+</section>
+<section id="vector-overlays">
+<h2>Vector overlays<a class="headerlink" href="#vector-overlays" title="Link to this heading"></a></h2>
+<p>DPC and CoM imaging generates a vector field, which can be selectively overlaid
+on any/all real space images. The user should first select the desired image by
+either clicking the relevant button above, clicking the image window, or
+selecting the image from the <strong>Image</strong> dropdown on the Display tab in the
+<strong>Settings</strong> UI. After the desired image is selected, the user can click the
+<strong>Vector Sampling</strong> dropdown in the <strong>Windows</strong> tab of the <strong>Settings</strong> UI.
+Vectors can be displayed at each pixel (1:1), or subsampled by a factor of 2,
+4, 8, or 16. This is especially helpful when the vector field is highly
+oversampled compared to its rate of change. Additionally, the user can change
+the color of the vector overlay independently on each image using the
+<img alt="colorpicker" class="no-scaled-link" src="_images/colorPicker.png" style="height: 2ex;" /> icon next to the vector sampling dropdown.</p>
+</section>
+<section id="idpc-icom">
+<h2>iDPC/iCoM<a class="headerlink" href="#idpc-icom" title="Link to this heading"></a></h2>
+<p>Integrated DPC/CoM images are generated automatically using the detector chosen
+by the user. Integration of the DPC/CoM signal retrieves the phase of the
+specimen transmission function. The maths are thoroughly described by Lazić <em>et
+al.</em> <a class="reference external" href="https://doi.org/10.1016/j.ultramic.2015.10.011" rel="noreferrer" target="_blank">[1]</a></p>
+</section>
+<section id="ddpc-dcom">
+<h2>dDPC/dCoM<a class="headerlink" href="#ddpc-dcom" title="Link to this heading"></a></h2>
+<p>Differentiated DPC/CoM images are generated automatically using the detector
+chose by the user. Differentiation of the DPC/CoM signal retrieves the charge
+density distribution of the specimen. <a class="reference external" href="https://doi.org/10.1016/j.ultramic.2015.10.011" rel="noreferrer" target="_blank">[1]</a></p>
+</section>
+<section id="filtering">
+<h2>Filtering<a class="headerlink" href="#filtering" title="Link to this heading"></a></h2>
+<p>Because the integration step can amplify noise at low spatial frequencies,
+while differentiation can suffer from noise at high spatial frequencies, a
+bandpass filter is made available to the user in the <strong>Windows</strong> tab of the
+<strong>Settings</strong> UI. The user can independently change the low and high frequency
+cutoff values (in pixels) to apply a bandpass, lowpass, or highpass filter. The
+filter is only applied to the iCoM/iDPC and dCoM/dDPC images.</p>
+<ol class="arabic simple">
+<li><p>Ivan Lazić, Eric G. T. Bosch, and Sorin Lazar. “Phase contrast STEM for thin
+samples: Integrated differential phase contrast.” <em>Ultramicroscopy</em> 160
+(2016): 265-280. <a class="reference external" href="https://doi.org/10.1016/j.ultramic.2015.10.011" rel="noreferrer" target="_blank">https://doi.org/10.1016/j.ultramic.2015.10.011</a></p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="virtual_apertures.html" class="btn btn-neutral float-left" title="Virtual apertures" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="custom_apertures.html" class="btn btn-neutral float-right" title="Custom Detectors" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Bryan D Esser.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

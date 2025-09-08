@@ -1,0 +1,150 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROIs &mdash; Quant4D 2025.03.17 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://quant4d.readthedocs.io/en/latest/rois.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=0423a653"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Save/Export" href="export.html" />
+    <link rel="prev" title="Custom Detectors" href="custom_apertures.html" /> 
+<meta name="google-site-verification" content="88B8Wu8mpwVWjINcWbx75MH9KXi1L5f8DUjiY9CFXQ0" />
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Quant4D
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphical_user_interface.html">Graphical user interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functionality.html">Functionality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="alignment.html">Alignment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annular_round.html">Annular/Round detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_apertures.html">Virtual apertures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpc_com.html">DPC/CoM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_apertures.html">Custom Detectors</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ROIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">Save/Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgement.html">Acknowledgement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Quant4D</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="functionality.html">Functionality</a></li>
+      <li class="breadcrumb-item active">ROIs</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/bryandesser/Quant4D/blob/master/docs/source/rois.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="rois">
+<span id="id1"></span><h1>ROIs<a class="headerlink" href="#rois" title="Link to this heading"></a></h1>
+<p>By default, Quant4D uses all real space probe positions to generate a
+diffraction pattern; however, the user can specify a region of interest (ROI)
+on any real space image to generate a local diffraction pattern. This is done
+in the <strong>Real-space ROI</strong> panel of the main UI.</p>
+<ul class="simple">
+<li><p><strong>Full image</strong> - default, uses all real space probe positions.</p></li>
+<li><p><strong>Point</strong> - used to visualize individual diffraction patterns.</p></li>
+<li><p><strong>Ellipse</strong> - defaults to a circle</p></li>
+<li><p><strong>Rectangle</strong> - defaults to a square</p></li>
+<li><p><strong>Draw Polygon</strong> - prompts the user to select a real-space image for initial
+drawing. The user clicks as many vertices as desired until finally finishing
+the polygon by clicking on the initial vertex or double clicking anywhere in
+the image.</p></li>
+<li><p><strong>From File</strong> -</p></li>
+</ul>
+<p><a class="reference external" href="https://mathworks.com/help/images/ref/images.roi.point.html" rel="noreferrer" target="_blank">Point</a>, <a class="reference external" href="https://mathworks.com/help/images/ref/images.roi.ellipse.html" rel="noreferrer" target="_blank">Ellipse</a>, <a class="reference external" href="https://mathworks.com/help/images/ref/images.roi.rectangle.html" rel="noreferrer" target="_blank">Rectangle</a>, and <a class="reference external" href="https://mathworks.com/help/images/ref/images.roi.polygon.html" rel="noreferrer" target="_blank">Polygon</a> ROIs generate interactive
+annotations on <em>all</em> real space images, whether or not all images are
+displayed. All annotations are synced across images, allowing the user to
+interact with them on whichever image is most convenient.</p>
+<p>Ellipse and Rectangle ROIs can be resized, translated, and rotated. Their aspect
+ratio can be fixed by right clicking on the annotation and selecting “Fix
+Aspect Ratio”.</p>
+<p>Additional vertices can be added to Polygon ROIs by right clicking on the
+polygon line and selecting “Add Vertex”. Vertices can be removed by right
+clicking on the vertex and selecting “Delete Vertex”.</p>
+<p>If any ROI is deleted (right click, “Delete ROI”), the UI reverts to using all
+probe positions.</p>
+<div  class="sphinx-contrib-video-container align-left"><video autoplay="True" controls="True" loop="True" preload="auto" width="100%" controlslist="noremoteplayback nodownload"><source src="_images/rois.mp4" type="video/mp4"></video></div></section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="custom_apertures.html" class="btn btn-neutral float-left" title="Custom Detectors" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="export.html" class="btn btn-neutral float-right" title="Save/Export" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Bryan D Esser.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
