@@ -1,14 +1,13 @@
 [flake8]
-max-line-length = 120
+max-line-length = 150
 
 # ---------------------------------------------------------------------------
 # Codes suppressed throughout this codebase
 #
-# The bulk of the ~2000 flake8 warnings are pre-existing style choices from
-# the MATLAB-to-Python port (alignment spacing, comment formatting, trailing
-# whitespace, etc.).  Rather than reformatting thousands of lines in one go,
-# they are suppressed here so that CI focuses on real correctness issues.
-# Style cleanup can be done incrementally via separate PRs.
+# The bulk of the pre-existing style issues come from the MATLAB-to-Python
+# port.  autopep8 has been run over src/ to fix what it can automatically.
+# The codes that remain here are either intentional style choices, physics
+# naming conventions, or patterns that require manual review.
 #
 # Codes that ARE still checked (must not appear):
 #   E999  – syntax errors                       (always fatal)
@@ -16,36 +15,19 @@ max-line-length = 120
 #   F821  – undefined names                     (real NameError at runtime)
 # ---------------------------------------------------------------------------
 extend-ignore =
-    # Whitespace style
-    E114, E117, E127, E128, E131,
-    E203, E221, E225, E227, E231, E241, E251, E261, E262, E265, E271, E275,
-    # Blank-line style
-    E302, E303, E305, E306,
-    # Import ordering / placement
-    E401, E402,
-    # Line length (enforced by max-line-length above)
-    E501,
-    # Redundant backslash
-    E502,
-    # Statement style (one-liners, semicolons, bare except)
-    E701, E702, E703, E722,
-    # Whitespace around operators (style)
-    E201, E228,
-    # Comparison style (None / True / False)
-    E711, E712, E713,
-    # Ambiguous variable names (l, O, I) – common in physics code
+    # Import ordering / placement (many deferred imports are intentional)
+    E402,
+    # Bare except – needs manual review per site
+    E722,
+    # Ambiguous variable names (l, O, I) – common and intentional in physics code
     E741,
-    # Pyflakes: imports and unused bindings
-    F401, F403, F405, F523, F811, F841,
-    # Trailing whitespace / newlines
-    W291, W292, W293, W391,
-    # Line-break conventions
-    W503, W504,
-    # Indentation style
-    E111,
+    # Pyflakes: star imports and re-exports (intentional in callback modules)
+    F401, F403, F405, F811,
+    # Pyflakes: unused variables and format-string issues
+    F523, F841,
 
 exclude =
     .git,
     __pycache__,
-    callbacks/tmp.py,
-    callbacks/appClassOLD.py,
+    src/callbacks/tmp.py,
+    src/callbacks/appClassOLD.py,

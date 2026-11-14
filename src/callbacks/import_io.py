@@ -700,7 +700,7 @@ def importBoxInput(self):
                     self.D.NPxY,
                     self.D.NFrX,
                     self.D.NFrY]))
-        if self.ImportWindow.ImpKeepP.isEnabled() == False:
+        if not self.ImportWindow.ImpKeepP.isEnabled():
             self.ImportWindow.ImpKeepP.setChecked(False)
         if self.ImportWindow.ImpKeepP.isChecked():
             notes += "\n\nSwapping dataset - keeping current setups/alignments etc."
