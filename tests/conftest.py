@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import QApplication  # noqa: E402  (must come after env set
 # ---------------------------------------------------------------------------
 SCAN_X, SCAN_Y, DET_X, DET_Y = 8, 8, 32, 32
 
+
 @pytest.fixture(scope="session")
 def synthetic_data() -> np.ndarray:
     """Return a tiny (8×8 real, 32×32 detector) float32 4D-STEM dataset."""
@@ -58,13 +59,13 @@ def app_session(tmp_path_factory, synthetic_data):
     win = MainWindow()
 
     # Inject synthetic data directly so we bypass the file-import pipeline
-    win.D.Data      = synthetic_data
-    win.D.ScanX     = SCAN_X
-    win.D.ScanY     = SCAN_Y
-    win.D.DetX      = DET_X
-    win.D.DetY      = DET_Y
-    win.D.Loaded    = True
-    win.D.GPU       = None   # CPU-only by default; GPU fixture overrides
+    win.D.Data = synthetic_data
+    win.D.ScanX = SCAN_X
+    win.D.ScanY = SCAN_Y
+    win.D.DetX = DET_X
+    win.D.DetY = DET_Y
+    win.D.Loaded = True
+    win.D.GPU = None   # CPU-only by default; GPU fixture overrides
 
     win.show()
     yield win
@@ -83,13 +84,13 @@ def app(qtbot, tmp_path, synthetic_data):
     win = MainWindow()
     qtbot.addWidget(win)
 
-    win.D.Data   = synthetic_data.copy()
-    win.D.ScanX  = SCAN_X
-    win.D.ScanY  = SCAN_Y
-    win.D.DetX   = DET_X
-    win.D.DetY   = DET_Y
+    win.D.Data = synthetic_data.copy()
+    win.D.ScanX = SCAN_X
+    win.D.ScanY = SCAN_Y
+    win.D.DetX = DET_X
+    win.D.DetY = DET_Y
     win.D.Loaded = True
-    win.D.GPU    = None
+    win.D.GPU = None
     win.show()
     return win
 

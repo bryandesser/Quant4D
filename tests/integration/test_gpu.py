@@ -14,6 +14,7 @@ pytestmark = pytest.mark.skipif(
     reason="No CUDA GPU detected"
 )
 
+
 def _gpu_available():
     try:
         import torch

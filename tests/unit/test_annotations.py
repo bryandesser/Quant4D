@@ -9,7 +9,7 @@ import pytest
 
 
 CENTRE = np.array([16.0, 16.0])
-SHAPE  = (32, 32)   # detector pixel grid
+SHAPE = (32, 32)   # detector pixel grid
 
 
 # ---------------------------------------------------------------------------

@@ -14,10 +14,10 @@ from PyQt6.QtCore import Qt
 
 MODES = {
     "AlignMod": "InteractiveCircle",
-    "AnnMod":   "InteractiveAnnulus",
-    "CoMMod":   None,          # no single annotation class
-    "DPCMod":   None,
-    "VrApMod":  "InteractiveCircle",
+    "AnnMod": "InteractiveAnnulus",
+    "CoMMod": None,          # no single annotation class
+    "DPCMod": None,
+    "VrApMod": "InteractiveCircle",
 }
 
 

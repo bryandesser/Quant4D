@@ -99,8 +99,8 @@ def _to_grayscale_double(image: np.ndarray) -> np.ndarray:
 def _sobel_gradients(gray: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Compute x/y image gradients via Sobel operators."""
     kx = np.array([[-1.0, 0.0, 1.0],
-                    [-2.0, 0.0, 2.0],
-                    [-1.0, 0.0, 1.0]])
+                   [-2.0, 0.0, 2.0],
+                   [-1.0, 0.0, 1.0]])
     ky = kx.T
     # Correlation (not convolution) so the kernel isn't 180-degree flipped;
     # this keeps gradient direction pointing toward increasing intensity.
@@ -205,7 +205,7 @@ def _refine_center_subpixel(strength_map: np.ndarray, xi: int, yi: int) -> tuple
 
 
 def _refine_radius_subpixel(hist_smooth: np.ndarray, best_bin: int,
-                             bin_width: float, rmin: float) -> float:
+                            bin_width: float, rmin: float) -> float:
     """Refine an integer radius-histogram peak bin to sub-bin precision."""
     n_bins = hist_smooth.shape[0]
     offset = 0.0
@@ -217,7 +217,7 @@ def _refine_radius_subpixel(hist_smooth: np.ndarray, best_bin: int,
 
 
 def _splat_bilinear_complex(acc: np.ndarray, x: np.ndarray, y: np.ndarray,
-                             vote: np.ndarray) -> None:
+                            vote: np.ndarray) -> None:
     """
     Accumulate ``vote`` (complex) into ``acc`` at continuous locations
     (x, y) using bilinear splatting across the 4 surrounding integer
@@ -248,7 +248,7 @@ def _splat_bilinear_complex(acc: np.ndarray, x: np.ndarray, y: np.ndarray,
 
 
 def _non_max_suppress_centers(coords: np.ndarray, strengths: np.ndarray,
-                               min_dist: float) -> list[int]:
+                              min_dist: float) -> list[int]:
     """Greedy non-maximum suppression over candidate centers, strongest first."""
     order = np.argsort(-strengths)
     kept: list[int] = []
@@ -287,11 +287,11 @@ def _radius_of_phase(phase: np.ndarray, ln_rmin: float, ln_rmax: float) -> np.nd
 # --------------------------------------------------------------------------- #
 
 def imfindcircles(image,
-                   radius_range,
-                   ObjectPolarity: str = "bright",
-                   Method: str = "PhaseCode",
-                   Sensitivity: float = 0.85,
-                   EdgeThreshold: float | None = None):
+                  radius_range,
+                  ObjectPolarity: str = "bright",
+                  Method: str = "PhaseCode",
+                  Sensitivity: float = 0.85,
+                  EdgeThreshold: float | None = None):
     """
     Find circles in an image using the Circular Hough Transform, with
     sub-pixel resolution on both centers and radii.

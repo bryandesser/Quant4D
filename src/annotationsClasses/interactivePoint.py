@@ -2,6 +2,7 @@ from matplotlib.backend_tools import Cursors
 from PyQt5 import QtCore as qtc
 import numpy as np
 
+
 class InteractivePoint(qtc.QObject):
     """
     Wraps an existing matplotlib scatter artist to make it draggable.
@@ -29,7 +30,7 @@ class InteractivePoint(qtc.QObject):
         self.idx = 0
         self.background = None
         self.radius = 1
-    
+
     def remove(self):
         'allow the points to be removed from plots'
         self.point.remove()
@@ -41,17 +42,20 @@ class InteractivePoint(qtc.QObject):
         self.cidmotion = self.point.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
 
     def on_press(self, event):
-        if event.inaxes != self.point.axes: return
-        if InteractivePoint.lock is not None: return
-        
+        if event.inaxes != self.point.axes:
+            return
+        if InteractivePoint.lock is not None:
+            return
+
         # check that mouse press contains one of the InteractivePoints
         contains, attrd = self.point.contains(event)
 
-        if not contains: return
+        if not contains:
+            return
         # if the point is contained, save point index (i.e. adfInner or adfOuter)
         self.idx = attrd["ind"][0]
 
-        # save info to the self.press 
+        # save info to the self.press
         self.press = (self.point.get_offsets()[attrd["ind"][0]]), event.xdata, event.ydata
 
         InteractivePoint.lock = self
@@ -75,7 +79,7 @@ class InteractivePoint(qtc.QObject):
     def on_motion(self, event):
         # monitor mouse location, if hovering over a Draggable point,
         # change the cursor to HAND, if not, return to standard pointer
-        contains, _ = self.point.contains(event)#,radius=self.radius)
+        contains, _ = self.point.contains(event)  # ,radius=self.radius)
         if contains:
             self.point.figure.canvas.set_cursor(Cursors.HAND)
         else:
@@ -83,13 +87,14 @@ class InteractivePoint(qtc.QObject):
 
         if InteractivePoint.lock is not self:
             return
-        if event.inaxes != self.point.axes: return
+        if event.inaxes != self.point.axes:
+            return
 
         self.point.center, xpress, ypress = self.press
         dx = event.xdata - xpress
         dy = event.ydata - ypress
         centers = self.point.get_offsets()
-        centers[self.idx] = np.array([self.point.center[0]+dx, self.point.center[1]+dy])
+        centers[self.idx] = np.array([self.point.center[0] + dx, self.point.center[1] + dy])
 
         self.point.set_offsets(centers)
 
@@ -121,8 +126,8 @@ class InteractivePoint(qtc.QObject):
         self.background = None
 
         # redraw the full figure
-        self.point.figure.canvas.draw()       
-    
+        self.point.figure.canvas.draw()
+
     def setPointPickerRadius(self, radius):
         self.radius = radius / 2
         self.point.set_sizes(2 * [self.radius / 2])

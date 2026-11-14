@@ -45,7 +45,7 @@ class InteractiveRectangle(qtc.QObject):
     """
 
     updateRect = qtc.pyqtSignal()
-    rightClick  = qtc.pyqtSignal(MouseEvent)
+    rightClick = qtc.pyqtSignal(MouseEvent)
 
     # Only one InteractiveRectangle may be active at a time
     lock: 'InteractiveRectangle | None' = None
@@ -53,14 +53,14 @@ class InteractiveRectangle(qtc.QObject):
     def __init__(self, axis, center, size, color='r', interactions='all'):
         super().__init__()
 
-        self.center       = np.asarray(center, float)
-        self.size         = np.abs(np.asarray(size, float))
-        self.rotation     = 0.0          # axis-aligned; kept for API compat
-        self.color        = color
+        self.center = np.asarray(center, float)
+        self.size = np.abs(np.asarray(size, float))
+        self.rotation = 0.0          # axis-aligned; kept for API compat
+        self.color = color
         self.interactions = interactions
-        self.axis         = axis
+        self.axis = axis
 
-        self._press     = None           # (center0, size0, xpress, ypress) on drag start
+        self._press = None           # (center0, size0, xpress, ypress) on drag start
         self._transform = None           # 'translate' | 'resize_<corner_idx>'
 
         # ---- Rectangle patch ------------------------------------------
@@ -107,8 +107,8 @@ class InteractiveRectangle(qtc.QObject):
     def _nearest_corner(self, x: float, y: float):
         """Return (index, distance) for the nearest corner to (x, y)."""
         corners = self._corner_positions()
-        dists   = np.linalg.norm(corners - np.array([x, y]), axis=1)
-        idx     = int(np.argmin(dists))
+        dists = np.linalg.norm(corners - np.array([x, y]), axis=1)
+        idx = int(np.argmin(dists))
         return idx, float(dists[idx])
 
     def _inside(self, x: float, y: float) -> bool:
@@ -131,9 +131,9 @@ class InteractiveRectangle(qtc.QObject):
 
     def connect(self):
         """Connect matplotlib mouse events."""
-        self._cidpress   = self.canvas.mpl_connect('button_press_event',   self.on_press)
+        self._cidpress = self.canvas.mpl_connect('button_press_event', self.on_press)
         self._cidrelease = self.canvas.mpl_connect('button_release_event', self.on_release)
-        self._cidmotion  = self.canvas.mpl_connect('motion_notify_event',  self.on_motion)
+        self._cidmotion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
 
     def remove(self):
         """Remove patch and handle scatter from the axes."""
@@ -245,14 +245,14 @@ class InteractiveRectangle(qtc.QObject):
             corner_idx = int(self._transform[-1])
             # Build the four corners from the saved state
             half = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]]) * size0 / 2.0
-            corners0    = center0[None, :] + half
-            new_corner  = corners0[corner_idx] + np.array([dx, dy])
-            opp_idx     = (corner_idx + 2) % 4
+            corners0 = center0[None, :] + half
+            new_corner = corners0[corner_idx] + np.array([dx, dy])
+            opp_idx = (corner_idx + 2) % 4
             fixed_corner = corners0[opp_idx]
-            new_size    = np.abs(new_corner - fixed_corner)
+            new_size = np.abs(new_corner - fixed_corner)
             if new_size[0] > 1e-6 and new_size[1] > 1e-6:
                 self.center = (new_corner + fixed_corner) / 2.0
-                self.size   = new_size
+                self.size = new_size
 
         self._update_artists()
         self.restoreBackground()
@@ -261,7 +261,7 @@ class InteractiveRectangle(qtc.QObject):
     def on_release(self, event):
         if InteractiveRectangle.lock is not self:
             return
-        self._press     = None
+        self._press = None
         self._transform = None
         InteractiveRectangle.lock = None
 

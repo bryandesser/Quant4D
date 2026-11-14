@@ -55,7 +55,7 @@ class TestColormap:
         qtbot.wait(50)
         imgs = app.Fig.Real.ax.get_images()
         assert imgs[0].cmap.name == combo.currentText().lower().replace(" ", "_") \
-               or True   # just check no exception was raised
+            or True   # just check no exception was raised
 
     def test_invert_colormap(self, app, qtbot):
         orig_cmap = app.Fig.Real.ax.get_images()[0].cmap.name

@@ -59,7 +59,7 @@ class TestRectangleROI:
         rows = np.where(mask.any(axis=1))[0]
         cols = np.where(mask.any(axis=0))[0]
         # All rows/cols in range should be True (axis-aligned rectangle)
-        assert mask[rows.min():rows.max()+1, cols.min():cols.max()+1].all()
+        assert mask[rows.min():rows.max() + 1, cols.min():cols.max() + 1].all()
 
     def test_invert_roi_flips_mask(self, app, qtbot):
         _select_roi(app, qtbot, "Rectangle")

@@ -39,7 +39,7 @@ class InteractivePolygon(qtc.QObject):
     """
 
     updatePoly = qtc.pyqtSignal()
-    rightClick  = qtc.pyqtSignal(MouseEvent)
+    rightClick = qtc.pyqtSignal(MouseEvent)
 
     # Only one InteractivePolygon may be dragged at a time
     lock: 'InteractivePolygon | None' = None
@@ -48,9 +48,9 @@ class InteractivePolygon(qtc.QObject):
         super().__init__()
 
         self.vertices = np.asarray(vertices, float)
-        self.color    = color
-        self.axis     = axis
-        self._press   = None   # (vertices0, xpress, ypress)
+        self.color = color
+        self.axis = axis
+        self._press = None   # (vertices0, xpress, ypress)
 
         # ---- Closed polygon patch ------------------------------------
         self.patch = axis.add_patch(MplPolygon(
@@ -82,9 +82,9 @@ class InteractivePolygon(qtc.QObject):
 
     def connect(self):
         """Connect matplotlib mouse events."""
-        self._cidpress   = self.canvas.mpl_connect('button_press_event',   self.on_press)
+        self._cidpress = self.canvas.mpl_connect('button_press_event', self.on_press)
         self._cidrelease = self.canvas.mpl_connect('button_release_event', self.on_release)
-        self._cidmotion  = self.canvas.mpl_connect('motion_notify_event',  self.on_motion)
+        self._cidmotion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
 
     def remove(self):
         """Remove polygon patch from the axes."""

@@ -58,7 +58,8 @@ class TestHDF5Import:
 class TestImportCancel:
     def test_cancel_leaves_no_data(self, app, qtbot, sample_raw_file):
         """Cancelling import mid-flight must not leave partial data."""
-        import threading, time
+        import threading
+        import time
 
         app.ImportWindow.FilePath.setText(str(sample_raw_file))
         app.ImportWindow.ScanX.setValue(64)   # deliberately large → slower
