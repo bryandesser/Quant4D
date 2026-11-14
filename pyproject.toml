@@ -89,21 +89,14 @@ quant4d = "Quant4D_app:main"
 "Documentation" = "https://pyquant4d.readthedocs.io"
 
 # ---------------------------------------------------------------------------
-# Package discovery
+# Package discovery — src/ layout
 # ---------------------------------------------------------------------------
 [tool.setuptools]
-# Install Quant4D_app.py as a top-level module so the entry point works.
+# Quant4D_app.py lives in src/ and is the entry-point module.
 py-modules = ["Quant4D_app"]
-# Force the legacy compat editable mode (pre-setuptools-64 behaviour):
-# writes a .pth pointing at the repo root so all top-level packages
-# (callbacks/, annotationsClasses/, gui/) are always importable after
-# `pip install -e .` without needing PYTHONPATH set manually.
-editable-mode = "compat"
 
 [tool.setuptools.packages.find]
-# Discover callbacks/, annotationsClasses/, and gui/ packages from the repo root.
-where   = ["."]
-include = ["callbacks*", "annotationsClasses*", "gui*"]
+where   = ["src"]
 exclude = ["*.tests*"]
 
 # Include .ui files and icon assets shipped inside the gui/ package.
