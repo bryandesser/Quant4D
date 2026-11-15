@@ -4,6 +4,24 @@ import sys
 import traceback
 import psutil
 import numpy as np
+try:
+    import torch
+except ImportError:
+    class _TorchStub:
+        class cuda:
+            @staticmethod
+            def is_available(): return False
+            @staticmethod
+            def device_count(): return 0
+            @staticmethod
+            def get_device_properties(i):
+                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+            @staticmethod
+            def get_device_name(i):
+                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+        @staticmethod
+        def device(x): return x
+    torch = _TorchStub()  # type: ignore[assignment]
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
