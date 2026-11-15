@@ -90,3 +90,102 @@ jobs:
 
       - name: Check entry point exists
         run: python -c "import Quant4D_app; print('Entry point module OK')"
+
+
+# ---------------------------------------------------------------------------
+# Testing routines
+# ---------------------------------------------------------------------------
+
+  test:
+    name: Test suite (${{ matrix.os }} / Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # ---- Linux only: virtual display for Qt ----------------------------
+      - name: Install Xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y xvfb libxkbcommon-x11-0 libxcb-icccm4 \
+            libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
+            libxcb-xinerama0 libxcb-xfixes0 x11-utils
+
+      # ---- Install package + test extras ---------------------------------
+      - name: Install package
+        run: pip install -e ".[dev,test]"
+
+      # Minimal test extras not in pyproject.toml (add them there permanently)
+      - name: Install test dependencies
+        run: |
+          pip install \
+            pytest \
+            pytest-qt \
+            pytest-cov \
+            pytest-mock \
+            pytest-xdist \
+            tifffile \
+            h5py
+
+      # ---- Run tests (Linux with Xvfb, others directly) ------------------
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+          DISPLAY: ":99"
+        run: |
+          Xvfb :99 -screen 0 1920x1080x24 &
+          sleep 1
+          pytest tests/ \
+            -m "not gpu" \
+            --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+
+      - name: Run tests (Windows / macOS)
+        if: runner.os != 'Linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          pytest tests/ \
+            -m "not gpu" \
+            --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+
+      # ---- Upload results ------------------------------------------------
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: test-results-*.xml
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+
+  # ---- GPU test job (self-hosted runner) ---------------------------------
+  test-gpu:
+    name: GPU tests
+    runs-on: [self-hosted, gpu]   # requires a self-hosted runner with CUDA
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install package + test deps
+        run: pip install -e ".[dev,test]" pytest pytest-qt pytest-cov tifffile h5py
+      - name: Run GPU tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest tests/ -m gpu -v
