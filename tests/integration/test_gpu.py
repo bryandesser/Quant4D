@@ -9,18 +9,18 @@ import numpy as np
 import pytest
 
 
-pytestmark = pytest.mark.skipif(
-    not _gpu_available(),
-    reason="No CUDA GPU detected"
-)
-
-
 def _gpu_available():
     try:
         import torch
         return torch.cuda.is_available()
     except ImportError:
         return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _gpu_available(),
+    reason="No CUDA GPU detected"
+)
 
 
 # ---------------------------------------------------------------------------

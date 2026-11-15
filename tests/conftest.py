@@ -10,7 +10,6 @@ Environment assumptions
 """
 
 import os
-import types
 import numpy as np
 import pytest
 
@@ -19,11 +18,28 @@ import matplotlib
 matplotlib.use("Agg")
 
 # ---------------------------------------------------------------------------
-# Qt / PyQt6
+# Qt / PyQt5
 # ---------------------------------------------------------------------------
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication  # noqa: E402  (must come after env set)
+from PyQt5.QtWidgets import QApplication  # noqa: E402  (must come after env set)
+
+
+# ---------------------------------------------------------------------------
+# GPU helper — defined before any module-level use of _gpu_available()
+# ---------------------------------------------------------------------------
+def _gpu_available() -> bool:
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except ImportError:
+        return False
+
+
+requires_gpu = pytest.mark.skipif(
+    not _gpu_available(),
+    reason="No CUDA-capable GPU detected"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +50,7 @@ SCAN_X, SCAN_Y, DET_X, DET_Y = 8, 8, 32, 32
 
 @pytest.fixture(scope="session")
 def synthetic_data() -> np.ndarray:
-    """Return a tiny (8×8 real, 32×32 detector) float32 4D-STEM dataset."""
+    """Return a tiny (8x8 real, 32x32 detector) float32 4D-STEM dataset."""
     rng = np.random.default_rng(42)
     # shape: (SCAN_X * SCAN_Y, DET_X * DET_Y)  — the flat 2D layout used internally
     flat = rng.random((SCAN_X * SCAN_Y, DET_X * DET_Y), dtype=np.float32)
@@ -115,23 +131,6 @@ def sample_hdf5_file(tmp_path_factory, synthetic_data):
     with h5py.File(p, "w") as f:
         f.create_dataset("data", data=synthetic_data.reshape(SCAN_X, SCAN_Y, DET_X, DET_Y))
     return p
-
-
-# ---------------------------------------------------------------------------
-# GPU helpers
-# ---------------------------------------------------------------------------
-requires_gpu = pytest.mark.skipif(
-    not _gpu_available(),
-    reason="No CUDA-capable GPU detected"
-)
-
-
-def _gpu_available() -> bool:
-    try:
-        import torch
-        return torch.cuda.is_available()
-    except ImportError:
-        return False
 
 
 # ---------------------------------------------------------------------------

@@ -15,6 +15,12 @@ max-line-length = 150
 #   F821  – undefined names                     (real NameError at runtime)
 # ---------------------------------------------------------------------------
 extend-ignore =
+    # Alignment spacing (intentional in physics code and generated files)
+    E221,
+    # Continuation line indentation (imfindcircles.py algorithmic layout)
+    E127,
+    # Line length — lines > 150 chars that autopep8 cannot wrap safely
+    E501,
     # Import ordering / placement (many deferred imports are intentional)
     E402,
     # Bare except – needs manual review per site
@@ -29,3 +35,5 @@ extend-ignore =
 exclude =
     .git,
     __pycache__,
+    src/callbacks/tmp.py,
+    src/callbacks/appClassOLD.py,
