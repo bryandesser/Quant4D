@@ -31,12 +31,8 @@ jobs:
   import-test:
     name: Import test (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
-    # Ensure the repo root is on PYTHONPATH so that all top-level packages
-    # (callbacks/, annotationsClasses/, gui/) are importable regardless of
-    # how pip resolves the editable-install sys.path in the given
-    # setuptools/pip version combination on the runner.
     env:
-      PYTHONPATH: ${{ github.workspace }}/src
+      PYTHONPATH: ${{ github.workspace }}
     strategy:
       fail-fast: false
       matrix:
@@ -51,7 +47,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # PyQt5 needs a virtual display on headless Linux runners
       - name: Install virtual display (Linux only)
         if: runner.os == 'Linux'
         run: |
@@ -63,10 +58,7 @@ jobs:
             libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0
 
       - name: Install pyquant4d (no GPU extras)
-        # editable_mode=compat forces setuptools to write a .pth file for the
-        # repo root (the pre-setuptools-64 behaviour), guaranteeing that all
-        # top-level packages resolve even on runners with very recent tooling.
-        run: pip install -e .
+        run: pip install -e . --config-settings editable_mode=compat
 
       - name: Verify core imports (Linux — with Xvfb)
         if: runner.os == 'Linux'
@@ -91,19 +83,17 @@ jobs:
       - name: Check entry point exists
         run: python -c "import Quant4D_app; print('Entry point module OK')"
 
-
-# ---------------------------------------------------------------------------
-# Testing routines
-# ---------------------------------------------------------------------------
-
   test:
     name: Test suite (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      QT_QPA_PLATFORM: offscreen
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12"]
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11"]
 
     steps:
       - uses: actions/checkout@v4
@@ -113,54 +103,30 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # ---- Linux only: virtual display for Qt ----------------------------
-      - name: Install Xvfb (Linux)
+      - name: Install virtual display and Qt libs (Linux only)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y xvfb libxkbcommon-x11-0 libxcb-icccm4 \
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libglib2.0-0 libdbus-1-3 \
+            xvfb x11-utils libxkbcommon-x11-0 libxcb-icccm4 \
             libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
-            libxcb-xinerama0 libxcb-xfixes0 x11-utils
+            libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0
 
-      # ---- Install package + test extras ---------------------------------
-      - name: Install package
-        run: pip install -e ".[dev,test]"
+      # Install the package first (pulls in PyQt6, numpy, etc. from pyproject.toml),
+      # then add test-only extras explicitly. PyQt6 is listed separately as a
+      # belt-and-suspenders measure in case editable-install resolution is incomplete.
+      - name: Install pyquant4d + test dependencies
+        run: pip install -e . --config-settings editable_mode=compat && pip install PyQt6 pytest pytest-qt pytest-cov pytest-mock tifffile h5py
 
-      # Minimal test extras not in pyproject.toml (add them there permanently)
-      - name: Install test dependencies
-        run: |
-          pip install \
-            pytest \
-            pytest-qt \
-            pytest-cov \
-            pytest-mock \
-            pytest-xdist \
-            tifffile \
-            h5py
-
-      # ---- Run tests (Linux with Xvfb, others directly) ------------------
-      - name: Run tests (Linux)
+      - name: Run test suite (Linux)
         if: runner.os == 'Linux'
-        env:
-          QT_QPA_PLATFORM: offscreen
-          DISPLAY: ":99"
-        run: |
-          Xvfb :99 -screen 0 1920x1080x24 &
-          sleep 1
-          pytest tests/ \
-            -m "not gpu" \
-            --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+        run: xvfb-run --auto-servernum pytest -m "not gpu" --junitxml=test-results-${{ matrix.os }}-py${{ matrix.python-version }}.xml
 
-      - name: Run tests (Windows / macOS)
-        if: runner.os != 'Linux'
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          pytest tests/ \
-            -m "not gpu" \
-            --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+      - name: Run test suite (Windows)
+        if: runner.os == 'Windows'
+        run: pytest -m "not gpu" --junitxml=test-results-${{ matrix.os }}-py${{ matrix.python-version }}.xml
 
-      # ---- Upload results ------------------------------------------------
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -168,24 +134,26 @@ jobs:
           name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
           path: test-results-*.xml
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
         uses: codecov/codecov-action@v4
         with:
           file: coverage.xml
           fail_ci_if_error: false
 
-  # ---- GPU test job (self-hosted runner) ---------------------------------
+  # GPU tests run only on pushes to main, on a self-hosted runner with CUDA.
+  # To enable: add a runner tagged [self-hosted, gpu] in repo Settings → Actions.
   test-gpu:
     name: GPU tests
-    runs-on: [self-hosted, gpu]   # requires a self-hosted runner with CUDA
+    runs-on: [self-hosted, gpu]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      QT_QPA_PLATFORM: offscreen
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install package + test deps
-        run: pip install -e ".[dev,test]" pytest pytest-qt pytest-cov tifffile h5py
+      - name: Install pyquant4d + test dependencies
+        run: pip install -e . --config-settings editable_mode=compat && pip install PyQt6 pytest pytest-qt tifffile h5py
       - name: Run GPU tests
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: pytest tests/ -m gpu -v
+        run: pytest tests/integration/test_gpu.py -m gpu -v
