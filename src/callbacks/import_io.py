@@ -221,10 +221,8 @@ def importFileType(self):
             bitSize = self.ByteSize[self.ImportWindow.ImpDataType.currentData()]
 
             # factoring in dataoffset/tail/header/footer lengths, get total number of frames (xy)
-            z = (self.T.FileSize - self.ImportWindow.DataOffset.value() - self.T.fileTail) / (self.ImportWindow.DNPxX.value() \
-                                                                                              * self.ImportWindow.DNPxY.value() * bitSize \
-                                                                                              + self.ImportWindow.FrHead.value() \
-                                                                                              + self.ImportWindow.FrFoot.value())
+            z = (self.T.FileSize - self.ImportWindow.DataOffset.value() - self.T.fileTail) / (self.ImportWindow.DNPxX.value()
+                                                                                              * self.ImportWindow.DNPxY.value() * bitSize + self.ImportWindow.FrHead.value() + self.ImportWindow.FrFoot.value())
 
             # assume dataset is as close to square as possible, factorize xy to (x,y)
             guessFramesFromDimZ(int(z))
@@ -728,7 +726,7 @@ def getImportInfo(self):
         "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", *d.NFr) +\
         "\n\n# Data Structure in File #" +\
         "\nData Offset: " + str(d0.Offset) + " bytes" +\
-        "\nFrame Header: " + str(d0.FrHead) + " bytes"+\
+        "\nFrame Header: " + str(d0.FrHead) + " bytes" +\
         "\nFrame Footer: " + str(d0.FrFoot) + " bytes" +\
         "\nByte Order: " + self.C.EndianTxt[d0.ByteOrder] +\
         "\nData Type: " + np.dtype(d0.DataType).name +\
@@ -760,11 +758,8 @@ def rangeImportExport(self, src):
     if "Import" in src.accessibleDescription():
         io_mode = "I"
         # Raw dataset dimensions, e.g. self.ImportWindow.DNPxX.value()
-        dnp = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox, "DN" +
-                                                      U +
-                                                      "X").value(), self.ImportWindow.findChild(qtw.QSpinBox, "DN" +
-                                                                                                U +
-                                                                                                "Y").value()]).astype(int)
+        dnp = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox, "DN" + U + "X").value(),
+                         self.ImportWindow.findChild(qtw.QSpinBox, "DN" + U + "Y").value()]).astype(int)
     else:  # Export
         io_mode = "E"
         dnp = np.asarray(getattr(self.D, "N" + U)).astype(int)  # Loaded dataset dimensions
@@ -800,9 +795,9 @@ def rangeImportExport(self, src):
         numPoints[0] = val  # N-Points X UI
     elif src == getattr(self.ImportWindow, io_mode + "N" + U + "Y"):
         numPoints[1] = val  # N-Points Y UI
-    elif src in [getattr(self.ImportWindow, "DN" + U + "X"),\
-                 getattr(self.ImportWindow, "DN" + U + "Y"),\
-                 getattr(self.ImportWindow, "Imp" + U + "Part"),\
+    elif src in [getattr(self.ImportWindow, "DN" + U + "X"),
+                 getattr(self.ImportWindow, "DN" + U + "Y"),
+                 getattr(self.ImportWindow, "Imp" + U + "Part"),
                  getattr(self.SaveWindow, "Exp" + U + "Part")]:
         # Reset range options if dataset raw dimension changes OR partial selection enables/disables
         getattr(self.ImportWindow, io_mode + U + "D").setMaximum(min(dnp))  # Update binning/sampling UI limits
