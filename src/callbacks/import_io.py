@@ -18,7 +18,9 @@ import matplotlib
 from PIL import Image
 # Deferred cross-module imports (safe: import_io is itself only loaded lazily)
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
-from callbacks.startup import enableWindows  # noqa: E402
+# NOTE: enableWindows is imported inside the functions that need it (unloadData,
+# importData) to avoid a circular import with callbacks.startup, which imports
+# from this module at its own module level.
 try:
     import torch
 except ImportError:
@@ -901,6 +903,7 @@ def unloadData(self, keep_p=False):
     from callbacks.appClass import A, P, Mask, D, Prev
 
     """ Function to unload data and clean all images """
+    from callbacks.startup import enableWindows  # deferred to break circular import
     enableWindows(self, False)  # Disable windows for the data unload process
     self.setWindowTitle('Quant4D')
     # Whether to swap dataset only, without changing any existing parameters
@@ -970,6 +973,7 @@ def importData(self):
         except BaseException:
             unloadData(self)
             notifDLG(self, self, 'error', 'Error during Import!', 'Error!')
+            from callbacks.startup import enableWindows  # deferred to break circular import
             enableWindows(self, True)
 
         # Start file reading here
