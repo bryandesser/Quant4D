@@ -52,7 +52,8 @@ class InteractiveCircle(qtc.QObject):
 
         # hide any intermediate points, only keeping first and last visible
         sz = np.zeros_like(self.radius)
-        sz[0] = sz[-1] = self.point.get_sizes()
+        _default_sz = float(self.point.get_sizes()[0])  # get_sizes() returns ndarray; extract scalar
+        sz[0] = sz[-1] = _default_sz
         self.point.set_sizes(sz)
 
         # points are only needed for resizing

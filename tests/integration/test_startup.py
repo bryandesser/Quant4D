@@ -25,12 +25,14 @@ class TestStartup:
             assert hasattr(app.Fig, attr), f"Fig.{attr} missing"
 
     def test_detector_mode_default(self, app):
-        """Detector mode dropdown should default to PrvwMod."""
-        assert app.DetectorMode.currentText() == "PrvwMod"
+        """Detector mode dropdown should default to Import Preview (PrvwMod)."""
+        # Widget is DetrMode (QComboBox); data value is "PrvwMod", display text is "Import Preview"
+        assert app.DetrMode.currentText() == "Import Preview"
 
     def test_memory_detection(self, app):
-        """getMem() should have stored a positive integer."""
-        assert app.D.TotalMem > 0
+        """getMem() should have stored a positive integer in app.C.MemTot."""
+        # Total system memory is stored on app.C (the C constants struct), not app.D
+        assert app.C.MemTot > 0
 
     def test_gpu_ui_populated(self, app):
         """
