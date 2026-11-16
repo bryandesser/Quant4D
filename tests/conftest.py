@@ -70,7 +70,7 @@ def app_session(tmp_path_factory, synthetic_data):
     Tests that mutate state heavily should use the function-scoped `app`
     fixture instead (which reloads).
     """
-    from Quant4D_app import MainWindow  # adjust import to actual entry point
+    from callbacks.guiClass import MainWindow  # MainWindow lives in callbacks.guiClass
 
     win = MainWindow()
 
@@ -95,7 +95,7 @@ def app(qtbot, tmp_path, synthetic_data):
     Use this whenever the test modifies persistent state (mode changes,
     signal wiring, annotations).
     """
-    from Quant4D_app import MainWindow
+    from callbacks.guiClass import MainWindow  # MainWindow lives in callbacks.guiClass
 
     win = MainWindow()
     qtbot.addWidget(win)
