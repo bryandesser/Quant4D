@@ -1,5 +1,5 @@
 # pyQuant4D
-
+[![CI](https://github.com/bryandesser/pyQuant4D/actions/workflows/ci.yml/badge.svg)](https://github.com/bryandesser/pyQuant4D/actions/workflows/ci.yml)
 A Python GUI application for quantitative 4D-STEM data visualisation and analysis, ported from the original MATLAB [Quant4D](https://github.com/bryandesser/Quant4D) application.
 
 4D-STEM (four-dimensional scanning transmission electron microscopy) collects a full diffraction pattern at each probe position in a 2-D scan, producing a 4-D dataset. pyQuant4D provides interactive tools to load, preview, and analyse these datasets — including annular integration, centre-of-mass (CoM/DPC), integrated CoM (iCoM), differential CoM (dCoM), and vector-field overlays — with optional GPU acceleration via PyTorch.
