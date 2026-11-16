@@ -1,0 +1,96 @@
+# ============================================================
+# pyQuant4D GPU test runner — Docker Compose
+# ============================================================
+#
+# QUICK START
+# -----------
+# 1. Create a GitHub PAT (recommended):
+#      https://github.com/settings/tokens
+#      Scopes needed: repo  (or public_repo for a public repo)
+#
+# 2. Copy .env.example → .env and fill in your values.
+#
+# 3. Build and start:
+#      docker compose up -d --build
+#
+# 4. Verify the runner appears in:
+#      https://github.com/bryandesser/Quant4D/settings/actions/runners
+#
+# STOPPING
+# --------
+#      docker compose down
+#   The entrypoint catches the SIGTERM and deregisters the runner
+#   from GitHub automatically.
+#
+# UPDATING THE RUNNER
+# -------------------
+#   Bump RUNNER_VERSION in the Dockerfile, then:
+#      docker compose up -d --build
+#
+# PLATFORM NOTES
+# --------------
+#   Linux   : Works as-is. Requires nvidia-container-toolkit on the host.
+#   Windows  : Works via Docker Desktop ≥ 4.26 + WSL2 backend.
+#              NVIDIA driver ≥ 525 required on the Windows host.
+#              GPU passthrough is automatic — no extra flags needed.
+#   macOS   : Not supported for GPU testing. macOS has no CUDA support
+#              and Docker on macOS cannot pass through the GPU.
+#              CPU-only tests for macOS run on GitHub-hosted runners.
+# ============================================================
+
+services:
+  gpu-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pyquant4d-gpu-runner:latest
+    container_name: pyquant4d-gpu-runner
+
+    # Restart unless explicitly stopped (survives host reboots)
+    restart: unless-stopped
+
+    # ── GPU passthrough ──────────────────────────────────────
+    # Requires nvidia-container-toolkit on Linux.
+    # Docker Desktop on Windows handles this automatically via WSL2.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all          # expose all GPUs; use count: 1 to limit
+              capabilities: [gpu]
+
+    # ── Environment variables ────────────────────────────────
+    environment:
+      GITHUB_OWNER: ${GITHUB_OWNER:-bryandesser}
+      GITHUB_REPO: ${GITHUB_REPO:-Quant4D}
+      # Recommended: PAT auto-fetches a fresh token on every start.
+      # Leave RUNNER_TOKEN blank when using GITHUB_PAT.
+      GITHUB_PAT: ${GITHUB_PAT:-}
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+      # Optional: override the display name shown in GitHub
+      RUNNER_NAME: ${RUNNER_NAME:-pyquant4d-gpu-runner}
+      # Optional: extra labels beyond self-hosted,gpu,Linux,X64
+      # Example: RUNNER_LABELS=cuda12,torch
+      RUNNER_LABELS: ${RUNNER_LABELS:-}
+
+    # ── Shared memory ────────────────────────────────────────
+    # PyTorch DataLoader workers use /dev/shm; 4 GB avoids
+    # "bus error" crashes on larger synthetic test datasets.
+    shm_size: '4gb'
+
+    # ── Persistent work directory ────────────────────────────
+    # Keeps checked-out repo and build artefacts between jobs,
+    # so git fetch only downloads deltas.
+    volumes:
+      - runner-work:/home/runner/_work
+
+    # ── Resource limits (optional) ───────────────────────────
+    # Uncomment to prevent a runaway job from saturating the host.
+    # mem_limit: 16g
+    # cpus: '8'
+
+# Named volume for the runner work directory
+volumes:
+  runner-work:
+    driver: local
