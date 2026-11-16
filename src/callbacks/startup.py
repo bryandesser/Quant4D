@@ -11,14 +11,18 @@ except ImportError:
         class cuda:
             @staticmethod
             def is_available(): return False
+
             @staticmethod
             def device_count(): return 0
+
             @staticmethod
             def get_device_properties(i):
                 raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+
             @staticmethod
             def get_device_name(i):
                 raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+
         @staticmethod
         def device(x): return x
     torch = _TorchStub()  # type: ignore[assignment]
