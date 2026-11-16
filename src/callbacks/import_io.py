@@ -661,6 +661,7 @@ def importBoxInput(self):
         if self.ImportWindow.FrHead.value() == 0 and self.ImportWindow.FrFoot.value() == 0 and (
                 not self.ImportWindow.HDF5Button.isChecked() or self.ImportWindow.DataOffset.value() > 0) and (
                 self.ImportWindow.ImpByteOrder.currentData() == self.C.SysEndian) and (
+                self.ImportWindow.ImpDataType.currentData() is not None and
                 'int' not in self.ImportWindow.ImpDataType.currentData()) and [
                     self.ImportWindow.DNPxX.value(),
                     self.ImportWindow.DNPxY.value(),
