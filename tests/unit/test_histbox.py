@@ -29,15 +29,26 @@ class TestHistboxToSliders:
         _, c = histbox_to_sliders(0.4, 0.6, 0.0, 1.0)
         assert c > 50
 
-    def test_low_window_decreases_brightness(self):
-        """Window in the dark half should return brightness < 50."""
-        b, _ = histbox_to_sliders(0.0, 0.2, 0.0, 1.0)
-        assert b < 50
+    def test_low_window_gives_high_brightness_slider(self):
+        """Window in the dark half → brightness slider > 50.
 
-    def test_high_window_increases_brightness(self):
-        """Window in the bright half should return brightness > 50."""
-        b, _ = histbox_to_sliders(0.8, 1.0, 0.0, 1.0)
+        The slider convention matches plotImage: a higher brightness value
+        shifts the display window *left* (toward darker pixel values), making
+        the image appear brighter.  When the window sits in the dark half
+        [0, 0.2] the slider must have been boosted above centre to get there,
+        so b_ui > 50.
+        """
+        b, _ = histbox_to_sliders(0.0, 0.2, 0.0, 1.0)
         assert b > 50
+
+    def test_high_window_gives_low_brightness_slider(self):
+        """Window in the bright half → brightness slider < 50.
+
+        When the window sits in the bright half [0.8, 1.0] the slider must
+        have been pulled below centre, so b_ui < 50.
+        """
+        b, _ = histbox_to_sliders(0.8, 1.0, 0.0, 1.0)
+        assert b < 50
 
     def test_output_clamped_0_100(self):
         """Extreme inputs must still return values in [0, 100]."""
