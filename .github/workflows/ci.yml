@@ -117,7 +117,7 @@ jobs:
       # then add test-only extras explicitly. PyQt6 is listed separately as a
       # belt-and-suspenders measure in case editable-install resolution is incomplete.
       - name: Install pyquant4d + test dependencies
-        run: pip install -e . --config-settings editable_mode=compat && pip install PyQt6 pytest pytest-qt pytest-cov pytest-mock tifffile h5py
+        run: pip install -e . --config-settings editable_mode=compat && pip install pytest pytest-qt pytest-cov pytest-mock tifffile h5py
 
       - name: Run test suite (Linux)
         if: runner.os == 'Linux'
@@ -154,6 +154,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install pyquant4d + test dependencies
-        run: pip install -e . --config-settings editable_mode=compat && pip install PyQt6 pytest pytest-qt tifffile h5py
+        run: pip install -e . --config-settings editable_mode=compat && pip install pytest pytest-qt tifffile h5py
       - name: Run GPU tests
         run: pytest tests/integration/test_gpu.py -m gpu -v
