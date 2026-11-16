@@ -74,6 +74,12 @@ def app_session(tmp_path_factory, synthetic_data):
 
     win = MainWindow()
 
+    # appStruct() leaves win.D = None until the user imports a file.
+    # Construct a D() instance here so we can inject synthetic data directly
+    # and bypass the file-import pipeline entirely.
+    from callbacks.appClass import D as _D
+    win.D = _D()
+
     # Inject synthetic data directly so we bypass the file-import pipeline
     win.D.Data = synthetic_data
     win.D.ScanX = SCAN_X
@@ -99,6 +105,10 @@ def app(qtbot, tmp_path, synthetic_data):
 
     win = MainWindow()
     qtbot.addWidget(win)
+
+    # appStruct() leaves win.D = None until the user imports a file.
+    from callbacks.appClass import D as _D
+    win.D = _D()
 
     win.D.Data = synthetic_data.copy()
     win.D.ScanX = SCAN_X
