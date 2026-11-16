@@ -8,16 +8,16 @@ Each test switches the detector mode and asserts:
 """
 
 import pytest
-from PyQt6.QtTest import QTest
-from PyQt6.QtCore import Qt
+from pytestqt.qt_compat import qt_api
+Qt = qt_api.QtCore.Qt
 
 
 MODES = {
     "AlignMod": "InteractiveCircle",
-    "AnnMod": "InteractiveAnnulus",
-    "CoMMod": None,          # no single annotation class
-    "DPCMod": None,
-    "VrApMod": "InteractiveCircle",
+    "AnnMod":   "InteractiveAnnulus",
+    "CoMMod":   None,          # no single annotation class
+    "DPCMod":   None,
+    "VrApMod":  "InteractiveCircle",
 }
 
 

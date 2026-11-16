@@ -7,6 +7,8 @@ controls and verify that plotImage produces expected pixel-intensity results.
 
 import numpy as np
 import pytest
+from pytestqt.qt_compat import qt_api
+Qt = qt_api.QtCore.Qt
 
 
 def _image_pixels(app):
@@ -41,7 +43,7 @@ class TestBrightnessContrast:
     def test_gamma_reset_button(self, app, qtbot):
         app.DispGamma.setValue(3.0)
         qtbot.wait(20)
-        qtbot.mouseClick(app.GammaReset, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+        qtbot.mouseClick(app.GammaReset, Qt.LeftButton)
         qtbot.wait(20)
         assert app.DispGamma.value() == pytest.approx(1.0, abs=0.01)
 
@@ -55,12 +57,12 @@ class TestColormap:
         qtbot.wait(50)
         imgs = app.Fig.Real.ax.get_images()
         assert imgs[0].cmap.name == combo.currentText().lower().replace(" ", "_") \
-            or True   # just check no exception was raised
+               or True   # just check no exception was raised
 
     def test_invert_colormap(self, app, qtbot):
         orig_cmap = app.Fig.Real.ax.get_images()[0].cmap.name
         qtbot.mouseClick(app.InvertCmap,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(50)
         new_cmap = app.Fig.Real.ax.get_images()[0].cmap.name
         # inverted cmap name should differ (usually has _r suffix)
@@ -73,7 +75,7 @@ class TestWindowVisibility:
             win.show()
         qtbot.wait(20)
         qtbot.mouseClick(app.HideAll,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(50)
         for win in [app.Fig.Dfrn.window, app.Fig.Real.window]:
             assert not win.isVisible()
@@ -83,7 +85,7 @@ class TestWindowVisibility:
             win.hide()
         qtbot.wait(20)
         qtbot.mouseClick(app.ShowAll,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(50)
         for win in [app.Fig.Dfrn.window, app.Fig.Real.window]:
             assert win.isVisible()

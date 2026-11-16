@@ -7,6 +7,8 @@ No real data file is required — the synthetic dataset from conftest is used.
 
 import numpy as np
 import pytest
+from pytestqt.qt_compat import qt_api
+Qt = qt_api.QtCore.Qt
 from pathlib import Path
 
 
@@ -21,7 +23,7 @@ class TestSaveTIFF:
         app.SaveWindow.SaveName.setText("real")
         # Trigger save
         qtbot.mouseClick(app.SaveWindow.SaveTIFF,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(200)
 
         assert out.exists(), f"TIFF not created at {out}"
@@ -36,7 +38,7 @@ class TestSaveTIFF:
         app.SaveWindow.SavePath.setText(str(out.parent))
         app.SaveWindow.SaveName.setText("real")
         qtbot.mouseClick(app.SaveWindow.SavePNG,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(200)
 
         assert out.exists()
@@ -52,7 +54,7 @@ class TestExportHDF5:
         app.SaveWindow.ExportPath.setText(str(out.parent))
         app.SaveWindow.ExportName.setText("export")
         qtbot.mouseClick(app.SaveWindow.ExportHDF5,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(500)
 
         assert out.exists()
@@ -67,7 +69,7 @@ class TestExportHDF5:
         app.SaveWindow.ExportPath.setText(str(out.parent))
         app.SaveWindow.ExportName.setText("values")
         qtbot.mouseClick(app.SaveWindow.ExportHDF5,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(500)
 
         with h5py.File(out, "r") as f:
@@ -92,7 +94,7 @@ class TestSaveVect:
         app.SaveWindow.SavePath.setText(str(tmp_path))
         app.SaveWindow.SaveName.setText("stem")
         qtbot.mouseClick(app.SaveWindow.SaveVect,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(200)
 
         for name in ("stem_CoMX.tif", "stem_CoMY.tif"):

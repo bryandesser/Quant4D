@@ -7,6 +7,8 @@ and that mask shapes are geometrically correct.
 
 import numpy as np
 import pytest
+from pytestqt.qt_compat import qt_api
+Qt = qt_api.QtCore.Qt
 
 
 SCAN_X, SCAN_Y, DET_X, DET_Y = 8, 8, 32, 32
@@ -59,14 +61,14 @@ class TestRectangleROI:
         rows = np.where(mask.any(axis=1))[0]
         cols = np.where(mask.any(axis=0))[0]
         # All rows/cols in range should be True (axis-aligned rectangle)
-        assert mask[rows.min():rows.max() + 1, cols.min():cols.max() + 1].all()
+        assert mask[rows.min():rows.max()+1, cols.min():cols.max()+1].all()
 
     def test_invert_roi_flips_mask(self, app, qtbot):
         _select_roi(app, qtbot, "Rectangle")
         qtbot.wait(50)
         orig_mask = app.D.ROIMask.copy()
         qtbot.mouseClick(app.InvertROI,
-                         pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
+                         Qt.LeftButton)
         qtbot.wait(50)
         np.testing.assert_array_equal(app.D.ROIMask, ~orig_mask)
 
@@ -76,7 +78,6 @@ class TestPolygonROI:
         """Pressing Escape during polygon drawing should cancel without crash."""
         _select_roi(app, qtbot, "Polygon")
         qtbot.wait(50)
-        from PyQt6.QtCore import Qt
-        qtbot.keyClick(app, Qt.Key.Key_Escape)
+        qtbot.keyClick(app, Qt.Key_Escape)
         qtbot.wait(50)
         # No unhandled exception = pass
