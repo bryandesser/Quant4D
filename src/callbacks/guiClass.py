@@ -52,6 +52,15 @@ class MainWindow(MW_Base, MW_Ui):
         # self.windowHandle().screenChanged.connect(lambda: self.pointPickerRadius.emit(self.screen().physicalDotsPerInch()))
 
     def closeEvent(self, event):
+        # In headless / CI mode (QT_QPA_PLATFORM=offscreen) do not show a
+        # QMessageBox: on Windows it triggers a fatal access violation at the
+        # C++ level before Python can handle it.  Also avoid sys.exit() which
+        # would kill the whole test-runner process.
+        if _os.environ.get('QT_QPA_PLATFORM', '') == 'offscreen':
+            event.accept()
+            qtw.QApplication.quit()
+            return
+
         reply = qtw.QMessageBox.question(self, 'Window Close', 'Are you sure you want to quit?',
                                          qtw.QMessageBox.No | qtw.QMessageBox.Yes, qtw.QMessageBox.No)
 
