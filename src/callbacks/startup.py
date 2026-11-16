@@ -36,9 +36,21 @@ from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 from multiprocessing.pool import ThreadPool
 # Deferred cross-module imports (safe: startup is itself only loaded lazily)
-from callbacks.plotting import displayCallbacks  # noqa: E402
-from callbacks.detector import detectorModeCallbacks  # noqa: E402
+from callbacks.plotting import displayCallbacks, updateImagesCallbacks  # noqa: E402
+from callbacks.detector import detectorModeCallbacks, detrCoordCallbacks  # noqa: E402
 from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
+from callbacks.importCallbacks import importCallbacks  # noqa: E402
+from callbacks.import_io import importSelectFile, importBoxInput, importFileType  # noqa: E402
+from callbacks.window_manager import (  # noqa: E402
+    resizeWindowCallbacks, showAllWindows, hideAllWindows, showWindowCallbacks,
+)
+from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
+from callbacks.alignment import moveTransBeam, transBeamCallbacks  # noqa: E402
+from callbacks.data_ops import mathCallbacks  # noqa: E402
+from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
+from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
+from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
+from callbacks.utils import breakpoint  # noqa: E402,A001
 
 
 def unlockScanDir(self):
