@@ -43,6 +43,23 @@ class TestAlignMode:
         loaded_app.TBX.setValue(x0)
         qapp.processEvents()
 
+    def test_drag_circle(self, loaded_app, qapp):
+        """Dragging the transmitted-beam circle (it emits updateCircle) used to raise: its radius
+        is an array, which went straight into the radius slider."""
+        set_mode(loaded_app, qapp, "AlignMod")
+        tb = loaded_app.A.tb
+        old = (np.array(loaded_app.B0, float).copy(), loaded_app.TBR.value())
+        tb.center = np.asarray(old[0]) + [1.5, -0.5]
+        tb.radius = np.array([old[1] + 1])
+        tb.updateCircle.emit()
+        qapp.processEvents()
+        assert np.allclose(loaded_app.B0, old[0] + [1.5, -0.5])
+        assert loaded_app.TBR.value() == pytest.approx(old[1] + 1)
+        assert loaded_app.TBX_NF.value() == pytest.approx(old[0][0] + 1.5)
+        tb.center, tb.radius = old[0], np.array([old[1]])
+        tb.updateCircle.emit()
+        qapp.processEvents()
+
     def test_auto_align_finds_disc(self, loaded_app, qapp):
         """The disc centre averaged over the scan is ~ (0.58*DET_X + 0.75, 0.4*DET_Y + 0.45)."""
         set_mode(loaded_app, qapp, "AlignMod")

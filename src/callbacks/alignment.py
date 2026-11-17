@@ -89,9 +89,9 @@ def moveTransBeam(self):
         case self.mradPx:
             mrad_per_px = self.sender().value()
             a = mrad_per_px * r  # Manually set the diffraction scale
-        case self.A.tb:
-            b0 = self.A.tb.center
-            r = self.A.tb.radius
+        case self.A.tb:   # dragged: the annotation holds an array of radii (one here) and its own centre array
+            b0 = np.array(self.A.tb.center, dtype=float)
+            r = float(np.ravel(self.A.tb.radius)[-1])
 
     # Restrict transmitted beam location/size
     b0 = b0.clip([0, 0], nPix - 1)   # 0-based: valid pixel centres are 0 .. N-1

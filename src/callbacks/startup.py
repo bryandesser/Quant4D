@@ -317,14 +317,16 @@ def startupFcn(self):
 
         # Find GPU devices and turn on/off GPU support;
         # self.ImportWindow.ImgGPU.currentData() = None is always "GPU off"
-        if self.C.nGPU == 0:  # no GPU devices
-            self.ImportWindow.ImpGPU.addItem('No GPU found.', 0)
+        if self.C.nGPU == 0:  # no GPU devices (or no CUDA-enabled torch)
+            self.ImportWindow.ImpGPU.addItem('No GPU found.', None)   # None = CPU (it was device 0)
+            self.ImportWindow.ImpGPU.setToolTip("No CUDA GPU found. GPU acceleration needs PyTorch with CUDA "
+                                                "(pip install pyquant4d[gpu]).")
         else:  # 1 or more devices found
             maxmem = 0
             for i in np.arange(0, self.C.nGPU):
                 self.C.GPUmem.append(torch.cuda.get_device_properties(i).total_memory)
                 self.C.GPUname.append(torch.cuda.get_device_name(i))
-                self.ImportWindow.ImpGPU.addItem(self.C.GPUname[i], i)
+                self.ImportWindow.ImpGPU.addItem(self.C.GPUname[i], int(i))     # plain int for torch.device
                 # Select GPU with max memory
                 if self.C.GPUmem[i] > maxmem:
                     maxmem = self.C.GPUmem[i]
@@ -614,9 +616,7 @@ def startupFcn(self):
         for vtt, vt in zip(vectTypeText, vectType):
             self.DispVecField.addItem(vtt, vt)
 
-        # import window, GPU selection
-        self.ImportWindow.ImpGPU.clear()
-        self.ImportWindow.ImpGPU.addItem('GPU off', None)
+        # import window, GPU selection: filled by getGPU (clearing it here dropped every detected GPU)
 
         # import window, memory loading selection
         self.ImportWindow.ImpMemType.clear()

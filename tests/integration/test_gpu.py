@@ -62,3 +62,18 @@ def test_gpu_matches_cpu(loaded_app, qapp, mode):
     for i in gpu:
         assert np.allclose(gpu[i], cpu[i], rtol=1e-4, atol=1e-6 * np.abs(cpu[i]).max()), f"{mode}: {i} differs"
     set_mode(loaded_app, qapp, "AnnMod")
+
+
+def test_import_window_selects_the_gpu(app, qapp, sample_raw_file):
+    """Through the app, not by setting D.GPU: the Import window offers the card, an import uses it."""
+    from callbacks import compute
+    from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, import_raw
+    gpu = app.ImportWindow.ImpGPU.currentData()
+    assert gpu is not None, f"no GPU selected; offered: {[app.ImportWindow.ImpGPU.itemText(i) for i in range(app.ImportWindow.ImpGPU.count())]}"
+    import_raw(app, qapp, sample_raw_file, SCAN_X, SCAN_Y, DET_X, DET_Y)
+    assert app.D.GPU == gpu
+    set_mode(app, qapp, "AnnMod")
+    app.UpdateImages.trigger()
+    qapp.processEvents()
+    info = compute.device_data_info()
+    assert info is not None and info["device"].startswith("cuda"), info

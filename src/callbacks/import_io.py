@@ -42,6 +42,10 @@ except ImportError:
             def get_device_name(i):
                 raise RuntimeError("torch not installed; install pyquant4d[gpu]")
 
+            @staticmethod
+            def mem_get_info(i=0):
+                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+
         @staticmethod
         def device(x): return x
     torch = _TorchStub()  # type: ignore[assignment]
@@ -607,46 +611,28 @@ def importBoxInput(self):
         return notes
 
     def checkGPUMEM(nPx, nFr):
+        """Note whether the dataset fits on the selected GPU.
+
+        Only the dataset goes to the GPU, as float32, and the compute code falls back to the CPU
+        by itself when it does not fit (``compute.backend``), so this informs and never switches
+        the GPU off.  (The old check compared the system-RAM estimate for everything with the
+        card's total memory, and switched the GPU off.)
+        """
+        from callbacks.compute.backend import RESIDENT_FRACTION
         igpu = self.ImportWindow.ImpGPU.currentData()
         if igpu is None:
-            gpu_note = 'GPU disabled.'
-        else:
-            tgpu = f"GPU {igpu:.0f}. " + self.C.GPUname[igpu] + f" {self.C.GPUmem[igpu] / 1024**3:.2f} GiB"
-            try:
-                device = torch.device(igpu if torch.cuda.is_available() else "cpu")
-                amem = torch.cuda.get_device_properties(igpu).total_memory
-                # If GPU is already in use, taking the current data size into account
-                if self.D is not None and self.D.GPU == igpu:
-                    try:
-                        amem = amem + self.D.EstMem
-                    except BaseException:
-                        pass
-
-                amem_t = '{:.3f} GiB'.format(amem / 1024**3)
-                wt = None
-                # TODO - this seems really arbitrary
-                if self.T.EstMem > amem - 128 * 1024**2:  # Has 128 MiB extra?
-                    gpu_note = tgpu + \
-                        " has NOT enough free memory (" + amem_t + "). 128 MiB EXTRA free memory is also required."
-                    wt = 'GPU Not Enough Free Memory!'
-                    self.ImportWindow.ImpGPU.setCurrentIndex(self.ImportWindow.ImpGPU.findData(None))
-
-                elif self.T.EstMem > (amem - 512 * 1024**2):  # Has 512 MiB extra?
-                    gpu_note = tgpu + " has LIMITED free memory (" + amem_t + ") and may cause errors."
-                    wt = 'GPU Limited Free Memory!'
-
-                else:
-                    gpu_note = tgpu + " has enough free memory (" + amem_t + ") for the selected dataset."
-
-                # Notify warnings if any
-                if wt:
-                    _ = notifDLG(self, self.ImportWindow, "warn", gpu_note, wt)
-            except BaseException:
-                gpu_note = "Failed to select " + tgpu + "!"
-                _ = notifDLG(self, self.ImportWindow, "warn", gpu_note, "Error Selecting GPU")
-                self.ImportWindow.ImpGPU.setCurrentIndex(self.ImportWindow.ImpGPU.findData(None))
-
-        return gpu_note
+            return "GPU off: computing on the CPU."
+        name = self.C.GPUname[igpu] if igpu < len(self.C.GPUname) else f"GPU {igpu}"
+        need = float(np.prod(nPx)) * float(np.prod(nFr)) * 4
+        try:
+            free, total = torch.cuda.mem_get_info(igpu)
+        except Exception as exc:                     # driver problem etc.: say so, keep the choice
+            return f"GPU {igpu} ({name}): could not read its memory ({exc}); the CPU is used if it fails."
+        gib = 1024**3
+        head = f"GPU {igpu} ({name}): {free / gib:.2f} of {total / gib:.2f} GiB free; dataset needs {need / gib:.2f} GiB."
+        if need > RESIDENT_FRACTION * free:
+            return head + " It will not fit, so computations run on the CPU."
+        return head + " The dataset is kept on the GPU."
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
