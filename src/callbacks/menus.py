@@ -77,6 +77,16 @@ def openSettingsTab(self, tab) -> None:
     sw.SettingsTabGroup.setCurrentWidget(tab)
 
 
+def showPreviewDisplayControls(self) -> None:
+    """Import preview: brightness/contrast/gamma of the preview on show, the Import window kept on top
+    and active (MATLAB opened the display settings with the importer)."""
+    openSettingsTab(self, self.SettingsWindow.DisplayTab)
+    iw = self.ImportWindow
+    iw.show()
+    iw.raise_()
+    iw.activateWindow()
+
+
 def openMaths(self) -> None:
     """The maths tab belongs to the Custom detector mode: switch to it if a dataset is loaded."""
     if self.Data is not None and self.DetrMode.currentData() != "CustMod":

@@ -15,6 +15,9 @@ def _drag(qapp, ann, signal):
         ann.center = np.asarray(ann.center, float) + [1.0, 0.5]
     if hasattr(ann, "radius"):
         ann.radius = np.asarray(ann.radius, float) + 0.5
+    if hasattr(ann, "semiaxes"):
+        ann.semiaxes = np.asarray(ann.semiaxes, float) + 0.5
+        ann.rotation = float(ann.rotation) + 20.0
     if hasattr(ann, "vertices"):
         ann.vertices = np.asarray(ann.vertices, float) + [0.5, 0.25]
     getattr(ann, signal).emit()
@@ -66,7 +69,7 @@ def test_real_space_roi(loaded_app, qapp, shape):
     loaded_app.RealROIShape.setCurrentIndex(loaded_app.RealROIShape.findData(shape))
     qapp.processEvents()
     roi = loaded_app.A.RealROI.get("Real")
-    _drag(qapp, roi, next(s for s in ("updateRect", "updateCircle", "positionChanged") if hasattr(roi, s)))
+    _drag(qapp, roi, next(s for s in ("updateRect", "updateEllipse", "updateCircle", "positionChanged") if hasattr(roi, s)))
     loaded_app.RealROIShape.setCurrentIndex(loaded_app.RealROIShape.findData("full"))
     qapp.processEvents()
 

@@ -84,6 +84,32 @@ class TestImportCancel:
         assert app.Data is not None, "cancelling a second import must keep the loaded dataset"
 
 
+class TestPreviewDisplayControls:
+    """Brightness/contrast/gamma open with the importer, whether or not the mode changes."""
+
+    def _check(self, app):
+        sw = app.SettingsWindow
+        assert sw.isVisible()
+        assert sw.SettingsTabGroup.currentWidget() is sw.DisplayTab
+        assert app.ImportWindow.isVisible()
+
+    def test_first_import(self, app, qapp):
+        assert app.DetrMode.currentData() == "PrvwMod"
+        app.SettingsWindow.hide()
+        app.ShowImportWdw.trigger()
+        qapp.processEvents()
+        self._check(app)
+
+    def test_after_a_dataset(self, app, qapp, sample_raw_file):
+        import_raw(app, qapp, sample_raw_file, SCAN_X, SCAN_Y, DET_X, DET_Y)
+        app.SettingsWindow.SettingsTabGroup.setCurrentWidget(app.SettingsWindow.MiscTab)
+        app.ShowImportWdw.trigger()
+        qapp.processEvents()
+        self._check(app)
+        app.ImportWindow.ImportCancelButton.click()
+        qapp.processEvents()
+
+
 class TestInvalidInput:
     def test_missing_file_refused(self, app, qapp, tmp_path):
         iw = app.ImportWindow

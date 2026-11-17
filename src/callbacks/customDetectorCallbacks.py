@@ -677,7 +677,7 @@ def _removeArtists(cmask):
 def _setVisible(self, cmask):
     visible = cmask.enabled and cmask.shown
     for h in cmask.handles:
-        for art in (getattr(h, "circ", None) or []) + [getattr(h, a, None) for a in ("point", "patch")]:
+        for art in (getattr(h, "circ", None) or []) + [getattr(h, a, None) for a in ("point", "patch", "handles")]:
             if art is not None:
                 art.set_visible(visible)
         if isinstance(h, InteractivePoint):
@@ -708,7 +708,7 @@ def _draw(self, cmask):
     for k, h in enumerate(hs):
         # the annotation classes start animated (blitting); they animate themselves while dragged,
         # so leave them as ordinary artists in between, otherwise full redraws would drop them
-        for art in (getattr(h, "circ", None) or []) + [getattr(h, a, None) for a in ("point", "patch")]:
+        for art in (getattr(h, "circ", None) or []) + [getattr(h, a, None) for a in ("point", "patch", "handles")]:
             if art is not None:
                 art.set_animated(False)
         h.connect()

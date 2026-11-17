@@ -1,6 +1,7 @@
 from callbacks.appClass import D
 from callbacks.import_io import gatherImportOptions, importData, unloadData
 from callbacks.io.file_reader import prepareData
+from callbacks.menus import showPreviewDisplayControls
 from callbacks.utils import notifDLG
 import os
 
@@ -12,6 +13,8 @@ def importCallbacks(self):
             # Enter Import Preview Mode
             if self.DetrMode.currentData() != "PrvwMod":
                 self.DetrMode.setCurrentIndex(self.DetrMode.findData("PrvwMod"))
+            else:                       # already in it (e.g. at startup): no mode change to show the controls
+                showPreviewDisplayControls(self)
 
         case self.ImportWindow.ImportCancelButton:  # Hide window when closing
             self.ImportWindow.hide()

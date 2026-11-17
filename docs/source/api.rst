@@ -171,6 +171,11 @@ annotationsClasses
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: annotationsClasses.interactiveEllipse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: annotationsClasses.interactiveRectangle
    :members:
    :undoc-members:

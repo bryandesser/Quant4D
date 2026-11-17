@@ -131,6 +131,94 @@ class TestPolygonROI:
         assert roi_app.isEnabled(), "windows left disabled after cancelling"
 
 
+def _click(fig, x, y, button=1):
+    from matplotlib.backend_bases import MouseEvent
+    canvas = fig.canvas
+    px, py = fig.ax.transData.transform((x, y))
+    for name in ("motion_notify_event", "button_press_event", "button_release_event"):
+        kw = {"button": button} if "button" in name else {}
+        canvas.callbacks.process(name, MouseEvent(name, canvas, px, py, **kw))
+
+
+def _drag_to(fig, start, end):
+    from matplotlib.backend_bases import MouseEvent
+    canvas = fig.canvas
+    canvas.draw()
+    p0, p1 = fig.ax.transData.transform(start), fig.ax.transData.transform(end)
+    canvas.callbacks.process("button_press_event", MouseEvent("button_press_event", canvas, *p0, button=1))
+    canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, *p1))
+    canvas.callbacks.process("button_release_event", MouseEvent("button_release_event", canvas, *p1, button=1))
+
+
+class TestPolygonDrawnWithTheMouse:
+    """The PolygonSelector's own outline stayed on the image after the polygon was closed: dragging
+    the ROI then left that uneditable copy behind (also after switching back to Full Image)."""
+
+    VERTS = [(0.5, 0.5), (4.5, 0.5), (2.5, 3.0)]
+
+    def _draw(self, app, qapp, monkeypatch):
+        def no_dialog(*a, **k):
+            raise AssertionError("only one real-space image: no need to ask which")
+        monkeypatch.setattr(rs, "notifDLG", no_dialog)
+        _select(app, qapp, "poly")
+        fig = app.Fig.Real
+        fig.canvas.draw()
+        for x, y in self.VERTS + [self.VERTS[0]]:
+            _click(fig, x, y)
+        qapp.processEvents()
+        return fig
+
+    def test_closed_polygon_leaves_one_editable_roi(self, roi_app, qapp, monkeypatch):
+        from matplotlib.lines import Line2D
+        from callbacks import compute
+        fig = self._draw(roi_app, qapp, monkeypatch)
+        assert roi_app.A._tmp_selector is None
+        roi = roi_app.A.RealROI["Real"]
+        np.testing.assert_allclose(roi.vertices, self.VERTS, atol=0.05)
+        assert len(roi.handles.get_offsets()) == 3, "vertices must be editable"
+        assert not [a for a in fig.ax.lines if isinstance(a, Line2D) and a.get_visible()], \
+            "the selector's outline is still on the image"
+        _drag_to(fig, self.VERTS[1], (5.0, 2.0))                       # move one vertex
+        qapp.processEvents()
+        np.testing.assert_allclose(roi.vertices[1], (5.0, 2.0), atol=0.05)
+        mask = compute.polygon_mask((SCAN_Y, SCAN_X), roi.vertices)
+        assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), mask)
+        _select(roi_app, qapp, "full")
+        assert not [p for p in fig.ax.patches if p.get_visible() and p.get_edgecolor()[3] > 0
+                    and p is not getattr(roi_app.A.RealROI["Real"], "patch", None)], "polygon left behind"
+        assert not [a for a in fig.ax.lines if a.get_visible()]
+
+
+class TestRotatableShapes:
+    def test_ellipse_roi_is_an_ellipse(self, roi_app, qapp):
+        from callbacks import compute
+        _select(roi_app, qapp, "ellipse")
+        roi = roi_app.A.RealROI["Real"]
+        assert roi.semiaxes[0] != roi.semiaxes[1], "should start as an ellipse, not a circle"
+        assert len(roi.handles.get_offsets()) == 2
+        roi.semiaxes = np.array([2.5, 1.0])
+        roi.center = np.array([2.5, 1.5])
+        roi.rotation = 90.0
+        roi.updateEllipse.emit()
+        qapp.processEvents()
+        expected = compute.ellipse_mask((SCAN_Y, SCAN_X), (2.5, 1.5), (2.5, 1.0), 90.0)
+        assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), expected)
+
+    def test_rectangle_roi_rotates(self, roi_app, qapp):
+        from callbacks import compute
+        _select(roi_app, qapp, "rectangle")
+        roi = roi_app.A.RealROI["Real"]
+        roi.center, roi.size = np.array([2.5, 1.5]), np.array([5.0, 1.0])
+        roi.redraw()
+        fig = roi_app.Fig.Real
+        fig.canvas.draw()
+        _drag_to(fig, roi.rotHandle.get_offsets()[0], (5.0, 1.5))       # a quarter turn
+        qapp.processEvents()
+        assert roi.rotation % 360 == pytest.approx(90.0)
+        expected = compute.rectangle_mask((SCAN_Y, SCAN_X), (2.5, 1.5), (5.0, 1.0), 90.0)
+        assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), expected)
+
+
 class TestSwitchingShapes:
     """Switching ROI shape removed the old annotation's artists but left its mouse handlers
     connected: every hover/click then ran the old annotation (errors drawing artists no longer

@@ -11,9 +11,11 @@ API notes (actual implementations):
                       attributes:  .center  (np.ndarray shape (2,))
                                    .radius  (np.ndarray, may be multi-element)
                       drawing:     uses axis.plot() → Line2D objects, NOT Circle patches
-  InteractiveRectangle constructor: (axis, center, size, color='r', interactions='all')
+  InteractiveRectangle constructor: (axis, center, size, color='r', interactions='all', rotation=0.0)
                       attributes:  .center, .size (np.ndarray shape (2,)), .rotation (float)
                       NOTE: no set_center() method; modify .center directly
+  InteractiveEllipse  constructor: (axis, center, semiaxes, rotation=0.0, color='r', interactions='all')
+                      attributes:  .center, .semiaxes (np.ndarray shape (2,)), .rotation (degrees)
   InteractivePolygon  constructor: (axis, vertices, color='r')
                       attributes:  .vertices (np.ndarray shape (N, 2))
                       NOTE: no translate() method; modify .vertices directly
@@ -113,9 +115,9 @@ class TestInteractiveRectangle:
                                          size=np.array([10.0, 6.0]))
 
     def test_patch_and_handles(self):
-        from matplotlib.patches import Rectangle
-        patches = [c for c in self.ax.get_children() if isinstance(c, Rectangle)]
-        assert len(patches) >= 1
+        assert self.rect.patch in self.ax.patches
+        assert len(self.rect.handles.get_offsets()) == 4
+        assert self.rect.rotHandle.get_visible()
 
     def test_initial_size(self):
         np.testing.assert_allclose(self.rect.size, [10.0, 6.0])
@@ -183,3 +185,129 @@ class TestInteractivePolygon:
         orig = self.poly.vertices.copy()
         self.poly.vertices = orig + delta
         np.testing.assert_allclose(self.poly.vertices, orig + delta)
+
+
+# ---------------------------------------------------------------------------
+# Mouse interaction: ellipse handles, rectangle rotation, polygon vertices
+# ---------------------------------------------------------------------------
+def _mouse(ax, *path):
+    """Press at the first data point, move through the others, release at the last."""
+    from matplotlib.backend_bases import MouseEvent
+    canvas = ax.figure.canvas
+    canvas.draw()
+    pts = [ax.transData.transform(p) for p in path]
+    steps = [("button_press_event", pts[0])] + [("motion_notify_event", p) for p in pts[1:]] \
+        + [("button_release_event", pts[-1])]
+    for name, (x, y) in steps:
+        kw = {"button": 1} if name != "motion_notify_event" else {}
+        canvas.callbacks.process(name, MouseEvent(name, canvas, x, y, **kw))
+
+
+@pytest.fixture()
+def roi_ax(mpl_fig_ax):
+    _, ax = mpl_fig_ax
+    ax.set_xlim(-0.5, 31.5)
+    ax.set_ylim(31.5, -0.5)          # image orientation: y down
+    return ax
+
+
+class TestInteractiveEllipse:
+    @pytest.fixture(autouse=True)
+    def setup(self, roi_ax):
+        from annotationsClasses.interactiveEllipse import InteractiveEllipse
+        self.ax = roi_ax
+        self.ell = InteractiveEllipse(self.ax, CENTRE, semiaxes=(6.0, 3.0))
+        self.ell.connect()
+        self.moves = []
+        self.ell.updateEllipse.connect(lambda: self.moves.append(1))
+
+    def test_two_handles_at_the_semiaxis_ends(self):
+        np.testing.assert_allclose(self.ell.handles.get_offsets(), [CENTRE + [6, 0], CENTRE + [0, 3]])
+
+    def test_major_handle_resizes_and_rotates(self):
+        _mouse(self.ax, CENTRE + [6, 0], CENTRE + [4, 4], CENTRE + [0, 8])
+        np.testing.assert_allclose(self.ell.semiaxes, [8.0, 3.0])
+        assert self.ell.rotation % 360 == pytest.approx(90.0)
+        np.testing.assert_allclose(self.ell.handles.get_offsets()[0], CENTRE + [0, 8], atol=1e-9)
+        assert self.moves, "no update signal"
+
+    def test_minor_handle_resizes_and_rotates(self):
+        _mouse(self.ax, CENTRE + [0, 3], CENTRE + [-5, 0])
+        np.testing.assert_allclose(self.ell.semiaxes, [6.0, 5.0])
+        assert self.ell.rotation % 360 == pytest.approx(90.0)
+
+    def test_drag_inside_translates(self):
+        _mouse(self.ax, CENTRE + [1, 1], CENTRE + [3, 2])
+        np.testing.assert_allclose(self.ell.center, CENTRE + [2, 1])
+        np.testing.assert_allclose(self.ell.semiaxes, [6.0, 3.0])
+
+    def test_mask_follows_rotation(self):
+        from callbacks import compute
+        upright = _roi_to_mask(self.ell, SHAPE, 'ellipse')
+        assert upright[16, 21] and not upright[21, 16]
+        self.ell.rotation = 90.0
+        turned = _roi_to_mask(self.ell, SHAPE, 'ellipse')
+        assert turned[21, 16] and not turned[16, 21]
+        np.testing.assert_array_equal(turned, compute.ellipse_mask(SHAPE, CENTRE, (6.0, 3.0), 90.0))
+
+    def test_remove_disconnects(self):
+        self.ell.remove()
+        _mouse(self.ax, CENTRE + [6, 0], CENTRE + [0, 8])
+        np.testing.assert_allclose(self.ell.semiaxes, [6.0, 3.0])
+
+
+class TestRectangleRotation:
+    @pytest.fixture(autouse=True)
+    def setup(self, roi_ax):
+        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        self.ax = roi_ax
+        self.rect = InteractiveRectangle(self.ax, CENTRE, (10.0, 6.0))
+        self.rect.connect()
+
+    def test_rotation_handle_turns_it(self):
+        start = self.rect.rotHandle.get_offsets()[0]
+        # the handle sits beyond the -y side; take it round to the +x side: a quarter turn
+        _mouse(self.ax, start, CENTRE + [8, 0])
+        assert self.rect.rotation % 360 == pytest.approx(90.0)
+        np.testing.assert_allclose(self.rect.size, [10.0, 6.0])
+        np.testing.assert_allclose(self.rect.center, CENTRE)
+
+    def test_resize_in_the_rotated_frame_keeps_the_opposite_corner(self):
+        self.rect.rotation = 30.0
+        self.rect.redraw()
+        corners = self.rect.handles.get_offsets().copy()
+        _mouse(self.ax, corners[2], corners[2] + [1.0, 2.0])
+        np.testing.assert_allclose(self.rect.handles.get_offsets()[0], corners[0], atol=1e-9)
+        assert self.rect.rotation == pytest.approx(30.0)
+
+    def test_mask_is_rotated(self):
+        from callbacks import compute
+        self.rect.rotation = 90.0
+        np.testing.assert_array_equal(_roi_to_mask(self.rect, SHAPE, 'rectangle'),
+                                      compute.rectangle_mask(SHAPE, CENTRE, (10.0, 6.0), 90.0))
+
+    def test_static_rectangle_has_no_handles(self):
+        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        r = InteractiveRectangle(self.ax, CENTRE, (10.0, 6.0), interactions='none')
+        assert not (r.handles.get_visible() or r.rotHandle.get_visible() or r.rotStalk.get_visible())
+
+
+class TestPolygonVertices:
+    @pytest.fixture(autouse=True)
+    def setup(self, roi_ax):
+        from annotationsClasses.interactivePolygon import InteractivePolygon
+        self.ax = roi_ax
+        self.poly = InteractivePolygon(self.ax, [[10, 10], [22, 10], [16, 22]])
+        self.poly.connect()
+
+    def test_one_handle_per_vertex(self):
+        np.testing.assert_allclose(self.poly.handles.get_offsets(), self.poly.vertices)
+
+    def test_drag_a_vertex(self):
+        _mouse(self.ax, (22, 10), (26, 8))
+        np.testing.assert_allclose(self.poly.vertices, [[10, 10], [26, 8], [16, 22]])
+        np.testing.assert_allclose(self.poly.handles.get_offsets(), self.poly.vertices)
+
+    def test_drag_inside_moves_all(self):
+        _mouse(self.ax, (16, 14), (17, 16))
+        np.testing.assert_allclose(self.poly.vertices, [[11, 12], [23, 12], [17, 24]])

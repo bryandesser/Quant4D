@@ -5,7 +5,7 @@ Handles all interactions with the real-space ROI controls:
   - RealROIShape dropdown  (full / point / ellipse / rectangle / poly / file)
   - FrameX / FrameY spinboxes  (probe position for point-ROI)
   - UpdateImages button  (force diffraction-pattern recalculation)
-  - Live ROI move signals  (from InteractiveCircle / Rectangle / Polygon / Point)
+  - Live ROI move signals  (from InteractiveEllipse / Rectangle / Polygon / Point)
 
 Porting notes
 -------------
@@ -26,14 +26,15 @@ import numpy as np
 from matplotlib.widgets import PolygonSelector
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
+import PyQt5.QtCore as qtc
 
 from callbacks.import_io import importMask
 from callbacks.plotting import plotAllPatterns, toUpdateImage
 from callbacks.utils import notifDLG
 from callbacks.window_manager import enableWindows
-from annotationsClasses.interactiveCircle import InteractiveCircle        # fixed: lowercase 'i'
 from annotationsClasses.interactiveRectangle import InteractiveRectangle
 from annotationsClasses.interactivePolygon import InteractivePolygon
+from annotationsClasses.interactiveEllipse import InteractiveEllipse
 from annotationsClasses.interactivePoint import InteractivePoint
 from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 from callbacks import compute  # noqa: E402
@@ -52,8 +53,8 @@ def _roi_to_mask(roi, shape, typ: str) -> np.ndarray:
     x = column index and y = row index, matching matplotlib's default for
     imshow with origin='upper'.
     """
-    if typ == 'ellipse':        # InteractiveCircle: use the outermost radius
-        return compute.ellipse_mask(shape, roi.center, roi.radius[-1])
+    if typ == 'ellipse':        # InteractiveEllipse
+        return compute.ellipse_mask(shape, roi.center, roi.semiaxes, roi.rotation)
     if typ == 'rectangle':      # InteractiveRectangle
         return compute.rectangle_mask(shape, roi.center, roi.size, roi.rotation)
     if typ == 'poly':           # InteractivePolygon
@@ -119,13 +120,17 @@ def realSpaceROICallbacks(self):
                 self.G.Img.name.isin(img_names)
             )
 
-            message = (
-                "Select a Real-space Image to draw a polygon ROI.\n\n"
-                "Click to place vertices; click the first vertex to close the\n"
-                "polygon. Press <Esc> to cancel drawing."
-            )
-            sel = notifDLG(self, self, 'list', message,
-                           'Draw Polygon ROI', self.G.Img.name[rs_mask])
+            names = list(self.G.Img.name[rs_mask])
+            if len(names) == 1:         # only one real-space image shown: nothing to choose
+                sel = names[0]
+            else:
+                message = (
+                    "Select a Real-space Image to draw a polygon ROI.\n\n"
+                    "Click to place vertices; click the first vertex to close the\n"
+                    "polygon. Press <Esc> to cancel drawing."
+                )
+                sel = notifDLG(self, self, 'list', message,
+                               'Draw Polygon ROI', self.G.Img.name[rs_mask])
 
             if sel is None:
                 # not blocked: the full ROI must actually be applied, not just shown in the combo
@@ -141,17 +146,26 @@ def realSpaceROICallbacks(self):
             enableWindows(self, False)
 
             def _poly_done(vertices):
-                """Callback fired by PolygonSelector when polygon is closed."""
+                """The polygon was closed (or drawing cancelled with an empty list)."""
+                if _done[0]:
+                    return
+                _done[0] = True
                 try:
                     ax_sel.figure.canvas.mpl_disconnect(_esc_cid[0])
                 except Exception:
                     pass
-                if hasattr(self.A, '_tmp_selector') and self.A._tmp_selector is not None:
+                selector = getattr(self.A, '_tmp_selector', None)
+                if selector is not None:
+                    # The selector's own outline and vertex handles must go too: left on the axes
+                    # they stayed behind as a second, uneditable copy of the polygon.
                     try:
-                        self.A._tmp_selector.disconnect_events()
+                        selector.disconnect_events()
+                        for art in selector.artists:
+                            art.remove()
                     except Exception:
                         pass
                     self.A._tmp_selector = None
+                    ax_sel.figure.canvas.draw_idle()
 
                 enableWindows(self, True)
 
@@ -184,22 +198,25 @@ def realSpaceROICallbacks(self):
                 if event.key == 'escape':
                     _poly_done([])   # empty → revert to 'full'
 
+            def _on_select(vertices):
+                # PolygonSelector calls this from inside its own release handler (and again on every
+                # later release): finish once, after that handler has returned.
+                qtc.QTimer.singleShot(0, lambda v=list(vertices): _poly_done(v))
+
+            _done = [False]
             _esc_cid = [ax_sel.figure.canvas.mpl_connect(
                 'key_press_event', _on_esc
             )]
             # matplotlib's stub types onselect as (x, y); PolygonSelector actually passes the vertex list
             self.A._tmp_selector = PolygonSelector(
-                ax_sel, _poly_done,  # pyright: ignore[reportArgumentType]
+                ax_sel, _on_select,  # pyright: ignore[reportArgumentType]
                 props=dict(color=c_mpl, linewidth=1.5),
             )
             return   # remainder handled asynchronously in _poly_done
 
         # --- All other shapes: draw synchronously -----------------------
-        # Use diffraction axes extents as a scale reference
-        rg = np.array([
-            np.ptp(self.Fig.Dfrn.ax.get_xlim()),
-            np.ptp(self.Fig.Dfrn.ax.get_ylim()),
-        ])
+        # Default sizes are fractions of the real-space (scan) extent
+        rg = np.array([self.D.NFrX, self.D.NFrY], dtype=float)
         p = np.array([self.FrameX.value(), self.FrameY.value()], dtype=float)
 
         real_ids = self.G.Img[
@@ -230,10 +247,10 @@ def realSpaceROICallbacks(self):
                 roi = InteractivePoint(pt_artist)
 
             elif typ == 'ellipse':
-                roi = InteractiveCircle(
+                roi = InteractiveEllipse(
                     ax,
                     center=p.copy(),
-                    radius=float(np.min(0.1 * rg)),
+                    semiaxes=float(np.min(0.1 * rg)) * np.array([1.5, 1.0]),   # MATLAB: 0.1 of the scan; visibly elliptical
                     color=c_mpl,
                 )
 
@@ -265,7 +282,7 @@ def realSpaceROICallbacks(self):
             # Wire the roi's update signal back to moveRealROI.
             # Using default-argument capture so each lambda closes over
             # its own roi object, not the loop variable.
-            signal = getattr(roi, 'updateRect', None) or getattr(roi, 'updateCircle', None) \
+            signal = getattr(roi, 'updateRect', None) or getattr(roi, 'updateEllipse', None) \
                 or getattr(roi, 'positionChanged', None)
             if signal is not None:
                 signal.connect(lambda *, _roi=roi: moveRealROI(roi_src=_roi))
@@ -343,7 +360,7 @@ def realSpaceROICallbacks(self):
             for img_id, other_roi in roi_dict.items():
                 if other_roi is None or other_roi is roi:
                     continue
-                for prop in ('center', 'size', 'rotation', 'vertices', 'position'):
+                for prop in ('center', 'size', 'semiaxes', 'rotation', 'vertices', 'position'):
                     if hasattr(roi, prop) and hasattr(other_roi, prop):
                         try:
                             setattr(other_roi, prop,

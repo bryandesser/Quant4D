@@ -2,18 +2,19 @@
 InteractivePolygon — a draggable, closed-polygon annotation.
 
 After vertices are obtained from matplotlib's PolygonSelector (which handles
-the interactive drawing), this class wraps the result in a draggable patch
-so the whole polygon can be translated by click-and-drag inside the shape.
+the interactive drawing), this class wraps the result in an editable patch:
+drag a vertex handle to move that vertex, drag inside the shape to move it all.
 
 Signals
 -------
-updatePoly : emitted whenever the polygon is moved (on_motion)
+updatePoly : emitted on every change while dragging, and once more on release
 rightClick : emitted on right mouse button press
 
 Public attributes
 -----------------
 vertices : np.ndarray, shape (N, 2)  — polygon vertices in data coordinates
 patch    : matplotlib.patches.Polygon
+handles  : matplotlib.collections.PathCollection — one handle per vertex
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ from matplotlib.backend_bases import MouseButton
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.backend_tools import Cursors
 from PyQt5 import QtCore as qtc
+
+from annotationsClasses._geometry import HANDLE_PICK_PX, nearest_handle
 
 
 class InteractivePolygon(qtc.QObject):
@@ -53,6 +56,7 @@ class InteractivePolygon(qtc.QObject):
         self.color = color
         self.axis = axis
         self._press = None   # (vertices0, xpress, ypress)
+        self._vertex = -1    # index of the vertex being dragged; -1 moves the whole polygon
 
         # ---- Closed polygon patch ------------------------------------
         self.patch = axis.add_patch(MplPolygon(
@@ -60,6 +64,8 @@ class InteractivePolygon(qtc.QObject):
             closed=True, animated=False,     # animated only while dragged
             linewidth=1.5, edgecolor=color, facecolor='none',
         ))
+        self.handles = axis.scatter(self.vertices[:, 0], self.vertices[:, 1], color=[color], s=30,
+                                    zorder=5, animated=False)
 
         # ---- Blitting setup -----------------------------------------
         self.canvas = axis.figure.canvas
@@ -76,8 +82,16 @@ class InteractivePolygon(qtc.QObject):
         closed_verts = np.vstack([self.vertices, self.vertices[0]])
         return Path(closed_verts).contains_point((x, y))
 
+    def _hit_vertex(self, event) -> int:
+        """Index of the vertex handle under the mouse, or -1."""
+        if not self.handles.get_visible():
+            return -1
+        i, d = nearest_handle(self.axis, self.vertices, event)
+        return i if d <= HANDLE_PICK_PX else -1
+
     def _update_artists(self):
         self.patch.set_xy(self.vertices)
+        self.handles.set_offsets(self.vertices)
 
     # ==================================================================
     # Public API  (mirrors InteractiveCircle / InteractiveRectangle)
@@ -105,6 +119,7 @@ class InteractivePolygon(qtc.QObject):
         """Remove polygon patch from the axes and stop listening to the mouse."""
         self.disconnect()
         self.patch.remove()
+        self.handles.remove()
 
     def redraw(self):
         """Sync patch to current vertices and blit."""
@@ -120,6 +135,8 @@ class InteractivePolygon(qtc.QObject):
             return
         self.canvas.restore_region(self.background)
         self.axis.draw_artist(self.patch)
+        if self.handles.get_visible():
+            self.axis.draw_artist(self.handles)
         self.canvas.blit(self.axis.bbox)
 
     def updateBackground(self):
@@ -140,19 +157,20 @@ class InteractivePolygon(qtc.QObject):
             return
         if event.xdata is None or event.ydata is None:
             return
-        if not self._contains_point(event.xdata, event.ydata):
+        self._vertex = self._hit_vertex(event)
+        if self._vertex < 0 and not self._contains_point(event.xdata, event.ydata):
             return
 
         self._press = (self.vertices.copy(), event.xdata, event.ydata)
         InteractivePolygon.lock = self
-        self.canvas.set_cursor(Cursors.MOVE)
+        self.canvas.set_cursor(Cursors.HAND if self._vertex >= 0 else Cursors.MOVE)
 
         # Prepare blit background
         self.patch.set_animated(True)
+        self.handles.set_animated(True)
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.axis.bbox)
-        self.axis.draw_artist(self.patch)
-        self.canvas.blit(self.axis.bbox)
+        self.restoreBackground()
 
     def on_motion(self, event):
         if event.inaxes != self.axis:
@@ -161,21 +179,26 @@ class InteractivePolygon(qtc.QObject):
         # ---- Hover cursor feedback (no drag) -------------------------
         if InteractivePolygon.lock is not self:
             if event.xdata is not None and event.ydata is not None:
-                if self._contains_point(event.xdata, event.ydata):
+                if self._hit_vertex(event) >= 0:
+                    self.canvas.set_cursor(Cursors.HAND)
+                elif self._contains_point(event.xdata, event.ydata):
                     self.canvas.set_cursor(Cursors.MOVE)
                 else:
                     self.canvas.set_cursor(Cursors.POINTER)
             return
 
         # ---- Active drag ---------------------------------------------
-        if self._press is None or event.xdata is None:
+        if self._press is None or event.xdata is None or event.ydata is None:
             return
 
         verts0, xpress, ypress = self._press
-        dx = event.xdata - xpress
-        dy = event.ydata - ypress
+        shift = np.array([event.xdata - xpress, event.ydata - ypress])
 
-        self.vertices = verts0 + np.array([dx, dy])
+        self.vertices = verts0.copy()
+        if self._vertex >= 0:
+            self.vertices[self._vertex] += shift
+        else:
+            self.vertices += shift
         self._update_artists()
         self.restoreBackground()
         self.updatePoly.emit()
@@ -184,9 +207,11 @@ class InteractivePolygon(qtc.QObject):
         if InteractivePolygon.lock is not self:
             return
         self._press = None
+        self._vertex = -1
         InteractivePolygon.lock = None
 
         self.patch.set_animated(False)
+        self.handles.set_animated(False)
         self.canvas.draw()
         self.updatePoly.emit()     # final update after the drag (Reduced calculation policy)
 

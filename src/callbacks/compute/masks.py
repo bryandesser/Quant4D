@@ -29,14 +29,23 @@ def circles_mask(shape: tuple[int, int], centers: Iterable, radius: float) -> np
     return mask
 
 
-def ellipse_mask(shape: tuple[int, int], center, radius: float) -> np.ndarray:
-    """Circular region of interest.
+def ellipse_mask(shape: tuple[int, int], center, radius, rotation_deg: float = 0.0) -> np.ndarray:
+    """Elliptical region of interest.
 
-    Named for the ROI type it serves; the interactive ROI is a circle, so this
-    is :func:`circle_mask` evaluated on distances rather than squared distances.
+    *radius* is a scalar (a disc, identical to :func:`circle_mask`) or the semi-axes
+    ``(a, b)``: *a* along the ellipse's own x axis, which is rotated by *rotation_deg*
+    from the image x axis towards +y (the convention of :func:`rectangle_mask`).
     """
+    r = np.asarray(radius, dtype=float).ravel()
+    a, b = (float(r[0]), float(r[0])) if r.size == 1 else (float(r[0]), float(r[1]))
     xx, yy = pixel_grids(shape, center)
-    return np.hypot(xx, yy) <= radius
+    if a == b:                                   # a disc: no rotation, exact same test as circle_mask
+        return xx ** 2 + yy ** 2 <= a ** 2
+    c, s = np.cos(np.radians(rotation_deg)), np.sin(np.radians(rotation_deg))
+    local_x = c * xx + s * yy
+    local_y = -s * xx + c * yy
+    tiny = np.finfo(float).tiny
+    return (local_x / max(a, tiny)) ** 2 + (local_y / max(b, tiny)) ** 2 <= 1.0
 
 
 def rectangle_mask(shape: tuple[int, int], center, size, rotation_deg: float = 0.0) -> np.ndarray:

@@ -4,6 +4,7 @@ import sys
 import traceback
 import numpy as np
 import re
+from callbacks.menus import showPreviewDisplayControls
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
@@ -117,8 +118,7 @@ def detectorModeCallbacks(self):
                     self.SaveWindow.ExportTab), False)
 
             self.Fig.Preview.show()
-            self.ImportWindow.show()
-            self.SettingsWindow.show()
+            showPreviewDisplayControls(self)    # brightness/contrast/gamma pop up with the importer
         else:
             self.P.DetrMode = self.DetrMode.currentData()  # Note current mode
             # Remove "Preview" image from drop down
