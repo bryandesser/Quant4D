@@ -100,7 +100,8 @@ def main():
     info = compute.device_data_info()
     if dev is not None:
         if info is None:
-            print("\nThe dataset did not fit in the device's free memory, so it was streamed in chunks on every call.")
+            print("\nThe dataset did not fit in the device's free memory, so every calculation ran on the CPU "
+                  "(the GPU columns are CPU times).")
         else:
             print(f"\nDataset held on {info['device']}: {info['bytes'] / 1024 ** 3:.2f} GiB")
     compute.release_device_data()

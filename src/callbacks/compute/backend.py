@@ -9,11 +9,13 @@ GPU strategy
 ------------
 The first GPU call uploads the dataset once, as ``float32``, and keeps it on
 the device; every later call only sends the (small) weights and brings back the
-(small) result.  If the dataset does not fit in the device's free memory it is
-*streamed* instead: uploaded and multiplied a bounded chunk at a time on every
-call.  Either way no temporary copy larger than :data:`CHUNK_BYTES` is made on
-the host.  If the device runs out of memory part-way, the resident copy is
-dropped and the call is retried by streaming, then on the CPU.
+(small) result.  The upload is done a bounded chunk at a time, so no temporary
+copy larger than :data:`CHUNK_BYTES` is made on the host.
+
+If the dataset does not fit in the device's free memory, or the device runs
+out of memory later, the calculation is done in NumPy instead.  Re-uploading
+the data in pieces on every call was measured to be 2-5x *slower* than the CPU
+(the host-to-device transfer dominates), so there is no streaming mode.
 
 The resident copy is keyed on the identity of the NumPy array, so loading a new
 dataset replaces it automatically.  Code that modifies the dataset **in place**
@@ -91,7 +93,7 @@ class _Resident:
         self.ref: Optional[weakref.ref] = None
         self.key: Optional[tuple] = None
         self.tensor: Any = None
-        self.too_big: Optional[tuple] = None    # (key, weakref) of a dataset known not to fit
+        self.too_big: Optional[tuple] = None    # (key, weakref) of a dataset that does not fit
 
     @staticmethod
     def key_for(data: np.ndarray, dev: Any) -> tuple:
@@ -130,7 +132,7 @@ class _Resident:
         return self.too_big is not None and self.too_big[0] == key and self.too_big[1]() is data
 
     def mark_too_big(self, data: np.ndarray, dev: Any) -> None:
-        """Remember that *data* does not fit on *dev*, so later calls stream it straight away."""
+        """Remember that *data* does not fit on *dev*, so later calls go straight to NumPy."""
         self.too_big = (self.key_for(data, dev), weakref.ref(data))
 
     def release(self) -> None:
@@ -218,16 +220,12 @@ def _project_numpy(data: np.ndarray, weights: np.ndarray) -> np.ndarray:
     return out
 
 
-def _project_torch(data: np.ndarray, weights: np.ndarray, dev: Any) -> np.ndarray:
-    w = torch.from_numpy(np.ascontiguousarray(weights, dtype=np.float32)).to(dev)
+def _project_torch(data: np.ndarray, weights: np.ndarray, dev: Any) -> Optional[np.ndarray]:
     resident = _resident.get(data, dev)
-    if resident is not None:
-        return (resident @ w).cpu().numpy()
-
-    out = np.empty((data.shape[0],) + weights.shape[1:], dtype=np.float32)
-    for start, block in _stream(data, dev):
-        out[start:start + block.shape[0]] = (block @ w).cpu().numpy()
-    return out
+    if resident is None:
+        return None
+    w = torch.from_numpy(np.ascontiguousarray(weights, dtype=np.float32)).to(dev)
+    return (resident @ w).cpu().numpy()
 
 
 # ---------------------------------------------------------------------------
@@ -266,45 +264,30 @@ def _project_frames_numpy(data: np.ndarray, frame_weights: np.ndarray) -> np.nda
     return total
 
 
-def _project_frames_torch(data: np.ndarray, frame_weights: np.ndarray, dev: Any) -> np.ndarray:
-    w = torch.from_numpy(np.ascontiguousarray(frame_weights, dtype=np.float32)).to(dev)
+def _project_frames_torch(data: np.ndarray, frame_weights: np.ndarray, dev: Any) -> Optional[np.ndarray]:
     resident = _resident.get(data, dev)
-    if resident is not None:
-        return (w @ resident).cpu().numpy()
-
-    total = torch.zeros(data.shape[1], dtype=torch.float32, device=dev)
-    for start, block in _stream(data, dev):
-        total += w[start:start + block.shape[0]] @ block
-    return total.cpu().numpy()
+    if resident is None:
+        return None
+    w = torch.from_numpy(np.ascontiguousarray(frame_weights, dtype=np.float32)).to(dev)
+    return (w @ resident).cpu().numpy()
 
 
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
-def _stream(data: np.ndarray, dev: Any):
-    """Yield ``(start, float32 tensor on dev)`` for consecutive blocks of frames."""
-    step = _frames_per_chunk(data.shape[1], 4)
-    for start in range(0, data.shape[0], step):
-        block = np.ascontiguousarray(data[start:start + step])
-        yield start, torch.from_numpy(block).to(dev, dtype=torch.float32)
+def _on_device(data: np.ndarray, dev: Any, compute) -> Optional[np.ndarray]:
+    """Run *compute* on the device.
 
-
-def _on_device(data: np.ndarray, dev: Any, compute):
-    """Run *compute*; on running out of device memory retry by streaming, then give up.
-
-    Returns the result, or ``None`` when the device cannot do it at all (the
-    caller then falls back to NumPy).
+    Returns its result, or ``None`` when the dataset is not (or can no longer
+    be) held on the device; the caller then does the calculation in NumPy.
     """
-    for attempt in range(2):
-        try:
-            return compute()
-        except RuntimeError as exc:
-            if not _is_out_of_memory(exc):
-                raise
-            # First failure: drop the resident copy and mark this dataset as too
-            # big, so the retry streams it.  Second failure: not even one chunk fits.
-            _resident.release()
-            _resident.mark_too_big(data, dev)
-            if dev.type == "cuda":
-                torch.cuda.empty_cache()
-    return None
+    try:
+        return compute()
+    except RuntimeError as exc:
+        if not _is_out_of_memory(exc):
+            raise
+        # Out of memory during the product: give the memory back and remember
+        # not to try this dataset on this device again.
+        _resident.release()
+        _resident.mark_too_big(data, dev)
+        return None

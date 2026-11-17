@@ -2,7 +2,7 @@
 The torch code path of callbacks.compute.backend.
 
 Runs wherever torch is installed.  Without a GPU it uses torch's CPU device,
-which exercises exactly the same code (resident dataset, streaming, fallbacks);
+which exercises exactly the same code (resident dataset, fallbacks to NumPy);
 with CUDA available every test is repeated on the GPU.
 """
 import gc
@@ -41,7 +41,7 @@ def _one_frame_per_chunk(monkeypatch):
     monkeypatch.setattr(backend, "CHUNK_BYTES", 1)
 
 
-def _force_streaming(monkeypatch):
+def _no_room_on_device(monkeypatch):
     monkeypatch.setattr(backend, "_free_bytes", lambda dev: 0)
 
 
@@ -96,48 +96,60 @@ def test_dead_array_is_not_mistaken_for_a_new_one(weights, device):
     np.testing.assert_allclose(compute.project(b, weights, device), b @ weights, rtol=1e-4)
 
 
-# ----------------------------------------------------------------- streaming
-def test_dataset_too_big_for_the_device_is_streamed(data, weights, device, monkeypatch):
-    _force_streaming(monkeypatch)
-    _one_frame_per_chunk(monkeypatch)
-    np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-4)
-    np.testing.assert_allclose(compute.project(data, weights[:, 1], device), data @ weights[:, 1], rtol=1e-4)
-    assert compute.device_data_info() is None, "nothing should be held when streaming"
+# ------------------------------------------------- does not fit on the device
+def test_dataset_too_big_for_the_device_uses_numpy(data, weights, device, monkeypatch):
+    _no_room_on_device(monkeypatch)
+    uploads = []
+    monkeypatch.setattr(torch, "empty", lambda *a, **k: uploads.append(a) or (_ for _ in ()).throw(AssertionError("upload attempted")))
+    np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-5)
+    np.testing.assert_allclose(compute.project(data, weights[:, 1], device), data @ weights[:, 1], rtol=1e-5)
+    assert not uploads and compute.device_data_info() is None
 
 
-def test_integer_data_resident_and_streamed(device, weights, monkeypatch):
+def test_integer_data_resident_and_not(device, weights, monkeypatch):
     ints = np.random.default_rng(5).integers(0, 4000, (NFY * NFX, NPY * NPX)).astype(np.uint16)
     expected = ints.astype(np.float64) @ weights
     np.testing.assert_allclose(compute.project(ints, weights, device), expected, rtol=1e-4)
+    assert compute.device_data_info() is not None
     compute.release_device_data()
-    _force_streaming(monkeypatch)
+    _no_room_on_device(monkeypatch)
     _one_frame_per_chunk(monkeypatch)
     np.testing.assert_allclose(compute.project(ints, weights, device), expected, rtol=1e-4)
+    assert compute.device_data_info() is None
 
 
 # ------------------------------------------------------------ out of memory
-def test_out_of_memory_on_upload_falls_back_to_streaming(data, weights, device, monkeypatch):
+def test_out_of_memory_on_upload_falls_back_to_numpy(data, weights, device, monkeypatch):
     real_empty = torch.empty
+    attempts = []
 
     def no_room(*args, **kwargs):
+        attempts.append(1)
         raise RuntimeError("CUDA out of memory. Tried to allocate ...")
 
     monkeypatch.setattr(torch, "empty", no_room)
-    np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-4)
-    assert compute.device_data_info() is None
-    monkeypatch.setattr(torch, "empty", real_empty)
-    # remembered as too big: still streamed, no second upload attempt
-    np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-4)
-    assert compute.device_data_info() is None
-
-
-def test_out_of_memory_everywhere_falls_back_to_numpy(data, weights, device, monkeypatch):
-    def always_oom(*args, **kwargs):
-        raise RuntimeError("CUDA out of memory.")
-
-    monkeypatch.setattr(backend, "_project_torch", always_oom)
     np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-5)
     assert compute.device_data_info() is None
+    # remembered as too big: no second upload attempt for the same dataset
+    np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-5)
+    assert len(attempts) == 1
+    # a different dataset is tried afresh
+    monkeypatch.setattr(torch, "empty", real_empty)
+    other = data.copy()
+    compute.project(other, weights, device)
+    assert compute.device_data_info() is not None
+
+
+def test_out_of_memory_during_the_product_falls_back_to_numpy(data, weights, device, monkeypatch):
+    compute.project(data, weights, device)
+    assert compute.device_data_info() is not None
+
+    def oom(*args, **kwargs):
+        raise RuntimeError("CUDA out of memory.")
+
+    monkeypatch.setattr(backend, "_project_torch", oom)
+    np.testing.assert_allclose(compute.project(data, weights, device), data @ weights, rtol=1e-5)
+    assert compute.device_data_info() is None, "the resident copy should have been released"
 
 
 def test_other_runtime_errors_are_not_swallowed(data, weights, device, monkeypatch):
@@ -150,11 +162,10 @@ def test_other_runtime_errors_are_not_swallowed(data, weights, device, monkeypat
 
 
 # ------------------------------------------------- every detector, on device
-@pytest.mark.parametrize("streamed", [False, True])
-def test_detectors_match_numpy(data, device, streamed, monkeypatch):
-    if streamed:
-        _force_streaming(monkeypatch)
-        _one_frame_per_chunk(monkeypatch)
+@pytest.mark.parametrize("fits", [True, False])
+def test_detectors_match_numpy(data, device, fits, monkeypatch):
+    if not fits:
+        _no_room_on_device(monkeypatch)
     k = compute.radial_index((NPY, NPX), CENTER, 0.5)
     mask = compute.annular_mask(k, 2, 14)
 
@@ -175,7 +186,7 @@ def test_detectors_match_numpy(data, device, streamed, monkeypatch):
     np.testing.assert_allclose(compute.roi_pattern(data, roi, device), compute.roi_pattern(data, roi), rtol=1e-4)
     weighted = np.linspace(0.1, 1.0, NFY * NFX)
     np.testing.assert_allclose(compute.roi_pattern(data, weighted, device), compute.roi_pattern(data, weighted), rtol=1e-4)
-    assert (compute.device_data_info() is None) == streamed
+    assert (compute.device_data_info() is not None) == fits
 
 
 def test_cuda_request_without_cuda_uses_numpy(data, weights, monkeypatch):
