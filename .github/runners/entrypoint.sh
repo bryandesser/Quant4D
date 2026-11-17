@@ -58,6 +58,9 @@ elif [ -z "${RUNNER_TOKEN:-}" ]; then
     exit 1
 fi
 
+# ---- Ensure _work is writable by the runner user
+sudo chown -R runner:runner /home/runner/_work 2>/dev/null || true
+
 # ---- Register (or re-register) the runner ------------------
 # --replace allows re-using the same name after a restart without
 # manually removing the old registration from GitHub first.
@@ -70,6 +73,7 @@ echo "[runner] Labels: ${LABELS}"
     --name "${RUNNER_NAME}" \
     --labels "${LABELS}" \
     --work "_work" \
+    --disableupdate \
     --unattended \
     --replace
 
