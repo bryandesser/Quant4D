@@ -9,10 +9,10 @@ except ImportError:
     _TORCH_AVAILABLE = False
 
 
-
 # ---------------------------------------------------------------------------
 # Module-level GPU helpers — importable by tests and callable from callbacks
 # ---------------------------------------------------------------------------
+
 
 def integrateAnnular(obj, mask):
     """GPU-accelerated annular integration.
