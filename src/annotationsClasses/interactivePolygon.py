@@ -173,3 +173,9 @@ class InteractivePolygon(qtc.QObject):
 
         self.patch.set_animated(False)
         self.canvas.draw()
+        self.updatePoly.emit()     # final update after the drag (Reduced calculation policy)
+
+    @property
+    def dragging(self) -> bool:
+        """True while the user is dragging this polygon."""
+        return self._press is not None

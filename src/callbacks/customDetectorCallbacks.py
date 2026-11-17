@@ -584,7 +584,9 @@ def _onHandleMoved(self, cmask, handle_index):
     _computeMask(self, cmask)
     _drawPassive(self, cmask)
     _fillDetailsTable(self, cmask)
-    _plotCustom(self)
+    from callbacks.plotting import toUpdateImage  # noqa: E402
+    if toUpdateImage(self):
+        _plotCustom(self)
 
 
 # ---------------------------------------------------------------------------

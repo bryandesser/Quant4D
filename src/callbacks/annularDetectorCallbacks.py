@@ -1,5 +1,5 @@
 from callbacks.axis_direction import axisDirectionCallbacks
-from callbacks.plotting import plotImage
+from callbacks.plotting import plotImage, toUpdateImage
 from callbacks.utils import isDiffToPrev
 from callbacks.window_manager import enableWindows
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
@@ -304,11 +304,8 @@ def annularDetectorCallbacks(self):
             if len(self.Fig.Real.ax.images) == 0:
                 self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
                 self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Fig.Real.Image)
-            else:
-                self.Fig.Real.Image = self.adfImages[
-                    :, :, innerRadius: outerRadius + 1
-                ].sum(axis=2)
-                self.ImageAx.Real.set_data(self.Fig.Real.Image)
+            # otherwise the image follows in moveAnnDetr, when the calculation policy allows
+            # (this used to update it unconditionally and show it without brightness/contrast)
 
             self.ImageAx.Real.autoscale()
             self.Fig.Real.canvas.draw()
@@ -613,15 +610,3 @@ def annularDetectorCallbacks(self):
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
-
-def toUpdateImage(self):
-    """
-    Return True if images should be recomputed now.
-
-    Rules:
-      calc == 2  → always update (active policy)
-      calc == 1  → reduced (not yet implemented; treated as always)
-      sender is UpdateImages or DetrMode → manual trigger
-    """
-    calc = self.SettingsWindow.CalcPolicy.currentData()
-    return (calc == 2) or (self.sender() in [self.UpdateImages, self.DetrMode])

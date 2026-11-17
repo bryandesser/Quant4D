@@ -116,9 +116,11 @@ class InteractiveCircle(qtc.QObject):
         # are any artists included in the click?
         contains = containsCirc or containsPoint
 
-        # check if press is within the radius of the outer circle (i.e. not ON the circle)
-        if (np.linalg.norm((event.xdata, event.ydata) - self.center) <=
-                self.radius[-1]) and (self.interactions in ["all", "translate"]):
+        # check if press is within the radius of the outer circle (i.e. not ON the circle);
+        # outside the axes (e.g. a drag released beyond the image) there are no data coordinates
+        inside_axes = event.xdata is not None and event.ydata is not None
+        if inside_axes and (np.linalg.norm((event.xdata, event.ydata) - self.center) <= self.radius[-1]) \
+                and (self.interactions in ["all", "translate"]):
             contains = True
 
         return containsPoint, contains
@@ -337,6 +339,14 @@ class InteractiveCircle(qtc.QObject):
             self.circ = [self.circ[idx] for idx in sortIdx]
             self.point.set_offsets(self.point.get_offsets()[sortIdx, :])
             self.radius = self.radius[sortIdx]
+
+        # the drag is over: a final update (the Reduced calculation policy waits for this one)
+        self.updateCircle.emit()
+
+    @property
+    def dragging(self) -> bool:
+        """True while the user is dragging this annotation."""
+        return self.press is not None
 
     def redraw(self):
         """ in the case where center/radius are updated externally, redraw all point(s) and circle(s) """

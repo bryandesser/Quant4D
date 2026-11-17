@@ -270,3 +270,9 @@ class InteractiveRectangle(qtc.QObject):
         self.patch.set_animated(False)
         self.handles.set_animated(False)
         self.canvas.draw()
+        self.updateRect.emit()     # final update after the drag (Reduced calculation policy)
+
+    @property
+    def dragging(self) -> bool:
+        """True while the user is dragging this rectangle."""
+        return self._press is not None

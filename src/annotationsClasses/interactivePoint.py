@@ -130,6 +130,14 @@ class InteractivePoint(qtc.QObject):
         # redraw the full figure
         self.point.figure.canvas.draw()
 
+        # the drag is over: a final update (the Reduced calculation policy waits for this one)
+        self.positionChanged.emit()
+
+    @property
+    def dragging(self) -> bool:
+        """True while the user is dragging this point."""
+        return self.press is not None
+
     def setPointPickerRadius(self, radius):
         self.radius = radius / 2
         self.point.set_sizes(2 * [self.radius / 2])

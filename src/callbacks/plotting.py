@@ -13,8 +13,13 @@ from callbacks.utils import isDiffToPrev
 from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 
 
-def displayCallbacks(self):
+def displayCallbacks(self, source=None):
+    """Display controls (Settings → Display) for the selected image.
 
+    *source* is the widget that changed; by default ``self.sender()``.  Callers that are not
+    Qt slots (the histogram box, run from a matplotlib mouse event) must pass it — or ``"refresh"``
+    — because ``self.sender()`` outside a signal can return a deleted object and crash.
+    """
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
         return
@@ -31,7 +36,9 @@ def displayCallbacks(self):
     # A change in brightness will result in shift of the range up or down
     # Initial gamma is set to 1
     # A change in gamma will result in a powerlaw change in contrast I' = I^gamma
-    match self.sender():
+    if source is None:
+        source = self.sender()
+    match source:
         case self.SettingsWindow.HistLog:  # Log-scale option of histogram
             if self.SettingsWindow.HistLog.isChecked():
                 self.SettingsWindow.HistAxes.axes.set_yscale('log')
@@ -73,16 +80,16 @@ def displayCallbacks(self):
             fig.gamma = 1  # Reset gamma
 
         case self.SettingsWindow.DispBrightness_NF | self.SettingsWindow.DispBrightness:
-            fig.brightness = self.sender().value()  # Brightness
+            fig.brightness = source.value()  # Brightness
 
         case self.SettingsWindow.DispContrast_NF | self.SettingsWindow.DispContrast:
-            fig.contrast = self.sender().value()  # Contrast
+            fig.contrast = source.value()  # Contrast
 
         case self.SettingsWindow.DispGamma | self.SettingsWindow.DispGamma_NF:
-            fig.gamma = max(self.sender().value(), np.finfo(np.single).eps)  # Gamma
+            fig.gamma = max(source.value(), np.finfo(np.single).eps)  # Gamma
 
         case self.SettingsWindow.DispMaskOpa | self.SettingsWindow.DispMaskOpa_NF:
-            fig.maskOpa = self.sender().value()  # Mask opacity
+            fig.maskOpa = source.value()  # Mask opacity
 
         case other:  # e.g. self.SettingsWindow.DispImage
             # Update GUIs by values stored in `self.ImageAx.(id).UserData` for the current selected image
@@ -296,16 +303,21 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
                                    (self.SettingsWindow.DispContrast, c_new),
                                    (self.SettingsWindow.DispContrast_NF, c_new)):
                         box.setValue(type(box.value())(v))
-                # Trigger a display refresh
+                # Trigger a display refresh (not a Qt slot: say so rather than rely on self.sender())
                 cur.brightness = b_new
                 cur.contrast = c_new
-                displayCallbacks(self)
+                self.A._histDrag = True
+                try:
+                    displayCallbacks(self, source="refresh")
+                finally:
+                    self.A._histDrag = False
 
             self.A.histBox = HistBox(hist_ax, limitLow, limitHigh,
                                      on_change=_on_histbox_change)
 
-        # Reposition ROI if the caller is NOT the histBox itself (avoid loop)
-        elif self.sender() is not self.A.histBox:
+        # Reposition the box unless it is being dragged (avoid a loop); a flag, because this also
+        # runs from matplotlib events, where self.sender() can be a deleted object
+        elif not getattr(self.A, "_histDrag", False):
             self.A.histBox.update_position(limitLow, limitHigh)
 
         # Update other annotations
@@ -407,18 +419,33 @@ def plotColorWheel(self):
     self.Fig.ColorWheel.ax.axis('off')
 
 
-def toUpdateImage(self):
+def isChanging(self) -> bool:
+    """True while the change that called us is still in progress (MATLAB's ValueChanging):
+    a slider being dragged, or an annotation being dragged."""
+    src = self.sender()
+    if isinstance(src, qtw.QAbstractSlider) and src.isSliderDown():
+        return True
+    return bool(getattr(src, "dragging", False))
+
+
+def toUpdateImage(self) -> bool:
+    """Whether to recompute images now, from the calculation policy (Settings):
+
+    * Active (2): always;
+    * Reduced (1): unless the change is still in progress (a slider or an annotation being
+      dragged) — the release brings a final update;
+    * Passive (0): only for Update Images or a detector-mode change.
     """
-    Function to determine whether to update images
-    Return true if any: 1) `self.SettingsWindow.CalcPolicy.currentData()` is 2 (active update)
-                    OR 2) `self.SettingsWindow.CalcPolicy.currentData()` is 1 (reduced) and not when changing
-                    OR 3) is a manual update (from update buttons or detector mode change)
-    #TODO - currently does not support reduced update functionality
-    """
+    if self.sender() in (self.UpdateImages, self.DetrMode):
+        return True
     calc = self.SettingsWindow.CalcPolicy.currentData()
-    # upd = (calc == 2) or (calc and isStaticEvt(evt)) or (evt.Source == self.UpdateImages) or (self.sender() == self.DetrMode)
-    update = (calc == 2) or (self.sender() in [self.UpdateImages, self.DetrMode])
-    return update
+    return calc == 2 or (calc == 1 and not isChanging(self))
+
+
+def sliderReleased(self) -> None:
+    """Reduced policy: a slider drag skipped the updates, so update once it is let go."""
+    if self.SettingsWindow.CalcPolicy.currentData() == 1:
+        self.UpdateImages.trigger()
 
 
 def updateImagesCallbacks(self):

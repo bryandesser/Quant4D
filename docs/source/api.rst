@@ -121,6 +121,12 @@ callbacks.axis_direction
 .. automodule:: callbacks.axis_direction
    :members:
 
+callbacks.menus
+---------------
+
+.. automodule:: callbacks.menus
+   :members:
+
 callbacks.customDetectorCallbacks
 ---------------------------------
 

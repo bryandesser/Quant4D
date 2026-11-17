@@ -36,7 +36,7 @@ from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 from multiprocessing.pool import ThreadPool
 # Deferred cross-module imports (safe: startup is itself only loaded lazily)
-from callbacks.plotting import displayCallbacks, updateImagesCallbacks  # noqa: E402
+from callbacks.plotting import displayCallbacks, sliderReleased, updateImagesCallbacks  # noqa: E402
 from callbacks.detector import detectorModeCallbacks, detrCoordCallbacks  # noqa: E402
 from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
 from callbacks.importCallbacks import importCallbacks  # noqa: E402
@@ -50,6 +50,7 @@ from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
 from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
 from callbacks.customDetectorCallbacks import connectCustomDetector  # noqa: E402
 from callbacks.axis_direction import connectAxisDirection  # noqa: E402
+from callbacks.menus import connectMenus  # noqa: E402
 from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
 from callbacks.utils import breakpoint  # noqa: E402,A001
 from callbacks.signals import signals_blocked  # noqa: E402
@@ -138,6 +139,7 @@ def slotsSignals(self):
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
     connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
+    connectMenus(self)            # menu-bar actions and help icons
 
     # menu action slots/signals
     self.actionShow_Diffraction_Pattern.triggered.connect(
@@ -251,6 +253,9 @@ def slotsSignals(self):
     self.SettingsWindow.DispContrastReset.triggered.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispBrightnessReset.triggered.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispMaskOpa.valueChanged.connect(lambda: displayCallbacks(self))
+    self.SettingsWindow.CalcPolicy.currentIndexChanged.connect(lambda *_: updateImagesCallbacks(self))
+    for slider in self.findChildren(qtw.QAbstractSlider):            # Reduced policy: update on release
+        slider.sliderReleased.connect(lambda: sliderReleased(self))
     self.SettingsWindow.HistLog.clicked.connect(lambda: displayCallbacks(self))
 
     # reset values, should not be necessary once connected to displayCallbacks #TODO
@@ -282,6 +287,9 @@ def slotsSignals(self):
     self.VrApMirrRot.valueChanged.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirrRot_NF.valueChanged.connect(lambda: virtualApertureCallbacks(self))
     self.VrApRotCW.clicked.connect(lambda: virtualApertureCallbacks(self))
+    for w in (self.VrApX, self.VrApY, self.VrApX_NF, self.VrApY_NF, self.VrApR_NF):
+        w.valueChanged.connect(lambda *_: virtualApertureCallbacks(self))
+    self.VrApReset.clicked.connect(lambda: virtualApertureCallbacks(self))
     self.VrApRotCCW.clicked.connect(lambda: virtualApertureCallbacks(self))
 
     # Settings window, units choices
@@ -728,6 +736,8 @@ def startupFcn(self):
 
     # only allow user to import data
     self.ShowImportWdw.setEnabled(True)
+    for action in (self.actionQuit, self.actionQuant4D_Manual, self.actionAbout_Quant4D):
+        action.setEnabled(True)      # always available
 
 
 def reinitializeUI(self):

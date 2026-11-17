@@ -252,6 +252,7 @@ class A:
     hist: Any = None
     histNote: Any = None
     histBox: Any = None
+    _histDrag: bool = False                         # the histogram box is being dragged
     histGamma: Any = None
 
     def removeGroup(self, tag):

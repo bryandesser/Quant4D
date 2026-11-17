@@ -264,6 +264,9 @@ def detrCoordCallbacks(self):
         case "AnnMod" | "DPCMod" | "CoMMod":
             from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
             annularDetectorCallbacks(self)      # self.sender() is still the DC* combo box
+        case "VrApMod":
+            from callbacks.virtualApertureCallbacks import syncVrApControls  # noqa: E402
+            syncVrApControls(self)
         case "CustMod":
             customDetectorCallbacks(self, source=self.SettingsWindow.DCSys)
 
