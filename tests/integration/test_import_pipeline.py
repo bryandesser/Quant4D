@@ -124,3 +124,23 @@ class TestCompressedHDF5:
         iw.ImportDataButton.click()
         assert wait_until(qapp, lambda: app.Data is not None and app.Data.shape == synthetic_data.shape)
         assert np.array_equal(np.asarray(app.Data), synthetic_data), "compressed HDF5 imported wrongly"
+
+
+class TestMemoryWarning:
+    def test_asked_once_on_import(self, app, qapp, sample_raw_file, monkeypatch):
+        """Typing dimensions only notes it; clicking Import asks once, and Cancel keeps the window."""
+        import callbacks.importCallbacks as ic
+        import callbacks.import_io as io_
+        asked = []
+        monkeypatch.setattr(io_, "notifDLG", lambda *a, **k: asked.append(a[3]) or "")
+        monkeypatch.setattr(ic, "notifDLG", lambda *a, **k: asked.append(a[3]) or "Cancel")
+        app.C.MemTot = 1024                      # pretend the computer has 1 KiB
+        iw = _open(app, qapp, sample_raw_file, "CustomButton")
+        iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData("f4"))
+        for name, val in (("DNPxX", DET_X), ("DNPxY", DET_Y), ("DNFrX", SCAN_X), ("DNFrY", SCAN_Y)):
+            getattr(iw, name).setValue(val)
+        qapp.processEvents()
+        assert asked == [] and "larger than the system memory" in iw.ImpNotes.toPlainText()
+        iw.ImportDataButton.click()
+        qapp.processEvents()
+        assert len(asked) == 1 and app.Data is None and iw.isVisible()

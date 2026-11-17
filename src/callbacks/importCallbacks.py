@@ -27,6 +27,15 @@ def importCallbacks(self):
                 notifDLG(self, self.ImportWindow, 'warn', 'Select the correct data type!', 'Select Data Type!')
             else:
                 if self.sender() == self.ImportWindow.ImportDataButton:  # Import data
+                    in_memory = self.ImportWindow.ImpMemType.currentIndex() == 0
+                    if in_memory and (self.T.EstMem or 0) > self.C.MemTot:
+                        sel = notifDLG(self, self.ImportWindow, 'quest',
+                                       f"The dataset needs about {self.T.EstMem / 1024**3:.1f} GiB, more than this "
+                                       f"computer's {self.C.MemTot / 1024**3:.1f} GiB of memory. Consider a partial "
+                                       "(cropped, binned or sampled) import.", 'Size Exceeds System Memory!',
+                                       ["Import anyway", "Cancel"])
+                        if not str(sel or "").startswith("Import"):
+                            return
                     self.ImportWindow.hide()
                     unloadData(self, self.ImportWindow.ImpKeepP.isChecked())
                     self.D = gatherImportOptions(self, False)

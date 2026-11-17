@@ -441,15 +441,19 @@ def realSpaceROICallbacks(self):
         moveRealROI()
 
 
+DEFAULT_COMBINE = "mean"
+
+
 def connectPatternCombine(self) -> None:
     """Add the "Pattern" dropdown (how a region's diffraction patterns are combined: sum, mean,
-    max, std, sqrt, ln, log10 — MATLAB Quant4D's diffraction dropdown, default sum) to the
-    diffraction window's toolbar; called once from ``slotsSignals``."""
+    max, std, sqrt, ln, log10 — MATLAB Quant4D's diffraction dropdown) to the diffraction
+    window's toolbar; called once from ``slotsSignals``.  Default: mean (Bryan, 2026-11-18;
+    MATLAB's default is sum)."""
     combo = qtw.QComboBox()
     combo.setObjectName("DfrnCombine")
     for mode in compute.COMBINE_MODES:
         combo.addItem(mode, mode)
-    combo.setCurrentIndex(0)
+    combo.setCurrentIndex(combo.findData(DEFAULT_COMBINE))
     combo.setToolTip("Set how patterns are combined in real space. NOTE: max() and std() can be "
                      "significantly slower when interacting with a real-space ROI!")
     toolbar = self.Fig.Dfrn.toolbar
@@ -462,5 +466,5 @@ def connectPatternCombine(self) -> None:
 
 def diffractionPattern(self, weights):
     """The diffraction image for real-space *weights*, combined as the "Pattern" dropdown says."""
-    mode = self.DfrnCombine.currentData() if hasattr(self, "DfrnCombine") else "sum"
+    mode = self.DfrnCombine.currentData() if hasattr(self, "DfrnCombine") else DEFAULT_COMBINE
     return compute.combine_frames(self.Data, weights, mode, self.D.GPU).reshape(dfrn_shape(self.D))

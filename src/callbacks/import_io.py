@@ -600,11 +600,10 @@ def importBoxInput(self):
 
         notes = "Estimated memory usage: {:.3f} GiB.".format(self.T.EstMem / (1024**3))
 
-        # warn if the dataset will not fit in memory
+        # note it if the dataset will not fit in memory (asked once, on Import — a dialog here
+        # popped up on every keystroke while the dimensions were being typed)
         if self.T.EstMem > self.C.MemTot:
-            msg = "WARNING: Size of dataset is larger than the system memory!"
-            _ = notifDLG(self, self.ImportWindow, "warn", msg, "Size Exceeds System Memory!")
-            notes += "\n" + msg
+            notes += "\nWARNING: Size of dataset is larger than the system memory!"
 
         notes += "\nSystem byte order: " + self.C.EndianTxt[self.C.SysEndian] + "."
 

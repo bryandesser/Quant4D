@@ -32,7 +32,7 @@ def test_swap_diffraction_xy(fresh, qapp, synthetic_data):
     assert (fresh.D.NPxX, fresh.D.NPxY) == (DET_Y, DET_X)
     assert np.array_equal(np.asarray(fresh.Data), synthetic_data), "swapping X/Y must not move data"
     assert fresh.Fig.Dfrn.Image.shape == (DET_X, DET_Y)
-    assert np.allclose(fresh.Fig.Dfrn.Image, synthetic_data.sum(axis=0).reshape(DET_X, DET_Y), rtol=1e-5)
+    assert np.allclose(fresh.Fig.Dfrn.Image, synthetic_data.mean(axis=0).reshape(DET_X, DET_Y), rtol=1e-5)
     assert np.allclose(fresh.Fig.Real.Image, _annular_reference(fresh), rtol=1e-5)
     for mode in ("CoMMod", "DPCMod", "VrApMod", "CustMod", "AnnMod"):     # every mode copes with the new shape
         set_mode(fresh, qapp, mode)

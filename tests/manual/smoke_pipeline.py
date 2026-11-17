@@ -315,11 +315,11 @@ def _check_polygon_roi(w):
     mask = compute.polygon_mask((NFY, NFX), verts)
     assert 0 < mask.sum() < NFX * NFY
     assert np.array_equal(w.Fig.RealMask.Image.astype(bool), mask), "real-space mask is not the polygon"
-    expected = w.Data[mask.ravel()].sum(axis=0).reshape(NPY, NPX)       # Pattern: sum (default)
-    assert np.allclose(w.Fig.Dfrn.Image, expected, rtol=1e-5), "pattern is not the polygon sum"
+    expected = w.Data[mask.ravel()].mean(axis=0).reshape(NPY, NPX)      # Pattern: mean (default)
+    assert np.allclose(w.Fig.Dfrn.Image, expected, rtol=1e-5), "pattern is not the polygon average"
     w.RealROIInvert.click()
     qapp.processEvents()
-    expected = w.Data[~mask.ravel()].sum(axis=0).reshape(NPY, NPX)
+    expected = w.Data[~mask.ravel()].mean(axis=0).reshape(NPY, NPX)
     assert np.allclose(w.Fig.Dfrn.Image, expected, rtol=1e-5), "inverted polygon is wrong"
     w.RealROIInvert.click()
     qapp.processEvents()
@@ -344,8 +344,8 @@ def _check_file_roi(w):
     assert w.RealROIShape.currentData() == "file", "file ROI was rejected"
     wn = weights / 255
     assert np.allclose(w.Fig.RealMask.Image, wn), "real-space mask is not the file"
-    expected = wn.ravel() @ np.asarray(w.Data, float)
-    assert np.allclose(w.Fig.Dfrn.Image, expected.reshape(NPY, NPX), rtol=1e-5), "pattern is not the weighted sum"
+    expected = (wn.ravel() @ np.asarray(w.Data, float)) / wn.sum()
+    assert np.allclose(w.Fig.Dfrn.Image, expected.reshape(NPY, NPX), rtol=1e-5), "pattern is not the weighted average"
 
     # a file of the wrong size is refused and the ROI falls back to the whole scan
     bad = os.path.join(tempfile.mkdtemp(), "bad.png")

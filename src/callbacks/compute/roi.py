@@ -65,7 +65,7 @@ def _selected_blocks(data, w, rows_per_block=256):
 def combine_frames(data: np.ndarray, weights: np.ndarray, mode: str = "sum", device: Any = None) -> np.ndarray:
     """Combine the diffraction patterns of the frames selected by *weights*.
 
-    Modes (MATLAB Quant4D's diffraction dropdown; default there: ``sum``):
+    Modes (MATLAB Quant4D's diffraction dropdown; MATLAB defaults to ``sum``, pyQuant4D to ``mean``):
 
     * ``sum`` — ``weights @ data``;  ``mean`` — that divided by ``weights.sum()``;
     * ``sqrt``, ``ln``, ``log10`` — of the sum (``sqrt`` of negatives is 0; the logarithms are
