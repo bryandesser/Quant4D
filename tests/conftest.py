@@ -82,11 +82,10 @@ def app_session(tmp_path_factory, synthetic_data):
 
     # Inject synthetic data directly so we bypass the file-import pipeline
     win.D.Data = synthetic_data
-    win.D.ScanX = SCAN_X
-    win.D.ScanY = SCAN_Y
-    win.D.DetX = DET_X
-    win.D.DetY = DET_Y
-    win.D.Loaded = True
+    win.D.NFrX, win.D.NFrY = SCAN_X, SCAN_Y
+    win.D.NPxX, win.D.NPxY = DET_X, DET_Y
+    win.D.NFr = np.array([SCAN_Y, SCAN_X])
+    win.D.NPx = np.array([DET_X, DET_Y])
     win.D.GPU = None   # CPU-only by default; GPU fixture overrides
 
     win.show()
@@ -111,11 +110,10 @@ def app(qtbot, tmp_path, synthetic_data):
     win.D = _D()
 
     win.D.Data = synthetic_data.copy()
-    win.D.ScanX = SCAN_X
-    win.D.ScanY = SCAN_Y
-    win.D.DetX = DET_X
-    win.D.DetY = DET_Y
-    win.D.Loaded = True
+    win.D.NFrX, win.D.NFrY = SCAN_X, SCAN_Y
+    win.D.NPxX, win.D.NPxY = DET_X, DET_Y
+    win.D.NFr = np.array([SCAN_Y, SCAN_X])
+    win.D.NPx = np.array([DET_X, DET_Y])
     win.D.GPU = None
     win.show()
     return win

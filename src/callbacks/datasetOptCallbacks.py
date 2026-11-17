@@ -14,6 +14,7 @@ def datasetOptCallbacks(self):
             except BaseException:
                 notifDLG(
                     self,
+                    self,
                     'error',
                     "It seems the system does not have enough memory for this process! Maybe try to increase system's virtual memory.",
                     "Out of Memory")
@@ -21,11 +22,11 @@ def datasetOptCallbacks(self):
 
             self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b` at `self.D.ByteOrder`
             self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
-            self.UpdateImages.tirgger()
+            self.UpdateImages.trigger()
             # delete(self.T.progDLG) #TODO
             self.progressBar.setValue(1)
             self.progressBar.setMaximum(1)
-            sel = notifDLG(self, 'quest', "Is the current byte-order correct?",
+            sel = notifDLG(self, self, 'quest', "Is the current byte-order correct?",
                            'Byte Order Swap', ["Yes", "No. Revert"])
 
             # Run the process again if selected "No ....."
@@ -65,14 +66,14 @@ def datasetOptCallbacks(self):
 
         case self.PreviewButton:
             # Check data NaN/Inf, without asking to sway byte-order
-            sel = checkNaN(self, image=self.Image.Preview.get_array(), preview=True)
+            sel = checkNaN(self, image=self.ImageAx.Preview.get_array(), preview=True)
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
 
         case other:
-            self.DataInfo.Value = getImportInfo()
+            self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
             # Check data NaN/Inf, ask whether to sway byte-order
-            sel = checkNaN(self, image=self.Image.Dfrn.get_array(), preview=False)
+            sel = checkNaN(self, image=self.ImageAx.Dfrn.get_array(), preview=False)
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
 

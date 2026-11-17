@@ -117,7 +117,6 @@ def annularDetectorCallbacks(self):
             bc = self.C.WarnC.name()
         else:
             bc = self.C.BgC.name()
-        self.ScanDirGrid.setStyleSheet("background-color:" + bc)
         self.comControls.setStyleSheet("background-color:" + bc)
 
     # ------------------------------------------------------------------
@@ -355,13 +354,13 @@ def annularDetectorCallbacks(self):
 
             # Refresh real-space image
             if len(self.Fig.Real.ax.images) == 0:
-                self.Image.Real = self.Data.sum(axis=1).reshape(real_shape(self.D))
-                self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Image.Real)
+                self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
+                self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Fig.Real.Image)
             else:
-                self.Image.Real = self.adfImages[
+                self.Fig.Real.Image = self.adfImages[
                     :, :, innerRadius: outerRadius + 1
                 ].sum(axis=2)
-                self.ImageAx.Real.set_data(self.Image.Real)
+                self.ImageAx.Real.set_data(self.Fig.Real.Image)
 
             self.ImageAx.Real.autoscale()
             self.Fig.Real.canvas.draw()
@@ -469,8 +468,8 @@ def annularDetectorCallbacks(self):
                 # 2D distance matrix is recalculated in integrateAnnular;
                 # here just recompute the real-space image from cached adfImages
                 mask_ann = (self.A.k >= ri) & (self.A.k <= ro)
-                self.Image.DfrnMask = mask_ann.astype(self.D.DataType)
-                self.Image.Real = self.adfImages[
+                self.Fig.DfrnMask.Image = mask_ann.astype(self.D.DataType)
+                self.Fig.Real.Image = self.adfImages[
                     :, :, ri: ro + 1
                 ].sum(axis=2)
 
@@ -494,13 +493,9 @@ def annularDetectorCallbacks(self):
         r2 = self.AnnRi.value()[1] * self.D.annWidth
 
         if self.A.adf is None:
-            self.A.adf = InteractiveAnnulus(
-                center=c, radius=(r1, r2),
-                axis=self.Fig.Dfrn.ax,
-                color='r', interactions='resize'
-            )
+            self.A.adf = InteractiveAnnulus(self.Fig.Dfrn.ax, c, r1, r2, color='r')
             self.A.adf.connect()
-            self.A.adf.updateAnnulus.connect(lambda: moveAnnDetr())
+            self.A.adf.updateCircle.connect(lambda: moveAnnDetr())
 
     # ------------------------------------------------------------------
     # integrateAnnular — build the adfImages cube
@@ -778,7 +773,7 @@ def annularDetectorCallbacks(self):
     dmod = self.DetrMode.currentData()
 
     match self.sender():
-        case self.DCSys:
+        case self.SettingsWindow.DCSys:
             limitAnnUI()
         case self.DetrMode:
             limitAnnUI()

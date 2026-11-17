@@ -19,6 +19,8 @@ def displayCallbacks(self):
         return
 
     id = self.SettingsWindow.DispImage.currentData()
+    if id is None:  # nothing selected (e.g. while the list is being repopulated)
+        return
     fig = self.Fig[id]
     ax = self.ImageAx[id]
 
@@ -201,9 +203,9 @@ def plotImage(self, id):
 
     # Shade CoM/DPC Phase with Magnitude
     if id == "CoMPhMag":
-        CoMMagNorm = self.Fig.Dfrn.CoMMag
-        CoMMagNorm -= np.nanmin(CoMMagNorm)
-        CoMMagNorm /= np.nanmax(CoMMagNorm)
+        # work on a copy so the stored CoM magnitude image is not rescaled in place
+        CoMMagNorm = self.Fig.CoMMag.Image - np.nanmin(self.Fig.CoMMag.Image)
+        CoMMagNorm = CoMMagNorm / max(np.nanmax(CoMMagNorm), np.finfo(np.float32).eps)
         self.ImageAx.CoMPhMag.set_alpha(self.ImageAx.CoMPhMag.get_alpha() * CoMMagNorm)
 
     plotVectorField(self, id)  # Plot vector field, if selected #TODO
@@ -363,9 +365,9 @@ def plotVectorField(self, id):
 
     # Plot vector arrows over the selected image
     x, y = np.meshgrid(np.arange(0, self.D.NFrX, vec), np.arange(0, self.D.NFrY, vec))
-    u = self.Fig.Dfrn.CoMX[0::vec, 0::vec]
-    v = self.Fig.Dfrn.CoMY[0::vec, 0::vec]
-    self.A.vecField[id] = fig.ax.quiver(x, y, u, v, color=fig.vecColor, units='xy')
+    u = self.Fig.CoMX.Image[0::vec, 0::vec]
+    v = self.Fig.CoMY.Image[0::vec, 0::vec]
+    self.A.vectField[id] = fig.ax.quiver(x, y, u, v, color=fig.vecColor, units='xy')
     fig.canvas.draw_idle()
 
 
@@ -379,7 +381,6 @@ def plotAllPatterns(self):
     # Update images if visible OR not in changing event; include CoMs if in the modes
     for id in ids:
         if self.Fig[id].isVisible():  # or isStaticEvt(evt): #TODO?
-            print(id, self.Fig[id].fig.stale)
             plotImage(self, id)
 
 
@@ -422,10 +423,16 @@ def toUpdateImage(self):
 
 
 def updateImagesCallbacks(self):
+    from callbacks.alignment import transBeamCallbacks  # noqa: E402
+    from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
+    from callbacks.detector import customDetectorCallbacks  # noqa: E402
+    from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
+    from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
+    from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
     match self.sender():
         case self.SettingsWindow.CalcPolicy:
             # Update once if not passive
-            if self.SettingsWindow.CalcPolicy.curentData():
+            if self.SettingsWindow.CalcPolicy.currentData():
                 self.UpdateImages.trigger()
 
         case self.UpdateImages:  # Calculate and update all images

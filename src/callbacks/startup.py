@@ -271,6 +271,9 @@ def slotsSignals(self):
     self.SettingsWindow.DCPos.currentIndexChanged.connect(lambda: detrCoordCallbacks(self))
     self.SettingsWindow.DCUnit.currentIndexChanged.connect(lambda: detrCoordCallbacks(self))
     self.RealROIShape.currentIndexChanged.connect(lambda: realSpaceROICallbacks(self))
+    self.FrameX.valueChanged.connect(lambda: realSpaceROICallbacks(self))
+    self.FrameY.valueChanged.connect(lambda: realSpaceROICallbacks(self))
+    self.RealROIInvert.clicked.connect(lambda: realSpaceROICallbacks(self))
 
 
 def startupFcn(self):
@@ -754,6 +757,7 @@ def reinitializeUI(self):
 
 
 def resetQuant4DCallbacks(self):
+    from callbacks.import_io import unloadData  # noqa: E402
     unloadData(self, False)
     self.DetrMode.setCurrentIndex(self.DetrMode.findData("PrvwMod"))
 

@@ -96,6 +96,8 @@ def prepareData(self):
     # self.T.progDLG = progDLG(self, 'Preparing data ...', "Data Preparation"); #TODO
 
     # block slots/signals whilst initializing UI components
+    from callbacks.alignment import transBeamCallbacks  # noqa: E402
+    from callbacks.detector import detectorModeCallbacks  # noqa: E402
     self.blockAllSignals = True
 
     # move to alignment mode
@@ -117,8 +119,9 @@ def prepareData(self):
     self.VrApMirrRot_NF.setValue(0)     #
 
     # Alignments
-    self.P.DfCtr = self.D.NPx / 2 + .5      # Exact center of the Diffraction image
-    self.P.RsCtr = self.D.NFr / 2 + .5      # Exact center of the Real-space image
+    # Exact (x, y) centres in 0-based pixel coordinates: pixel i spans [i - 0.5, i + 0.5]
+    self.P.DfCtr = (np.array([self.D.NPxX, self.D.NPxY]) - 1) / 2   # Diffraction image
+    self.P.RsCtr = (np.array([self.D.NFrX, self.D.NFrY]) - 1) / 2   # Real-space image
     self.Alpha.setValue(12)             # initialize alpha to 12 mrad
     self.P.VrApXY = self.P.DfCtr        # initialize virtual aperture to diffraction center
 
@@ -143,20 +146,20 @@ def prepareData(self):
         self.P.TransBeamInit = 0
         # set transmitted beam ranges and values for sliders and number fields
         self.TBR.setRange(0, max(self.D.NPx))
-        self.TBX.setRange(0, self.D.NPxX)
-        self.TBY.setRange(0, self.D.NPxY)
+        self.TBX.setRange(0, self.D.NPxX - 1)
+        self.TBY.setRange(0, self.D.NPxY - 1)
         self.TBR.setValue(min(self.D.NPx) / 10)
         self.TBX.setValue(self.P.DfCtr[0])
         self.TBY.setValue(self.P.DfCtr[1])
-        self.TBX_NF.setRange(0, self.D.NPxX)
-        self.TBY_NF.setRange(0, self.D.NPxY)
+        self.TBX_NF.setRange(0, self.D.NPxX - 1)
+        self.TBY_NF.setRange(0, self.D.NPxY - 1)
         self.TBX_NF.setValue(self.P.DfCtr[0])
         self.TBY_NF.setValue(self.P.DfCtr[1])
         transBeamCallbacks(self)  # Update Transmitted Beam dependant variables
 
     # Real-space ROI controls
-    self.FrameX.setRange(0, self.D.NFrX)
-    self.FrameY.setRange(0, self.D.NFrY)
+    self.FrameX.setRange(0, self.D.NFrX - 1)
+    self.FrameY.setRange(0, self.D.NFrY - 1)
     self.FrameX.setValue(round(self.P.RsCtr[0]))
     self.FrameY.setValue(round(self.P.RsCtr[1]))
     self.RealROIInvert.setChecked(False)  # do not invert the real space ROI picker on initialization
@@ -188,8 +191,11 @@ def prepareData(self):
     self.SettingsWindow.setGeometry(pos)
     self.SettingsWindow.show()
 
-    self.DetrMode.setCurrentIndex(self.DetrMode.findData("AlignMod"))
-    detectorModeCallbacks(self)
+    # Enter alignment mode.  The mode callbacks dispatch on self.sender(), so
+    # emit the combo's own signal rather than calling them directly (the index
+    # was already set above while signals were blocked, so setCurrentIndex
+    # alone would not fire).
+    self.DetrMode.currentIndexChanged.emit(self.DetrMode.currentIndex())
 
     # flashBackground(self, [self.DfrnCalibGrid self.TransBeamAlignGrid])
 
@@ -207,14 +213,15 @@ def finishImport(self):
     # self.threadpool.start(worker)
 
     # quit the import thread
+    from callbacks.startup import reinitializeUI  # noqa: E402
     self.workerThread.quit()
 
     # generate placeholder images
     self.Fig.Preview.Image = np.zeros(dfrn_shape(self.D))
     self.Fig.Dfrn.Image = np.zeros(dfrn_shape(self.D))
-    self.Fig.Dfrn.ImageMask = np.zeros(dfrn_shape(self.D))
-    self.Fig.Dfrn.Real = np.zeros(real_shape(self.D))
-    self.Fig.Dfrn.RealMask = np.zeros(real_shape(self.D))
+    self.Fig.DfrnMask.Image = np.zeros(dfrn_shape(self.D))
+    self.Fig.Real.Image = np.zeros(real_shape(self.D))
+    self.Fig.RealMask.Image = np.zeros(real_shape(self.D))
 
     prepareData(self)
     reinitializeUI(self)

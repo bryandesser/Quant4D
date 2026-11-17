@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import numpy as np
+import re
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
@@ -39,6 +40,12 @@ def clearDetectors(self):
 
 def detectorModeCallbacks(self):
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
+    from callbacks.alignment import moveTransBeam, transBeamCallbacks  # noqa: E402
+    from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
+    from callbacks.plotting import plotImage  # noqa: E402
+    from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
+    from callbacks.startup import enableWindows  # noqa: E402
+    from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
     if self.blockAllSignals:
         return
 

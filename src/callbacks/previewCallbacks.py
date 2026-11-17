@@ -25,18 +25,18 @@ def previewCallbacks(self):
                 case self.PvBC | self.PvBL | self.PvBR:
                     frY = self.PvFrY.maximum()
                 case self.PvCC | self.PvCL | self.PvCR:
-                    frY = np.ceil(self.PvFrY.maximum() / 2)
+                    frY = self.PvFrY.maximum() // 2
                 case self.PvTC | self.PvTL | self.PvTR:
-                    frY = 1
+                    frY = 0
 
             match self.sender():
                 # Pv*L = Left; Pv*C = Horizontal Center; Pv*R = Right
                 case self.PvBR | self.PvCR | self.PvTR:
                     frX = self.PvFrX.maximum()
                 case self.PvBC | self.PvCC | self.PvTC:
-                    frX = np.ceil(self.PvFrX.maximum() / 2)
+                    frX = self.PvFrX.maximum() // 2
                 case self.PvBL | self.PvCL | self.PvTL:
-                    frX = 1
+                    frX = 0
 
             self.blockAllSignals = True
             self.PvFrX.setValue(int(frX))
@@ -48,8 +48,8 @@ def previewCallbacks(self):
             # Get parameters
             importCallbacks(self)
             d = self.D
-            ifx = self.PvFrX.value() - 1  # indices displayed in GUI start at 1; python indices start at 0 -->
-            ify = self.PvFrY.value() - 1  # subtract 1 to get to the beginning of the frame of interest
+            ifx = self.PvFrX.value()  # frame indices in the GUI are 0-based
+            ify = self.PvFrY.value()
 
             if d != []:
                 dnpx = d.DNPxX

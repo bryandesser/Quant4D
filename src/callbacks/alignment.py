@@ -18,6 +18,8 @@ except ImportError:
 
 
 def transBeamCallbacks(self):
+    from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
+    from callbacks.startup import enableWindows  # noqa: E402
     match self.sender():
         case self.DetrMode:  # Entering mode
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
@@ -61,6 +63,7 @@ def transBeamCallbacks(self):
 
 def moveTransBeam(self):
     """ Function to sync UIs/ROIs depending on the central beam location """
+    from callbacks.detector import detrCoordCallbacks  # noqa: E402
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
@@ -74,9 +77,9 @@ def moveTransBeam(self):
 
     match self.sender():
         case self.TBX | self.TBX_NF:
-            b0[0] = max(1, self.sender().value())  # Force X >= 1
+            b0[0] = max(0, self.sender().value())  # Force X >= 0
         case self.TBY | self.TBY_NF:
-            b0[1] = max(1, self.sender().value())  # Force Y >= 1
+            b0[1] = max(0, self.sender().value())  # Force Y >= 0
         case self.TBR | self.TBR_NF:
             r = self.sender().value()  # Radius
         case self.Alpha:
@@ -90,7 +93,7 @@ def moveTransBeam(self):
             r = self.A.tb.radius
 
     # Restrict transmitted beam location/size
-    b0 = b0.clip([1, 1], nPix)
+    b0 = b0.clip([0, 0], nPix - 1)   # 0-based: valid pixel centres are 0 .. N-1
     self.B0 = b0
     self.P.RMax = np.ceil(np.linalg.norm(abs(self.P.DfCtr - b0) + self.P.DfCtr))  # Find the max allowed radius
     r = np.clip(r, np.finfo(np.single).eps, self.P.RMax)  # 0 < r <= RMax
@@ -162,7 +165,7 @@ def autoAlign(self):
 
     # ── Radius search range ───────────────────────────────────────────────
     tbr = self.TBR.value()
-    if tbr > 1:
+    if self.P.TransBeamInit and tbr > 1:
         # Use ±50 % of the current beam-disc radius, clamped to sensible values
         rmin = max(1, int(np.floor(0.5 * tbr)))
         rmax = min(rmax_abs, int(np.ceil(1.5 * tbr)))
@@ -202,8 +205,8 @@ def autoAlign(self):
     r = float(radii[0])
 
     # Clamp to valid pixel range
-    cx = np.clip(cx, 1, nPx[1])
-    cy = np.clip(cy, 1, nPx[0])
+    cx = np.clip(cx, 0, nPx[1] - 1)
+    cy = np.clip(cy, 0, nPx[0] - 1)
     r = np.clip(r, np.finfo(np.single).eps, rmax_abs)
 
     self.blockAllSignals = True
@@ -270,8 +273,8 @@ def crossAlign(self):
         if event.button != 1:   # left-click only
             return
 
-        new_x = float(np.clip(event.xdata, 1, self.D.NPxX))
-        new_y = float(np.clip(event.ydata, 1, self.D.NPxY))
+        new_x = float(np.clip(event.xdata, 0, self.D.NPxX - 1))
+        new_y = float(np.clip(event.ydata, 0, self.D.NPxY - 1))
 
         self.blockAllSignals = True
         self.TBX.setValue(new_x)

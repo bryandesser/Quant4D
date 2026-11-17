@@ -17,8 +17,10 @@ the dataset is therefore conceptually::
 
 Images handed to matplotlib are ``(rows, cols) == (y, x)`` and are drawn with
 the origin in the upper-left corner, matching the microscope display.  UI
-coordinates such as ``TBX``/``TBY`` and the annotation centres are ``(x, y)``,
-i.e. ``(column, row)``.
+coordinates such as ``TBX``/``TBY``, ``FrameX``/``FrameY`` and the annotation
+centres are ``(x, y)``, i.e. ``(column, row)``, and are **0-based**: pixel
+``i`` is centred on coordinate ``i`` and spans ``[i - 0.5, i + 0.5]``, so the
+valid range is ``0 .. N - 1`` and the exact image centre is ``(N - 1) / 2``.
 
 MATLAB is column-major, so the original code built its pixel grids as
 ``(x, y)`` arrays and flattened them column-first.  Doing the same in NumPy

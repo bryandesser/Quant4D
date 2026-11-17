@@ -217,6 +217,8 @@ def importSelectFile(self):
 
 
 def importFileType(self):
+    from callbacks.io.dm import prepDM  # noqa: E402
+
     def guessFramesFromSize():
         """ Make an initial guess at the file dimensions (assume ~square field of view: NFrX≈NFrY) """
         if self.ImportWindow.DNPxX.value() > 1 and self.ImportWindow.DNPxY.value() > 1:
@@ -231,6 +233,8 @@ def importFileType(self):
 
     def guessFramesFromDimZ(z):
         """ Guess number of frames (x,y) from 3D dataset by finding the two largest integer factors that go into z without remainder """
+        if z < 1:   # file holds less than one frame with the current settings; nothing to guess
+            return
         x = round(np.sqrt(z))
         while z % x > 0:
             x -= 1
@@ -248,27 +252,21 @@ def importFileType(self):
                             D = NFrY
         """
 
-        try:
-            # standard EMPAD naming scheme
-            s = re.search(r'_x(\d+)_y(\d+).raw', filename)
+        name = os.path.basename(filename)
+        s = re.search(r'_x(\d+)_y(\d+)\.raw$', name)             # standard EMPAD naming scheme
+        t = re.search(r'(\d+)x(\d+)x(\d+)x(\d+)', name)          # above described naming scheme
+        if s:
             DNFrX, DNFrY = [int(ii) for ii in s.groups()]
-            DNPxX = DNPxY = int(128)
+            DNPxX = DNPxY = 128
+        elif t:
+            DNPxX, DNPxY, DNFrX, DNFrY = [int(ii) for ii in t.groups()]
+        else:
+            return  # no match; leave the UI values as they are
 
-        except BaseException:
-            try:
-                # above described naming scheme
-                t = re.search(r'(\d+)x(\d+)x(\d+)x(\d+)', filename)
-                DNPxX, DNPxY, DNFrX, DNFrY = [int(ii) for ii in t.groups()]
-            except BaseException:
-                # failure, quit now
-                return
-
-        finally:
-            # if the above passed, set the import window UI values
-            self.ImportWindow.DNPxX.setValue(DNPxX)
-            self.ImportWindow.DNPxY.setValue(DNPxY)
-            self.ImportWindow.DNFrX.setValue(DNFrX)
-            self.ImportWindow.DNFrY.setValue(DNFrY)
+        self.ImportWindow.DNPxX.setValue(DNPxX)
+        self.ImportWindow.DNPxY.setValue(DNPxY)
+        self.ImportWindow.DNFrX.setValue(DNFrX)
+        self.ImportWindow.DNFrY.setValue(DNFrY)
 
     def returnKeys(obj):
         datasetKeys = []
@@ -589,12 +587,12 @@ def importBoxInput(self):
         if igpu is None:
             gpu_note = 'GPU disabled.'
         else:
-            tgpu = f"GPU {igpu:.0f}. " + self.C.GPU(igpu).name + f" {self.C.GPU(igpu).mem / 1024**3:.2f} GiB"
+            tgpu = f"GPU {igpu:.0f}. " + self.C.GPUname[igpu] + f" {self.C.GPUmem[igpu] / 1024**3:.2f} GiB"
             try:
                 device = torch.device(igpu if torch.cuda.is_available() else "cpu")
                 amem = torch.cuda.get_device_properties(igpu).total_memory
                 # If GPU is already in use, taking the current data size into account
-                if self.D.GPU == self.ImportWindow.ImpGPU.value():
+                if self.D is not None and self.D.GPU == igpu:
                     try:
                         amem = amem + self.D.EstMem
                     except BaseException:
@@ -806,10 +804,10 @@ def rangeImportExport(self, src):
         getattr(self.ImportWindow, io_mode + U + "D").setMaximum(min(dnp))  # Update binning/sampling UI limits
         if io_mode == "I" and U == "Fr":  # Update preview frame limits
             self.blockAllSignals = True
-            self.PvFrX.setRange(1, dnp[0])
-            self.PvFrX.setValue(dnp[0])
-            self.PvFrY.setRange(1, dnp[1])
-            self.PvFrY.setValue(dnp[1])
+            self.PvFrX.setRange(0, dnp[0] - 1)   # 0-based frame indices
+            self.PvFrX.setValue(dnp[0] - 1)
+            self.PvFrY.setRange(0, dnp[1] - 1)
+            self.PvFrY.setValue(dnp[1] - 1)
             self.blockAllSignals = False
         binDist = 1
         initPoint = np.asarray([1, 1])
@@ -900,10 +898,8 @@ def rangeImportExport(self, src):
 
 
 def unloadData(self, keep_p=False):
-    importlib.reload(appClass)
-    from callbacks.appClass import A, P, Mask, D, Prev
-
     """ Function to unload data and clean all images """
+    from callbacks.appClass import A, P, Mask, Prev
     from callbacks.startup import enableWindows  # deferred to break circular import
     enableWindows(self, False)  # Disable windows for the data unload process
     self.setWindowTitle('Quant4D')
@@ -919,17 +915,8 @@ def unloadData(self, keep_p=False):
         self.SettingsWindow.HistAxes.axes.cla()
         self.SettingsWindow.HistAxes.figure.canvas.draw_idle()
 
-        # clear annotations (lines and draggable points)
-        for ii in dir(self.A):
-            if type(
-                getattr(
-                    self.A,
-                    ii)) in (
-                InteractivePoint,
-                InteractiveCircle,
-                    matplotlib.lines.Line2D):  # ,InteractiveBox #TODO
-                setattr(self.A, ii, None)
-
+        # the axes were cleared above, so the annotation artists are already gone;
+        # fresh namespaces drop every remaining reference to them
         setattr(self, 'P', P())
         setattr(self, 'A', A())
         setattr(self, 'Mask', Mask())
@@ -953,6 +940,7 @@ def unloadData(self, keep_p=False):
 
 
 def importData(self):
+    from callbacks.io.file_reader import readFile  # noqa: E402
     assert (os.path.isfile(self.ImportWindow.ImpFilePath.text())), "File does not exist at the specified location"
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)

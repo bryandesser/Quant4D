@@ -8,7 +8,7 @@ def importCallbacks(self):
         case self.ShowImportWdw:
             self.ImportWindow.show()
             # Enter Import Preview Mode
-            if self.DetrMode.currentData != "PrvwMod":
+            if self.DetrMode.currentData() != "PrvwMod":
                 self.DetrMode.setCurrentIndex(self.DetrMode.findData("PrvwMod"))
 
         case self.ImportWindow.ImportCancelButton:  # Hide window when closing
@@ -20,18 +20,18 @@ def importCallbacks(self):
         case self.ImportWindow.ImportDataButton | self.PreviewButton:  # When the "Import Data" or "Preview" button is pressed
             self.T.Preview = D()
             if not os.path.exists(self.ImportWindow.ImpFilePath.text()):
-                notifDLG(self, 'warn', 'The entered file path is invalid!', 'Invalid File!')
-            elif self.ImpDataType.Value == "unknown":
-                notifDLG(self, 'warn', 'Select the correct data type!', 'Select Data Type!')
+                notifDLG(self, self.ImportWindow, 'warn', 'The entered file path is invalid!', 'Invalid File!')
+            elif self.ImportWindow.ImpDataType.currentData() == "unknown":
+                notifDLG(self, self.ImportWindow, 'warn', 'Select the correct data type!', 'Select Data Type!')
             else:
                 if self.sender() == self.ImportWindow.ImportDataButton:  # Import data
                     self.ImportWindow.hide()
-                    unloadData(self, self.ImpKeepP.Value)
-                    self.D = gatherImportOptions(self, self.D, False)
+                    unloadData(self, self.ImportWindow.ImpKeepP.isChecked())
+                    self.D = gatherImportOptions(self, False)
                     self.T.prev_D = self.D  # Backup current `self.D`
                     importData(self)
                 else:  # Preview
-                    self.T.Preview = gatherImportOptions(self, self.T.Preview, True)
+                    self.T.Preview = gatherImportOptions(self, True)
 
         case self.SettingsWindow.SwapDfrnXY | self.SettingsWindow.SwapRealXY:  # Refresh axes settings etc when dimensions swapped
             prepareData(self)

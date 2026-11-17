@@ -320,9 +320,9 @@ def realSpaceROICallbacks(self):
         y = self.FrameY.value()
 
         if from_spinbox == 'x':
-            x = max(1, self.FrameX.value())
+            x = max(0, self.FrameX.value())
         elif from_spinbox == 'y':
-            y = max(1, self.FrameY.value())
+            y = max(0, self.FrameY.value())
         elif roi_src is not None:
             roi = roi_src
             typ = self.RealROIShape.currentData()
@@ -382,13 +382,13 @@ def realSpaceROICallbacks(self):
 
         elif typ == 'point':
             mask_real = np.zeros((ny, nx), bool)
-            # Convert 1-based probe coordinates → 0-based row/col indices
-            yi = max(0, min(y - 1, ny - 1))
-            xi = max(0, min(x - 1, nx - 1))
+            # Probe coordinates are 0-based (x = column, y = row), same as the display
+            yi = max(0, min(y, ny - 1))
+            xi = max(0, min(x, nx - 1))
             mask_real[yi, xi] = True
 
         elif typ == 'file':
-            mask_real = np.asarray(self.Image.RealROIFile, bool)
+            mask_real = np.asarray(self.Mask.RealROIFile, bool)
 
         elif roi is not None:
             mask_real = _roi_to_mask(roi, (ny, nx), typ)
@@ -401,7 +401,7 @@ def realSpaceROICallbacks(self):
         if self.RealROIInvert.isChecked():
             mask_real = mask_real.max() - mask_real
 
-        self.Image.RealMask = mask_real
+        self.Fig.RealMask.Image = mask_real
 
         # --- Weighted-average diffraction pattern for selected frames ----
         # self.Data is (NFr, NPx), so (mask_flat) @ self.Data sums over frames
@@ -410,7 +410,7 @@ def realSpaceROICallbacks(self):
         if n_sum < np.finfo(np.float32).eps:
             n_sum = float(np.finfo(np.float32).eps)
 
-        self.Image.Dfrn = (
+        self.Fig.Dfrn.Image = (
             (mask_flat @ self.Data) / n_sum
         ).reshape(self.D.NPxY, self.D.NPxX)
 
@@ -436,8 +436,8 @@ def realSpaceROICallbacks(self):
         val = self.RealROIShape.currentData()
 
         if val == 'file':
-            self.Image.RealROIFile = importMask(self, 'Real')
-            if self.Image.RealROIFile is None:
+            self.Mask.RealROIFile = importMask(self, 'Real')
+            if self.Mask.RealROIFile is None:
                 val = 'full'
                 self.RealROIShape.blockSignals(True)
                 self.RealROIShape.setCurrentIndex(
