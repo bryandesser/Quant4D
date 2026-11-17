@@ -163,8 +163,9 @@ def detectorModeCallbacks(self):
             self.DfrnDetrTabGroup.setCurrentIndex(0)
             previewCallbacks(self)
         case "AlignMod":
-            # display the full dataset pacbed
-            self.Fig.Dfrn.Image = self.Data.sum(axis=0).reshape(dfrn_shape(self.D))
+            # display the full dataset pacbed, combined as the Pattern dropdown says (default sum)
+            from callbacks.realSpaceROICallbacks import diffractionPattern  # noqa: E402
+            self.Fig.Dfrn.Image = diffractionPattern(self, np.ones(self.Data.shape[0]))
             self.ImageAx.Dfrn = self.Fig.Dfrn.ax.imshow(self.Fig.Dfrn.Image, cmap=self.Fig.Dfrn.cmap)
             self.ImageAx.Dfrn.figure.set_facecolor('black')
             self.Fig.Dfrn.show()

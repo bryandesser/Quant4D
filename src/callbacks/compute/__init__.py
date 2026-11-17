@@ -30,7 +30,7 @@ from callbacks.compute.dpc import sector_centroid_radius, segment_weights, segme
 from callbacks.compute.masks import (
     circle_mask, circles_mask, ellipse_mask, polygon_mask, rectangle_mask,
 )
-from callbacks.compute.roi import roi_pattern
+from callbacks.compute.roi import COMBINE_MODES, combine_frames, roi_pattern
 
 __all__ = [
     "device_data_info", "project", "project_frames", "release_device_data", "resolve_device",
@@ -39,5 +39,5 @@ __all__ = [
     "weighted_mean_position",
     "sector_centroid_radius", "segment_weights", "segmented_dpc",
     "circle_mask", "circles_mask", "ellipse_mask", "polygon_mask", "rectangle_mask",
-    "roi_pattern",
+    "roi_pattern", "combine_frames", "COMBINE_MODES",
 ]

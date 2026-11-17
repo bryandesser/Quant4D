@@ -193,3 +193,16 @@ def test_cuda_request_without_cuda_uses_numpy(data, weights, monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     assert compute.resolve_device("cuda:0") is None
     np.testing.assert_allclose(compute.project(data, weights, "cuda:0"), data @ weights, rtol=1e-5)
+
+
+def test_upload_non_native_byte_order(device):
+    """A byte-swapped memory map (lazy data after Swap Byte Order) uploads and projects correctly."""
+    from callbacks import compute
+    rng = np.random.default_rng(5)
+    data = rng.random((6, 20), dtype=np.float32)
+    swapped = data.byteswap().view(data.dtype.newbyteorder())     # same values, other byte order
+    assert not swapped.dtype.isnative
+    weights = rng.random(20).astype(np.float32)
+    compute.release_device_data()
+    assert np.allclose(compute.project(swapped, weights, device), data @ weights, rtol=1e-5)
+    compute.release_device_data()

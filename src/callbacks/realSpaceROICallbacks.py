@@ -382,8 +382,8 @@ def realSpaceROICallbacks(self):
 
         self.Fig.RealMask.Image = mask_real
 
-        # --- Weighted-average diffraction pattern for selected frames ----
-        self.Fig.Dfrn.Image = compute.roi_pattern(self.Data, mask_real, self.D.GPU).reshape(dfrn_shape(self.D))
+        # --- Diffraction pattern of the selected frames (Pattern dropdown: sum, mean, max, …) ----
+        self.Fig.Dfrn.Image = diffractionPattern(self, mask_real)
 
         plotAllPatterns(self)
 
@@ -439,3 +439,28 @@ def realSpaceROICallbacks(self):
     # -- Any other sender (e.g. the ROI invert checkbox) -----------------
     else:
         moveRealROI()
+
+
+def connectPatternCombine(self) -> None:
+    """Add the "Pattern" dropdown (how a region's diffraction patterns are combined: sum, mean,
+    max, std, sqrt, ln, log10 — MATLAB Quant4D's diffraction dropdown, default sum) to the
+    diffraction window's toolbar; called once from ``slotsSignals``."""
+    combo = qtw.QComboBox()
+    combo.setObjectName("DfrnCombine")
+    for mode in compute.COMBINE_MODES:
+        combo.addItem(mode, mode)
+    combo.setCurrentIndex(0)
+    combo.setToolTip("Set how patterns are combined in real space. NOTE: max() and std() can be "
+                     "significantly slower when interacting with a real-space ROI!")
+    toolbar = self.Fig.Dfrn.toolbar
+    toolbar.addSeparator()
+    toolbar.addWidget(qtw.QLabel(" Pattern: "))
+    toolbar.addWidget(combo)
+    self.DfrnCombine = combo
+    combo.currentIndexChanged.connect(lambda *_: realSpaceROICallbacks(self))
+
+
+def diffractionPattern(self, weights):
+    """The diffraction image for real-space *weights*, combined as the "Pattern" dropdown says."""
+    mode = self.DfrnCombine.currentData() if hasattr(self, "DfrnCombine") else "sum"
+    return compute.combine_frames(self.Data, weights, mode, self.D.GPU).reshape(dfrn_shape(self.D))

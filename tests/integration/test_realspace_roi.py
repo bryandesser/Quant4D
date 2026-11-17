@@ -20,8 +20,9 @@ def _select(app, qapp, shape):
 
 
 def _weighted_mean(app, weights):
+    """The region's pattern with the default combination, *sum* (MATLAB Quant4D's default)."""
     w = np.asarray(weights, float).ravel()
-    return (w @ np.asarray(app.Data, float) / w.sum()).reshape(DET_Y, DET_X)
+    return (w @ np.asarray(app.Data, float)).reshape(DET_Y, DET_X)
 
 
 @pytest.fixture()
@@ -37,9 +38,35 @@ def roi_app(loaded_app, qapp):
 
 
 class TestFullROI:
-    def test_full_is_mean_of_all_frames(self, roi_app):
+    def test_full_is_sum_of_all_frames(self, roi_app):
         assert np.asarray(roi_app.Fig.RealMask.Image, bool).all()
-        assert np.allclose(roi_app.Fig.Dfrn.Image, np.asarray(roi_app.Data, float).mean(axis=0).reshape(DET_Y, DET_X),
+        assert np.allclose(roi_app.Fig.Dfrn.Image, np.asarray(roi_app.Data, float).sum(axis=0).reshape(DET_Y, DET_X),
+                           rtol=1e-5)
+
+
+class TestPatternCombination:
+    """The "Pattern" dropdown on the diffraction window (MATLAB's diffraction dropdown)."""
+
+    @pytest.mark.parametrize("mode", ["sum", "mean", "max", "std", "sqrt", "ln", "log10"])
+    def test_modes(self, roi_app, qapp, mode):
+        from callbacks import compute
+        _select(roi_app, qapp, "rectangle")
+        mask = np.asarray(roi_app.Fig.RealMask.Image, float)
+        roi_app.DfrnCombine.setCurrentIndex(roi_app.DfrnCombine.findData(mode))
+        qapp.processEvents()
+        try:
+            expected = compute.combine_frames(np.asarray(roi_app.Data), mask, mode).reshape(DET_Y, DET_X)
+            assert np.allclose(roi_app.Fig.Dfrn.Image, expected, rtol=1e-5)
+        finally:
+            roi_app.DfrnCombine.setCurrentIndex(0)
+            qapp.processEvents()
+
+    def test_default_is_sum_everywhere(self, roi_app, qapp):
+        """After import (Align mode) and with the full ROI the pattern is the same sum."""
+        assert roi_app.DfrnCombine.currentData() == "sum"
+        roi_app.DetrMode.setCurrentIndex(roi_app.DetrMode.findData("AlignMod"))
+        qapp.processEvents()
+        assert np.allclose(roi_app.Fig.Dfrn.Image, np.asarray(roi_app.Data, float).sum(axis=0).reshape(DET_Y, DET_X),
                            rtol=1e-5)
 
 

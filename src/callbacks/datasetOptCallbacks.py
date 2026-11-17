@@ -7,34 +7,13 @@ from callbacks import compute  # noqa: E402
 
 def datasetOptCallbacks(self):
     match self.sender():
-        case self.SettingsWindow.SwapByteOrder:  # Swap byte-order
-            # msg = "Swapping byte order ..." #TODO
-            # self.T.progDLG = progDLG(self, sprintf("\n#s\n",msg), "Byte Order Swap") #TODO
-            self.progressBar.setMaximum(0)
-            try:
-                self.Data.byteswap(inplace=True)
-                compute.release_device_data()   # the GPU copy is now stale
-            except BaseException:
-                notifDLG(
-                    self,
-                    self,
-                    'error',
-                    "It seems the system does not have enough memory for this process! Maybe try to increase system's virtual memory.",
-                    "Out of Memory")
+        case self.SettingsWindow.SwapByteOrder:  # Swap byte-order, then ask whether it is right
+            if not swapByteOrder(self):
                 return
-
-            self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b` at `self.D.ByteOrder`
-            self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
-            self.UpdateImages.trigger()
-            # delete(self.T.progDLG) #TODO
-            self.progressBar.setValue(1)
-            self.progressBar.setMaximum(1)
             sel = notifDLG(self, self, 'quest', "Is the current byte-order correct?",
                            'Byte Order Swap', ["Yes", "No. Revert"])
-
-            # Run the process again if selected "No ....."
             if str(sel or "").startswith("No"):   # None when the dialog is dismissed
-                self.SettingsWindow.SwapByteOrder.click()  # datasetOptCallbacks(self,struct('Source',self.SwapByteOrder,'EventName',"")) #TODO?
+                swapByteOrder(self)              # (re-clicking the button from its own handler did nothing)
 
         case self.SettingsWindow.SwapDfrnXY | self.SettingsWindow.SwapRealXY:
             # Diffraction or real-space
@@ -81,6 +60,34 @@ def datasetOptCallbacks(self):
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
                 compute.release_device_data()   # the GPU copy is now stale
+
+
+def swapByteOrder(self) -> bool:
+    """Reinterpret the dataset with the other byte order and update the images.
+
+    In-memory data is byte-swapped in place (it stays in the native byte order the compute and
+    GPU paths need); a lazily loaded dataset is a read-only memory map, so it is viewed with the
+    swapped dtype instead (no copy, nothing written to the file).  Returns False on failure.
+    """
+    self.progressBar.setMaximum(0)
+    try:
+        if isinstance(self.Data, np.memmap) or not self.Data.flags.writeable:
+            self.Data = self.Data.view(self.Data.dtype.newbyteorder())
+        else:
+            self.Data.byteswap(inplace=True)
+    except MemoryError:
+        notifDLG(self, self, 'error',
+                 "It seems the system does not have enough memory for this process! "
+                 "Maybe try to increase system's virtual memory.", "Out of Memory")
+        return False
+    finally:
+        self.progressBar.setMaximum(1)
+        self.progressBar.setValue(1)
+    compute.release_device_data()   # the GPU copy is now stale
+    self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b`
+    self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
+    self.UpdateImages.trigger()
+    return True
 
 
 def getImportInfo(self):

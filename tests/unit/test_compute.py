@@ -299,3 +299,40 @@ def test_roi_pattern_empty_selection_is_zero(data):
 def test_roi_pattern_rejects_wrong_frame_count(data):
     with pytest.raises(ValueError):
         compute.roi_pattern(data, np.ones(4))
+
+
+# ---------------------------------------------------------------------------
+# combine_frames: the diffraction "Pattern" dropdown
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("weights_kind", ["binary", "weighted", "single"])
+def test_combine_frames(data, weights_kind):
+    rng = np.random.default_rng(3)
+    n = data.shape[0]
+    if weights_kind == "binary":
+        w = (rng.random(n) > 0.5).astype(float)
+    elif weights_kind == "weighted":
+        w = rng.random(n) * (rng.random(n) > 0.3)
+    else:
+        w = np.zeros(n)
+        w[4] = 1
+    d = np.asarray(data, float)
+    sel = w != 0
+    rows = d[sel] * w[sel, None]
+    s = w @ d
+    expected = {
+        "sum": s, "mean": s / w.sum(), "max": rows.max(axis=0),
+        "std": rows.std(axis=0, ddof=1) if sel.sum() > 1 else np.zeros(d.shape[1]),
+        "sqrt": np.sqrt(s), "ln": np.clip(np.log(s), 0, None), "log10": np.clip(np.log10(s), 0, None),
+    }
+    for mode, ref in expected.items():
+        assert np.allclose(compute.combine_frames(data, w, mode), ref, rtol=1e-6, atol=1e-9), mode
+
+
+def test_combine_frames_edge_cases(data):
+    n = data.shape[0]
+    assert not compute.combine_frames(data, np.zeros(n), "max").any()
+    neg = -np.ones((n, 3))
+    assert np.allclose(compute.combine_frames(neg, np.ones(n), "sqrt"), 0)
+    assert np.allclose(compute.combine_frames(neg, np.ones(n), "ln"), np.log(n)), "log of the magnitude, as MATLAB real(log(x))"
+    with pytest.raises(ValueError):
+        compute.combine_frames(data, np.ones(n), "median")

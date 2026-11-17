@@ -51,7 +51,7 @@ from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa:
 from callbacks.customDetectorCallbacks import connectCustomDetector  # noqa: E402
 from callbacks.axis_direction import connectAxisDirection  # noqa: E402
 from callbacks.menus import connectMenus  # noqa: E402
-from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
+from callbacks.realSpaceROICallbacks import connectPatternCombine, realSpaceROICallbacks  # noqa: E402
 from callbacks.utils import breakpoint  # noqa: E402,A001
 from callbacks.signals import signals_blocked  # noqa: E402
 from callbacks.window_manager import enableWindows  # noqa: E402,F401  (moved; re-exported)
@@ -140,6 +140,7 @@ def slotsSignals(self):
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
     connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
     connectMenus(self)            # menu-bar actions and help icons
+    connectPatternCombine(self)   # diffraction window: how a region's patterns are combined
 
     # menu action slots/signals
     self.actionShow_Diffraction_Pattern.triggered.connect(

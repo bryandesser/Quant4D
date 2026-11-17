@@ -117,7 +117,8 @@ class _Resident:
             tensor = torch.empty(data.shape, dtype=torch.float32, device=dev)
             step = _frames_per_chunk(data.shape[1], 4)
             for start in range(0, data.shape[0], step):
-                block = np.ascontiguousarray(data[start:start + step])
+                # native byte order (torch refuses others, e.g. a byte-swapped memory map)
+                block = np.ascontiguousarray(data[start:start + step], dtype=data.dtype.newbyteorder("="))
                 tensor[start:start + step] = torch.from_numpy(block).to(dev, dtype=torch.float32)
         except RuntimeError as exc:
             if not _is_out_of_memory(exc):
