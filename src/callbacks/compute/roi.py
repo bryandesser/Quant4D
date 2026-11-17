@@ -1,14 +1,18 @@
 """Diffraction pattern for a real-space region of interest."""
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+
+from callbacks.compute.backend import project_frames
 
 __all__ = ["roi_pattern"]
 
 _EPS = float(np.finfo(np.float32).eps)
 
 
-def roi_pattern(data: np.ndarray, weights: np.ndarray) -> np.ndarray:
+def roi_pattern(data: np.ndarray, weights: np.ndarray, device: Any = None) -> np.ndarray:
     """Weighted-average diffraction pattern over the frames selected by *weights*.
 
     Parameters
@@ -17,6 +21,8 @@ def roi_pattern(data: np.ndarray, weights: np.ndarray) -> np.ndarray:
     weights : np.ndarray, shape (NFrY, NFrX) or (n_frames,)
         Weight of each frame; a 0/1 mask gives the mean pattern of the selected
         frames.
+    device :
+        Torch device, or ``None`` for NumPy.  Only used for large selections.
 
     Returns
     -------
@@ -34,4 +40,4 @@ def roi_pattern(data: np.ndarray, weights: np.ndarray) -> np.ndarray:
         # frames instead of multiplying through the whole dataset.
         rows = np.asarray(data[selected], dtype=np.result_type(data.dtype, np.float32))
         return rows.sum(axis=0) / total
-    return np.asarray(w @ data) / total
+    return project_frames(data, w, device) / total

@@ -12,9 +12,13 @@ Conventions (see :mod:`callbacks.layout`)
   lines up with the pixel axis of ``data``.
 * Points such as the beam centre are ``(x, y)`` in 0-based pixel coordinates.
 * ``device`` is a CUDA device (``"cuda:0"``, an index, or ``None`` for CPU).
-  Results always come back as NumPy arrays.
+  Results always come back as NumPy arrays.  On a GPU the dataset is uploaded
+  once and kept there (see :mod:`callbacks.compute.backend`); call
+  :func:`release_device_data` after changing it in place or unloading it.
 """
-from callbacks.compute.backend import project, resolve_device
+from callbacks.compute.backend import (
+    device_data_info, project, project_frames, release_device_data, resolve_device,
+)
 from callbacks.compute.annular import (
     annular_mask, masked_sum, radial_index, ring_integrals, ring_matrix,
 )
@@ -29,7 +33,7 @@ from callbacks.compute.masks import (
 from callbacks.compute.roi import roi_pattern
 
 __all__ = [
-    "project", "resolve_device",
+    "device_data_info", "project", "project_frames", "release_device_data", "resolve_device",
     "annular_mask", "masked_sum", "radial_index", "ring_integrals", "ring_matrix",
     "center_of_mass", "divergence", "integrate_field", "magnitude_phase", "rotate_field",
     "weighted_mean_position",

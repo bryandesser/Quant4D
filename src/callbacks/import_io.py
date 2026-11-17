@@ -19,6 +19,7 @@ from PIL import Image
 # Deferred cross-module imports (safe: import_io is itself only loaded lazily)
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
 from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
+from callbacks import compute  # noqa: E402
 # NOTE: enableWindows is imported inside the functions that need it (unloadData,
 # importData) to avoid a circular import with callbacks.startup, which imports
 # from this module at its own module level.
@@ -925,7 +926,8 @@ def unloadData(self, keep_p=False):
     # except:
     #    pass
 
-    # Clear data, parameters and Axes
+    # Clear data, parameters and Axes; free the copy of the dataset held on the GPU
+    compute.release_device_data()
     self.Data = None
     self.Memfile = None
     # setattr(self,'D',D()) #TODO #DELTE

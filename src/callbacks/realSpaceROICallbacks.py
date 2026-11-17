@@ -387,7 +387,7 @@ def realSpaceROICallbacks(self):
         self.Fig.RealMask.Image = mask_real
 
         # --- Weighted-average diffraction pattern for selected frames ----
-        self.Fig.Dfrn.Image = compute.roi_pattern(self.Data, mask_real).reshape(dfrn_shape(self.D))
+        self.Fig.Dfrn.Image = compute.roi_pattern(self.Data, mask_real, self.D.GPU).reshape(dfrn_shape(self.D))
 
         plotAllPatterns(self)
 

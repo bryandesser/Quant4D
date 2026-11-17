@@ -57,6 +57,18 @@ def test_project_rejects_mismatched_weights(data):
         compute.project(data, np.ones(5))
 
 
+def test_project_frames_matches_matmul(data, monkeypatch):
+    w = np.linspace(0.0, 1.0, NFY * NFX)
+    np.testing.assert_allclose(compute.project_frames(data, w), w @ data, rtol=1e-5)
+    ints = (data * 1000).astype(np.uint16)
+    whole = compute.project_frames(ints, w)
+    np.testing.assert_allclose(whole, w @ ints.astype(np.float64), rtol=1e-5)
+    monkeypatch.setattr(backend, "CHUNK_BYTES", 1)      # one frame per chunk
+    np.testing.assert_allclose(compute.project_frames(ints, w), whole, rtol=1e-6)
+    with pytest.raises(ValueError):
+        compute.project_frames(data, np.ones(3))
+
+
 def test_resolve_device_none_is_cpu():
     assert compute.resolve_device(None) is None
 

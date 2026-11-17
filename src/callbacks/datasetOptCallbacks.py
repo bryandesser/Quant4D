@@ -1,6 +1,7 @@
 from callbacks.allFunctions import notifDLG, checkNaN, getImportInfo
 from callbacks.importCallbacks import importCallbacks
 import numpy as np
+from callbacks import compute  # noqa: E402
 
 
 def datasetOptCallbacks(self):
@@ -11,6 +12,7 @@ def datasetOptCallbacks(self):
             self.progressBar.setMaximum(0)
             try:
                 self.Data.byteswap(inplace=True)
+                compute.release_device_data()   # the GPU copy is now stale
             except BaseException:
                 notifDLG(
                     self,
@@ -69,6 +71,7 @@ def datasetOptCallbacks(self):
             sel = checkNaN(self, image=self.ImageAx.Preview.get_array(), preview=True)
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
+                compute.release_device_data()   # the GPU copy is now stale
 
         case other:
             self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
@@ -76,6 +79,7 @@ def datasetOptCallbacks(self):
             sel = checkNaN(self, image=self.ImageAx.Dfrn.get_array(), preview=False)
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
+                compute.release_device_data()   # the GPU copy is now stale
 
 
 def getImportInfo(self):
