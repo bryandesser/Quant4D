@@ -87,11 +87,15 @@ def mathCallbacks(self):
 
 
 def saveCallbacks(self):
-    pass  # TODO
+    """Save the images selected in the Save window (see callbacks.save_export)."""
+    from callbacks.save_export import saveImages  # noqa: E402
+    return saveImages(self)
 
 
 def exportCallbacks(self):
-    pass  # TODO
+    """Export the dataset as set up in the Save window (see callbacks.save_export)."""
+    from callbacks.save_export import exportDataset  # noqa: E402
+    return exportDataset(self)
 
 
 def axeDirCallbacks(self):
@@ -99,4 +103,14 @@ def axeDirCallbacks(self):
 
 
 def saveVect(self):
-    pass  # TODO
+    """Save the two components of the CoM/DPC vector field as CoMX and CoMY float32 TIFFs."""
+    import os
+    from callbacks.io.export import save_tiff  # noqa: E402
+    from callbacks.save_export import imageFilename  # noqa: E402
+    written = []
+    for id in ("CoMX", "CoMY"):
+        if self.Fig[id] is not None and self.Fig[id].Image is not None:
+            path = os.path.join(self.SaveWindow.SaveDir.text(), imageFilename(self, id, "tif"))
+            save_tiff(path, self.Fig[id].Image)
+            written.append(path)
+    return written

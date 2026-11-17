@@ -71,8 +71,10 @@ def readFile(self):
     # real space scan shape
     framesx = self.D.NFrX
     framesy = self.D.NFrY
-    dataType = [("header", "{}uint8".format(header)), ("data", "{}{}".format(
-        nopix * nopiy, self.D.DataType)), ("footer", "{}uint8".format(footer))]
+    # element type in the file's byte order ('l' little / 'b' big endian)
+    order = {"l": "<", "b": ">"}.get(self.D.ByteOrder, "=")
+    dataType = [("header", "{}uint8".format(header)), ("data", "{}{}{}".format(
+        nopix * nopiy, order, self.D.DataType)), ("footer", "{}uint8".format(footer))]
 
     # show progressbar to let user know things are happening
     self.progressBarPanel.setVisible(True)
@@ -165,9 +167,9 @@ def prepareData(self):
         self.RealROIInvert.setChecked(False)  # do not invert the real space ROI picker on initialization
         self.RealROIShape.setCurrentIndex(self.RealROIShape.findData("full"))  # display PACBED from the entire dataset
 
-        # Export controls #TODO
-        self.SaveWindow.ExpPxPart.setChecked(False)
-        self.SaveWindow.ExpFrPart.setChecked(False)
+        # Export controls: whole dataset
+        from callbacks.save_export import resetExportRanges  # noqa: E402
+        resetExportRanges(self)
 
         # initiate image display parameters for all ImageWindows
         for id in self.G.ImgID:

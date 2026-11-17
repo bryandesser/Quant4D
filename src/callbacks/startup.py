@@ -122,10 +122,16 @@ def slotsSignals(self):
     self.ImportWindow.FrFoot.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.FrHead.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpSubImg.currentIndexChanged.connect(lambda: importFileType(self))
+    # file-type radio buttons: re-read the file's header/geometry for the chosen type
+    for button in (self.ImportWindow.EMPADButton, self.ImportWindow.MedipixButton, self.ImportWindow.MRCButton,
+                   self.ImportWindow.DM34Button, self.ImportWindow.HDF5Button, self.ImportWindow.CustomButton):
+        button.clicked.connect(lambda: importFileType(self))
 
     # save window slots/signals
     self.SaveWindow.SaveImgSelectAll.clicked.connect(
         lambda isChecked: self.SaveWindow.SaveImgList.selectAll() if isChecked else self.SaveWindow.SaveImgList.clearSelection())
+    from callbacks.save_export import connectSaveWindow  # noqa: E402
+    connectSaveWindow(self)
 
     # menu action slots/signals
     self.actionShow_Diffraction_Pattern.triggered.connect(
@@ -560,9 +566,7 @@ def startupFcn(self):
         self.SaveWindow.ExpByteOrder.addItem("Little Endian", 'l')
         self.SaveWindow.ExpByteOrder.addItem("Big Endian", 'b')
 
-        # export window, file format
-        self.SaveWindow.ExpFormat.Items = {'HDF5 (*.h5)', 'Raw binary (*.raw)'}
-        self.SaveWindow.ExpFormat.ItemsData = {'h5', 'raw'}
+        # export window, file format: populated in save_export.connectSaveWindow
 
         # main UI window, diffraction modes
         diffType = ['PrvwMod', 'AlignMod', 'AnnMod', 'DPCMod', 'CoMMod', 'VrApMod', 'CustMod']

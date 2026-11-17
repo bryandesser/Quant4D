@@ -51,6 +51,8 @@ class importThread(qtc.QObject):
                 dtype=self.dataType,
                 count=self.frameCount,
                 offset=self.dataOffset)["data"]
+            if not self.Data.dtype.isnative:     # e.g. a big-endian file: compute in native order
+                self.Data = self.Data.astype(self.Data.dtype.newbyteorder("="))
         self.result.emit(self.Data)
         self.finished.emit()
 

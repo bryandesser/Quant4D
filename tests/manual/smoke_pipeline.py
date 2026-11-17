@@ -108,6 +108,138 @@ def _import_from_file(w, data):
     assert np.array_equal(np.asarray(w.Data), data), "imported data differs from file contents"
 
 
+def _wait_for_import(w, shape):
+    deadline = time.time() + 20
+    while time.time() < deadline and not (w.Data is not None and w.Data.shape == shape
+                                          and w.Fig.Dfrn.Image is not None and w.Fig.Dfrn.Image.any()):
+        qapp.processEvents()
+        time.sleep(0.02)
+    assert w.Data is not None and w.Data.shape == shape, \
+        f"import gave {None if w.Data is None else w.Data.shape}, expected {shape}"
+
+
+def _save_images(w, folder):
+    """Save every image as TIFF, plain PNG and annotated PNG, with detector angles in the names."""
+    from PIL import Image
+    sw = w.SaveWindow
+    sw.SaveDir.setText(folder)
+    sw.SaveImgPrefix.setText("smoke_")
+    sw.SaveImgList.selectAll()
+    ids = [it.text() for it in sw.SaveImgList.selectedItems()]
+    assert "Real" in ids and "Dfrn" in ids, f"image list is {ids}"
+    sw.SavePrfxRi.setChecked(True)
+    sw.SavePrfxRo.setChecked(True)
+    sw.SaveTabGroup.setCurrentWidget(sw.SaveImgTab)
+    assert sw.SaveExport.text() == "Save Images"
+    for tif, png, annot in ((True, False, False), (False, True, False), (False, True, True)):
+        sub = os.path.join(folder, f"t{int(tif)}p{int(png)}a{int(annot)}")
+        os.mkdir(sub)
+        sw.SaveDir.setText(sub)
+        sw.SaveImgTIF.setChecked(tif)
+        sw.SaveImgPNG.setChecked(png)
+        sw.SaveImgPNGAnnot.setChecked(annot)
+        sw.SaveExport.click()
+        qapp.processEvents()
+        files = sorted(os.listdir(sub))
+        assert files, "nothing was saved"
+        real = [f for f in files if f.startswith("smoke_Real_") or f.startswith("smoke_Real.")]
+        assert len(real) == 1, f"expected one Real image in {files}"
+        assert "_ri" in real[0] and "_ro" in real[0], f"detector angles missing from {real[0]}"
+        im = np.array(Image.open(os.path.join(sub, real[0])))
+        if tif:
+            assert im.dtype == np.float32 and np.allclose(im, w.Fig.Real.Image), "TIFF is not the raw Real image"
+        elif not annot:
+            assert im.shape == (NFY, NFX, 3), f"plain PNG has shape {im.shape}, expected one pixel per probe position"
+        else:
+            assert im.shape[0] > NFY and im.shape[2] in (3, 4), f"annotated PNG has shape {im.shape}"
+    sw.SaveDir.setText(folder)
+
+
+def _export(w, folder, fmt, partial, byte_order="l"):
+    """Export through the Save window and return (path, expected 4-D array)."""
+    sw = w.SaveWindow
+    sw.SaveDir.setText(folder)
+    sw.SaveTabGroup.setCurrentWidget(sw.ExportTab)
+    assert sw.SaveExport.text() == "Export Dataset"
+    sw.ExpFormat.setCurrentIndex(sw.ExpFormat.findData(fmt))
+    sw.ExpByteOrder.setCurrentIndex(sw.ExpByteOrder.findData(byte_order))
+    sw.ExpFilename.setText(f"smoke_{fmt}")
+    sw.ExpDimSuff.setChecked(fmt == "raw")
+    cube = np.asarray(w.Data).reshape(NFY, NFX, NPY, NPX)
+    if partial:
+        sw.ExpFrPart.setChecked(True)
+        sw.ExpFrPart.clicked.emit(True)
+        sw.EFrD.setValue(2)
+        sw.EFrX1.setValue(1)
+        sw.EFrY1.setValue(0)
+        sw.ENFrX.setValue(99)                # clamped to what fits
+        sw.ENFrY.setValue(99)
+        assert (sw.ENFrX.value(), sw.ENFrY.value()) == ((NFX - 2) // 2 + 1, (NFY - 1) // 2 + 1)
+        sw.ExpPxPart.setChecked(True)
+        sw.ExpPxPart.clicked.emit(True)
+        sw.EPxD.setValue(2)
+        sw.EPxX1.setValue(3)
+        sw.EPxY1.setValue(1)
+        sw.ENPxX.setValue(99)
+        sw.ENPxY.setValue(99)
+        cx, cy = sw.ENPxX.value(), sw.ENPxY.value()
+        assert (cx, cy) == ((NPX - 3) // 2, (NPY - 1) // 2)
+        fx, fy = sw.ENFrX.value(), sw.ENFrY.value()
+        sub = cube[0:(fy - 1) * 2 + 1:2, 1:1 + (fx - 1) * 2 + 1:2, 1:1 + cy * 2, 3:3 + cx * 2]
+        expected = sub.reshape(fy, fx, cy, 2, cx, 2).sum(axis=(3, 5))
+    else:
+        sw.ExpFrPart.setChecked(False)
+        sw.ExpPxPart.setChecked(False)
+        sw.ExpPxPart.clicked.emit(False)
+        expected = cube.copy()
+    notes = sw.ExpNotes.toPlainText()
+    assert f"{expected.shape}" in notes, f"export summary does not show {expected.shape}:\n{notes}"
+    sw.SaveExport.click()
+    qapp.processEvents()
+    path = notes.splitlines()[0].replace("File: ", "")
+    assert os.path.isfile(path), f"{path} was not written"
+    return path, expected
+
+
+def _check_export_hdf5(w, folder):
+    import h5py
+    path, expected = _export(w, folder, "h5", partial=False)
+    with h5py.File(path) as f:
+        assert np.array_equal(f["data"][()], expected), "HDF5 data differs"
+        meta = dict(f["metadata"].attrs)
+    assert np.allclose(meta["beam_center_xy"], w.B0), meta
+    return path, expected
+
+
+def _check_export_raw_partial(w, folder):
+    path, expected = _export(w, folder, "raw", partial=True, byte_order="b")
+    ny, nx, py, px = expected.shape
+    assert path.endswith(f"_{px}x{py}x{nx}x{ny}.raw"), path
+    got = np.fromfile(path, dtype=">f4").reshape(expected.shape)
+    assert np.allclose(got, expected, rtol=1e-6), "raw data differs"
+    return path, expected
+
+
+def _reimport(w, path, expected, hdf5, byte_order="l"):
+    """Open an exported file through the Import window, letting it detect the geometry."""
+    iw = w.ImportWindow
+    w.ShowImportWdw.trigger()
+    iw.ImpFilePath.setText(path)
+    importSelectFile(w)
+    (iw.HDF5Button if hdf5 else iw.CustomButton).click()
+    qapp.processEvents()
+    ny, nx, py, px = expected.shape
+    got_dims = tuple(getattr(iw, n).value() for n in ("DNPxX", "DNPxY", "DNFrX", "DNFrY"))
+    assert got_dims == (px, py, nx, ny), f"importer read dimensions {got_dims} from {os.path.basename(path)}"
+    iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData("f4"))
+    if not hdf5:
+        iw.ImpByteOrder.setCurrentIndex(iw.ImpByteOrder.findData(byte_order))
+    qapp.processEvents()
+    iw.ImportDataButton.click()
+    _wait_for_import(w, (ny * nx, py * px))
+    assert np.allclose(np.asarray(w.Data).reshape(expected.shape), expected, rtol=1e-6), "re-imported data differs"
+
+
 def _check_images(w, ids):
     for i in ids:
         im = w.Fig[i].Image
@@ -310,6 +442,16 @@ def main():
     _step("update images", lambda: w.UpdateImages.trigger())
     _step("hide all image windows", lambda: hideAllWindows(w))
     _step("re-import same file", lambda: _import_from_file(w, data))
+
+    out = tempfile.mkdtemp()
+    _step("mode AnnMod for saving", lambda: _set_mode(w, "AnnMod"))
+    _step("save images (TIFF, PNG, annotated PNG)", lambda: _save_images(w, out))
+    exported = {}
+    _step("export HDF5, whole dataset", lambda: exported.update(h5=_check_export_hdf5(w, out)))
+    _step("export raw, big endian, partial + binned + sampled", lambda: exported.update(raw=_check_export_raw_partial(w, out)))
+    _step("re-import exported big-endian raw (geometry from file name)", lambda: _reimport(w, *exported["raw"], hdf5=False, byte_order="b"))
+    _step("re-import exported HDF5", lambda: _reimport(w, *exported["h5"], hdf5=True))
+    _step("modes after re-import", lambda: [_set_mode(w, m) for m in ("AlignMod", "AnnMod", "CoMMod", "VrApMod")])
     if os.environ.get("SMOKE_DUMP"):
         np.savez_compressed(os.environ["SMOKE_DUMP"], **snapshots)
     return 1 if errors else 0

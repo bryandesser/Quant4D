@@ -33,6 +33,15 @@ All detector images are computed here.
 .. automodule:: callbacks.compute.roi
    :members:
 
+Saving and exporting
+--------------------
+
+.. automodule:: callbacks.io.export
+   :members:
+
+.. automodule:: callbacks.save_export
+   :members:
+
 Array layout and coordinates
 ----------------------------
 
