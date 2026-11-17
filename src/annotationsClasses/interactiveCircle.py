@@ -4,6 +4,8 @@ from matplotlib.backend_bases import MouseEvent
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtGui as qtg
+from typing import Any
+
 import numpy as np
 
 
@@ -25,7 +27,7 @@ class InteractiveCircle(qtc.QObject):
 
     lock = None  # only one InteractiveCircle can be interactived with at a time
 
-    def __init__(self, axis, center=None, radius=None, color='r', interactions='all'):
+    def __init__(self, axis, center=None, radius=None, color: Any = 'r', interactions='all'):
         super().__init__()
 
         # set defaults for center and radius if none are provided
@@ -244,6 +246,8 @@ class InteractiveCircle(qtc.QObject):
             return
 
         # get artist info from the initial mouse press event
+        if self.press is None:
+            return
         circData, ptData, (xpress, ypress) = self.press
 
         # get mouse movement vector from event and press location

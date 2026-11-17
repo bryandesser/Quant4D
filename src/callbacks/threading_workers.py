@@ -31,11 +31,15 @@ class importThread(qtc.QObject):
     def run(self):
         from callbacks.io.raw import read_frames
         try:
+            assert self.on_disk is not None, "the worker runs once"
             data = read_frames(self.on_disk, self.scan, self.detector, self.frames, self.pixels)
         except (OSError, ValueError, MemoryError) as exc:
             self.failed.emit(f"{type(exc).__name__}: {exc}")
         else:
             self.result.emit(data)
         finally:
+            close = getattr(self.on_disk, "close", None)   # HDF5 file (memory maps have no close)
+            if callable(close):
+                close()
             self.on_disk = None          # close the memory map
             self.finished.emit()

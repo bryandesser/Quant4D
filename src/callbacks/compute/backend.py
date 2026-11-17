@@ -30,11 +30,12 @@ from typing import Any, Optional
 import numpy as np
 
 try:
-    import torch
+    import torch as _torch
     _TORCH_AVAILABLE = True
 except ImportError:  # torch is an optional dependency (pip install pyquant4d[gpu])
-    torch = None  # type: ignore[assignment]
+    _torch = None
     _TORCH_AVAILABLE = False
+torch: Any = _torch      # only used behind _TORCH_AVAILABLE / resolve_device
 
 __all__ = ["resolve_device", "project", "project_frames", "release_device_data", "device_data_info"]
 

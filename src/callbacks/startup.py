@@ -330,12 +330,14 @@ def startupFcn(self):
             self.C.MonitorPositions.append(qtw.QDesktopWidget().screenGeometry(i).getRect())
 
         # monitor size
-        self.C.monitorWidth = qtw.QApplication.desktop().screenGeometry().width()
-        self.C.monitorHeight = qtw.QApplication.desktop().screenGeometry().height()
+        desktop = qtw.QApplication.desktop()
+        assert desktop is not None, "checkMonitors needs a QApplication"
+        self.C.monitorWidth = desktop.screenGeometry().width()
+        self.C.monitorHeight = desktop.screenGeometry().height()
 
         # toolbar size + any horizontal or vertical offsets due to toolbar
         self.C.hOffset, self.C.vOffset, self.C.toolbarWidth, self.C.toolbarHeight = abs(np.array(
-            qtw.QApplication.desktop().screenGeometry().getRect()) - np.array(qtw.QApplication.desktop().availableGeometry().getRect()))
+            desktop.screenGeometry().getRect()) - np.array(desktop.availableGeometry().getRect()))
 
         # establish window decoration sizes with temporary image window
         tmp = ImageWindow("", "", "", "", "", [0, 0, 400, 400])
@@ -725,8 +727,6 @@ def startupFcn(self):
     # only allow user to import data
     self.ShowImportWdw.setEnabled(True)
 
-    resetQuant4DCallbacks
-
 
 def reinitializeUI(self):
     # finalize progressBar
@@ -783,7 +783,7 @@ def enableWindows(self, sw=True):
 
     # Also reset all windows' mouse pointer when enabling UIs
     if sw:
-        [ii.setCursor(qtc.Qt.ArrowCursor) for ii in self.G.AllFig]
+        [ii.setCursor(qtc.Qt.CursorShape.ArrowCursor) for ii in self.G.AllFig]
 
 
 def getDecorSize(self):

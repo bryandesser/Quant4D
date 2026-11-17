@@ -28,7 +28,7 @@ def radial_index(shape: tuple[int, int], center, ann_width: float) -> np.ndarray
         ``floor(distance from center / ann_width)``.
     """
     xx, yy = pixel_grids(shape, center)
-    return np.int32(np.sqrt(xx ** 2 + yy ** 2) / ann_width)
+    return (np.sqrt(xx ** 2 + yy ** 2) / ann_width).astype(np.int32)    # truncation = floor (non-negative)
 
 
 def ring_matrix(k: np.ndarray, dtype=np.float32) -> np.ndarray:

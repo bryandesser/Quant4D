@@ -29,7 +29,7 @@ _FRAME_BYTES = EMPAD_PIXELS * EMPAD_PIXELS * 4
 class EmpadLayout:
     version: int                 # 1 (with footer) or 2 (without)
     footer: int                  # bytes after each frame
-    scan: Optional[tuple]        # (NFrX, NFrY) if known
+    scan: tuple                  # (NFrX, NFrY): from the file name, else the squarest factorisation
     n_frames: int
 
 

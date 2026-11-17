@@ -20,6 +20,8 @@ handles  : matplotlib.collections.PathCollection  — four corner scatter points
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 from matplotlib.patches import Rectangle
 from matplotlib.backend_bases import MouseButton
@@ -50,7 +52,7 @@ class InteractiveRectangle(qtc.QObject):
     # Only one InteractiveRectangle may be active at a time
     lock: 'InteractiveRectangle | None' = None
 
-    def __init__(self, axis, center, size, color='r', interactions='all'):
+    def __init__(self, axis, center, size, color: Any = 'r', interactions='all'):
         super().__init__()
 
         self.center = np.asarray(center, float)
@@ -66,7 +68,7 @@ class InteractiveRectangle(qtc.QObject):
         # ---- Rectangle patch ------------------------------------------
         xy = self.center - self.size / 2.0
         self.patch = axis.add_patch(Rectangle(
-            xy, self.size[0], self.size[1],
+            (float(xy[0]), float(xy[1])), self.size[0], self.size[1],
             linewidth=1.5, edgecolor=color, facecolor='none',
             animated=True,
         ))

@@ -150,6 +150,8 @@ def combine_masks(masks: Sequence[np.ndarray], weights: Sequence[float], mode: s
     """
     weighted = [np.asarray(m, float) * w for m, w in zip(masks, weights)]
     if not weighted:
+        if shape is None:
+            raise ValueError("combine_masks needs `shape` when there are no masks")
         return np.zeros(shape, dtype=float)
     out = np.zeros_like(weighted[0])
     for k, m in enumerate(weighted):

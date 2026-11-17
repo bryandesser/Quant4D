@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
-from matplotlib import cbook
 from callbacks.allFunctions import startupFcn
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import key_press_handler
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt import NavigationToolbar2QT
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import sys
 import os as _os
 from PyQt5 import QtWidgets as qtw
@@ -135,7 +134,7 @@ class ImageWindow(qtw.QMainWindow):
         self.ax = self.fig.add_subplot(111)
         self.fig.subplots_adjust(bottom=0, right=1, top=1, left=0)
         self.canvas = FigureCanvas(self.fig)
-        self.canvas.setFocusPolicy(qtc.Qt.StrongFocus)
+        self.canvas.setFocusPolicy(qtc.Qt.FocusPolicy.StrongFocus)
         self.ax.axis('off')
         self.ax.set_facecolor('black')
 
@@ -177,7 +176,7 @@ class ImageWindow(qtw.QMainWindow):
         else:
             self.setGeometry(qtc.QRect(pos[0], pos[1], pos[2], pos[3]))
 
-        self.fig.canvas.mpl_connect('button_press_event', lambda id: self.activateFigure.emit(self.id))
+        self.fig.canvas.mpl_connect('button_press_event', lambda id: self.activateFigure.emit(self.id))  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
 
         # add custom keyboard shortcuts
         self.shortcut = qtw.QShortcut(qtg.QKeySequence("Ctrl+W"), self)
@@ -195,14 +194,14 @@ class ImageWindow(qtw.QMainWindow):
 
     def resizeEvent(self, a0: qtg.QResizeEvent) -> None:
         sizeChange = a0.size() - a0.oldSize()
-        self.imageResize.emit(sizeChange, self.space)
+        self.imageResize.emit(sizeChange, self.space)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
         return super().resizeEvent(a0)
 
     def on_key_press(self, event):
         key_press_handler(event, self.canvas, self.toolbar)
 
     def mousePressEvent(self, a0: qtg.QMouseEvent) -> None:
-        self.activateFigure.emit(self.id)
+        self.activateFigure.emit(self.id)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
         return super().mousePressEvent(a0)
 
     # TODO: clicking title bar activates window, but does not trigger a mousePressEvent;
@@ -245,14 +244,14 @@ class NavigationToolbar(NavigationToolbar2QT):
                 artists = [a for a in event.inaxes._mouseover_set
                            if a.contains(event)[0] and a.get_visible()]
                 if artists:
-                    a = cbook._topmost_artist(artists)
+                    a = max(artists, key=lambda art: art.zorder)   # topmost (cbook._topmost_artist is private)
                     if a is not event.inaxes.patch:
                         # data = a.get_cursor_data(event) # deleted
                         # get data from the self.Fig[id].Image array rather than
                         # the plotted image, which is scaled. Ensure x,y indices
                         # do not go beyond the length/width of the image array
                         im = event.canvas.parent().parent().Image
-                        xmax, ymax = im.shape
+                        ymax, xmax = im.shape          # images are (y, x); was swapped for non-square images
                         x = np.clip(round(event.xdata), 0, xmax - 1)
                         y = np.clip(round(event.ydata), 0, ymax - 1)
                         data = im[y, x]

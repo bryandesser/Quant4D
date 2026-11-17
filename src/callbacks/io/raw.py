@@ -10,7 +10,7 @@ dataset larger than memory can still be opened in reduced form.
 """
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional
 
 import numpy as np
 
@@ -22,7 +22,7 @@ __all__ = ["frame_record_dtype", "open_frames", "read_frames", "float_type_for"]
 def frame_record_dtype(dtype, n_pixels: int, header: int = 0, footer: int = 0,
                        byte_order: str = "l") -> np.dtype:
     """Structured dtype of one frame record: header bytes, the pixels, footer bytes."""
-    order = {"l": "<", "b": ">"}.get(byte_order, "=")
+    order: Literal["<", ">", "="] = "<" if byte_order == "l" else ">" if byte_order == "b" else "="
     elem = np.dtype(dtype).newbyteorder(order) if np.dtype(dtype).itemsize > 1 else np.dtype(dtype)
     return np.dtype([("header", "u1", (header,)), ("data", elem, (n_pixels,)), ("footer", "u1", (footer,))])
 

@@ -232,7 +232,7 @@ class _Parser:
     # -- token helpers
     def peek(self, offset=0):
         j = self.i + offset
-        return self.toks[j] if j < len(self.toks) else (None, None)
+        return self.toks[j] if j < len(self.toks) else ("eof", "")     # end of input
 
     def take(self, val=None):
         tok = self.peek()
@@ -246,7 +246,7 @@ class _Parser:
         if not self.toks:
             raise MaskMathError("the formula is empty")
         value = self.expr()
-        if self.peek()[0] is not None:
+        if self.peek()[0] != "eof":
             raise MaskMathError(f"unexpected {self.peek()[1]!r}")
         return value
 

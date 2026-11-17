@@ -164,3 +164,21 @@ class TestHistogram:
         sw.DispBrightnessReset.click()
         sw.DispContrastReset.click()
         qapp.processEvents()
+
+
+class TestHoverReadout:
+    """The toolbar shows the raw image value under the cursor, not the display-scaled one."""
+
+    @pytest.mark.parametrize("id", ["Real", "Dfrn"])
+    def test_value_at_far_corner(self, real, qapp, id):
+        from matplotlib.backend_bases import MouseEvent
+        from callbacks.guiClass import NavigationToolbar
+        fig = real.Fig[id]
+        fig.canvas.draw()
+        im = fig.Image
+        ny, nx = im.shape                       # non-square: a swapped x/y clip shows here
+        x_px, y_px = fig.ax.transData.transform((nx - 1, ny - 1))
+        event = MouseEvent("motion_notify_event", fig.canvas, x_px, y_px)
+        msg = NavigationToolbar._mouse_event_to_message(event)
+        value = fig.ax.get_images()[0].format_cursor_data(im[ny - 1, nx - 1]).rstrip()
+        assert msg.endswith(value), f"hover shows {msg!r}, expected the value {value}"

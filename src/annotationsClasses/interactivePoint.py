@@ -90,6 +90,8 @@ class InteractivePoint(qtc.QObject):
         if event.inaxes != self.point.axes:
             return
 
+        if self.press is None:
+            return
         self.point.center, xpress, ypress = self.press
         dx = event.xdata - xpress
         dy = event.ydata - ypress

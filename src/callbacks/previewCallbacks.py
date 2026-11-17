@@ -59,9 +59,10 @@ def previewCallbacks(self):
             self.Fig.Preview.ax.set_xlim(self.P.PreviewAxLim[0:2])
             self.Fig.Preview.ax.set_ylim(self.P.PreviewAxLim[2:])
             try:
-                if d.h5ds and d.Offset == 0:      # HDF5 dataset that is not stored contiguously
+                if d.h5ds:                          # HDF5: through h5py (any layout, chunked or compressed)
+                    from callbacks.io.hdf5 import H5Frames
                     with h5py.File(d.filePath, "r") as f:
-                        frame = np.asarray(f[d.h5ds][ify, ifx], dtype=float)
+                        frame = np.asarray(H5Frames(f[d.h5ds])[ify * d.DNFrX + ifx], dtype=float).reshape(d.DNPxY, d.DNPxX)
                 else:                              # any file read by offset
                     frames = open_frames(d.filePath, d.Offset, d.DNFrX * d.DNFrY, d.DNPxX * d.DNPxY,
                                          d.DataType, d.FrHead, d.FrFoot, d.ByteOrder)

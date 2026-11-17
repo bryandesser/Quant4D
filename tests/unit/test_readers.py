@@ -255,3 +255,61 @@ def test_mask_refused(tmp_path, name, shape):
         open(p, "w").close()
     with pytest.raises(ValueError):
         load_mask_image(p, shape)
+
+
+# ---------------------------------------------------------------------------
+# HDF5 through h5py (chunked / compressed datasets have no data offset)
+# ---------------------------------------------------------------------------
+class TestH5Frames:
+    NY, NX, PY, PX = 3, 5, 6, 7
+
+    @pytest.fixture()
+    def cube(self):
+        return np.arange(self.NY * self.NX * self.PY * self.PX, dtype=np.float32).reshape(
+            self.NY, self.NX, self.PY, self.PX)
+
+    def _ds(self, tmp_path, data, **kw):
+        h5py = pytest.importorskip("h5py")
+        f = h5py.File(tmp_path / "d.h5", "w")
+        f.create_dataset("data", data=data, **kw)
+        f.close()
+        return h5py.File(tmp_path / "d.h5", "r")["data"]
+
+    def test_dims4(self):
+        from callbacks.io.hdf5 import dims4
+        assert dims4((2, 3, 4, 5)) == (2, 3, 4, 5)
+        assert dims4((12, 4, 5)) == (1, 12, 4, 5)
+        assert dims4((4, 5)) == (1, 1, 4, 5)
+        with pytest.raises(ValueError):
+            dims4((5,))
+
+    @pytest.mark.parametrize("kw", [{}, {"chunks": (1, 2, 6, 7), "compression": "gzip"}])
+    def test_4d_indexing(self, tmp_path, cube, kw):
+        from callbacks.io.hdf5 import H5Frames
+        frames = H5Frames(self._ds(tmp_path, cube, **kw))
+        flat = cube.reshape(self.NY * self.NX, -1)
+        assert frames.shape == flat.shape and frames.dtype == np.float32
+        assert np.array_equal(frames[7], flat[7])
+        assert np.array_equal(frames[2:9:3], flat[2:9:3])
+        assert np.array_equal(frames[np.array([5, 7, 9])], flat[[5, 7, 9]])      # one scan row
+        assert np.array_equal(frames[np.array([3, 4, 6, 12])], flat[[3, 4, 6, 12]])  # across rows
+        frames.close()
+
+    def test_3d_stack(self, tmp_path, cube):
+        from callbacks.io.hdf5 import H5Frames
+        stack = cube.reshape(-1, self.PY, self.PX)
+        frames = H5Frames(self._ds(tmp_path, stack, chunks=(4, 6, 7), compression="gzip"))
+        assert frames.shape == (stack.shape[0], self.PY * self.PX)
+        assert np.array_equal(frames[np.array([1, 2, 11])], stack[[1, 2, 11]].reshape(3, -1))
+
+    def test_read_frames_crop_bin_sample(self, tmp_path, cube):
+        """The same cropping/binning/sampling as the offset reader."""
+        from callbacks.io.export import Region
+        from callbacks.io.hdf5 import H5Frames
+        from callbacks.io.raw import read_frames
+        frames = H5Frames(self._ds(tmp_path, cube, chunks=True, compression="gzip"))
+        got = read_frames(frames, (self.NX, self.NY), (self.PX, self.PY),
+                          Region((1, 0), (2, 2), 2), Region((1, 2), (3, 2), 2))
+        sub = cube[0:3:2, 1:4:2, 2:6, 1:7]
+        expected = sub.reshape(2, 2, 2, 2, 3, 2).sum(axis=(3, 5))
+        assert np.allclose(got, expected.reshape(4, -1))

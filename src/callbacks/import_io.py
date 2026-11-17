@@ -220,6 +220,14 @@ def importSelectFile(self):
     importFileType(self)
 
 
+def _h5dataset(h5file, key: str) -> "h5py.Dataset":
+    """The dataset at *key* (``returnKeys`` lists datasets only; committed datatypes are refused)."""
+    obj = h5file[key]
+    if not isinstance(obj, h5py.Dataset):
+        raise TypeError(f"{key} is not a dataset")
+    return obj
+
+
 def importFileType(self):
     from callbacks.io.dm import prepDM  # noqa: E402
 
@@ -486,25 +494,26 @@ def importFileType(self):
                 if self.sender() is not self.ImportWindow.ImpSubImg:
                     # List all images' names in `self.ImportWindow.ImpSubImg`
                     with signals_blocked(self.ImportWindow.ImpSubImg):
-                        pdim = [self.T.h5[key].size for key in keys]
+                        pdim = [_h5dataset(self.T.h5, key).size for key in keys]
                         self.ImportWindow.ImpSubImg.clear()
                         self.ImportWindow.ImpSubImg.addItems(keys)
                     self.ImportWindow.ImpSubImg.setCurrentIndex(np.argmax(pdim))
 
                 # Info of selected sub-image
-                h5i = self.T.h5[keys[self.ImportWindow.ImpSubImg.currentIndex()]]
+                h5i = _h5dataset(self.T.h5, keys[self.ImportWindow.ImpSubImg.currentIndex()])
 
-                # Read dimensions,
-                dims = h5i.shape
-                if len(dims) < 4:
-                    np.append(dims, np.ones(4 - len(dims), dtype=int))
+                # Read dimensions (ry, rx, py, px); a 3-D stack (n, py, px) has n frames, a 2-D dataset one
+                # (the old padding discarded its result, so anything below 4-D raised IndexError)
+                from callbacks.io.hdf5 import dims4
+                dims = dims4(h5i.shape)
                 self.ImportWindow.DNPxX.setValue(dims[3])
                 self.ImportWindow.DNPxY.setValue(dims[2])
                 self.ImportWindow.DNFrX.setValue(dims[1])
                 self.ImportWindow.DNFrY.setValue(dims[0])
 
                 # Find offset, file tail, data type, byte-order of dataset
-                offset = int(h5i.id.get_offset())
+                offset = h5i.id.get_offset()      # None for chunked/compressed datasets (read via h5py)
+                offset = -1 if offset is None else int(offset)
                 if offset == -1:
                     self.ImportWindow.DataOffset.setValue(0)
                     noteoffs = 'This dataset is not "contiguous", thus data offset is unknown.'
@@ -527,8 +536,8 @@ def importFileType(self):
 
                 notes = "Dim: X = {:d}, Y = {:d}, Z = {:d}, W = {:d}\n{:s}, {:s}\n{:s}".format(
                     *dims, bo, str(h5i.dtype), noteoffs)
-                if dims[3] == 1:
-                    guessFramesFromDimZ(dims[2])
+                if len(h5i.shape) == 3:       # a stack of frames: guess the scan from the frame count
+                    guessFramesFromDimZ(dims[1])
         else:
             getDimFromName(self.ImportWindow.ImpFilePath.text())
             self.ImportWindow.ImpDataType.setCurrentIndex(self.ImportWindow.ImpDataType.findData("f4"))  # 32-bit float

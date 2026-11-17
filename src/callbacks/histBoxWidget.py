@@ -127,9 +127,9 @@ class HistBox(AxesWidget):
         self._drag_lo0 = None   # lo at drag start
         self._drag_hi0 = None   # hi at drag start
 
-        self.connect_event('button_press_event', self._on_press)
-        self.connect_event('button_release_event', self._on_release)
-        self.connect_event('motion_notify_event', self._on_motion)
+        self.connect_event('button_press_event', self._on_press)  # pyright: ignore[reportArgumentType] (stub types the event name wrongly)
+        self.connect_event('button_release_event', self._on_release)  # pyright: ignore[reportArgumentType] (stub types the event name wrongly)
+        self.connect_event('motion_notify_event', self._on_motion)  # pyright: ignore[reportArgumentType] (stub types the event name wrongly)
 
     # ------------------------------------------------------------------
     # Public API
@@ -216,6 +216,7 @@ class HistBox(AxesWidget):
             new_hi = np.clip(self._drag_hi0 + dx, self._lo, hi_bound)
             self._hi = float(new_hi)
         else:  # 'body'
+            assert self._drag_hi0 is not None and self._drag_lo0 is not None   # set on press
             span = self._drag_hi0 - self._drag_lo0
             new_lo = np.clip(self._drag_lo0 + dx, lo_bound, hi_bound - span)
             self._lo = float(new_lo)

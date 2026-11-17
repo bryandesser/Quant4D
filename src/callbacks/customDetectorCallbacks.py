@@ -27,6 +27,8 @@ and :mod:`callbacks.compute.mask_math`.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 from matplotlib.patches import Polygon as MplPolygon
 from matplotlib.widgets import PolygonSelector
@@ -60,14 +62,16 @@ class CustomMask:
         self.mirrored = typ == "Wedge"
         self.inverted = False
         self.intra = "Union"
-        self.p1 = self.p2 = None        # (x, y) handles
-        self.r1 = self.r2 = None        # radii, pixels
-        self.vertices = None            # polygon
-        self.file_mask = None           # File type, (NPxY, NPxX)
+        self.p1: Any = None             # (x, y) handles
+        self.p2: Any = None
+        self.r1: Any = None             # radii, pixels
+        self.r2: Any = None
+        self.vertices: Any = None       # polygon, (n, 2)
+        self.file_mask: Any = None      # File type, (NPxY, NPxX)
         self.formula = "1"              # Math type
-        self.mask = None                # current (inverted, unweighted) mask
-        self.handles = []               # interactive annotations
-        self.artists = []               # passive matplotlib artists
+        self.mask: Any = None           # current (inverted, unweighted) mask
+        self.handles: list = []         # interactive annotations
+        self.artists: list = []         # passive matplotlib artists
 
     def points(self):
         """Geometry rows for the details table: list of ((x, y), r or None)."""
@@ -98,7 +102,7 @@ def connectCustomDetector(self):
         btn.setIcon(self.CDNewGrid.icon())
         btn.setIconSize(self.CDNewGrid.iconSize())
         btn.setText("×")
-        btn.setToolButtonStyle(qtc.Qt.ToolButtonTextUnderIcon)
+        btn.setToolButtonStyle(qtc.Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         btn.setToolTip("New grid of apertures without the transmitted beam (every 2nd lattice site)")
         layout = self.CDNewGrid.parent().layout()
         layout.insertWidget(layout.indexOf(self.CDNewGrid) + 1, btn) if isinstance(layout, qtw.QBoxLayout) \
@@ -314,7 +318,8 @@ def _drawPolygon(self, cmask):
             done(None)
 
     esc_cid = [ax.figure.canvas.mpl_connect("key_press_event", on_key)]
-    self._cdSelector = PolygonSelector(ax, done, props=dict(color=cmask.color, linewidth=1.5))
+    # matplotlib's stub types onselect as (x, y); PolygonSelector actually passes the vertex list
+    self._cdSelector = PolygonSelector(ax, done, props=dict(color=cmask.color, linewidth=1.5))  # pyright: ignore[reportArgumentType]
 
 
 def _deleteMask(self, cmask):
@@ -347,11 +352,12 @@ def _fontColor(color):
 
 def _fillMainTable(self, select=None):
     t = self.CDT
-    current = select if select is not None else (_selected(self).id if _selected(self) else None)
+    sel = _selected(self)
+    current = select if select is not None else (sel.id if sel is not None else None)
     with signals_blocked(t):
         t.setRowCount(len(self.A.Custom))
         for row, cmask in enumerate(self.A.Custom.values()):
-            fixed = qtc.Qt.ItemIsSelectable | qtc.Qt.ItemIsEnabled
+            fixed = qtc.Qt.ItemFlags(qtc.Qt.ItemFlag.ItemIsSelectable) | qtc.Qt.ItemFlag.ItemIsEnabled
             for col, text in ((0, cmask.id), (1, cmask.type)):
                 item = qtw.QTableWidgetItem(text)
                 item.setFlags(fixed)
@@ -362,8 +368,8 @@ def _fillMainTable(self, select=None):
             t.setItem(row, _LABEL, label)
             for col, state in ((_ENABLE, cmask.enabled), (_SHOW, cmask.shown)):
                 item = qtw.QTableWidgetItem()
-                item.setFlags(fixed | qtc.Qt.ItemIsUserCheckable)
-                item.setCheckState(qtc.Qt.Checked if state else qtc.Qt.Unchecked)
+                item.setFlags(qtc.Qt.ItemFlags(fixed | qtc.Qt.ItemFlag.ItemIsUserCheckable))
+                item.setCheckState(qtc.Qt.CheckState.Checked if state else qtc.Qt.CheckState.Unchecked)
                 t.setItem(row, col, item)
             t.setItem(row, _WEIGHT, qtw.QTableWidgetItem(f"{cmask.weight:g}"))
             if cmask.id == current:
@@ -379,8 +385,8 @@ def _syncFromMainTable(self):
         if t.item(row, _LABEL) is None:
             continue
         cmask.label = t.item(row, _LABEL).text()
-        cmask.enabled = t.item(row, _ENABLE).checkState() == qtc.Qt.Checked
-        cmask.shown = t.item(row, _SHOW).checkState() == qtc.Qt.Checked
+        cmask.enabled = t.item(row, _ENABLE).checkState() == qtc.Qt.CheckState.Checked
+        cmask.shown = t.item(row, _SHOW).checkState() == qtc.Qt.CheckState.Checked
         try:
             cmask.weight = float(t.item(row, _WEIGHT).text())
         except ValueError:
@@ -424,7 +430,7 @@ def _fillDetailsTable(self, cmask):
             for col, v in enumerate(values):
                 item = qtw.QTableWidgetItem("" if v is None else f"{v:.4g}")
                 if v is None:
-                    item.setFlags(qtc.Qt.ItemIsEnabled)
+                    item.setFlags(qtc.Qt.ItemFlag.ItemIsEnabled)
                 d.setItem(row, col, item)
 
 

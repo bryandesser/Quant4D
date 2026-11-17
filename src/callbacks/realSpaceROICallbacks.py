@@ -186,8 +186,9 @@ def realSpaceROICallbacks(self):
             _esc_cid = [ax_sel.figure.canvas.mpl_connect(
                 'key_press_event', _on_esc
             )]
+            # matplotlib's stub types onselect as (x, y); PolygonSelector actually passes the vertex list
             self.A._tmp_selector = PolygonSelector(
-                ax_sel, _poly_done,
+                ax_sel, _poly_done,  # pyright: ignore[reportArgumentType]
                 props=dict(color=c_mpl, linewidth=1.5),
             )
             return   # remainder handled asynchronously in _poly_done
@@ -263,12 +264,10 @@ def realSpaceROICallbacks(self):
             # Wire the roi's update signal back to moveRealROI.
             # Using default-argument capture so each lambda closes over
             # its own roi object, not the loop variable.
-            if hasattr(roi, 'updateRect'):
-                roi.updateRect.connect(lambda *, _roi=roi: moveRealROI(roi_src=_roi))
-            elif hasattr(roi, 'updateCircle'):
-                roi.updateCircle.connect(lambda *, _roi=roi: moveRealROI(roi_src=_roi))
-            elif hasattr(roi, 'positionChanged'):
-                roi.positionChanged.connect(lambda *, _roi=roi: moveRealROI(roi_src=_roi))
+            signal = getattr(roi, 'updateRect', None) or getattr(roi, 'updateCircle', None) \
+                or getattr(roi, 'positionChanged', None)
+            if signal is not None:
+                signal.connect(lambda *, _roi=roi: moveRealROI(roi_src=_roi))
 
             self.A.RealROI[img_id] = roi
 

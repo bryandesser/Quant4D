@@ -90,7 +90,7 @@ def checkNaN(self, image, preview=False):
         sel = notifDLG(self, self.ImportWindow, 'quest', msg, ttl, opt)
 
         # Execute the swap byte order callbacks
-        if sel.startswith("Yes"):
+        if str(sel or "").startswith("Yes"):   # None when the dialog is dismissed
             self.SettingsWindow.SwapByteOrder.click()
 
         return sel  # string of button, will be checked outside function for further action

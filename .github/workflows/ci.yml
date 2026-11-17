@@ -28,6 +28,26 @@ jobs:
         # until incremental style cleanup PRs are merged.
         run: flake8 . --count --statistics
 
+  typecheck:
+    name: Type check (pyright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pyquant4d and pyright
+        # the package's dependencies are installed so pyright sees numpy/matplotlib/PyQt5/h5py types;
+        # pyright is pinned so a new release can't fail CI on unchanged code
+        run: pip install -e . --config-settings editable_mode=compat && pip install pyright==1.1.414
+
+      - name: Run pyright
+        # settings in [tool.pyright] in pyproject.toml ("basic" mode, zero errors)
+        run: pyright
+
   import-test:
     name: Import test (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}

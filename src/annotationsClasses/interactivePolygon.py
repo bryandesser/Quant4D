@@ -18,6 +18,8 @@ patch    : matplotlib.patches.Polygon
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 from matplotlib.patches import Polygon as MplPolygon
 from matplotlib.path import Path
@@ -44,7 +46,7 @@ class InteractivePolygon(qtc.QObject):
     # Only one InteractivePolygon may be dragged at a time
     lock: 'InteractivePolygon | None' = None
 
-    def __init__(self, axis, vertices, color='r'):
+    def __init__(self, axis, vertices, color: Any = 'r'):
         super().__init__()
 
         self.vertices = np.asarray(vertices, float)

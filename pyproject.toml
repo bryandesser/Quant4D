@@ -102,3 +102,15 @@ exclude = ["*.tests*"]
 # Include .ui files and icon assets shipped inside the gui/ package.
 [tool.setuptools.package-data]
 gui = ["*.ui", "icons/*", "icons/**/*"]
+
+# ---------------------------------------------------------------------------
+# Type checking (pyright, run in CI).  "basic" mode, zero errors required.
+# torch is optional, so a missing torch is only a warning.
+# ---------------------------------------------------------------------------
+[tool.pyright]
+include = ["src"]
+extraPaths = ["src"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
+reportMissingModuleSource = "none"

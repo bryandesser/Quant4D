@@ -64,8 +64,17 @@ def readFile(self):
     scan, detector = (d.DNFrX, d.DNFrY), (d.DNPxX, d.DNPxY)
     frames = Region((d.FrX1, d.FrY1), (d.NFrX, d.NFrY), d.FrD)
     pixels = Region((d.PxX1, d.PxY1), (d.NPxX, d.NPxY), d.PxD)
-    on_disk = open_frames(filename, d.Offset, scan[0] * scan[1], detector[0] * detector[1],
-                          d.DataType, d.FrHead, d.FrFoot, d.ByteOrder)
+    if d.h5ds:      # HDF5 into memory: read through h5py (chunked/compressed datasets have no data offset)
+        from callbacks.io.hdf5 import H5Frames
+        on_disk = H5Frames(h5py.File(filename, "r")[d.h5ds])
+        if on_disk.shape != (scan[0] * scan[1], detector[0] * detector[1]):
+            on_disk.close()
+            importFailed(self, f"The dataset {d.h5ds} holds {on_disk.shape[0]} frames of {on_disk.shape[1]} pixels, "
+                               f"not {scan[0]} x {scan[1]} frames of {detector[0]} x {detector[1]} pixels.")
+            return
+    else:
+        on_disk = open_frames(filename, d.Offset, scan[0] * scan[1], detector[0] * detector[1],
+                              d.DataType, d.FrHead, d.FrFoot, d.ByteOrder)
 
     # show progressbar to let user know things are happening
     self.progressBarPanel.setVisible(True)

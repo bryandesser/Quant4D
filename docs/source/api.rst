@@ -51,6 +51,9 @@ Reading files
 .. automodule:: callbacks.io.empad
    :members:
 
+.. automodule:: callbacks.io.hdf5
+   :members:
+
 Saving and exporting
 --------------------
 

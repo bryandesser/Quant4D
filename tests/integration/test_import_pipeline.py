@@ -100,3 +100,27 @@ class TestInvalidInput:
         data.tofile(path)
         import_raw(app, qapp, path, SCAN_X, SCAN_Y, DET_X, DET_Y, dtype=dtype)
         assert np.array_equal(np.asarray(app.Data), data)
+
+
+class TestCompressedHDF5:
+    """Chunked/compressed datasets have no data offset; they must be read through h5py."""
+
+    @pytest.mark.parametrize("layout", ["4d", "3d"])
+    def test_compressed(self, app, qapp, tmp_path, synthetic_data, layout):
+        h5py = pytest.importorskip("h5py")
+        shape = (SCAN_Y, SCAN_X, DET_Y, DET_X) if layout == "4d" else (SCAN_Y * SCAN_X, DET_Y, DET_X)
+        path = tmp_path / f"{layout}.h5"
+        with h5py.File(path, "w") as f:
+            f.create_group("meta").attrs["note"] = "not data"
+            f.create_dataset("entry/data", data=synthetic_data.reshape(shape), chunks=True, compression="gzip")
+        iw = _open(app, qapp, path, "HDF5Button")
+        assert iw.ImpSubImg.currentText() == "/entry/data"
+        assert "not \"contiguous\"" in iw.ImpFileMetaNotes.toPlainText()
+        if layout == "3d":     # the scan is guessed from the frame count: 24 -> 4 x 6
+            assert iw.DNFrX.value() * iw.DNFrY.value() == SCAN_X * SCAN_Y
+            iw.DNFrX.setValue(SCAN_X)
+            iw.DNFrY.setValue(SCAN_Y)
+        assert (iw.DNPxX.value(), iw.DNPxY.value()) == (DET_X, DET_Y)
+        iw.ImportDataButton.click()
+        assert wait_until(qapp, lambda: app.Data is not None and app.Data.shape == synthetic_data.shape)
+        assert np.array_equal(np.asarray(app.Data), synthetic_data), "compressed HDF5 imported wrongly"

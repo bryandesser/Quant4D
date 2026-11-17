@@ -32,7 +32,7 @@ def datasetOptCallbacks(self):
                            'Byte Order Swap', ["Yes", "No. Revert"])
 
             # Run the process again if selected "No ....."
-            if sel.startswith("No"):
+            if str(sel or "").startswith("No"):   # None when the dialog is dismissed
                 self.SettingsWindow.SwapByteOrder.click()  # datasetOptCallbacks(self,struct('Source',self.SwapByteOrder,'EventName',"")) #TODO?
 
         case self.SettingsWindow.SwapDfrnXY | self.SettingsWindow.SwapRealXY:

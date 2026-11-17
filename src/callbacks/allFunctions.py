@@ -299,12 +299,6 @@ def toUpdateImage(self):
 from callbacks.threading_workers import importThread  # noqa: F401,E402
 
 
-def prepEMPAD(self):
-    """Delegate to callbacks.io.empad.prepEMPAD."""
-    from callbacks.io.empad import prepEMPAD as _impl  # noqa: E402
-    _impl(self)
-
-
 def prepDM(self):
     """Delegate to callbacks.io.dm.prepDM."""
     from callbacks.io.dm import prepDM as _impl  # noqa: E402

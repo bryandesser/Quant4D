@@ -87,7 +87,7 @@ def _to_grayscale_double(image: np.ndarray) -> np.ndarray:
 
     # Normalize integer-typed images to [0, 1]
     if np.issubdtype(img.dtype, np.integer):
-        info = np.iinfo(img.dtype)
+        info = np.iinfo(img.dtype)   # pyright: ignore[reportCallIssue, reportArgumentType] (integer, checked above)
         gray = gray / float(info.max)
     else:
         if gray.max() > 1.0 + 1e-6:
@@ -275,7 +275,7 @@ def _phase_of_radius(r: np.ndarray, ln_rmin: float, ln_rmax: float) -> np.ndarra
     return 2.0 * np.pi * (ln_r - ln_rmin) / (ln_rmax - ln_rmin) - np.pi
 
 
-def _radius_of_phase(phase: np.ndarray, ln_rmin: float, ln_rmax: float) -> np.ndarray:
+def _radius_of_phase(phase, ln_rmin: float, ln_rmax: float):
     """
     Decode a phase (radians) back to a radius.
     """
