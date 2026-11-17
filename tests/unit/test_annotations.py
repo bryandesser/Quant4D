@@ -26,6 +26,8 @@ API notes (actual implementations):
 import numpy as np
 import pytest
 
+from conftest import just_outside, turned
+
 
 CENTRE = np.array([16.0, 16.0])
 SHAPE = (32, 32)   # detector pixel grid
@@ -117,7 +119,7 @@ class TestInteractiveRectangle:
     def test_patch_and_handles(self):
         assert self.rect.patch in self.ax.patches
         assert len(self.rect.handles.get_offsets()) == 4
-        assert self.rect.rotHandle.get_visible()
+        assert self.rect.handles.get_visible()
 
     def test_initial_size(self):
         np.testing.assert_allclose(self.rect.size, [10.0, 6.0])
@@ -203,6 +205,14 @@ def _mouse(ax, *path):
         canvas.callbacks.process(name, MouseEvent(name, canvas, x, y, **kw))
 
 
+def _hover(ax, p):
+    from matplotlib.backend_bases import MouseEvent
+    canvas = ax.figure.canvas
+    canvas.draw()
+    x, y = ax.transData.transform(p)
+    canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, x, y))
+
+
 @pytest.fixture()
 def roi_ax(mpl_fig_ax):
     _, ax = mpl_fig_ax
@@ -264,13 +274,30 @@ class TestRectangleRotation:
         self.rect = InteractiveRectangle(self.ax, CENTRE, (10.0, 6.0))
         self.rect.connect()
 
-    def test_rotation_handle_turns_it(self):
-        start = self.rect.rotHandle.get_offsets()[0]
-        # the handle sits beyond the -y side; take it round to the +x side: a quarter turn
-        _mouse(self.ax, start, CENTRE + [8, 0])
+    def test_drag_just_outside_a_corner_rotates(self):
+        corner = self.rect.handles.get_offsets()[2].copy()
+        start = just_outside(self.ax, corner, CENTRE)
+        _mouse(self.ax, start, turned(start, CENTRE, 90.0))
         assert self.rect.rotation % 360 == pytest.approx(90.0)
         np.testing.assert_allclose(self.rect.size, [10.0, 6.0])
         np.testing.assert_allclose(self.rect.center, CENTRE)
+
+    def test_on_the_corner_resizes_not_rotates(self):
+        corner = self.rect.handles.get_offsets()[2].copy()
+        _mouse(self.ax, corner, corner + [2.0, 1.0])
+        assert self.rect.rotation == 0.0
+        np.testing.assert_allclose(self.rect.size, [12.0, 7.0])
+
+    def test_rotation_cursor_shown_just_outside_a_corner(self, monkeypatch):
+        import annotationsClasses.interactiveRectangle as mod
+        shown = []
+        monkeypatch.setattr(mod, "set_rotate_cursor", lambda canvas: shown.append(1))
+        corner = self.rect.handles.get_offsets()[2].copy()
+        _hover(self.ax, just_outside(self.ax, corner, CENTRE))
+        assert shown, "no rotation cursor"
+        shown.clear()
+        _hover(self.ax, CENTRE)                       # inside: move, not rotate
+        assert not shown
 
     def test_resize_in_the_rotated_frame_keeps_the_opposite_corner(self):
         self.rect.rotation = 30.0
@@ -286,10 +313,25 @@ class TestRectangleRotation:
         np.testing.assert_array_equal(_roi_to_mask(self.rect, SHAPE, 'rectangle'),
                                       compute.rectangle_mask(SHAPE, CENTRE, (10.0, 6.0), 90.0))
 
+    def test_rotates_near_the_image_edge(self):
+        """Near the edge of the image the corners still rotate it (a handle off the image could not)."""
+        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        r = InteractiveRectangle(self.ax, (16.0, 2.0), (10.0, 3.0))
+        r.connect()
+        self.rect.remove()
+        corner = r.handles.get_offsets()[2].copy()           # a corner on the image side
+        start = just_outside(self.ax, corner, (16.0, 2.0))
+        _mouse(self.ax, start, turned(start, (16.0, 2.0), -30.0))
+        assert r.rotation == pytest.approx(-30.0)
+
     def test_static_rectangle_has_no_handles(self):
         from annotationsClasses.interactiveRectangle import InteractiveRectangle
         r = InteractiveRectangle(self.ax, CENTRE, (10.0, 6.0), interactions='none')
-        assert not (r.handles.get_visible() or r.rotHandle.get_visible() or r.rotStalk.get_visible())
+        assert not r.handles.get_visible()
+        r.connect()
+        corner = r._corner_positions()[2]
+        _mouse(self.ax, just_outside(self.ax, corner, CENTRE), CENTRE + [0, 9])
+        assert r.rotation == 0.0
 
 
 class TestPolygonVertices:
@@ -311,3 +353,25 @@ class TestPolygonVertices:
     def test_drag_inside_moves_all(self):
         _mouse(self.ax, (16, 14), (17, 16))
         np.testing.assert_allclose(self.poly.vertices, [[11, 12], [23, 12], [17, 24]])
+
+    def test_drag_just_outside_a_vertex_rotates_about_the_centre(self):
+        centre = self.poly.vertices.mean(axis=0)
+        offsets = self.poly.vertices - centre
+        start = just_outside(self.ax, self.poly.vertices[2], centre)
+        _mouse(self.ax, start, turned(start, centre, 90.0))
+        assert self.poly.rotation == pytest.approx(90.0)
+        expected = centre + offsets @ np.array([[0.0, -1.0], [1.0, 0.0]]).T     # +90 deg: (x, y) -> (-y, x)
+        np.testing.assert_allclose(self.poly.vertices, expected, atol=1e-9)
+        np.testing.assert_allclose(self.poly.handles.get_offsets(), self.poly.vertices)
+
+    def test_inside_near_a_vertex_moves_not_rotates(self):
+        """Within the rotation distance of a vertex but inside the shape: still a move."""
+        centre = self.poly.vertices.mean(axis=0)
+        p = self.poly.vertices[0] + (centre - self.poly.vertices[0]) * 0.15
+        _mouse(self.ax, p, p + [1.0, 0.0])
+        assert self.poly.rotation == 0.0
+        np.testing.assert_allclose(self.poly.vertices, [[11, 10], [23, 10], [17, 22]])
+
+    def test_remove_takes_every_artist(self):
+        self.poly.remove()
+        assert not self.ax.patches and not self.ax.lines and not self.ax.collections

@@ -176,3 +176,21 @@ def mpl_fig_ax():
     fig, ax = plt.subplots()
     yield fig, ax
     plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Rotating rectangles/polygons: drag from just outside a corner (MATLAB style)
+# ---------------------------------------------------------------------------
+def just_outside(ax, corner, centre, px=14.0):
+    """A data point *px* screen pixels beyond *corner*, away from *centre*: where the shape rotates."""
+    c, k = ax.transData.transform(centre), ax.transData.transform(corner)
+    d = (k - c) / np.hypot(*(k - c))
+    return ax.transData.inverted().transform(k + px * d)
+
+
+def turned(p, centre, deg):
+    """*p* turned by *deg* about *centre* (data coordinates, +x towards +y)."""
+    a = np.radians(deg)
+    v = np.asarray(p, float) - np.asarray(centre, float)
+    return np.asarray(centre, float) + np.array([np.cos(a) * v[0] - np.sin(a) * v[1],
+                                                 np.sin(a) * v[0] + np.cos(a) * v[1]])

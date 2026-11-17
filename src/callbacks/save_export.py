@@ -320,17 +320,15 @@ def exportDataset(self):
     scan = (self.D.NFrX, self.D.NFrY)
     detector = (self.D.NPxX, self.D.NPxY)
     byte_order = sw.ExpByteOrder.currentData() or "l"
-    self.progressBar.setMaximum(0)
+    from callbacks.window_manager import busyIndicator  # noqa: E402
     try:
-        if (sw.ExpFormat.currentData() or "h5") == "raw":
-            shape = ex.write_raw(path, self.Data, scan, detector, frames, pixels, byte_order)
-        else:
-            shape = ex.write_hdf5(path, self.Data, scan, detector, frames, pixels, byte_order,
-                                  _metadata(self, frames, pixels))
+        with busyIndicator(self):
+            if (sw.ExpFormat.currentData() or "h5") == "raw":
+                shape = ex.write_raw(path, self.Data, scan, detector, frames, pixels, byte_order)
+            else:
+                shape = ex.write_hdf5(path, self.Data, scan, detector, frames, pixels, byte_order,
+                                      _metadata(self, frames, pixels))
     except (ValueError, OSError) as exc:
         return _tell(self, "error", f"Export failed:\n{exc}", "Export Failed")
-    finally:
-        self.progressBar.setMaximum(1)
-        self.progressBar.setValue(1)
     _tell(self, "none", f"Exported {shape} (NFrY, NFrX, NPxY, NPxX) to\n{path}", "Dataset Exported")
     return path

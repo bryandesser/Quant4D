@@ -80,6 +80,9 @@ def openSettingsTab(self, tab) -> None:
 def showPreviewDisplayControls(self) -> None:
     """Import preview: brightness/contrast/gamma of the preview on show, the Import window kept on top
     and active (MATLAB opened the display settings with the importer)."""
+    from callbacks.window_manager import placeBesideMain  # noqa: E402
+    if not self.SettingsWindow.isVisible():     # first shown: beside the main window, not centred under the importer
+        placeBesideMain(self, self.SettingsWindow)
     openSettingsTab(self, self.SettingsWindow.DisplayTab)
     iw = self.ImportWindow
     iw.show()

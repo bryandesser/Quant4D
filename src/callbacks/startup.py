@@ -574,7 +574,12 @@ def startupFcn(self):
                 self.SettingsWindow.WdwWReal.setValue(self.SettingsWindow.WdwWReal.value() + size.width())
 
     def updateDispImg(self, id):
-        self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData(id))
+        """Clicking an image window selects it for the display controls, unless the selection is locked."""
+        if self.SettingsWindow.DispLock.isChecked():
+            return
+        idx = self.SettingsWindow.DispImage.findData(id)
+        if idx != -1:
+            self.SettingsWindow.DispImage.setCurrentIndex(idx)
 
     def populateDropdowns(self):
         """ populates GUI dropdowns with itemText and itemData where necessary """
@@ -751,16 +756,12 @@ def startupFcn(self):
 
 
 def reinitializeUI(self):
-    # finalize progressBar
-    self.progressBar.setMaximum(100)
-    self.progressBar.setValue(100)
-    self.progressBar.setTextVisible(False)
-
-    self.progressBar.setEnabled(False)
+    # the import is done: no progress bar left at the bottom of the main window
+    from callbacks.window_manager import hideProgressBar  # noqa: E402
+    hideProgressBar(self)
 
     # make control panels visible again
     self.RealSpacePanel.setVisible(True)
-    self.progressBarPanel.setVisible(True)
     self.DfrnDetrTabGroup.setVisible(True)
     self.DetectorModeGroup.setVisible(True)
 

@@ -21,7 +21,10 @@ def clearDetectors(self):
 
     detectorList = [
         "adf",
-        "tb"]
+        "tb",
+        "VrAp",         # virtual aperture, its mirror handle and mirror line
+        "VrApMirP",
+        "VrApMirL"]
 
     # Try removing annotations and then setting to None so that they can be replotted later
     for ii in detectorList:
@@ -32,6 +35,11 @@ def clearDetectors(self):
                 pass
             finally:
                 setattr(self.A, ii, None)
+
+    # Virtual aperture's symmetry/mirror copies (plain lines, tagged when drawn)
+    for ln in list(self.Fig.Dfrn.ax.lines):
+        if getattr(ln, '_vrAp_clone', False):
+            ln.remove()
 
     # Custom detectors: remove their annotations; they are redrawn on returning to CustMod
     from callbacks.customDetectorCallbacks import _removeArtists  # noqa: E402
@@ -67,6 +75,9 @@ def detectorModeCallbacks(self):
     # Enable/Disable CoM/DPC related buttons/images
     for btn in self.G.CoM_btns:
         btn.setEnabled(dmod in ["CoMMod", "DPCMod"])
+
+    # a locked display selection survives the mode change (if the image is still listed)
+    locked_id = self.SettingsWindow.DispImage.currentData() if self.SettingsWindow.DispLock.isChecked() else None
 
     # block singals whilst updating DispImage QComboBox
     with signals_blocked(self.SettingsWindow.DispImage):
@@ -152,6 +163,10 @@ def detectorModeCallbacks(self):
         self.VrApR.setValue(self.TBR.value())
         self.P.VrApXY = self.B0
         self.P.TransBeamInit = 1
+
+    if locked_id is not None and self.SettingsWindow.DispImage.findData(locked_id) != -1:
+        with signals_blocked(self.SettingsWindow.DispImage):
+            self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData(locked_id))
 
     # hide custom mask maths tab
     self.SettingsWindow.SettingsTabGroup.setTabVisible(

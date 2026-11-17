@@ -1,9 +1,11 @@
 """
 InteractiveRectangle — a draggable, resizable, rotatable rectangle annotation.
 
-* drag inside      → move
-* drag a corner    → resize, the opposite corner stays put (in the rectangle's own frame)
-* drag the handle on the stalk beyond one side → rotate about the centre
+Used as MATLAB's rotatable ``images.roi.Rectangle``:
+
+* drag inside               → move
+* drag a corner             → resize, the opposite corner stays put (in the rectangle's own frame)
+* drag just outside a corner → rotate about the centre; the cursor shows a curved double arrow there
 
 Signals
 -------
@@ -12,12 +14,11 @@ rightClick : emitted on right mouse button press
 
 Public attributes
 -----------------
-center    : np.ndarray (2,)  — (cx, cy) in data coordinates
-size      : np.ndarray (2,)  — (width, height) along the rectangle's own axes, always positive
-rotation  : float            — degrees from the data +x axis towards +y
-patch     : matplotlib.patches.Polygon — the outline
-handles   : PathCollection   — the four corner handles
-rotHandle : PathCollection   — the rotation handle;  rotStalk : Line2D joining it to the side
+center   : np.ndarray (2,)  — (cx, cy) in data coordinates
+size     : np.ndarray (2,)  — (width, height) along the rectangle's own axes, always positive
+rotation : float            — degrees from the data +x axis towards +y
+patch    : matplotlib.patches.Polygon — the outline
+handles  : PathCollection   — the four corner handles
 """
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ from matplotlib.backend_tools import Cursors
 from matplotlib.patches import Polygon as MplPolygon
 from PyQt5 import QtCore as qtc
 
-from annotationsClasses._geometry import HANDLE_PICK_PX, nearest_handle, rotation_matrix, to_local
+from annotationsClasses._geometry import corner_action, rotation_matrix, set_rotate_cursor, to_local, turn
 
 _UNIT_CORNERS = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]], float) / 2.0   # in units of (w, h)
 
@@ -42,7 +43,8 @@ class InteractiveRectangle(qtc.QObject):
     center, size : (x, y) and (width, height) in data units
     rotation     : degrees (default 0, axis-aligned)
     color        : matplotlib colour spec
-    interactions : ``'all'`` (move, resize, rotate) | ``'translate'`` | ``'resize'`` (resize, rotate) | ``'none'``
+    interactions : str
+        ``'all'`` (move, resize, rotate), ``'translate'``, ``'resize'`` (resize and rotate) or ``'none'``
     """
 
     updateRect = qtc.pyqtSignal()
@@ -67,14 +69,8 @@ class InteractiveRectangle(qtc.QObject):
             animated=False))
         c = self._corner_positions()
         self.handles = axis.scatter(c[:, 0], c[:, 1], color=[color], s=40, zorder=5, animated=False)
-        stalk = np.array([self._side_midpoint(), self._rot_handle_position()])
-        self.rotStalk, = axis.plot(stalk[:, 0], stalk[:, 1], color=color, linewidth=1, animated=False)
-        r = self._rot_handle_position()
-        self.rotHandle = axis.scatter([r[0]], [r[1]], color=[color], s=40, marker='o', zorder=5,
-                                      facecolors='none', linewidths=1.5, animated=False)
         if interactions in ('none', 'translate'):
-            for a in (self.handles, self.rotStalk, self.rotHandle):
-                a.set_visible(False)
+            self.handles.set_visible(False)
         self.background = None      # taken when a drag starts
         self.canvas.draw_idle()
 
@@ -83,45 +79,37 @@ class InteractiveRectangle(qtc.QObject):
         """(4, 2) corners, in the order (-w,-h), (+w,-h), (+w,+h), (-w,+h) of the rectangle's own frame."""
         return self.center + (_UNIT_CORNERS * self.size) @ rotation_matrix(self.rotation).T
 
-    def _stalk_length(self) -> float:
-        """A fixed fraction of the visible axes, so the rotation handle stays reachable at any size."""
-        return 0.08 * max(float(np.ptp(self.axis.get_xlim())), float(np.ptp(self.axis.get_ylim())))
-
-    def _side_midpoint(self) -> np.ndarray:
-        return self.center + rotation_matrix(self.rotation) @ np.array([0.0, -self.size[1] / 2.0])
-
-    def _rot_handle_position(self) -> np.ndarray:
-        return self.center + rotation_matrix(self.rotation) @ np.array(
-            [0.0, -(self.size[1] / 2.0 + self._stalk_length())])
-
     def _inside(self, x, y) -> bool:
         lx, ly = to_local((x, y), self.center, self.rotation)[0]
         return abs(lx) <= self.size[0] / 2.0 and abs(ly) <= self.size[1] / 2.0
 
     def _hit(self, event) -> str | None:
-        """The part of the rectangle under the mouse: 'rotate', 'resize_<i>', 'translate' or None."""
+        """The action under the mouse: 'resize_<i>', 'rotate', 'translate' or None."""
+        inside = event.xdata is not None and event.ydata is not None and self._inside(event.xdata, event.ydata)
         if self.interactions in ('all', 'resize') and self.handles.get_visible():
-            _, d = nearest_handle(self.axis, [self._rot_handle_position()], event)
-            if d <= HANDLE_PICK_PX:
-                return 'rotate'
-            i, d = nearest_handle(self.axis, self._corner_positions(), event)
-            if d <= HANDLE_PICK_PX:
+            what, i = corner_action(self.axis, self._corner_positions(), event, inside)
+            if what == 'corner':
                 return f'resize_{i}'
-        if self.interactions in ('all', 'translate') and event.xdata is not None and event.ydata is not None \
-                and self._inside(event.xdata, event.ydata):
+            if what == 'rotate':
+                return 'rotate'
+        if self.interactions in ('all', 'translate') and inside:
             return 'translate'
         return None
+
+    def _set_cursor(self, hit):
+        if hit == 'rotate':
+            set_rotate_cursor(self.canvas)
+        else:
+            self.canvas.set_cursor(Cursors.POINTER if hit is None else
+                                   Cursors.MOVE if hit == 'translate' else Cursors.HAND)
 
     def _update_artists(self):
         c = self._corner_positions()
         self.patch.set_xy(c)
         self.handles.set_offsets(c)
-        stalk = np.array([self._side_midpoint(), self._rot_handle_position()])
-        self.rotStalk.set_data(stalk[:, 0], stalk[:, 1])
-        self.rotHandle.set_offsets(stalk[1:])
 
     def _artists(self):
-        return [self.patch] + [a for a in (self.rotStalk, self.handles, self.rotHandle) if a.get_visible()]
+        return [self.patch] + ([self.handles] if self.handles.get_visible() else [])
 
     # ------------------------------------------------------------------ public API
     def connect(self):
@@ -141,8 +129,8 @@ class InteractiveRectangle(qtc.QObject):
 
     def remove(self):
         self.disconnect()
-        for a in (self.patch, self.handles, self.rotStalk, self.rotHandle):
-            a.remove()
+        self.patch.remove()
+        self.handles.remove()
 
     def redraw(self):
         self._update_artists()
@@ -175,7 +163,7 @@ class InteractiveRectangle(qtc.QObject):
         self._transform = self._hit(event)
         if self._transform is None:
             return
-        self.canvas.set_cursor(Cursors.MOVE if self._transform == 'translate' else Cursors.HAND)
+        self._set_cursor(self._transform)
         self._press = (self.center.copy(), self.size.copy(), self.rotation, event.xdata, event.ydata)
         InteractiveRectangle.lock = self
         for a in self._artists():
@@ -188,11 +176,10 @@ class InteractiveRectangle(qtc.QObject):
         if event.inaxes != self.axis:
             return
         if InteractiveRectangle.lock is not self:                   # hover feedback
-            if event.xdata is None or event.ydata is None:
+            if event.xdata is None or event.ydata is None or InteractiveRectangle.lock is not None \
+                    or self.interactions == 'none':
                 return
-            hit = self._hit(event)
-            self.canvas.set_cursor(Cursors.POINTER if hit is None else
-                                   Cursors.MOVE if hit == 'translate' else Cursors.HAND)
+            self._set_cursor(self._hit(event))
             return
         if self._press is None or event.xdata is None or event.ydata is None:
             return
@@ -201,9 +188,7 @@ class InteractiveRectangle(qtc.QObject):
         if self._transform == 'translate':
             self.center = center0 + p - np.array([x0, y0])
         elif self._transform == 'rotate':
-            v = p - center0
-            # the handle lies along the rectangle's own -y axis
-            self.rotation = float(np.degrees(np.arctan2(v[1], v[0]))) + 90.0
+            self.rotation = rotation0 + turn(center0, (x0, y0), p)
         elif self._transform is not None and self._transform.startswith('resize_'):
             i = int(self._transform[-1])
             R = rotation_matrix(rotation0)
@@ -224,7 +209,7 @@ class InteractiveRectangle(qtc.QObject):
         self._press = None
         self._transform = None
         InteractiveRectangle.lock = None
-        for a in (self.patch, self.handles, self.rotStalk, self.rotHandle):
-            a.set_animated(False)
+        self.patch.set_animated(False)
+        self.handles.set_animated(False)
         self.canvas.draw()
         self.updateRect.emit()      # final update after the drag (Reduced calculation policy)

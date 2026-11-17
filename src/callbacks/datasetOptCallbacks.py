@@ -69,20 +69,18 @@ def swapByteOrder(self) -> bool:
     GPU paths need); a lazily loaded dataset is a read-only memory map, so it is viewed with the
     swapped dtype instead (no copy, nothing written to the file).  Returns False on failure.
     """
-    self.progressBar.setMaximum(0)
+    from callbacks.window_manager import busyIndicator  # noqa: E402
     try:
-        if isinstance(self.Data, np.memmap) or not self.Data.flags.writeable:
-            self.Data = self.Data.view(self.Data.dtype.newbyteorder())
-        else:
-            self.Data.byteswap(inplace=True)
+        with busyIndicator(self):
+            if isinstance(self.Data, np.memmap) or not self.Data.flags.writeable:
+                self.Data = self.Data.view(self.Data.dtype.newbyteorder())
+            else:
+                self.Data.byteswap(inplace=True)
     except MemoryError:
         notifDLG(self, self, 'error',
                  "It seems the system does not have enough memory for this process! "
                  "Maybe try to increase system's virtual memory.", "Out of Memory")
         return False
-    finally:
-        self.progressBar.setMaximum(1)
-        self.progressBar.setValue(1)
     compute.release_device_data()   # the GPU copy is now stale
     self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b`
     self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))

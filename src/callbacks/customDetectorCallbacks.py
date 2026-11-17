@@ -302,9 +302,10 @@ def _drawPolygon(self, cmask):
 
     def done(vertices):
         sel = getattr(self, "_cdSelector", None)
-        if sel is not None:
+        if sel is not None:             # the selector's outline and handles go; the mask's polygon replaces them
             sel.disconnect_events()
-            sel.set_visible(False)
+            for art in sel.artists:
+                art.remove()
         self._cdSelector = None
         ax.figure.canvas.mpl_disconnect(esc_cid[0])
         ax.figure.canvas.draw_idle()

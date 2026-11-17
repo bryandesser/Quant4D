@@ -113,7 +113,9 @@ def importFailed(self, msg):
     """The worker could not read the file: report it and leave no dataset loaded."""
     from callbacks.utils import notifDLG
     from callbacks.import_io import unloadData
+    from callbacks.window_manager import hideProgressBar
     _stopImportThread(self)
+    hideProgressBar(self)
     unloadData(self)
     notifDLG(self, self, "error", f"Error during import:\n{msg}", "Import Failed")
 
@@ -207,10 +209,8 @@ def prepareData(self):
 
     # initialize SettingsWindow and move next to main UI window
     self.SettingsWindow.SettingsTabGroup.setCurrentWidget(self.SettingsWindow.DisplayTab)
-    pos = self.SettingsWindow.geometry()
-    pos.moveLeft(self.geometry().getRect()[0] + self.geometry().getRect()[2] + self.C.decorPad * 2)
-    pos.moveTop(self.geometry().getRect()[1])
-    self.SettingsWindow.setGeometry(pos)
+    from callbacks.window_manager import placeBesideMain  # noqa: E402
+    placeBesideMain(self, self.SettingsWindow)
     self.SettingsWindow.show()
 
     # Enter alignment mode.  The mode callbacks dispatch on self.sender(), so

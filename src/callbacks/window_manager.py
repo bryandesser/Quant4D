@@ -9,6 +9,40 @@ from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
 from callbacks.signals import signals_blocked  # noqa: E402
+from contextlib import contextmanager  # noqa: E402
+
+
+def placeBesideMain(self, window) -> None:
+    """Put *window* to the right of the main window, tops aligned (on the left if it would leave
+    the screen).  New windows otherwise open centred on the screen, under whatever is there."""
+    main = self.frameGeometry()
+    pad = int(self.C.decorPad or 0) * 2
+    geo = window.frameGeometry()
+    x = main.right() + 1 + pad
+    screen = self.screen().availableGeometry() if self.screen() is not None else None
+    if screen is not None and x + geo.width() > screen.right():
+        x = max(screen.left(), main.left() - geo.width() - pad)
+    window.move(x, main.top())
+
+
+@contextmanager
+def busyIndicator(self):
+    """Show the progress bar at the bottom of the main window as "busy" for the duration, then hide it."""
+    self.progressBar.setTextVisible(False)
+    self.progressBar.setMaximum(0)
+    self.progressBarPanel.setVisible(True)
+    self.progressBarPanel.setEnabled(True)
+    try:
+        yield
+    finally:
+        hideProgressBar(self)
+
+
+def hideProgressBar(self) -> None:
+    """The work is done: no progress bar left on the main window."""
+    self.progressBar.setMaximum(1)
+    self.progressBar.setValue(1)
+    self.progressBarPanel.setVisible(False)
 
 
 def toggleWindows(self):

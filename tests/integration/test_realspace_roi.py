@@ -10,7 +10,7 @@ import pytest
 from matplotlib.backend_bases import KeyEvent
 
 import callbacks.realSpaceROICallbacks as rs
-from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y
+from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, just_outside, turned
 
 
 def _select(app, qapp, shape):
@@ -150,6 +150,44 @@ def _drag_to(fig, start, end):
     canvas.callbacks.process("button_release_event", MouseEvent("button_release_event", canvas, *p1, button=1))
 
 
+class TestPointStaysVisibleWhileDragged:
+    """The point ROI vanished while dragged: it was animated (left out of ordinary redraws) and its
+    blitted copy was never put on screen, so only the redraws triggered by the move were shown."""
+
+    def test_point_on_screen_during_drag(self, roi_app, qapp):
+        from matplotlib.backend_bases import MouseEvent
+        _select(roi_app, qapp, "point")
+        roi_app.FrameX.setValue(1)
+        roi_app.FrameY.setValue(1)
+        qapp.processEvents()
+        fig, roi = roi_app.Fig.Real, roi_app.A.RealROI["Real"]
+        canvas = fig.canvas
+        canvas.draw()
+        blits = []
+        saved_blit = canvas.blit
+        canvas.blit = lambda *a, **k: (blits.append(1), saved_blit(*a, **k))
+        try:
+            p0, p1 = fig.ax.transData.transform((1, 1)), fig.ax.transData.transform((4, 2))
+            canvas.callbacks.process("button_press_event", MouseEvent("button_press_event", canvas, *p0, button=1))
+            blits.clear()
+            canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, *p1))
+            qapp.processEvents()                        # any redraw the move asked for happens now
+            assert roi.dragging
+            assert blits, "the moved point is never put on screen"
+            canvas.draw()                               # a full redraw mid-drag must still show it
+            with_point = np.asarray(canvas.buffer_rgba()).copy()
+            roi.point.set_visible(False)
+            canvas.draw()
+            without = np.asarray(canvas.buffer_rgba()).copy()
+            roi.point.set_visible(True)
+            assert not np.array_equal(with_point, without), "point not drawn while dragged"
+            canvas.callbacks.process("button_release_event", MouseEvent("button_release_event", canvas, *p1, button=1))
+            qapp.processEvents()
+            assert (roi_app.FrameX.value(), roi_app.FrameY.value()) == (4, 2)
+        finally:
+            canvas.blit = saved_blit
+
+
 class TestPolygonDrawnWithTheMouse:
     """The PolygonSelector's own outline stayed on the image after the polygon was closed: dragging
     the ROI then left that uneditable copy behind (also after switching back to Full Image)."""
@@ -190,6 +228,26 @@ class TestPolygonDrawnWithTheMouse:
 
 
 class TestRotatableShapes:
+    def test_polygon_roi_rotates(self, roi_app, qapp, monkeypatch):
+        from callbacks import compute
+        name = roi_app.G.Img[roi_app.G.Img.id == "Real"].name.item()
+        monkeypatch.setattr(rs, "notifDLG", lambda *a, **k: name)
+        _select(roi_app, qapp, "poly")
+        roi_app.A._tmp_selector.onselect([(0.5, 1.5), (4.5, 1.5), (4.5, 2.5), (0.5, 2.5)])
+        qapp.processEvents()
+        roi = roi_app.A.RealROI["Real"]
+        fig = roi_app.Fig.Real
+        fig.canvas.draw()
+        centre = roi.vertices.mean(axis=0)
+        start = just_outside(fig.ax, roi.vertices[1], centre)      # just outside a vertex: rotate
+        _drag_to(fig, start, turned(start, centre, -90.0))
+        qapp.processEvents()
+        assert roi.rotation == pytest.approx(-90.0)
+        np.testing.assert_allclose(roi.vertices.mean(axis=0), centre)
+        np.testing.assert_allclose(np.ptp(roi.vertices, axis=0), (1.0, 4.0), atol=1e-9)   # long side now along y
+        expected = compute.polygon_mask((SCAN_Y, SCAN_X), roi.vertices)
+        assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), expected)
+
     def test_ellipse_roi_is_an_ellipse(self, roi_app, qapp):
         from callbacks import compute
         _select(roi_app, qapp, "ellipse")
@@ -208,14 +266,15 @@ class TestRotatableShapes:
         from callbacks import compute
         _select(roi_app, qapp, "rectangle")
         roi = roi_app.A.RealROI["Real"]
-        roi.center, roi.size = np.array([2.5, 1.5]), np.array([5.0, 1.0])
+        roi.center, roi.size = np.array([2.5, 1.5]), np.array([3.0, 1.0])      # corners clear of the image edge
         roi.redraw()
         fig = roi_app.Fig.Real
         fig.canvas.draw()
-        _drag_to(fig, roi.rotHandle.get_offsets()[0], (5.0, 1.5))       # a quarter turn
+        start = just_outside(fig.ax, roi.handles.get_offsets()[2], roi.center)
+        _drag_to(fig, start, turned(start, roi.center, 90.0))           # a quarter turn
         qapp.processEvents()
         assert roi.rotation % 360 == pytest.approx(90.0)
-        expected = compute.rectangle_mask((SCAN_Y, SCAN_X), (2.5, 1.5), (5.0, 1.0), 90.0)
+        expected = compute.rectangle_mask((SCAN_Y, SCAN_X), (2.5, 1.5), (3.0, 1.0), 90.0)
         assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), expected)
 
 

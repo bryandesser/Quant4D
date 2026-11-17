@@ -37,7 +37,8 @@ def transBeamCallbacks(self):
                 self.Fig.Dfrn.canvas.flush_events()
 
             # Select `Dfrn` image and bring window to the front
-            self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData("Dfrn"))
+            if not self.SettingsWindow.DispLock.isChecked():
+                self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData("Dfrn"))
             self.Fig.Dfrn.activateWindow()
 
             # If this is the initializing alignment, then do swap byte check and auto-align

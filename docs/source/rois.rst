@@ -13,13 +13,15 @@ ROI types
 - **Full** — all frames (default)
 - **Point** — single frame at (FrameX, FrameY)
 - **Rectangle** — drag inside to move, a corner handle to resize (the opposite
-  corner stays put), and the handle on the stalk to rotate
+  corner stays put); just outside a corner the cursor turns into a curved double
+  arrow: drag there to rotate the rectangle about its centre
 - **Ellipse** — drag inside to move; each of the two handles sits at the end of a
   semi-axis: dragging it sets that semi-axis and turns the ellipse towards the cursor
 - **Polygon** — click to place vertices, click the first vertex to close it
   (``Esc`` cancels).  When more than one real-space image is shown you are asked
-  which one to draw on.  Afterwards drag a vertex to move it, or drag inside to
-  move the polygon
+  which one to draw on.  Afterwards drag a vertex to move it, drag inside to
+  move the polygon, or drag just outside a vertex (curved double-arrow cursor)
+  to rotate it about its centre
 - **File** — load a boolean mask from a file
 
 The mask can be **inverted** using the Invert ROI button, selecting all frames

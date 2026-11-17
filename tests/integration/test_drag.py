@@ -119,3 +119,40 @@ def test_annotations_visible_without_a_click(loaded_app, qapp):
         assert _drawn(qapp, w.Fig.Real, w.A.RealROI["Real"]), f"{shape} ROI not drawn"
     w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("full"))
     qapp.processEvents()
+
+
+def test_custom_polygon_is_editable_and_rotatable(loaded_app, qapp):
+    """The custom-detector polygon: the drawing tool's outline is removed once the polygon is
+    closed, and the mask follows its rotation handle."""
+    from matplotlib.backend_bases import MouseEvent
+    from callbacks import compute
+    from conftest import DET_X, DET_Y, just_outside, turned
+    w = loaded_app
+    set_mode(w, qapp, "CustMod")
+    w.CDNewPolygon.click()
+    qapp.processEvents()
+    verts = [(4.0, 6.0), (16.0, 6.0), (16.0, 9.0), (4.0, 9.0)]
+    selector = w._cdSelector
+    selector.onselect(verts)
+    qapp.processEvents()
+    try:
+        cmask = list(w.A.Custom.values())[-1]
+        h = cmask.handles[0]
+        fig = w.Fig.Dfrn
+        assert not [a for a in selector.artists if a in fig.ax.get_children()], "drawing tool's outline left behind"
+        canvas = fig.canvas
+        canvas.draw()
+        centre = h.vertices.mean(axis=0)
+        start = just_outside(fig.ax, h.vertices[1], centre)        # just outside a vertex: rotate
+        p0, p1 = fig.ax.transData.transform(start), fig.ax.transData.transform(turned(start, centre, 90.0))
+        canvas.callbacks.process("button_press_event", MouseEvent("button_press_event", canvas, *p0, button=1))
+        canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, *p1))
+        canvas.callbacks.process("button_release_event", MouseEvent("button_release_event", canvas, *p1, button=1))
+        qapp.processEvents()
+        np.testing.assert_allclose(np.ptp(cmask.vertices, axis=0), (3.0, 12.0), atol=1e-9)     # turned a quarter
+        np.testing.assert_array_equal(np.asarray(cmask.mask, bool),
+                                      compute.polygon_mask((DET_Y, DET_X), cmask.vertices))
+    finally:
+        w.CDDelMask.click()
+        qapp.processEvents()
+        set_mode(w, qapp, "AnnMod")

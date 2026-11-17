@@ -40,8 +40,16 @@ class InteractivePoint(qtc.QObject):
             if cid is not None and canvas is not None:
                 canvas.mpl_disconnect(cid)
             setattr(self, name, None)
+        self._stopDrawHandler()
         if InteractivePoint.lock is self:
             InteractivePoint.lock = None
+
+    def _stopDrawHandler(self):
+        handler = getattr(self, "_ciddraw", None)
+        if handler is not None:
+            canvas, cid = handler
+            canvas.mpl_disconnect(cid)
+        self._ciddraw = None
 
     def remove(self):
         'remove the point from the plot and stop listening to the mouse'
@@ -74,21 +82,25 @@ class InteractivePoint(qtc.QObject):
 
         InteractivePoint.lock = self
 
-        # draw everything but the selected rectangle and store the pixel buffer
+        # Blit while dragging: draw everything but the point, keep that as the background.  Any full
+        # redraw during the drag (e.g. one the move itself triggers) would leave the animated point
+        # out, so a draw_event handler takes the new background and paints the point back on.
         canvas = self.point.figure.canvas
-        axes = self.point.axes
         self.point.set_animated(True)
-        canvas.draw()
-        self.background = canvas.copy_from_bbox(self.point.axes.bbox)
+        self._ciddraw = (canvas, canvas.mpl_connect('draw_event', self._on_draw))
+        canvas.draw()                   # → _on_draw: background + point
 
         # update cursor
         canvas.set_cursor(Cursors.HAND)
+        canvas.blit(self.point.axes.bbox)
 
-        # now redraw just the rectangle
-        axes.draw_artist(self.point)
-
-        # and blit just the redrawn area
-        canvas.blit(axes.bbox)
+    def _on_draw(self, event):
+        """A full redraw while dragging: new background, and the point painted back on top."""
+        if self.press is None or self.point.axes is None:
+            return
+        canvas = self.point.figure.canvas
+        self.background = canvas.copy_from_bbox(self.point.axes.bbox)
+        self.point.axes.draw_artist(self.point)
 
     def on_motion(self, event):
         # monitor mouse location, if hovering over a Draggable point,
@@ -117,11 +129,11 @@ class InteractivePoint(qtc.QObject):
         canvas = self.point.figure.canvas
         axes = self.point.axes
 
-        # restore the background region
-        canvas.restore_region(self.background)
-
-        # redraw just the current rectangle
+        # restore the background region, draw the point and put it on screen
+        if self.background is not None:
+            canvas.restore_region(self.background)
         axes.draw_artist(self.point)
+        canvas.blit(axes.bbox)
 
         # notify listeners (e.g. associated circle/annulus or ROI callback)
         self.positionChanged.emit()
@@ -133,6 +145,7 @@ class InteractivePoint(qtc.QObject):
 
         self.press = None
         InteractivePoint.lock = None
+        self._stopDrawHandler()
 
         # update cursor
         self.point.figure.canvas.set_cursor(Cursors.POINTER)

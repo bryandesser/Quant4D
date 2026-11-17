@@ -305,6 +305,12 @@ def virtualApertureCallbacks(self):  # noqa: C901
         elif self.sender() is self.VrApR:
             pass  # VrApXY unchanged; radius read fresh in calcVrAp
 
+        # Outside Virtual Aperture mode only the settings change (e.g. Align mode sets the radius to the
+        # beam's): drawing here put an interactive aperture on another mode's pattern, and dragging it
+        # replaced that mode's real-space image.
+        if self.DetrMode.currentData() != "VrApMod":
+            return
+
         # decide before redrawing: the redraw replaces the annotation that may be self.sender()
         update = _toUpdateImage()
 
