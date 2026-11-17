@@ -303,7 +303,7 @@ def annularDetectorCallbacks(self):
             # Refresh real-space image
             if len(self.Fig.Real.ax.images) == 0:
                 self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
-                self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Fig.Real.Image)
+                plotImage(self, 'Real')
             # otherwise the image follows in moveAnnDetr, when the calculation policy allows
             # (this used to update it unconditionally and show it without brightness/contrast)
 

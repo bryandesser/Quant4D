@@ -57,14 +57,15 @@ class InteractivePolygon(qtc.QObject):
         # ---- Closed polygon patch ------------------------------------
         self.patch = axis.add_patch(MplPolygon(
             self.vertices,
-            closed=True, animated=True,
+            closed=True, animated=False,     # animated only while dragged
             linewidth=1.5, edgecolor=color, facecolor='none',
         ))
 
         # ---- Blitting setup -----------------------------------------
         self.canvas = axis.figure.canvas
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(axis.bbox)
+        # Ordinary artists, drawn by every redraw; they are animated (blitted) only while dragged.
+        self.background = None                  # taken when a drag starts
+        self.canvas.draw_idle()
 
     # ==================================================================
     # Geometry helpers
@@ -88,8 +89,21 @@ class InteractivePolygon(qtc.QObject):
         self._cidrelease = self.canvas.mpl_connect('button_release_event', self.on_release)
         self._cidmotion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
 
+    def disconnect(self):
+        """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
+        to every hover/click on the canvas (drawing artists no longer in a figure, emitting moves)."""
+        canvas = self.canvas
+        for name in ('_cidpress', '_cidrelease', '_cidmotion'):
+            cid = getattr(self, name, None)
+            if cid is not None and canvas is not None:
+                canvas.mpl_disconnect(cid)
+            setattr(self, name, None)
+        if InteractivePolygon.lock is self:
+            InteractivePolygon.lock = None
+
     def remove(self):
-        """Remove polygon patch from the axes."""
+        """Remove polygon patch from the axes and stop listening to the mouse."""
+        self.disconnect()
         self.patch.remove()
 
     def redraw(self):
@@ -99,17 +113,18 @@ class InteractivePolygon(qtc.QObject):
 
     def restoreBackground(self):
         """Blit: restore saved background then redraw patch."""
+        # Outside a drag the saved background is stale (the image may have changed since it was
+        # taken, e.g. brightness/contrast), so blitting it would paint the old image back: redraw.
+        if not self.dragging:
+            self.canvas.draw_idle()
+            return
         self.canvas.restore_region(self.background)
         self.axis.draw_artist(self.patch)
         self.canvas.blit(self.axis.bbox)
 
     def updateBackground(self):
-        """Full redraw, capture new background, then blit patch."""
-        self.patch.set_animated(True)
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(self.axis.bbox)
-        self.axis.draw_artist(self.patch)
-        self.canvas.blit(self.axis.bbox)
+        """Redraw the canvas (kept for compatibility; the background is taken when a drag starts)."""
+        self.canvas.draw_idle()
 
     # ==================================================================
     # Event handlers

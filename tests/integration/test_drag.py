@@ -69,3 +69,50 @@ def test_real_space_roi(loaded_app, qapp, shape):
     _drag(qapp, roi, next(s for s in ("updateRect", "updateCircle", "positionChanged") if hasattr(roi, s)))
     loaded_app.RealROIShape.setCurrentIndex(loaded_app.RealROIShape.findData("full"))
     qapp.processEvents()
+
+
+def _artists(ann):
+    arts = list(getattr(ann, "circ", None) or [])
+    for name in ("point", "patch", "handles"):
+        a = getattr(ann, name, None)
+        if a is not None:
+            arts.append(a)
+    return arts
+
+
+def _drawn(qapp, fig, ann):
+    """True if the annotation changes the rendered pixels of an ordinary (non-blitted) redraw."""
+    arts = _artists(ann)
+    assert arts and not any(a.get_animated() for a in arts), "animated artists are left out of redraws"
+    fig.canvas.draw()
+    shown = np.asarray(fig.canvas.buffer_rgba()).copy()
+    vis = [a.get_visible() for a in arts]
+    for a in arts:
+        a.set_visible(False)
+    fig.canvas.draw()
+    hidden = np.asarray(fig.canvas.buffer_rgba()).copy()
+    for a, v in zip(arts, vis):
+        a.set_visible(v)
+    fig.canvas.draw()
+    return not np.array_equal(shown, hidden)
+
+
+def test_annotations_visible_without_a_click(loaded_app, qapp):
+    """Annotations were created 'animated', so a normal redraw skipped them: the transmitted
+    beam was invisible after import until it was clicked."""
+    w = loaded_app
+    set_mode(w, qapp, "AlignMod")
+    assert _drawn(qapp, w.Fig.Dfrn, w.A.tb), "transmitted beam not drawn"
+    set_mode(w, qapp, "AnnMod")
+    w.AnnRi.setValue((1, 6))
+    qapp.processEvents()
+    assert _drawn(qapp, w.Fig.Dfrn, w.A.adf), "annular detector not drawn"
+    set_mode(w, qapp, "VrApMod")
+    assert _drawn(qapp, w.Fig.Dfrn, w.A.VrAp), "virtual aperture not drawn"
+    set_mode(w, qapp, "AnnMod")
+    for shape in ("ellipse", "rectangle", "point"):
+        w.RealROIShape.setCurrentIndex(w.RealROIShape.findData(shape))
+        qapp.processEvents()
+        assert _drawn(qapp, w.Fig.Real, w.A.RealROI["Real"]), f"{shape} ROI not drawn"
+    w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("full"))
+    qapp.processEvents()

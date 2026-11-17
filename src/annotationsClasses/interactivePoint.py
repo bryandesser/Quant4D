@@ -31,15 +31,29 @@ class InteractivePoint(qtc.QObject):
         self.background = None
         self.radius = 1
 
+    def disconnect(self):
+        """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
+        to every hover/click on the canvas (drawing artists no longer in a figure, emitting moves)."""
+        canvas = getattr(self, "_canvas", None)
+        for name in ('cidpress', 'cidrelease', 'cidmotion'):
+            cid = getattr(self, name, None)
+            if cid is not None and canvas is not None:
+                canvas.mpl_disconnect(cid)
+            setattr(self, name, None)
+        if InteractivePoint.lock is self:
+            InteractivePoint.lock = None
+
     def remove(self):
-        'allow the points to be removed from plots'
+        'remove the point from the plot and stop listening to the mouse'
+        self.disconnect()
         self.point.remove()
 
     def connect(self):
         'connect to all the events we need'
-        self.cidpress = self.point.figure.canvas.mpl_connect('button_press_event', self.on_press)
-        self.cidrelease = self.point.figure.canvas.mpl_connect('button_release_event', self.on_release)
-        self.cidmotion = self.point.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        self._canvas = self.point.figure.canvas      # kept: point.figure is None once removed
+        self.cidpress = self._canvas.mpl_connect('button_press_event', self.on_press)
+        self.cidrelease = self._canvas.mpl_connect('button_release_event', self.on_release)
+        self.cidmotion = self._canvas.mpl_connect('motion_notify_event', self.on_motion)
 
     def on_press(self, event):
         if event.inaxes != self.point.axes:

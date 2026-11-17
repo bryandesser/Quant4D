@@ -142,7 +142,11 @@ class HistBox(AxesWidget):
         self._redraw()
 
     def remove(self) -> None:
-        """Remove all artists from the axes."""
+        """Remove all artists from the axes and stop listening to the mouse."""
+        try:
+            self.disconnect_events()
+        except Exception:
+            pass
         try:
             self._rect.remove()
         except Exception:

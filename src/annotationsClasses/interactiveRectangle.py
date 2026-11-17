@@ -70,22 +70,23 @@ class InteractiveRectangle(qtc.QObject):
         self.patch = axis.add_patch(Rectangle(
             (float(xy[0]), float(xy[1])), self.size[0], self.size[1],
             linewidth=1.5, edgecolor=color, facecolor='none',
-            animated=True,
+            animated=False,   # animated only while dragged
         ))
 
         # ---- Corner handles (4 scatter points) ------------------------
         corners = self._corner_positions()
         self.handles = axis.scatter(
             corners[:, 0], corners[:, 1],
-            color=color, s=40, zorder=5, animated=True,
+            color=color, s=40, zorder=5, animated=False,   # animated only while dragged
         )
         if interactions in ('none', 'translate'):
             self.handles.set_visible(False)
 
         # ---- Blitting setup -------------------------------------------
         self.canvas = axis.figure.canvas
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(axis.bbox)
+        # Ordinary artists, drawn by every redraw; they are animated (blitted) only while dragged.
+        self.background = None                  # taken when a drag starts
+        self.canvas.draw_idle()
 
     # ==================================================================
     # Geometry helpers
@@ -137,8 +138,21 @@ class InteractiveRectangle(qtc.QObject):
         self._cidrelease = self.canvas.mpl_connect('button_release_event', self.on_release)
         self._cidmotion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
 
+    def disconnect(self):
+        """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
+        to every hover/click on the canvas (drawing artists no longer in a figure, emitting moves)."""
+        canvas = self.canvas
+        for name in ('_cidpress', '_cidrelease', '_cidmotion'):
+            cid = getattr(self, name, None)
+            if cid is not None and canvas is not None:
+                canvas.mpl_disconnect(cid)
+            setattr(self, name, None)
+        if InteractiveRectangle.lock is self:
+            InteractiveRectangle.lock = None
+
     def remove(self):
-        """Remove patch and handle scatter from the axes."""
+        """Remove patch and handle scatter from the axes and stop listening to the mouse."""
+        self.disconnect()
         self.patch.remove()
         self.handles.remove()
 
@@ -148,6 +162,11 @@ class InteractiveRectangle(qtc.QObject):
         self.restoreBackground()
 
     def restoreBackground(self):
+        # Outside a drag the saved background is stale (the image may have changed since it was
+        # taken, e.g. brightness/contrast), so blitting it would paint the old image back: redraw.
+        if not self.dragging:
+            self.canvas.draw_idle()
+            return
         """Blit: restore saved background then redraw artists."""
         self.canvas.restore_region(self.background)
         self.axis.draw_artist(self.patch)
@@ -156,15 +175,8 @@ class InteractiveRectangle(qtc.QObject):
         self.canvas.blit(self.axis.bbox)
 
     def updateBackground(self):
-        """Redraw full canvas, capture new background, then blit artists."""
-        self.patch.set_animated(True)
-        self.handles.set_animated(True)
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(self.axis.bbox)
-        self.axis.draw_artist(self.patch)
-        if self.handles.get_visible():
-            self.axis.draw_artist(self.handles)
-        self.canvas.blit(self.axis.bbox)
+        """Redraw the canvas (kept for compatibility; the background is taken when a drag starts)."""
+        self.canvas.draw_idle()
 
     # ==================================================================
     # Event handlers

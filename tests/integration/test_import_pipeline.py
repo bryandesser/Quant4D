@@ -144,3 +144,33 @@ class TestMemoryWarning:
         iw.ImportDataButton.click()
         qapp.processEvents()
         assert len(asked) == 1 and app.Data is None and iw.isVisible()
+
+
+class TestDisplayAfterImport:
+    def test_histogram_and_stats_after_import(self, app, qapp, sample_raw_file):
+        """Align mode drew the images with a bare imshow, so the histogram stayed empty after import."""
+        import_raw(app, qapp, sample_raw_file, SCAN_X, SCAN_Y, DET_X, DET_Y)
+        sw = app.SettingsWindow
+        assert app.DetrMode.currentData() == "AlignMod" and sw.DispImage.currentData() == "Dfrn"
+        assert app.A.hist is not None and app.A.hist.axes is sw.HistAxes.axes, "histogram empty"
+        assert app.A.histBox is not None and "avg" in sw.ImStatsNotes.toPlainText()
+
+    def test_align_mode_does_not_stack_images(self, app, qapp, sample_raw_file):
+        from conftest import set_mode
+        import_raw(app, qapp, sample_raw_file, SCAN_X, SCAN_Y, DET_X, DET_Y)
+        for _ in range(3):
+            set_mode(app, qapp, "AnnMod")
+            set_mode(app, qapp, "AlignMod")
+        for id in ("Dfrn", "Real", "DfrnMask", "RealMask"):
+            assert len(app.Fig[id].ax.get_images()) == 1, f"{id}: images pile up"
+
+    def test_preview_has_a_histogram(self, app, qapp, sample_raw_file):
+        iw = _open(app, qapp, sample_raw_file, "CustomButton")
+        iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData("f4"))
+        for name, val in (("DNPxX", DET_X), ("DNPxY", DET_Y), ("DNFrX", SCAN_X), ("DNFrY", SCAN_Y)):
+            getattr(iw, name).setValue(val)
+        qapp.processEvents()
+        assert app.SettingsWindow.DispImage.currentData() == "Preview"
+        app.PreviewButton.click()
+        qapp.processEvents()
+        assert app.A.hist is not None and "avg" in app.SettingsWindow.ImStatsNotes.toPlainText()

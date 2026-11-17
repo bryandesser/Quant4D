@@ -254,6 +254,9 @@ def slotsSignals(self):
     self.SettingsWindow.DispContrastReset.triggered.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispBrightnessReset.triggered.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispMaskOpa.valueChanged.connect(lambda: displayCallbacks(self))
+    for w in (self.SettingsWindow.DispMaskOpa, self.SettingsWindow.DispMaskOpa_NF):
+        w.setToolTip("Dims the parts of the selected image outside its mask (the detector or real-space ROI). "
+                     "No effect where the mask covers everything: Align mode, or the full real-space ROI.")
     self.SettingsWindow.CalcPolicy.currentIndexChanged.connect(lambda *_: updateImagesCallbacks(self))
     for slider in self.findChildren(qtw.QAbstractSlider):            # Reduced policy: update on release
         slider.sliderReleased.connect(lambda: sliderReleased(self))
@@ -724,6 +727,12 @@ def startupFcn(self):
 
     # always keep "Import Preview" hidden from QComboBox
     self.DetrMode.view().setRowHidden(0, True)
+
+    # The app starts in Import Preview mode without a mode change, so the display selector would stay
+    # empty (no histogram/statistics for the preview): give it the Preview image, as the mode change does.
+    with signals_blocked(self.SettingsWindow.DispImage):
+        self.SettingsWindow.DispImage.clear()
+        self.SettingsWindow.DispImage.addItem("Preview", "Preview")
 
     # Import Data is the only option to start
     # turn off ALL actions

@@ -66,14 +66,10 @@ class InteractiveCircle(qtc.QObject):
         self.canvas = self.circ[0].figure.canvas
         self.axis = self.circ[0].axes
 
-        # annotations are animated for quick blitting
-        for circ in self.circ:
-            circ.set_animated(True)
-        self.point.set_animated(True)
-
-        # update axis with new annotations
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(axis.bbox)
+        # Ordinary artists, drawn by every redraw; they are animated (blitted) only while dragged.
+        # (Created animated, they were invisible until first clicked once nothing blitted them.)
+        self.background = None                  # taken when a drag starts
+        self.canvas.draw_idle()
 
     def containsArtist(self, event):
         """
@@ -125,8 +121,21 @@ class InteractiveCircle(qtc.QObject):
 
         return containsPoint, contains
 
+    def disconnect(self):
+        """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
+        to every hover/click on the canvas (drawing artists no longer in a figure, emitting moves)."""
+        canvas = self.canvas
+        for name in ('cidpress', 'cidrelease', 'cidmotion'):
+            cid = getattr(self, name, None)
+            if cid is not None and canvas is not None:
+                canvas.mpl_disconnect(cid)
+            setattr(self, name, None)
+        if InteractiveCircle.lock is self:
+            InteractiveCircle.lock = None
+
     def remove(self):
-        ''' remove all circle(s) and points(s) from axes '''
+        ''' remove all circle(s) and points(s) from axes, and stop listening to the mouse '''
+        self.disconnect()
         for circ in self.circ:
             circ.remove()
         self.point.remove()
@@ -366,6 +375,11 @@ class InteractiveCircle(qtc.QObject):
 
     def restoreBackground(self):
         """ this function is used to restore background for blitting """
+        # Outside a drag the saved background is stale (the image may have changed since it was
+        # taken, e.g. brightness/contrast), so blitting it would paint the old image back: redraw.
+        if not self.dragging:
+            self.canvas.draw_idle()
+            return
 
         # monitor point visibility
         self.pointVisibility()
@@ -383,20 +397,5 @@ class InteractiveCircle(qtc.QObject):
         self.canvas.blit(self.axis.bbox)
 
     def updateBackground(self):
-        """ this function is used to redraw artists and update background for blitting """
-
-        # draw everything but the selected circle and store the pixel buffer
-        for circ in self.circ:
-            circ.set_animated(True)
-        self.point.set_animated(True)
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(self.axis.bbox)
-
-        # now redraw the circle(s) and point(s)
-        for circ in self.circ:
-            self.axis.draw_artist(circ)
-        if self.point.get_visible():
-            self.axis.draw_artist(self.point)
-
-        # and blit just the redrawn area
-        self.canvas.blit(self.axis.bbox)
+        """Redraw the canvas (kept for compatibility; the background is taken when a drag starts)."""
+        self.canvas.draw_idle()

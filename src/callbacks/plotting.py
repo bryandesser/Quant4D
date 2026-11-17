@@ -224,10 +224,9 @@ def plotImage(self, id):
     # set colormap
     self.ImageAx[id].set_cmap(fig.cmap + ["", "_r"][fig.invert])  # append "_r" if inverted
 
-    # update plot
-    if id != "Dfrn":
-        fig.canvas.draw_idle()
-    fig.canvas.flush_events()
+    # update plot (the diffraction window used to be skipped here, so brightness, contrast, gamma and
+    # colour-map changes never showed on it; the annotations no longer paint stale backgrounds over it)
+    fig.canvas.draw_idle()       # not flushed: rapid changes (a slider drag) coalesce into one redraw
 
 
 def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange):
@@ -246,16 +245,24 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
             "min:{:< 14.7g}\tavg:{:< 14.7g}\nmax:{:< 14.7g}\tstd:{:< 14.7g}\nsum:{:< 14.7g}\t{:s}".format(
                 minVal, np.nanmean(im), maxVal, np.nanstd(im), np.nansum(im), nanwarn))
 
-        # try to clear the histogram
-        try:
-            self.SettingsWindow.HistAxes.axes.cla()
-            self.A.hist = None
-        except BaseException:
-            pass
+        # clear the histogram (and its box: cla() removes the box's artists, so it is recreated)
+        hax = self.SettingsWindow.HistAxes.axes
+        if self.A.histBox is not None:
+            try:
+                self.A.histBox.remove()
+            except (ValueError, AttributeError, NotImplementedError):
+                pass
+            self.A.histBox = None
+        hax.cla()
+        self.A.hist = self.A.histGamma = self.A.histNote = None
 
-        # Generate an intensity histogram for the selected image
-        binCounts, binEdges, self.A.hist = self.SettingsWindow.HistAxes.axes.hist(
-            im.ravel(), bins=128, ec='k', linewidth=0.5)
+        # Intensity histogram of the finite values, drawn as one filled step artist
+        # (128 bar patches made every histogram redraw slow, e.g. while dragging gamma)
+        values = im.compressed()
+        if values.size == 0:
+            values = np.zeros(1)
+        binCounts, binEdges = np.histogram(values, bins=128)
+        self.A.hist = hax.stairs(binCounts, binEdges, fill=True, facecolor="C0", edgecolor="k", linewidth=0.5)
 
         # Set histogram limits
         self.SettingsWindow.HistAxes.axes.set_xlim(binEdges.min(), binEdges.max())
@@ -322,21 +329,27 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
 
         # Update other annotations
         # remove gamma curve
-        try:
-            self.A.histGamma.remove()
+        if self.A.histGamma is not None:
+            try:
+                self.A.histGamma.remove()
+            except (ValueError, AttributeError, NotImplementedError):
+                pass
             self.A.histGamma = None
-        except BaseException:
-            pass
-        # remove any text(s)
-        if len(ax.texts):
-            for ii in ax.texts:
-                ii.remove()
+        # remove the previous note (only that one: this used to remove every text from the *image*
+        # axes, including the kx/ky axis-direction labels)
+        if self.A.histNote is not None:
+            try:
+                self.A.histNote.remove()
+            except (ValueError, AttributeError, NotImplementedError):
+                pass
         self.A.histNote = None
 
         # Gamma line
         x = np.linspace(limitLow, limitHigh, 128)  # histogram is on x_lim = [0,1]
-        self.A.histGamma, = self.SettingsWindow.HistAxes.axes.plot(x, ((x - limitLow) / (limitHigh - limitLow))**fig.gamma * np.diff(
-            self.SettingsWindow.HistAxes.axes.get_ylim()) + self.SettingsWindow.HistAxes.axes.get_ylim()[0], color='k')
+        span = limitHigh - limitLow
+        ramp = (x - limitLow) / span if span > 0 else np.zeros_like(x)   # a flat image has no ramp
+        y0, y1 = self.SettingsWindow.HistAxes.axes.get_ylim()
+        self.A.histGamma, = self.SettingsWindow.HistAxes.axes.plot(x, ramp**fig.gamma * (y1 - y0) + y0, color='k')
 
         # Print display limits on the histogram
         textstr = "High:{:< 9.2e}\nLow:{:< 9.2e}".format(limitHigh, limitLow)
@@ -349,7 +362,7 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
             0.05,
             0.95,
             textstr,
-            transform=ax.transAxes,
+            transform=self.SettingsWindow.HistAxes.axes.transAxes,     # was the image axes' transform
             fontsize=10,
             verticalalignment='top',
             bbox=props)  # , font="Courier")

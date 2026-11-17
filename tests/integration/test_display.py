@@ -182,3 +182,102 @@ class TestHoverReadout:
         msg = NavigationToolbar._mouse_event_to_message(event)
         value = fig.ax.get_images()[0].format_cursor_data(im[ny - 1, nx - 1]).rstrip()
         assert msg.endswith(value), f"hover shows {msg!r}, expected the value {value}"
+
+
+class TestOnScreen:
+    """What is actually drawn, not just the data handed to the image: the diffraction window used
+    to skip its redraw, so brightness/contrast/gamma/colour map never showed there."""
+
+    @staticmethod
+    def _pixels(app, qapp, id):
+        qapp.processEvents()
+        return np.asarray(app.Fig[id].canvas.buffer_rgba()).copy()
+
+    @pytest.mark.parametrize("id", ["Dfrn", "Real"])
+    @pytest.mark.parametrize("control", ["brightness", "contrast", "gamma", "colormap", "invert"])
+    def test_display_controls_change_the_screen(self, real, qapp, id, control):
+        sw = real.SettingsWindow
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData(id))
+        real.Fig[id].canvas.draw()
+        before = self._pixels(real, qapp, id)
+        change = {"brightness": lambda: sw.DispBrightness.setValue(75),
+                  "contrast": lambda: sw.DispContrast.setValue(80),
+                  "gamma": lambda: sw.DispGamma.setValue(2.5),
+                  "colormap": lambda: sw.DispCMap.setCurrentIndex(sw.DispCMap.findText("inferno")),
+                  "invert": lambda: sw.DispCMapInvert.click()}[control]
+        try:
+            change()
+            assert not np.array_equal(self._pixels(real, qapp, id), before), f"{control} did not change the {id} window"
+        finally:
+            sw.DispBrightnessReset.click()
+            sw.DispContrastReset.click()
+            sw.DispGammaReset.click()
+            sw.DispCMap.setCurrentIndex(sw.DispCMap.findText("gray"))
+            if sw.DispCMapInvert.isChecked():
+                sw.DispCMapInvert.click()
+            qapp.processEvents()
+
+    def test_moving_an_annotation_does_not_paint_an_old_image(self, loaded_app, qapp):
+        """Annotations moved from a spinbox used to blit a background saved earlier, painting the
+        diffraction pattern as it was then over the current one."""
+        from conftest import set_mode
+        set_mode(loaded_app, qapp, "AlignMod")
+        sw = loaded_app.SettingsWindow
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        sw.DispBrightness.setValue(80)
+        qapp.processEvents()
+        loaded_app.TBR.setValue(loaded_app.TBR.value() + 0.5)      # redraws the beam circle
+        shown = self._pixels(loaded_app, qapp, "Dfrn")
+        loaded_app.Fig.Dfrn.canvas.draw()
+        try:
+            assert np.array_equal(shown, self._pixels(loaded_app, qapp, "Dfrn")), "stale background painted"
+        finally:
+            sw.DispBrightnessReset.click()
+            loaded_app.TBR.setValue(loaded_app.TBR.value() - 0.5)
+            set_mode(loaded_app, qapp, "AnnMod")
+
+
+class TestDisplayKeepsOtherArtists:
+    def test_axis_labels_survive_display_changes(self, real, qapp):
+        """Updating the histogram note used to remove every text from the image axes."""
+        sw = real.SettingsWindow
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        qapp.processEvents()
+        labels = lambda: sorted(t.get_text() for t in real.Fig.Dfrn.ax.texts if t.get_text())   # noqa: E731
+        before = labels()
+        assert "kx" in before and "ky" in before
+        sw.DispGamma.setValue(1.7)
+        sw.DispBrightness.setValue(60)
+        qapp.processEvents()
+        assert labels() == before
+
+    def test_histogram_box_survives_switching_images(self, real, qapp):
+        """Clearing the histogram for another image removed the box's artists but kept the box."""
+        sw = real.SettingsWindow
+        for id in ("Dfrn", "Real", "Dfrn"):
+            sw.DispImage.setCurrentIndex(sw.DispImage.findData(id))
+            qapp.processEvents()
+            box = real.A.histBox
+            assert box is not None and box._rect.axes is sw.HistAxes.axes, f"histogram box missing for {id}"
+        assert real.A.hist is not None and real.A.histNote.axes is sw.HistAxes.axes
+
+    def test_mask_opacity(self, loaded_app, qapp):
+        from conftest import set_mode
+        set_mode(loaded_app, qapp, "AnnMod")
+        loaded_app.AnnRi.setValue((2, 6))            # a ring: there is something outside the mask
+        sw = loaded_app.SettingsWindow
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        qapp.processEvents()
+        assert not np.asarray(loaded_app.Fig.DfrnMask.Image, bool).all()
+        fig = loaded_app.Fig.Dfrn
+        fig.canvas.draw()
+        before = np.asarray(fig.canvas.buffer_rgba()).copy()
+        sw.DispMaskOpa.setValue(70)
+        qapp.processEvents()
+        fig.canvas.draw()
+        try:
+            assert not np.array_equal(np.asarray(fig.canvas.buffer_rgba()), before), "outside the annulus not dimmed"
+            assert "Align mode" in sw.DispMaskOpa.toolTip()
+        finally:
+            sw.DispMaskOpa.setValue(0)
+            qapp.processEvents()

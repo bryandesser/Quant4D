@@ -225,7 +225,7 @@ def realSpaceROICallbacks(self):
             elif typ == 'point':
                 pt_artist = ax.scatter(
                     p[0], p[1],
-                    color=c_mpl, s=50, zorder=5, animated=True,
+                    color=c_mpl, s=50, zorder=5,     # not animated: ordinary redraws must draw it
                 )
                 roi = InteractivePoint(pt_artist)
 
@@ -290,6 +290,8 @@ def realSpaceROICallbacks(self):
             when called from other contexts.
         """
         roi_dict = getattr(self.A, 'RealROI', {})
+        if roi_src is not None and not any(roi_src is v for v in roi_dict.values()):
+            return          # a replaced ROI (e.g. after switching shape) is not the current one
 
         # Pick the primary ROI to read geometry from
         roi = roi_dict.get('Real') or next(
@@ -417,6 +419,7 @@ def realSpaceROICallbacks(self):
 
         # Enable / disable point-only panel widgets
         is_point = (val == 'point')
+        setPatternModesFor(self, is_point)
         for w in (self.FrameX, self.FrameY,
                   self.FrameXLabel, self.FrameYLabel, self.FrameLabel):
             w.setEnabled(is_point)
@@ -468,3 +471,17 @@ def diffractionPattern(self, weights):
     """The diffraction image for real-space *weights*, combined as the "Pattern" dropdown says."""
     mode = self.DfrnCombine.currentData() if hasattr(self, "DfrnCombine") else DEFAULT_COMBINE
     return compute.combine_frames(self.Data, weights, mode, self.D.GPU).reshape(dfrn_shape(self.D))
+
+
+def setPatternModesFor(self, single_frame: bool) -> None:
+    """``std`` over one frame is meaningless (all zeros): grey it out for a point ROI, falling back
+    to the default if it was selected."""
+    combo = getattr(self, "DfrnCombine", None)
+    if combo is None:
+        return
+    item = combo.model().item(combo.findData("std"))
+    item.setEnabled(not single_frame)
+    item.setToolTip("Not available for a point ROI (a single frame has no spread)" if single_frame else "")
+    if single_frame and combo.currentData() == "std":
+        with signals_blocked(combo):
+            combo.setCurrentIndex(combo.findData(DEFAULT_COMBINE))

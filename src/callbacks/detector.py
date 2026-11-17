@@ -163,36 +163,23 @@ def detectorModeCallbacks(self):
             self.DfrnDetrTabGroup.setCurrentIndex(0)
             previewCallbacks(self)
         case "AlignMod":
-            # display the full dataset pacbed, combined as the Pattern dropdown says (default mean)
+            # The full dataset: pattern (combined as the Pattern dropdown says, default mean), the real-space
+            # image of an all-ones detector, and all-ones masks (MATLAB's alignment view).  Drawn through
+            # plotImage — a bare imshow here skipped the histogram/statistics and the display settings,
+            # and stacked a new image on the axes every time Align mode was entered.
             from callbacks.realSpaceROICallbacks import diffractionPattern  # noqa: E402
+            from callbacks.plotting import plotImage  # noqa: E402
             self.Fig.Dfrn.Image = diffractionPattern(self, np.ones(self.Data.shape[0]))
-            self.ImageAx.Dfrn = self.Fig.Dfrn.ax.imshow(self.Fig.Dfrn.Image, cmap=self.Fig.Dfrn.cmap)
-            self.ImageAx.Dfrn.figure.set_facecolor('black')
-            self.Fig.Dfrn.show()
-            self.Fig.Dfrn.ax.axis(self.P.DfrnAxLim)
-            self.Fig.Dfrn.canvas.draw_idle()
-
-            # initialize real space image with sum over all diffraction space
             self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
-            self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Fig.Real.Image, cmap=self.Fig.Real.cmap)
-            self.ImageAx.Real.figure.set_facecolor('black')
-            self.Fig.Real.show()
-            self.Fig.Real.ax.axis(self.P.RealAxLim)
-            self.Fig.Real.canvas.draw_idle()
-
-            # initial masking for diffraction space should be all ones
             self.Fig.DfrnMask.Image = np.ones(dfrn_shape(self.D))
-            self.ImageAx.DfrnMask = self.Fig.DfrnMask.ax.imshow(self.Fig.DfrnMask.Image, cmap=self.Fig.DfrnMask.cmap)
-            self.ImageAx.DfrnMask.figure.set_facecolor('black')
-            self.Fig.DfrnMask.ax.axis(self.P.DfrnAxLim)
-            self.Fig.DfrnMask.canvas.draw_idle()
-
-            # initial masking for real space should be all ones
             self.Fig.RealMask.Image = np.ones(real_shape(self.D))
-            self.ImageAx.RealMask = self.Fig.RealMask.ax.imshow(self.Fig.RealMask.Image, cmap=self.Fig.RealMask.cmap)
-            self.ImageAx.RealMask.figure.set_facecolor('black')
-            self.Fig.RealMask.ax.axis(self.P.RealAxLim)
-            self.Fig.RealMask.canvas.draw_idle()
+            for id, limits in (("DfrnMask", self.P.DfrnAxLim), ("RealMask", self.P.RealAxLim),
+                               ("Dfrn", self.P.DfrnAxLim), ("Real", self.P.RealAxLim)):
+                plotImage(self, id)
+                self.Fig[id].fig.set_facecolor('black')
+                self.Fig[id].ax.axis(limits)
+            self.Fig.Dfrn.show()
+            self.Fig.Real.show()
 
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
             if self.A.tb is None:

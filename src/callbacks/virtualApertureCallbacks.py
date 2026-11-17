@@ -112,14 +112,8 @@ def virtualApertureCallbacks(self):  # noqa: C901
         annotation that is emitting (self.sender()) mid-drag would end the drag, and freeing a
         QObject while it emits crashes."""
         if self.A.VrAp is not None and not keep_primary:
-            # InteractiveCircle stores artists in .circ (list of Line2D) and .point (scatter)
-            for line in self.A.VrAp.circ:
-                try:
-                    line.remove()
-                except ValueError:
-                    pass
             try:
-                self.A.VrAp.point.remove()
+                self.A.VrAp.remove()          # its artists and its mouse handlers
             except ValueError:
                 pass
             self.A.VrAp = None
