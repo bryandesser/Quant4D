@@ -156,4 +156,4 @@ jobs:
       - name: Install pyquant4d + test dependencies
         run: pip install -e . --config-settings editable_mode=compat && pip install pytest pytest-qt tifffile h5py
       - name: Run GPU tests
-        run: pytest tests/integration/test_gpu.py -m gpu -v
+        run: pytest tests/integration/test_gpu.py -v
