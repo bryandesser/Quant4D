@@ -3,6 +3,7 @@ from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 try:
     import torch
     _TORCH_AVAILABLE = True
@@ -90,16 +91,13 @@ def annularDetectorCallbacks(self):
 
     def limitAnnUI():
         """Update annular detector UI limits/labels when coordinate options change."""
-        self.AnnRi_NF.blockSignals(True)
-        self.AnnRo_NF.blockSignals(True)
-        self.AnnRi_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
-        self.AnnRo_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
-        self.AnnRi_NF.setRange(0, self.P.RMax * self.DfPxR)
-        self.AnnRo_NF.setRange(0, self.P.RMax * self.DfPxR)
-        self.AnnRi_NF.setSingleStep(0.25 * self.DfPxR)
-        self.AnnRo_NF.setSingleStep(0.25 * self.DfPxR)
-        self.AnnRi_NF.blockSignals(False)
-        self.AnnRo_NF.blockSignals(False)
+        with signals_blocked(self.AnnRi_NF, self.AnnRo_NF):
+            self.AnnRi_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
+            self.AnnRo_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
+            self.AnnRi_NF.setRange(0, self.P.RMax * self.DfPxR)
+            self.AnnRo_NF.setRange(0, self.P.RMax * self.DfPxR)
+            self.AnnRi_NF.setSingleStep(0.25 * self.DfPxR)
+            self.AnnRo_NF.setSingleStep(0.25 * self.DfPxR)
 
     def enableAnnUI():
         """Enable/disable UI elements based on current detector mode."""
@@ -331,17 +329,10 @@ def annularDetectorCallbacks(self):
             outerRadius = min(self.P.RMax, outerRadius)
 
             # Block signals to avoid update loops
-            self.AnnRi.blockSignals(True)
-            self.AnnRi_NF.blockSignals(True)
-            self.AnnRo_NF.blockSignals(True)
-
-            self.AnnRi.setValue((innerRadius, outerRadius))
-            self.AnnRi_NF.setValue(innerRadius * self.D.annWidth * scale)
-            self.AnnRo_NF.setValue(outerRadius * self.D.annWidth * scale)
-
-            self.AnnRi.blockSignals(False)
-            self.AnnRi_NF.blockSignals(False)
-            self.AnnRo_NF.blockSignals(False)
+            with signals_blocked(self.AnnRi, self.AnnRi_NF, self.AnnRo_NF):
+                self.AnnRi.setValue((innerRadius, outerRadius))
+                self.AnnRi_NF.setValue(innerRadius * self.D.annWidth * scale)
+                self.AnnRo_NF.setValue(outerRadius * self.D.annWidth * scale)
 
             # Sync the InteractiveAnnulus if the sender was not the annotation
             if self.sender() is not self.A.adf:
@@ -382,12 +373,9 @@ def annularDetectorCallbacks(self):
                     np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
                 ) % 360.0
 
-                self.DetRot.blockSignals(True)
-                self.DetRot_NF.blockSignals(True)
-                self.DetRot.setValue(int(round(new_rot)))
-                self.DetRot_NF.setValue(new_rot)
-                self.DetRot.blockSignals(False)
-                self.DetRot_NF.blockSignals(False)
+                with signals_blocked(self.DetRot, self.DetRot_NF):
+                    self.DetRot.setValue(int(round(new_rot)))
+                    self.DetRot_NF.setValue(new_rot)
 
             # Redraw all SegDetr annotations with updated parameters
             drawSegDetr()
@@ -412,12 +400,9 @@ def annularDetectorCallbacks(self):
                 new_sd = float(
                     np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
                 ) % 360.0
-                self.ScanDir.blockSignals(True)
-                self.ScanDir_NF.blockSignals(True)
-                self.ScanDir.setValue(int(round(new_sd)))
-                self.ScanDir_NF.setValue(new_sd)
-                self.ScanDir.blockSignals(False)
-                self.ScanDir_NF.blockSignals(False)
+                with signals_blocked(self.ScanDir, self.ScanDir_NF):
+                    self.ScanDir.setValue(int(round(new_sd)))
+                    self.ScanDir_NF.setValue(new_sd)
 
             elif (self.A.ScanDirYcirc is not None
                   and self.sender() is self.A.ScanDirYcirc):
@@ -427,12 +412,9 @@ def annularDetectorCallbacks(self):
                     np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
                 )
                 new_sd = (y_ang - 90.0 * syf) % 360.0
-                self.ScanDir.blockSignals(True)
-                self.ScanDir_NF.blockSignals(True)
-                self.ScanDir.setValue(int(round(new_sd)))
-                self.ScanDir_NF.setValue(new_sd)
-                self.ScanDir.blockSignals(False)
-                self.ScanDir_NF.blockSignals(False)
+                with signals_blocked(self.ScanDir, self.ScanDir_NF):
+                    self.ScanDir.setValue(int(round(new_sd)))
+                    self.ScanDir_NF.setValue(new_sd)
 
             # Redraw scan direction arrows with updated angle
             drawScanDir()
@@ -514,13 +496,13 @@ def annularDetectorCallbacks(self):
             )
             k = self.A.k.flatten()
 
+            # One-hot (pixel, ring) matrix: column r selects the pixels in ring r, so
+            # Data @ adfMask integrates every ring for every probe position in one
+            # BLAS call.  Use a floating dtype so integer datasets cannot overflow.
             distance = np.arange(0, k.max() + 1)
-            adfMask = np.where(
-                (k.reshape(1, len(k)) >= distance.reshape(len(distance), 1))
-                & (k.reshape(1, len(k)) < distance.reshape(len(distance), 1) + 0.5),
-                True,
-                False,
-            ).T
+            adfMask = (k[:, None] == distance[None, :]).astype(
+                np.result_type(self.Data.dtype, np.float32)
+            )
 
             # GPU path: use torch CUDA tensor for the large matrix multiply
             if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
@@ -536,11 +518,10 @@ def annularDetectorCallbacks(self):
             )
 
             # Update UI slider limits
-            self.blockAllSignals = True
-            self.AnnRi.setMaximum(k.max())
-            self.AnnRi_NF.setMaximum(k.max() * self.D.annWidth)
-            self.AnnRo_NF.setMaximum(k.max() * self.D.annWidth)
-            self.blockAllSignals = False
+            with all_signals_blocked(self):
+                self.AnnRi.setMaximum(k.max())
+                self.AnnRi_NF.setMaximum(k.max() * self.D.annWidth)
+                self.AnnRo_NF.setMaximum(k.max() * self.D.annWidth)
 
             self.P.RMax = k.max()
 

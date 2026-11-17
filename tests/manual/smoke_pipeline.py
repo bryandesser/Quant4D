@@ -129,6 +129,21 @@ def _check_auto_align(w):
     assert err < 1.0 and abs(w.TBR.value() - 4) < 1.5, f"B0 = {w.B0}, TBR = {w.TBR.value():.2f}"
 
 
+def _check_annular(w):
+    """The BF/ADF image must equal the plain masked sum over the selected rings."""
+    for ri, ro in ((0, int(w.AnnRi.maximum())), (0, 6), (4, 12)):
+        w.AnnRi.setValue((ri, ro))
+        qapp.processEvents()
+        ri, ro = w.AnnRi.value()
+        _check_images(w, ["Real", "DfrnMask"])
+        yy, xx = np.mgrid[0:NPY, 0:NPX]
+        ring = np.int32(np.hypot(xx - w.B0[0], yy - w.B0[1]) / w.D.annWidth)
+        mask = (ring >= ri) & (ring <= ro)
+        expected = w.Data[:, mask.ravel()].sum(axis=1).reshape(NFY, NFX)
+        assert np.allclose(w.Fig.Real.Image, expected, rtol=1e-5), f"annular image wrong for rings {ri}-{ro}"
+        assert np.array_equal(w.Fig.DfrnMask.Image.astype(bool), mask), f"displayed mask wrong for rings {ri}-{ro}"
+
+
 def _check_com(w):
     """The disc drifts +0.3 px in x per rx step and +0.3 px in y per ry step."""
     _check_images(w, ["CoMX", "CoMY", "CoMMag", "CoMPh", "iCoM", "dCoM"])
@@ -180,7 +195,8 @@ def main():
     _step("set beam centre/radius", lambda: (w.TBX.setValue(14.75), w.TBY.setValue(6.45), w.TBR.setValue(4.0)))
 
     _step("mode AnnMod", lambda: _set_mode(w, "AnnMod"))
-    _step("annular radii slider", lambda: (w.AnnRi.setValue((0, int(w.AnnRi.maximum()))), _check_images(w, ["Real", "DfrnMask"])))
+    _step("annular image equals masked sum", lambda: _check_annular(w))
+    _step("annular radii full range", lambda: w.AnnRi.setValue((0, int(w.AnnRi.maximum()))))
     _step("mode CoMMod", lambda: (_set_mode(w, "CoMMod"), _check_com(w)))
     _step("mode DPCMod", lambda: (_set_mode(w, "DPCMod"), _check_images(w, ["CoMX", "CoMY", "iCoM", "dCoM"])))
     _step("DPC segments/rotation", lambda: (w.NSeg.setValue(8), w.NRung.setValue(2), w.DetRot.setValue(30)))

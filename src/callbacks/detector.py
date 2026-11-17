@@ -13,6 +13,7 @@ from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
+from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def clearDetectors(self):
@@ -66,92 +67,86 @@ def detectorModeCallbacks(self):
         btn.setEnabled(dmod in ["CoMMod", "DPCMod"])
 
     # block singals whilst updating DispImage QComboBox
-    self.SettingsWindow.DispImage.blockSignals(True)
+    with signals_blocked(self.SettingsWindow.DispImage):
+        if dmod in ["CoMMod", "DPCMod"]:
+            # add all images to dropdown list in the Settings Window and
+            # Subsitute "CoM"/"DPC" in image names and window titles
+            imageNames = [re.sub('DPC|CoM', dmod[:3], ii) for ii in self.G.ImgName]
 
-    if dmod in ["CoMMod", "DPCMod"]:
-        # add all images to dropdown list in the Settings Window and
-        # Subsitute "CoM"/"DPC" in image names and window titles
-        imageNames = [re.sub('DPC|CoM', dmod[:3], ii) for ii in self.G.ImgName]
-
-        self.SettingsWindow.DispImage.clear()
-        for itemText, itemID in zip(imageNames, self.G.ImgID):
-            self.SettingsWindow.DispImage.addItem(itemText, itemID)  # drop down items
-            self.Fig[itemID].setWindowTitle(itemText)  # window title
-
-        # Subsitute "CoM"/"DPC" in button text
-        for btn in self.G.CoM_btns:
-            re.sub('DPC|CoM', dmod[:3], btn.text())
-
-    else:
-        self.SettingsWindow.DispImage.clear()
-        for itemText, itemID, itemType in zip(self.G.ImgName, self.G.ImgID, self.G.ImgType):
-            if "CoM" not in itemType:
+            self.SettingsWindow.DispImage.clear()
+            for itemText, itemID in zip(imageNames, self.G.ImgID):
                 self.SettingsWindow.DispImage.addItem(itemText, itemID)  # drop down items
-            else:
-                self.Fig[itemID].hide()  # Image windows
+                self.Fig[itemID].setWindowTitle(itemText)  # window title
 
-    # Show primary diffraction/real-space image when mode changes unless in Preview mode
-    if dmod != "PrvwMod":
-        self.Fig.Dfrn.show()
-        self.Fig.Real.show()
-    else:
-        self.Fig.Dfrn.hide()
-        self.Fig.Real.hide()
+            # Subsitute "CoM"/"DPC" in button text
+            for btn in self.G.CoM_btns:
+                re.sub('DPC|CoM', dmod[:3], btn.text())
 
-    # Special case for Import Preview Mode
-    if dmod == "PrvwMod":
-        # Keep only "Preview" image
-        self.SettingsWindow.DispImage.clear()
-        self.SettingsWindow.DispImage.addItem("Preview", "Preview")
+        else:
+            self.SettingsWindow.DispImage.clear()
+            for itemText, itemID, itemType in zip(self.G.ImgName, self.G.ImgID, self.G.ImgType):
+                if "CoM" not in itemType:
+                    self.SettingsWindow.DispImage.addItem(itemText, itemID)  # drop down items
+                else:
+                    self.Fig[itemID].hide()  # Image windows
 
-        # Hide other UIs
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.MiscTab), False)
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.InfoTab), False)
-        self.SaveWindow.SaveTabGroup.setTabVisible(
-            self.SaveWindow.SaveTabGroup.indexOf(
-                self.SaveWindow.ExportTab), False)
+        # Show primary diffraction/real-space image when mode changes unless in Preview mode
+        if dmod != "PrvwMod":
+            self.Fig.Dfrn.show()
+            self.Fig.Real.show()
+        else:
+            self.Fig.Dfrn.hide()
+            self.Fig.Real.hide()
 
-        self.Fig.Preview.show()
-        self.ImportWindow.show()
-        self.SettingsWindow.show()
-    else:
-        self.P.DetrMode = self.DetrMode.currentData()  # Note current mode
-        # Remove "Preview" image from drop down
-        self.SettingsWindow.DispImage.removeItem(self.SettingsWindow.DispImage.findData("Preview"))
-        self.Fig.Preview.hide()
+        # Special case for Import Preview Mode
+        if dmod == "PrvwMod":
+            # Keep only "Preview" image
+            self.SettingsWindow.DispImage.clear()
+            self.SettingsWindow.DispImage.addItem("Preview", "Preview")
 
-        # Show all UIs
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.MiscTab), True)
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.InfoTab), True)
-        self.SaveWindow.SaveTabGroup.setTabVisible(
-            self.SaveWindow.SaveTabGroup.indexOf(
-                self.SaveWindow.ExportTab), True)
+            # Hide other UIs
+            self.SettingsWindow.SettingsTabGroup.setTabVisible(
+                self.SettingsWindow.SettingsTabGroup.indexOf(
+                    self.SettingsWindow.MiscTab), False)
+            self.SettingsWindow.SettingsTabGroup.setTabVisible(
+                self.SettingsWindow.SettingsTabGroup.indexOf(
+                    self.SettingsWindow.InfoTab), False)
+            self.SaveWindow.SaveTabGroup.setTabVisible(
+                self.SaveWindow.SaveTabGroup.indexOf(
+                    self.SaveWindow.ExportTab), False)
 
-    # unblock singals after updating DispImage QComboBox
-    self.SettingsWindow.DispImage.blockSignals(False)
+            self.Fig.Preview.show()
+            self.ImportWindow.show()
+            self.SettingsWindow.show()
+        else:
+            self.P.DetrMode = self.DetrMode.currentData()  # Note current mode
+            # Remove "Preview" image from drop down
+            self.SettingsWindow.DispImage.removeItem(self.SettingsWindow.DispImage.findData("Preview"))
+            self.Fig.Preview.hide()
+
+            # Show all UIs
+            self.SettingsWindow.SettingsTabGroup.setTabVisible(
+                self.SettingsWindow.SettingsTabGroup.indexOf(
+                    self.SettingsWindow.MiscTab), True)
+            self.SettingsWindow.SettingsTabGroup.setTabVisible(
+                self.SettingsWindow.SettingsTabGroup.indexOf(
+                    self.SettingsWindow.InfoTab), True)
+            self.SaveWindow.SaveTabGroup.setTabVisible(
+                self.SaveWindow.SaveTabGroup.indexOf(
+                    self.SaveWindow.ExportTab), True)
 
     # Define images in the saving list
-    self.SaveWindow.SaveImgList.blockSignals(True)
-    self.SaveWindow.SaveImgList.clear()
-    self.SaveWindow.SaveImgList.addItems([self.SettingsWindow.DispImage.itemData(ii)
-                                         for ii in range(self.SettingsWindow.DispImage.count())])
-    self.SaveWindow.SaveImgList.blockSignals(False)
+    with signals_blocked(self.SaveWindow.SaveImgList):
+        self.SaveWindow.SaveImgList.clear()
+        self.SaveWindow.SaveImgList.addItems([self.SettingsWindow.DispImage.itemData(ii)
+                                             for ii in range(self.SettingsWindow.DispImage.count())])
     self.SaveWindow.SaveImgPrefix.textChanged.emit(self.SaveWindow.SaveImgPrefix.text())  # Update Image saving prefix
     self.SettingsWindow.ShowDfrnAxes.clicked.emit()  # Update diffraction axis annotations
 
     # Set detector size when transmitted beam is aligned the first time
     if not (self.P.TransBeamInit) and (dmod != "AlignMod"):
-        self.AnnRi.blockSignals(True)
-        self.AnnRi.setValue((self.TBR.value(), (self.TBR.value() + self.P.RMax) / 3))
-        self.AnnRi.blockSignals(False)
+        with signals_blocked(self.AnnRi):
+            self.AnnRi.setValue((self.TBR.value(), (self.TBR.value() + self.P.RMax) / 3))
         self.VrApR.setValue(self.TBR.value())
         self.P.VrApXY = self.B0
         self.P.TransBeamInit = 1

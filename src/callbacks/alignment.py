@@ -11,6 +11,7 @@ from callbacks.appClass import *
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
+from callbacks.signals import all_signals_blocked  # noqa: E402
 try:
     from callbacks.imfindcircles import imfindcircles
 except ImportError:
@@ -99,32 +100,28 @@ def moveTransBeam(self):
     r = np.clip(r, np.finfo(np.single).eps, self.P.RMax)  # 0 < r <= RMax
 
     # avoid triggering a valueChanged loop by blocking signals
-    self.blockAllSignals = True
+    with all_signals_blocked(self):
+        # Update UI limits
+        self.TBR.setRange(0, self.P.RMax)
+        self.TBR_NF.setRange(0, self.P.RMax)
+        self.AnnRi.setRange(0, self.P.RMax)
+        self.VrApR.setRange(0, self.P.RMax)
 
-    # Update UI limits
-    self.TBR.setRange(0, self.P.RMax)
-    self.TBR_NF.setRange(0, self.P.RMax)
-    self.AnnRi.setRange(0, self.P.RMax)
-    self.VrApR.setRange(0, self.P.RMax)
+        # Update UI values
+        self.TBR.setValue(r)
+        self.TBX.setValue(b0[0])
+        self.TBY.setValue(b0[1])
+        self.TBR_NF.setValue(r)
+        self.TBX_NF.setValue(b0[0])
+        self.TBY_NF.setValue(b0[1])
+        self.Alpha.setValue(a)
+        self.mradPx.setValue(mrad_per_px)
 
-    # Update UI values
-    self.TBR.setValue(r)
-    self.TBX.setValue(b0[0])
-    self.TBY.setValue(b0[1])
-    self.TBR_NF.setValue(r)
-    self.TBX_NF.setValue(b0[0])
-    self.TBY_NF.setValue(b0[1])
-    self.Alpha.setValue(a)
-    self.mradPx.setValue(mrad_per_px)
-
-    # Update transmitted beam annotation
-    if (self.sender() is not self.A.tb) and (self.A.tb is not None):
-        self.A.tb.center = b0
-        self.A.tb.radius = np.array([r])
-        self.A.tb.redraw()
-
-    # unblock trigger signals
-    self.blockAllSignals = False
+        # Update transmitted beam annotation
+        if (self.sender() is not self.A.tb) and (self.A.tb is not None):
+            self.A.tb.center = b0
+            self.A.tb.radius = np.array([r])
+            self.A.tb.redraw()
 
     detrCoordCallbacks(self)
 
@@ -209,14 +206,13 @@ def autoAlign(self):
     cy = np.clip(cy, 0, nPx[0] - 1)
     r = np.clip(r, np.finfo(np.single).eps, rmax_abs)
 
-    self.blockAllSignals = True
-    self.TBX.setValue(cx)
-    self.TBX_NF.setValue(cx)
-    self.TBY.setValue(cy)
-    self.TBY_NF.setValue(cy)
-    self.TBR.setValue(r)
-    self.TBR_NF.setValue(r)
-    self.blockAllSignals = False
+    with all_signals_blocked(self):
+        self.TBX.setValue(cx)
+        self.TBX_NF.setValue(cx)
+        self.TBY.setValue(cy)
+        self.TBY_NF.setValue(cy)
+        self.TBR.setValue(r)
+        self.TBR_NF.setValue(r)
 
     moveTransBeam(self)
 
@@ -276,12 +272,11 @@ def crossAlign(self):
         new_x = float(np.clip(event.xdata, 0, self.D.NPxX - 1))
         new_y = float(np.clip(event.ydata, 0, self.D.NPxY - 1))
 
-        self.blockAllSignals = True
-        self.TBX.setValue(new_x)
-        self.TBX_NF.setValue(new_x)
-        self.TBY.setValue(new_y)
-        self.TBY_NF.setValue(new_y)
-        self.blockAllSignals = False
+        with all_signals_blocked(self):
+            self.TBX.setValue(new_x)
+            self.TBX_NF.setValue(new_x)
+            self.TBY.setValue(new_y)
+            self.TBY_NF.setValue(new_y)
 
         # Tear down the crosshair
         crossAlign(self)   # second call → removes state

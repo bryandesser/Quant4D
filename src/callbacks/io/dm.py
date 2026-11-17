@@ -15,6 +15,7 @@ import importlib
 import h5py
 import time
 import matplotlib
+from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def prepDM(self):
@@ -399,11 +400,10 @@ def prepDM(self):
     # Select sub-image with the largest dimension; unless manually selected
     if self.sender() is not self.ImportWindow.ImpSubImg:
         pdim = np.zeros(len(self.T.dm) - 1)
-        self.ImportWindow.ImpSubImg.blockSignals(True)
-        for i in range(pdim.size):
-            self.ImportWindow.ImpSubImg.addItem(self.T.dm[i].Name)
-            pdim[i] = np.array(self.T.dm[i].Dimensions).prod()
-        self.ImportWindow.ImpSubImg.blockSignals(False)
+        with signals_blocked(self.ImportWindow.ImpSubImg):
+            for i in range(pdim.size):
+                self.ImportWindow.ImpSubImg.addItem(self.T.dm[i].Name)
+                pdim[i] = np.array(self.T.dm[i].Dimensions).prod()
         self.ImportWindow.ImpSubImg.setCurrentIndex(pdim.argmax())
 
     # Info of selected sub-image

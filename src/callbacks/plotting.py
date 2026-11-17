@@ -10,6 +10,7 @@ import callbacks.appClass as appClass
 from callbacks.appClass import *
 import matplotlib
 from callbacks.utils import isDiffToPrev
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 
 
 def displayCallbacks(self):
@@ -116,20 +117,16 @@ def displayCallbacks(self):
             self.SettingsWindow.DispMaskOpa.setEnabled(enabledState)
 
     # block signals during UI update
-    self.blockAllSignals = False
-
-    # Update UI
-    self.SettingsWindow.DispBrightness_NF.setValue(fig.brightness)
-    self.SettingsWindow.DispBrightness.setValue(fig.brightness)
-    self.SettingsWindow.DispContrast_NF.setValue(fig.contrast)
-    self.SettingsWindow.DispContrast.setValue(fig.contrast)
-    self.SettingsWindow.DispGamma_NF.setValue(fig.gamma)
-    self.SettingsWindow.DispGamma.setValue(fig.gamma)
-    self.SettingsWindow.DispMaskOpa_NF.setValue(fig.maskOpa)
-    self.SettingsWindow.DispMaskOpa.setValue(fig.maskOpa)
-
-    # unblock signals
-    self.blockAllSignals = False
+    with all_signals_blocked(self):
+        # Update UI
+        self.SettingsWindow.DispBrightness_NF.setValue(fig.brightness)
+        self.SettingsWindow.DispBrightness.setValue(fig.brightness)
+        self.SettingsWindow.DispContrast_NF.setValue(fig.contrast)
+        self.SettingsWindow.DispContrast.setValue(fig.contrast)
+        self.SettingsWindow.DispGamma_NF.setValue(fig.gamma)
+        self.SettingsWindow.DispGamma.setValue(fig.gamma)
+        self.SettingsWindow.DispMaskOpa_NF.setValue(fig.maskOpa)
+        self.SettingsWindow.DispMaskOpa.setValue(fig.maskOpa)
 
     # Update image
     plotImage(self, id)  # Re-plot image
@@ -283,20 +280,14 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
                 """Convert dragged limits back to brightness/contrast sliders."""
                 b_new, c_new = histbox_to_sliders(lo, hi, minVal, maxVal)
                 # Block the other spinbox while updating to avoid re-entry
-                for w in [self.SettingsWindow.DispBrightness,
-                          self.SettingsWindow.DispContrast,
-                          self.SettingsWindow.DispBrightness_NF,
-                          self.SettingsWindow.DispContrast_NF]:
-                    w.blockSignals(True)
-                self.SettingsWindow.DispBrightness.setValue(int(round(b_new)))
-                self.SettingsWindow.DispBrightness_NF.setValue(b_new)
-                self.SettingsWindow.DispContrast.setValue(int(round(c_new)))
-                self.SettingsWindow.DispContrast_NF.setValue(c_new)
-                for w in [self.SettingsWindow.DispBrightness,
-                          self.SettingsWindow.DispContrast,
-                          self.SettingsWindow.DispBrightness_NF,
-                          self.SettingsWindow.DispContrast_NF]:
-                    w.blockSignals(False)
+                with signals_blocked(self.SettingsWindow.DispBrightness,
+                                     self.SettingsWindow.DispContrast,
+                                     self.SettingsWindow.DispBrightness_NF,
+                                     self.SettingsWindow.DispContrast_NF):
+                    self.SettingsWindow.DispBrightness.setValue(int(round(b_new)))
+                    self.SettingsWindow.DispBrightness_NF.setValue(b_new)
+                    self.SettingsWindow.DispContrast.setValue(int(round(c_new)))
+                    self.SettingsWindow.DispContrast_NF.setValue(c_new)
                 # Trigger a display refresh
                 fig.brightness = int(round(b_new))
                 fig.contrast = int(round(c_new))

@@ -35,6 +35,7 @@ from annotationsClasses.interactiveCircle import InteractiveCircle        # fixe
 from annotationsClasses.interactiveRectangle import InteractiveRectangle
 from annotationsClasses.interactivePolygon import InteractivePolygon
 from annotationsClasses.interactivePoint import InteractivePoint
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -141,11 +142,10 @@ def realSpaceROICallbacks(self):
                            'Draw Polygon ROI', self.G.Img.name[rs_mask])
 
             if sel is None:
-                self.RealROIShape.blockSignals(True)
-                self.RealROIShape.setCurrentIndex(
-                    self.RealROIShape.findData('full')
-                )
-                self.RealROIShape.blockSignals(False)
+                with signals_blocked(self.RealROIShape):
+                    self.RealROIShape.setCurrentIndex(
+                        self.RealROIShape.findData('full')
+                    )
                 return
 
             # Bring the selected image to front for drawing
@@ -172,11 +172,10 @@ def realSpaceROICallbacks(self):
                 enableWindows(self, True)
 
                 if not vertices or len(vertices) < 3:
-                    self.RealROIShape.blockSignals(True)
-                    self.RealROIShape.setCurrentIndex(
-                        self.RealROIShape.findData('full')
-                    )
-                    self.RealROIShape.blockSignals(False)
+                    with signals_blocked(self.RealROIShape):
+                        self.RealROIShape.setCurrentIndex(
+                            self.RealROIShape.findData('full')
+                        )
                     return
 
                 poly_verts = np.array(vertices, dtype=float)
@@ -352,10 +351,9 @@ def realSpaceROICallbacks(self):
                         pass
 
         # --- Update UI spinboxes (block to avoid re-entrant signals) ----
-        self.blockAllSignals = True
-        self.FrameX.setValue(x)
-        self.FrameY.setValue(y)
-        self.blockAllSignals = False
+        with all_signals_blocked(self):
+            self.FrameX.setValue(x)
+            self.FrameY.setValue(y)
 
         # --- Sync ROI geometry across all real-space panels --------------
         if roi is not None:
@@ -439,11 +437,10 @@ def realSpaceROICallbacks(self):
             self.Mask.RealROIFile = importMask(self, 'Real')
             if self.Mask.RealROIFile is None:
                 val = 'full'
-                self.RealROIShape.blockSignals(True)
-                self.RealROIShape.setCurrentIndex(
-                    self.RealROIShape.findData('full')
-                )
-                self.RealROIShape.blockSignals(False)
+                with signals_blocked(self.RealROIShape):
+                    self.RealROIShape.setCurrentIndex(
+                        self.RealROIShape.findData('full')
+                    )
 
         # Enable / disable point-only panel widgets
         is_point = (val == 'point')
@@ -452,11 +449,10 @@ def realSpaceROICallbacks(self):
             w.setEnabled(is_point)
 
         self.RealROIInvert.setEnabled(val != 'full')
-        self.RealROIInvert.blockSignals(True)
-        self.RealROIInvert.setChecked(
-            self.RealROIInvert.isChecked() and self.RealROIInvert.isEnabled()
-        )
-        self.RealROIInvert.blockSignals(False)
+        with signals_blocked(self.RealROIInvert):
+            self.RealROIInvert.setChecked(
+                self.RealROIInvert.isChecked() and self.RealROIInvert.isEnabled()
+            )
 
         drawRealROI(val)
 

@@ -29,6 +29,7 @@ from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
+from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def virtualApertureCallbacks(self):  # noqa: C901
@@ -214,9 +215,8 @@ def virtualApertureCallbacks(self):  # noqa: C901
 
             self.P.VrApXY = new_ctr
 
-            self.VrApR.blockSignals(True)
-            self.VrApR.setValue(new_r)
-            self.VrApR.blockSignals(False)
+            with signals_blocked(self.VrApR):
+                self.VrApR.setValue(new_r)
 
         # --- sync mirror-drag handle → mirror-angle UI ---
         elif (self.A.VrApMirP is not None
@@ -225,12 +225,9 @@ def virtualApertureCallbacks(self):  # noqa: C901
             new_ang = float(
                 np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
             ) % 180.0  # mirror angle is defined mod 180°
-            self.VrApMirrRot.blockSignals(True)
-            self.VrApMirrRot_NF.blockSignals(True)
-            self.VrApMirrRot.setValue(int(round(new_ang)))
-            self.VrApMirrRot_NF.setValue(new_ang)
-            self.VrApMirrRot.blockSignals(False)
-            self.VrApMirrRot_NF.blockSignals(False)
+            with signals_blocked(self.VrApMirrRot, self.VrApMirrRot_NF):
+                self.VrApMirrRot.setValue(int(round(new_ang)))
+                self.VrApMirrRot_NF.setValue(new_ang)
 
         # --- sync radius spinbox → stored position ---
         elif self.sender() is self.VrApR:

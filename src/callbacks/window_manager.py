@@ -8,6 +8,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
+from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def toggleWindows(self):
@@ -107,17 +108,12 @@ def resizeWindowCallbacks(self):
                 id = space
 
             # temporarily block slots/signals to avoid recursion
-            self.Fig[id].blockSignals(True)
-
-            # set the height and wdith
-            self.Fig[id].resize(width, height)
-
-            # unblock slots/signals
-            self.Fig[id].blockSignals(False)
+            with signals_blocked(self.Fig[id]):
+                # set the height and wdith
+                self.Fig[id].resize(width, height)
 
         case self.SettingsWindow.WdwSetAllDfrn | self.SettingsWindow.WdwSetAllReal:  # Set all image windows of the given space to the same size
             for fig in self.G.ImgFig:
                 if fig.space == space:
-                    fig.blockSignals(True)
-                    fig.resize(width, height)
-                    fig.blockSignals(False)
+                    with signals_blocked(fig):
+                        fig.resize(width, height)

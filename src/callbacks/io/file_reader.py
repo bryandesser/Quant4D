@@ -43,6 +43,7 @@ from callbacks.threading_workers import importThread  # noqa: E402
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
 from callbacks.startup import enableWindows  # noqa: E402
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape  # noqa: E402
+from callbacks.signals import all_signals_blocked  # noqa: E402
 
 
 def readFile(self):
@@ -98,87 +99,83 @@ def prepareData(self):
     # block slots/signals whilst initializing UI components
     from callbacks.alignment import transBeamCallbacks  # noqa: E402
     from callbacks.detector import detectorModeCallbacks  # noqa: E402
-    self.blockAllSignals = True
+    with all_signals_blocked(self):
+        # move to alignment mode
+        self.DetrMode.setCurrentIndex(self.DetrMode.findData("AlignMod"))
 
-    # move to alignment mode
-    self.DetrMode.setCurrentIndex(self.DetrMode.findData("AlignMod"))
+        # Detector controls
+        self.P.ScanDirInit = 0              # Reset alignments
+        self.NSeg.setValue(4)               # DPC defaults: 4 segments for DPC
+        self.NRung.setValue(1)  # 1 rung for DPC
+        self.DetRot.setValue(0)  # 0 detector rotation
+        self.DetRot_NF.setValue(0)          #
+        self.ScanDir.setValue(0)  # 0 scan rotation
+        self.ScanDir_NF.setValue(0)         #
 
-    # Detector controls
-    self.P.ScanDirInit = 0              # Reset alignments
-    self.NSeg.setValue(4)               # DPC defaults: 4 segments for DPC
-    self.NRung.setValue(1)  # 1 rung for DPC
-    self.DetRot.setValue(0)  # 0 detector rotation
-    self.DetRot_NF.setValue(0)          #
-    self.ScanDir.setValue(0)  # 0 scan rotation
-    self.ScanDir_NF.setValue(0)         #
+        self.VrApSymm.setCurrentIndex(0)    # default to one virtual aperture
+        self.VrApInvert.setChecked(False)   # without inversion
+        self.VrApMirror.setChecked(False)   # without mirror symmetry
+        self.VrApMirrRot.setValue(0)        # initialize mirror symmetry to 0 degrees
+        self.VrApMirrRot_NF.setValue(0)     #
 
-    self.VrApSymm.setCurrentIndex(0)    # default to one virtual aperture
-    self.VrApInvert.setChecked(False)   # without inversion
-    self.VrApMirror.setChecked(False)   # without mirror symmetry
-    self.VrApMirrRot.setValue(0)        # initialize mirror symmetry to 0 degrees
-    self.VrApMirrRot_NF.setValue(0)     #
+        # Alignments
+        # Exact (x, y) centres in 0-based pixel coordinates: pixel i spans [i - 0.5, i + 0.5]
+        self.P.DfCtr = (np.array([self.D.NPxX, self.D.NPxY]) - 1) / 2   # Diffraction image
+        self.P.RsCtr = (np.array([self.D.NFrX, self.D.NFrY]) - 1) / 2   # Real-space image
+        self.Alpha.setValue(12)             # initialize alpha to 12 mrad
+        self.P.VrApXY = self.P.DfCtr        # initialize virtual aperture to diffraction center
 
-    # Alignments
-    # Exact (x, y) centres in 0-based pixel coordinates: pixel i spans [i - 0.5, i + 0.5]
-    self.P.DfCtr = (np.array([self.D.NPxX, self.D.NPxY]) - 1) / 2   # Diffraction image
-    self.P.RsCtr = (np.array([self.D.NFrX, self.D.NFrY]) - 1) / 2   # Real-space image
-    self.Alpha.setValue(12)             # initialize alpha to 12 mrad
-    self.P.VrApXY = self.P.DfCtr        # initialize virtual aperture to diffraction center
+        # Axes limits, restrict to avoid rounding to pixels outside the image. Origin upper left as in raster scanning
+        self.P.DfrnAxLim = np.array([0, self.D.NPxX, self.D.NPxY, 0]) - 0.5
+        self.P.RealAxLim = np.array([0, self.D.NFrX, self.D.NFrY, 0]) - 0.5
 
-    # Axes limits, restrict to avoid rounding to pixels outside the image. Origin upper left as in raster scanning
-    self.P.DfrnAxLim = np.array([0, self.D.NPxX, self.D.NPxY, 0]) - 0.5
-    self.P.RealAxLim = np.array([0, self.D.NFrX, self.D.NFrY, 0]) - 0.5
+        # initialize diffraction space axis limits for all diffraction space images
+        for id in self.G.DfrnID:
+            self.Fig[id].ax.set_xbound(self.P.DfrnAxLim[0:2])
+            self.Fig[id].ax.set_ybound(self.P.DfrnAxLim[2:4])
+            self.Fig[id].canvas.draw_idle()
 
-    # initialize diffraction space axis limits for all diffraction space images
-    for id in self.G.DfrnID:
-        self.Fig[id].ax.set_xbound(self.P.DfrnAxLim[0:2])
-        self.Fig[id].ax.set_ybound(self.P.DfrnAxLim[2:4])
-        self.Fig[id].canvas.draw_idle()
+        # initialize real space axis limits for all real space images
+        for id in self.G.RealID:
+            self.Fig[id].ax.set_xbound(self.P.RealAxLim[0:2])
+            self.Fig[id].ax.set_ybound(self.P.RealAxLim[2:4])
+            self.Fig[id].canvas.draw_idle()
 
-    # initialize real space axis limits for all real space images
-    for id in self.G.RealID:
-        self.Fig[id].ax.set_xbound(self.P.RealAxLim[0:2])
-        self.Fig[id].ax.set_ybound(self.P.RealAxLim[2:4])
-        self.Fig[id].canvas.draw_idle()
+        # Transmitted Beam controls
+        if self.sender() is not self.SettingsWindow.SwapRealXY:  # Keep transmitted beam alignment if swapping Real-space X/Y
+            self.P.TransBeamInit = 0
+            # set transmitted beam ranges and values for sliders and number fields
+            self.TBR.setRange(0, max(self.D.NPx))
+            self.TBX.setRange(0, self.D.NPxX - 1)
+            self.TBY.setRange(0, self.D.NPxY - 1)
+            self.TBR.setValue(min(self.D.NPx) / 10)
+            self.TBX.setValue(self.P.DfCtr[0])
+            self.TBY.setValue(self.P.DfCtr[1])
+            self.TBX_NF.setRange(0, self.D.NPxX - 1)
+            self.TBY_NF.setRange(0, self.D.NPxY - 1)
+            self.TBX_NF.setValue(self.P.DfCtr[0])
+            self.TBY_NF.setValue(self.P.DfCtr[1])
+            transBeamCallbacks(self)  # Update Transmitted Beam dependant variables
 
-    # Transmitted Beam controls
-    if self.sender() is not self.SettingsWindow.SwapRealXY:  # Keep transmitted beam alignment if swapping Real-space X/Y
-        self.P.TransBeamInit = 0
-        # set transmitted beam ranges and values for sliders and number fields
-        self.TBR.setRange(0, max(self.D.NPx))
-        self.TBX.setRange(0, self.D.NPxX - 1)
-        self.TBY.setRange(0, self.D.NPxY - 1)
-        self.TBR.setValue(min(self.D.NPx) / 10)
-        self.TBX.setValue(self.P.DfCtr[0])
-        self.TBY.setValue(self.P.DfCtr[1])
-        self.TBX_NF.setRange(0, self.D.NPxX - 1)
-        self.TBY_NF.setRange(0, self.D.NPxY - 1)
-        self.TBX_NF.setValue(self.P.DfCtr[0])
-        self.TBY_NF.setValue(self.P.DfCtr[1])
-        transBeamCallbacks(self)  # Update Transmitted Beam dependant variables
+        # Real-space ROI controls
+        self.FrameX.setRange(0, self.D.NFrX - 1)
+        self.FrameY.setRange(0, self.D.NFrY - 1)
+        self.FrameX.setValue(round(self.P.RsCtr[0]))
+        self.FrameY.setValue(round(self.P.RsCtr[1]))
+        self.RealROIInvert.setChecked(False)  # do not invert the real space ROI picker on initialization
+        self.RealROIShape.setCurrentIndex(self.RealROIShape.findData("full"))  # display PACBED from the entire dataset
 
-    # Real-space ROI controls
-    self.FrameX.setRange(0, self.D.NFrX - 1)
-    self.FrameY.setRange(0, self.D.NFrY - 1)
-    self.FrameX.setValue(round(self.P.RsCtr[0]))
-    self.FrameY.setValue(round(self.P.RsCtr[1]))
-    self.RealROIInvert.setChecked(False)  # do not invert the real space ROI picker on initialization
-    self.RealROIShape.setCurrentIndex(self.RealROIShape.findData("full"))  # display PACBED from the entire dataset
+        # Export controls #TODO
+        self.SaveWindow.ExpPxPart.setChecked(False)
+        self.SaveWindow.ExpFrPart.setChecked(False)
 
-    # Export controls #TODO
-    self.SaveWindow.ExpPxPart.setChecked(False)
-    self.SaveWindow.ExpFrPart.setChecked(False)
-
-    # initiate image display parameters for all ImageWindows
-    for id in self.G.ImgID:
-        self.Fig[id].brightness = 50
-        self.Fig[id].contrast = 50
-        self.Fig[id].gamma = 1
-        self.Fig[id].maskOpa = 0
-        self.Fig[id].vecField = 0
-
-    # unblock slots/signals
-    self.blockAllSignals = False
+        # initiate image display parameters for all ImageWindows
+        for id in self.G.ImgID:
+            self.Fig[id].brightness = 50
+            self.Fig[id].contrast = 50
+            self.Fig[id].gamma = 1
+            self.Fig[id].maskOpa = 0
+            self.Fig[id].vecField = 0
 
     self.UpdateImages.trigger()  # Update all images
     # delete(self.T.progDLG);  # Close progress bar and Enable panel objects #TODO

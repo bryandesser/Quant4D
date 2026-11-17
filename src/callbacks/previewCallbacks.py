@@ -2,6 +2,7 @@ from callbacks.allFunctions import enableWindows, plotImage, datasetOptCallbacks
 from callbacks.importCallbacks import importCallbacks
 import numpy as np
 import h5py
+from callbacks.signals import all_signals_blocked  # noqa: E402
 
 
 def previewCallbacks(self):
@@ -38,10 +39,9 @@ def previewCallbacks(self):
                 case self.PvBL | self.PvCL | self.PvTL:
                     frX = 0
 
-            self.blockAllSignals = True
-            self.PvFrX.setValue(int(frX))
-            self.PvFrY.setValue(int(frY))
-            self.blockAllSignals = False
+            with all_signals_blocked(self):
+                self.PvFrX.setValue(int(frX))
+                self.PvFrY.setValue(int(frY))
             self.PreviewButton.click()  # Preview
 
         case self.PreviewButton | self.UpdateImages | self.PvFrX | self.PvFrY:

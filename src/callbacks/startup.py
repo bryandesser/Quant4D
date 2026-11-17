@@ -51,6 +51,7 @@ from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
 from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
 from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
 from callbacks.utils import breakpoint  # noqa: E402,A001
+from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def unlockScanDir(self):
@@ -745,9 +746,8 @@ def reinitializeUI(self):
         action.setEnabled(True)
 
     # update annular QRangeSlider to match
-    self.AnnRi.blockSignals(True)
-    self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
-    self.AnnRi.blockSignals(False)
+    with signals_blocked(self.AnnRi):
+        self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
 
     # re-enable windows
     enableWindows(self, True)

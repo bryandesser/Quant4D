@@ -18,6 +18,7 @@ import matplotlib
 from PIL import Image
 # Deferred cross-module imports (safe: import_io is itself only loaded lazily)
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 # NOTE: enableWindows is imported inside the functions that need it (unloadData,
 # importData) to avoid a circular import with callbacks.startup, which imports
 # from this module at its own module level.
@@ -285,61 +286,57 @@ def importFileType(self):
         return datasetKeys
 
     # block slots/signals whilst updating UI values
-    self.blockAllSignals = True
+    with all_signals_blocked(self):
+        # Default values/properties
+        notes = None
+        err = 0  # TODO
+        self.T.dm = []
+        self.T.h5 = []
+        self.T.fileTail = 0
+        self.ImportWindow.DataOffset.setValue(0)
+        self.ImportWindow.FrHead.setValue(0)
+        self.ImportWindow.FrFoot.setValue(0)
+        self.ImportWindow.DNPxX.setValue(1)
+        self.ImportWindow.DNPxY.setValue(1)
+        self.ImportWindow.DNFrX.setValue(1)
+        self.ImportWindow.DNFrY.setValue(1)
 
-    # Default values/properties
-    notes = None
-    err = 0  # TODO
-    self.T.dm = []
-    self.T.h5 = []
-    self.T.fileTail = 0
-    self.ImportWindow.DataOffset.setValue(0)
-    self.ImportWindow.FrHead.setValue(0)
-    self.ImportWindow.FrFoot.setValue(0)
-    self.ImportWindow.DNPxX.setValue(1)
-    self.ImportWindow.DNPxY.setValue(1)
-    self.ImportWindow.DNFrX.setValue(1)
-    self.ImportWindow.DNFrY.setValue(1)
+        # Medipix data are saved as a .mib file of varying bit-depth as unsigned integers of the next highest class
+        #   (i.e. 12-bit is saved as a 16-bit unsigned integer) with big-endian ordering.
+        # EMPAD data are saved as a .raw file with 32-bit depth with little endian ordering.
+        # Fiji/ImageJ tend to save their files with big-endian ordering, though this is also system- and user-dependent.
+        # H5 and other binary/raw data types are allowed, but user-dependent.
 
-    # Medipix data are saved as a .mib file of varying bit-depth as unsigned integers of the next highest class
-    #   (i.e. 12-bit is saved as a 16-bit unsigned integer) with big-endian ordering.
-    # EMPAD data are saved as a .raw file with 32-bit depth with little endian ordering.
-    # Fiji/ImageJ tend to save their files with big-endian ordering, though this is also system- and user-dependent.
-    # H5 and other binary/raw data types are allowed, but user-dependent.
+        # available data types and their plain text names
+        dataType = ['unknown', 'i1', 'u1', 'i2', 'u2', 'f4', 'i4', 'u4', 'f8', 'i8', 'u8']
+        dataTypeText = [
+            'Select Data Type...',
+            '8-bit Signed',
+            '8-bit Unsigned',
+            '16-bit Signed',
+            '16-bit Unsigned',
+            '32-bit Real',
+            '32-bit Signed',
+            '32-bit Unsigned',
+            '64-bit Real',
+            '64-bit Signed',
+            '64-bit Unsigned']
 
-    # available data types and their plain text names
-    dataType = ['unknown', 'i1', 'u1', 'i2', 'u2', 'f4', 'i4', 'u4', 'f8', 'i8', 'u8']
-    dataTypeText = [
-        'Select Data Type...',
-        '8-bit Signed',
-        '8-bit Unsigned',
-        '16-bit Signed',
-        '16-bit Unsigned',
-        '32-bit Real',
-        '32-bit Signed',
-        '32-bit Unsigned',
-        '64-bit Real',
-        '64-bit Signed',
-        '64-bit Unsigned']
+        # add to combobox
+        self.ImportWindow.ImpDataType.clear()
+        for dtt, dt in zip(dataTypeText, dataType):
+            self.ImportWindow.ImpDataType.addItem(dtt, dt)
 
-    # add to combobox
-    self.ImportWindow.ImpDataType.clear()
-    for dtt, dt in zip(dataTypeText, dataType):
-        self.ImportWindow.ImpDataType.addItem(dtt, dt)
+        # default to "Select Data Type..." prompt
+        self.ImportWindow.ImpDataType.setCurrentIndex(0)
 
-    # default to "Select Data Type..." prompt
-    self.ImportWindow.ImpDataType.setCurrentIndex(0)
+        # start with h5 directory combobox cleared and disabled
+        if self.sender() == self.ImportWindow.ImpFileSelect:
+            self.ImportWindow.ImpSubImg.clear()
+            self.ImportWindow.ImpSubImg.setEnabled(False)
 
-    # start with h5 directory combobox cleared and disabled
-    if self.sender() == self.ImportWindow.ImpFileSelect:
-        self.ImportWindow.ImpSubImg.clear()
-        self.ImportWindow.ImpSubImg.setEnabled(False)
-
-    # default to "little endian"
-    self.ImportWindow.ImpByteOrder.setCurrentIndex(0)
-
-    # unblock slots/signals
-    self.blockAllSignals = False
+        # default to "little endian"
+        self.ImportWindow.ImpByteOrder.setCurrentIndex(0)
 
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
         if self.ImportWindow.EMPADButton.isChecked():
@@ -362,11 +359,10 @@ def importFileType(self):
                 '24-bit Padded Unsigned']
 
             # add to combobox
-            self.ImportWindow.ImpDataType.blockSignals(True)
-            self.ImportWindow.ImpDataType.clear()
-            for dtt, dt in zip(dataTypeText, dataType):
-                self.ImportWindow.ImpDataType.addItem(dtt, dt)
-            self.ImportWindow.ImpDataType.blockSignals(True)
+            with signals_blocked(self.ImportWindow.ImpDataType):
+                self.ImportWindow.ImpDataType.clear()
+                for dtt, dt in zip(dataTypeText, dataType):
+                    self.ImportWindow.ImpDataType.addItem(dtt, dt)
 
             # check .mib file header
             fmeta = np.fromfile(self.ImportWindow.ImpFilePath.text(), dtype=np.uint8, count=128)
@@ -470,11 +466,10 @@ def importFileType(self):
                 # Select sub-image with the 1st largest dimension; unless manually selected
                 if self.sender() is not self.ImportWindow.ImpSubImg:
                     # List all images' names in `self.ImportWindow.ImpSubImg`
-                    self.ImportWindow.ImpSubImg.blockSignals(True)
-                    pdim = [self.T.h5[key].size for key in keys]
-                    self.ImportWindow.ImpSubImg.clear()
-                    self.ImportWindow.ImpSubImg.addItems(keys)
-                    self.ImportWindow.ImpSubImg.blockSignals(False)
+                    with signals_blocked(self.ImportWindow.ImpSubImg):
+                        pdim = [self.T.h5[key].size for key in keys]
+                        self.ImportWindow.ImpSubImg.clear()
+                        self.ImportWindow.ImpSubImg.addItems(keys)
                     self.ImportWindow.ImpSubImg.setCurrentIndex(np.argmax(pdim))
 
                 # Info of selected sub-image
@@ -803,12 +798,11 @@ def rangeImportExport(self, src):
         # Reset range options if dataset raw dimension changes OR partial selection enables/disables
         getattr(self.ImportWindow, io_mode + U + "D").setMaximum(min(dnp))  # Update binning/sampling UI limits
         if io_mode == "I" and U == "Fr":  # Update preview frame limits
-            self.blockAllSignals = True
-            self.PvFrX.setRange(0, dnp[0] - 1)   # 0-based frame indices
-            self.PvFrX.setValue(dnp[0] - 1)
-            self.PvFrY.setRange(0, dnp[1] - 1)
-            self.PvFrY.setValue(dnp[1] - 1)
-            self.blockAllSignals = False
+            with all_signals_blocked(self):
+                self.PvFrX.setRange(0, dnp[0] - 1)   # 0-based frame indices
+                self.PvFrX.setValue(dnp[0] - 1)
+                self.PvFrY.setRange(0, dnp[1] - 1)
+                self.PvFrY.setValue(dnp[1] - 1)
         binDist = 1
         initPoint = np.asarray([1, 1])
         numPoints = dnp
