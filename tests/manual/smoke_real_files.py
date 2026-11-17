@@ -60,7 +60,7 @@ def select(w, path):
     iw = w.ImportWindow
     w.ShowImportWdw.trigger()
     iw.ImpFilePath.setText(path)
-    importSelectFile(w)
+    iw.ImpFilePath.editingFinished.emit()   # as if the path had been typed in; runs importSelectFile as a slot
     getattr(iw, BUTTONS[os.path.splitext(path)[1].lower()]).click()
     qapp.processEvents()
     geo = {n: getattr(iw, n).value() for n in NAMES}

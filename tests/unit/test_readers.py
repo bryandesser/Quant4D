@@ -201,3 +201,57 @@ def test_empad_v1_and_v2_read_the_same_frames(tmp_path):
         out.append(read_frames(open_frames(str(p), 0, lay.n_frames, 128 * 128, "f4", 0, lay.footer, "l"), lay.scan, (128, 128)))
     np.testing.assert_array_equal(out[0], frames)
     np.testing.assert_array_equal(out[1], frames)
+
+
+# --------------------------------------------------------------- mask files
+from PIL import Image  # noqa: E402
+
+from callbacks.io.mask_file import load_mask_image  # noqa: E402
+
+
+def test_mask_png_scaled_and_kept_as_weights(tmp_path):
+    a = np.zeros((3, 5), np.uint8)
+    a[1, 2], a[0, 0] = 200, 50
+    p = str(tmp_path / "m.png")
+    Image.fromarray(a).save(p)
+    m, notes = load_mask_image(p, (3, 5))
+    np.testing.assert_allclose(m, a / 200.0)
+    assert any("scaled" in n for n in notes)
+
+
+def test_mask_transposed_only_when_shapes_differ(tmp_path):
+    a = np.arange(15, dtype=np.uint8).reshape(5, 3)
+    p = str(tmp_path / "t.png")
+    Image.fromarray(a).save(p)
+    m, notes = load_mask_image(p, (3, 5))
+    np.testing.assert_allclose(m, a.T / a.max())
+    assert any("transposed" in n for n in notes)
+    sq = np.triu(np.ones((4, 4), np.uint8))           # square: must never be transposed
+    p2 = str(tmp_path / "s.png")
+    Image.fromarray(sq).save(p2)
+    m2, notes2 = load_mask_image(p2, (4, 4))
+    np.testing.assert_array_equal(m2, sq)
+    assert notes2 == []
+
+
+def test_mask_float_tiff_and_npy_keep_values(tmp_path):
+    a = np.array([[0.0, 0.5], [np.nan, 2.0]], np.float32)
+    p = str(tmp_path / "f.tif")
+    Image.fromarray(a, mode="F").save(p)
+    m, notes = load_mask_image(p, (2, 2))
+    np.testing.assert_allclose(m, [[0, 0.25], [0, 1]])
+    assert any("NaN" in n for n in notes)
+    q = str(tmp_path / "f.npy")
+    np.save(q, np.eye(2))
+    np.testing.assert_array_equal(load_mask_image(q, (2, 2))[0], np.eye(2))
+
+
+@pytest.mark.parametrize("name, shape", [("x.png", (4, 4)), ("x.txt", (3, 5))])
+def test_mask_refused(tmp_path, name, shape):
+    p = str(tmp_path / name)
+    if name.endswith(".png"):
+        Image.fromarray(np.zeros((3, 5), np.uint8)).save(p)
+    else:
+        open(p, "w").close()
+    with pytest.raises(ValueError):
+        load_mask_image(p, shape)

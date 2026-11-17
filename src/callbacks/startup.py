@@ -97,6 +97,8 @@ def slotsSignals(self):
     self.ImportWindow.xEvent.connect(lambda: self.ShowImportWdw.setChecked(False)
                                      )  # ImportWindow.ImportCancelButton.click())
     self.ImportWindow.ImpFileSelect.clicked.connect(lambda: importSelectFile(self))
+    # a path typed or pasted into the field is read when editing finishes (Enter or focus change)
+    self.ImportWindow.ImpFilePath.editingFinished.connect(lambda: importSelectFile(self))
     self.ImportWindow.ImportDataButton.clicked.connect(lambda: importCallbacks(self))
     self.ImportWindow.ImpKeepP.clicked.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpGPU.currentIndexChanged.connect(lambda: importBoxInput(self))

@@ -947,82 +947,30 @@ def importData(self):
         notifDLG(self, self.ImportWindow, 'error', msg, ttl)
 
 
-def importMask(self, space):
-    if space == "Real":
-        spaceName = "Real-space"
-        imShape = self.D.NFr
-    else:  # "Dfrn"
-        spaceName = "Diffraction"
-        imShape = self.D.NPx
+def importMask(self, space, path=None):
+    """Ask for (or take) a mask image for ``space`` ("Real" or "Dfrn") and load it.
 
-    im = []
-    msg = ""
+    Returns the mask as a float array of the image shape of that space, or
+    ``None`` if the user cancelled or the file could not be used (the user is
+    told why).
+    """
+    from callbacks.io.mask_file import MASK_EXTENSIONS, load_mask_image
+    from callbacks.layout import dfrn_shape, real_shape
 
-    fDialog = qtw.QFileDialog(self)
-    fDialog.setWindowTitle("Select a mask image with shape [{:d},{:d}]".format(*imShape))
-    fDialog.setNameFilter("('*.tif;*.tiff;*.png;*.jpg;*.jpeg;*.bmp;*.gif);;(*.*)")
-    fDialog.setFileMode(qtw.QFileDialog.ExistingFile)
-    fDialog.setDirectory(qtc.QDir.currentPath())
-    file = None
-    if fDialog.exec_() == qtw.QDialog.Accepted:
-        file = fDialog.selectedFiles()
-
-    _, ext = os.path.splitext(file)
-
-    match ext.lower():  # force lowercase
-        case '.tif' | '.tiff' | '.png' | '.jpg' | '.jpeg' | '.bmp' | '.gif':
-
-            # directly convert image to grayscale floating point numpy array
-            im = np.array(Image.open(file).convert("L")).astype(np.float64)
-
-            # get mask shape
-            isize = im.shape
-
-            # if imported dimensions do not matched data dimensions
-            if ~all(isize == imShape):
-                # check for a transpose
-                if all(isize == np.flip(imShape)):
-                    im = im.T
-                    msg += "Image shape ({:d},{:d}) transposed to fit data's {:s} shape ({:d},{:d}).\n".format(*
-                                                                                                               isize, spaceName, *imShape)
-                else:  # throw error
-                    notifDLG(
-                        self,
-                        self,
-                        'warn',
-                        "Image size ({:d},{:d}) does not fit data's {:s} size ({:d},{:d})!".format(
-                            *
-                            isize,
-                            spaceName,
-                            *
-                            imShape),
-                        'Dimension Mismatch')
-                    return
-
-        case "":  # Canceled, etc.
-            return
-
-        case other:  # unsupported filetype
-            _ = notifDLG(self, self, 'warn', "File type '*" + ext + "' currently unsupported!", 'Import Failed')
-            return
-
-    # check for invalid data (nan or inf) and replace with zeros
-    invalidMask = np.ma.masked_invalid(im).mask
-    if invalidMask.any():
-        im[invalidMask] = 0
-        msg += "NaN/Inf found in image, and set to 0.\n"
-
-    # scale the maximum to 1
-    imax = im.max()
-    if (imax != 0) and (imax != 1):
-        im /= imax
-        msg += "The maximum was {:d}; now scaled to 1, by `IMG = IMG/{:d}`.\n".format(imax, imax)
-
-    # notify user of what has been done and return the mask
-    if msg != "":
-        msg = "Please note:\n" + msg + "\n"
-
-    _ = notifDLG(self, self, 'help', msg + "Please check the " + spaceName + " Mask image.", 'Mask Imported')
-    self.Fig[space + "Mask"].activateWindow()
-
+    space_name = "Real-space" if space == "Real" else "Diffraction"
+    shape = real_shape(self.D) if space == "Real" else dfrn_shape(self.D)
+    if path is None:
+        patterns = " ".join("*" + e for e in MASK_EXTENSIONS)
+        path, _ = qtw.QFileDialog.getOpenFileName(
+            self, f"Select a {space_name} mask image of {shape[1]} x {shape[0]} pixels",
+            qtc.QDir.currentPath(), f"Images ({patterns});;All files (*.*)")
+    if not path:
+        return None
+    try:
+        im, notes = load_mask_image(path, shape)
+    except (OSError, ValueError) as exc:
+        notifDLG(self, self, 'warn', f"Could not use {os.path.basename(path)} as a mask:\n{exc}", 'Mask Not Imported')
+        return None
+    if notes:
+        notifDLG(self, self, 'help', "Please note:\n" + "\n".join(notes), 'Mask Imported')
     return im

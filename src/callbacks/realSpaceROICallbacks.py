@@ -371,7 +371,7 @@ def realSpaceROICallbacks(self):
             mask_real[yi, xi] = True
 
         elif typ == 'file':
-            mask_real = np.asarray(self.Mask.RealROIFile, bool)
+            mask_real = np.asarray(self.Mask.RealROIFile, float)   # grey levels weight the frames
 
         elif roi is not None:
             mask_real = _roi_to_mask(roi, (ny, nx), typ)

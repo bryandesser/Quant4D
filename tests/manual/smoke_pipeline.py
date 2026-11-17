@@ -88,7 +88,7 @@ def _import_from_file(w, data):
     iw = w.ImportWindow
     w.ShowImportWdw.trigger()
     iw.ImpFilePath.setText(path)
-    importSelectFile(w)
+    iw.ImpFilePath.editingFinished.emit()   # as if the path had been typed in; runs importSelectFile as a slot
     iw.CustomButton.click()             # plain binary, geometry entered by hand
     qapp.processEvents()
     iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData("f4"))
@@ -225,7 +225,7 @@ def _reimport(w, path, expected, hdf5, byte_order="l"):
     iw = w.ImportWindow
     w.ShowImportWdw.trigger()
     iw.ImpFilePath.setText(path)
-    importSelectFile(w)
+    iw.ImpFilePath.editingFinished.emit()   # as if the path had been typed in; runs importSelectFile as a slot
     (iw.HDF5Button if hdf5 else iw.CustomButton).click()
     qapp.processEvents()
     ny, nx, py, px = expected.shape
@@ -293,6 +293,71 @@ def _import_variants(w, data):
         box.setChecked(False)
         box.clicked.emit(False)
     _import_from_file(w, data)                  # back to the full dataset
+
+
+def _check_polygon_roi(w):
+    """Draw a polygon ROI by feeding vertices to the selector, as mouse clicks would."""
+    import callbacks.realSpaceROICallbacks as rs
+    from callbacks import compute
+    real_name = w.G.Img[w.G.Img.id == "Real"].name.item()
+    old = rs.notifDLG
+    rs.notifDLG = lambda *a, **k: real_name        # "which image do you want to draw on?"
+    try:
+        w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("poly"))
+        qapp.processEvents()
+    finally:
+        rs.notifDLG = old
+    assert w.A._tmp_selector is not None, "no polygon selector was started"
+    verts = [(0.2, 0.1), (4.6, 0.4), (1.0, 2.8)]
+    w.A._tmp_selector.onselect(verts)
+    qapp.processEvents()
+    assert w.A._tmp_selector is None and w.A.RealROI, "polygon was not created"
+    mask = compute.polygon_mask((NFY, NFX), verts)
+    assert 0 < mask.sum() < NFX * NFY
+    assert np.array_equal(w.Fig.RealMask.Image.astype(bool), mask), "real-space mask is not the polygon"
+    expected = w.Data[mask.ravel()].mean(axis=0).reshape(NPY, NPX)
+    assert np.allclose(w.Fig.Dfrn.Image, expected, rtol=1e-5), "pattern is not the polygon average"
+    w.RealROIInvert.click()
+    qapp.processEvents()
+    expected = w.Data[~mask.ravel()].mean(axis=0).reshape(NPY, NPX)
+    assert np.allclose(w.Fig.Dfrn.Image, expected, rtol=1e-5), "inverted polygon is wrong"
+    w.RealROIInvert.click()
+    qapp.processEvents()
+
+
+def _check_file_roi(w):
+    """Load a weighted real-space ROI from an image file (stored transposed, to test that path)."""
+    from PIL import Image
+    from PyQt5 import QtWidgets as qtw
+    weights = np.zeros((NFY, NFX))
+    weights[1, 1:4] = 255
+    weights[2, 2] = 51                          # 0.2 after scaling
+    path = os.path.join(tempfile.mkdtemp(), "roi.png")
+    Image.fromarray(weights.T.astype(np.uint8)).save(path)
+    old = qtw.QFileDialog.getOpenFileName
+    qtw.QFileDialog.getOpenFileName = staticmethod(lambda *a, **k: (path, ""))
+    try:
+        w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("file"))
+        qapp.processEvents()
+    finally:
+        qtw.QFileDialog.getOpenFileName = old
+    assert w.RealROIShape.currentData() == "file", "file ROI was rejected"
+    wn = weights / 255
+    assert np.allclose(w.Fig.RealMask.Image, wn), "real-space mask is not the file"
+    expected = (wn.ravel() @ np.asarray(w.Data, float)) / wn.sum()
+    assert np.allclose(w.Fig.Dfrn.Image, expected.reshape(NPY, NPX), rtol=1e-5), "pattern is not the weighted average"
+
+    # a file of the wrong size is refused and the ROI falls back to the whole scan
+    bad = os.path.join(tempfile.mkdtemp(), "bad.png")
+    Image.fromarray(np.zeros((NFY + 1, NFX), np.uint8)).save(bad)
+    w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("full"))
+    qtw.QFileDialog.getOpenFileName = staticmethod(lambda *a, **k: (bad, ""))
+    try:
+        w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("file"))
+        qapp.processEvents()
+    finally:
+        qtw.QFileDialog.getOpenFileName = old
+    assert w.RealROIShape.currentData() == "full", "mis-sized mask file should be refused"
 
 
 def _check_images(w, ids):
@@ -490,6 +555,9 @@ def main():
         _step("ROI " + shape, lambda s=shape: (w.RealROIShape.setCurrentIndex(w.RealROIShape.findData(s)),
                                                _check_images(w, ["Dfrn", "RealMask"])))
     _step("ROI invert", lambda: (w.RealROIInvert.setChecked(True), w.RealROIInvert.setChecked(False)))
+    _step("ROI polygon (drawn) and invert", lambda: _check_polygon_roi(w))
+    _step("ROI from file (weighted, transposed) and a refused file", lambda: _check_file_roi(w))
+    _step("ROI back to full", lambda: w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("full")))
 
     sw = w.SettingsWindow
     for i in [sw.DispImage.itemData(k) for k in range(sw.DispImage.count())]:

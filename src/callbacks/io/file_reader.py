@@ -72,6 +72,7 @@ def readFile(self):
     self.progressBarPanel.setEnabled(True)
 
     if self.ImportWindow.ImpMemType.currentIndex() == 0:  # physical memory, read on a worker thread
+        _stopImportThread(self)
         self.workerThread = qtc.QThread()
         self.worker = importThread(on_disk, scan, detector, frames, pixels)
         self.worker.moveToThread(self.workerThread)
@@ -87,11 +88,23 @@ def readFile(self):
         finishImport(self)
 
 
+def _stopImportThread(self):
+    """Stop the import thread and wait for it.
+
+    Waiting matters: the next import replaces ``self.workerThread``, and Qt
+    aborts the program if a QThread object is destroyed while still running.
+    """
+    thread = getattr(self, "workerThread", None)
+    if thread is not None:
+        thread.quit()
+        thread.wait()
+
+
 def importFailed(self, msg):
     """The worker could not read the file: report it and leave no dataset loaded."""
     from callbacks.utils import notifDLG
     from callbacks.import_io import unloadData
-    self.workerThread.quit()
+    _stopImportThread(self)
     unloadData(self)
     notifDLG(self, self, "error", f"Error during import:\n{msg}", "Import Failed")
 
@@ -214,8 +227,7 @@ def finishImport(self):
 
     # quit the import thread
     from callbacks.startup import reinitializeUI  # noqa: E402
-    if self.workerThread is not None:
-        self.workerThread.quit()
+    _stopImportThread(self)
     if self.Data is None:        # the worker failed; importFailed has reported it
         return
 
