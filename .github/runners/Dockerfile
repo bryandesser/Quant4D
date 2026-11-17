@@ -14,7 +14,7 @@
 FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 # ---- Build arguments ----------------------------------------
-ARG RUNNER_VERSION=2.321.0
+ARG RUNNER_VERSION=2.329.0
 ARG PYTHON_VERSION=3.11
 
 # ---- Environment -------------------------------------------
