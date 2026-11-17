@@ -33,6 +33,18 @@ All detector images are computed here.
 .. automodule:: callbacks.compute.roi
    :members:
 
+Reading files
+-------------
+
+.. automodule:: callbacks.io.raw
+   :members:
+
+.. automodule:: callbacks.io.dm_header
+   :members:
+
+.. automodule:: callbacks.io.empad
+   :members:
+
 Saving and exporting
 --------------------
 

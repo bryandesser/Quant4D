@@ -1,8 +1,10 @@
-from callbacks.allFunctions import enableWindows, plotImage, datasetOptCallbacks, notifDLG
+from callbacks.allFunctions import enableWindows, plotImage, notifDLG
+from callbacks.utils import checkNaN
 from callbacks.importCallbacks import importCallbacks
 import numpy as np
 import h5py
 from callbacks.signals import all_signals_blocked  # noqa: E402
+from callbacks.io.raw import open_frames  # noqa: E402
 
 
 def previewCallbacks(self):
@@ -45,47 +47,32 @@ def previewCallbacks(self):
             self.PreviewButton.click()  # Preview
 
         case self.PreviewButton | self.UpdateImages | self.PvFrX | self.PvFrY:
-            # Get parameters
+            # Import options as currently set in the Import window
             importCallbacks(self)
-            d = self.D
-            ifx = self.PvFrX.value()  # frame indices in the GUI are 0-based
-            ify = self.PvFrY.value()
+            d = self.T.Preview
+            if d is None or not d.filePath:
+                return
+            ifx = min(self.PvFrX.value(), d.DNFrX - 1)  # frame indices in the GUI are 0-based
+            ify = min(self.PvFrY.value(), d.DNFrY - 1)
 
-            if d != []:
-                dnpx = d.DNPxX
-                dnpy = d.DNPxY
-                dnfx = d.DNFrX
-                dnfy = d.DNFrY
-                self.P.PreviewAxLim = np.array([0, dnpx, dnpy, 0]) - 0.5
-                self.Fig.Preview.ax.set_xlim(self.P.PreviewAxLim[0:2])
-                self.Fig.Preview.ax.set_ylim(self.P.PreviewAxLim[2:])
-                try:
-                    if not d.h5ds == []:  # Preview HDF5
-                        f = h5py.File(d.filePath)
-                        if d.h5ds in f:
-                            frame = f["datacube"][ify, ifx, :, :]
-                        else:
-                            return
-                    else:  # Preview others
-                        skipBytes = d.Offset + (d.FrHead + dnpx * dnpy * d.ByteSize +
-                                                d.FrFoot) * (dnfx * ify + ifx) + d.FrHead
-                        frame = np.fromfile(
-                            file=d.filePath,
-                            offset=skipBytes,
-                            count=1,
-                            dtype=str(
-                                dnpx *
-                                dnpy) +
-                            d.DataType).reshape(
-                            dnpy,
-                            dnpx)
+            self.P.PreviewAxLim = np.array([0, d.DNPxX, d.DNPxY, 0]) - 0.5
+            self.Fig.Preview.ax.set_xlim(self.P.PreviewAxLim[0:2])
+            self.Fig.Preview.ax.set_ylim(self.P.PreviewAxLim[2:])
+            try:
+                if d.h5ds and d.Offset == 0:      # HDF5 dataset that is not stored contiguously
+                    with h5py.File(d.filePath, "r") as f:
+                        frame = np.asarray(f[d.h5ds][ify, ifx], dtype=float)
+                else:                              # any file read by offset
+                    frames = open_frames(d.filePath, d.Offset, d.DNFrX * d.DNFrY, d.DNPxX * d.DNPxY,
+                                         d.DataType, d.FrHead, d.FrFoot, d.ByteOrder)
+                    frame = np.asarray(frames[ify * d.DNFrX + ifx], dtype=float).reshape(d.DNPxY, d.DNPxX)
+                    del frames
+            except (OSError, ValueError, KeyError, TypeError, IndexError) as exc:
+                notifDLG(self, self, 'error',
+                         f"Errors occurred during preview! Maybe reached end-of-file.\n\n{exc}",
+                         'Error during Preview!')
+                return
 
-                    self.Fig.Preview.Image = frame
-                    plotImage(self, "Preview")  # Plot image
-                    datasetOptCallbacks(self)  # Check NaN
-                except BaseException:
-                    notifDLG(
-                        self,
-                        'error',
-                        "Errors occurred during preview! Maybe reached end-of-file.",
-                        'Error during Preview!')
+            self.Fig.Preview.Image = frame
+            plotImage(self, "Preview")  # Plot image
+            checkNaN(self, image=frame, preview=True)  # warn about NaN/Inf, which suggest wrong import settings

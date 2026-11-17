@@ -96,15 +96,17 @@ def gatherImportOptions(self, preview):
     d.DNFrY = self.ImportWindow.DNFrY.value()
     d.FrD = self.ImportWindow.IFrD.value()
 
-    # Starting points and number of pixels/frames after binning/sampling
-    d.PxX1 = self.ImportWindow.IPxX1.value()
-    d.PxY1 = self.ImportWindow.IPxY1.value()
-    d.NPxX = self.ImportWindow.INPxX.value()
-    d.NPxY = self.ImportWindow.INPxY.value()
-    d.FrX1 = self.ImportWindow.IFrX1.value()
-    d.FrY1 = self.ImportWindow.IFrY1.value()
-    d.NFrX = self.ImportWindow.INFrX.value()
-    d.NFrY = self.ImportWindow.INFrY.value()
+    # Starting points (0-based) and number of pixels/frames after binning/sampling;
+    # the whole dataset when partial import is off
+    iw = self.ImportWindow
+    if iw.ImpPxPart.isChecked():
+        d.PxX1, d.PxY1, d.NPxX, d.NPxY = iw.IPxX1.value(), iw.IPxY1.value(), iw.INPxX.value(), iw.INPxY.value()
+    else:
+        d.PxX1, d.PxY1, d.NPxX, d.NPxY, d.PxD = 0, 0, d.DNPxX, d.DNPxY, 1
+    if iw.ImpFrPart.isChecked():
+        d.FrX1, d.FrY1, d.NFrX, d.NFrY = iw.IFrX1.value(), iw.IFrY1.value(), iw.INFrX.value(), iw.INFrY.value()
+    else:
+        d.FrX1, d.FrY1, d.NFrX, d.NFrY, d.FrD = 0, 0, d.DNFrX, d.DNFrY, 1
 
     # Frequently used dimension parameters
     d.NPx = np.array([d.NPxX, d.NPxY])
@@ -341,14 +343,25 @@ def importFileType(self):
 
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
         if self.ImportWindow.EMPADButton.isChecked():
-            self.ImportWindow.FrFoot.setValue(1024)
-            self.ImportWindow.DNPxX.setValue(128)
-            self.ImportWindow.DNPxY.setValue(128)
-            self.ImportWindow.ImpDataType.setCurrentIndex(self.ImportWindow.ImpDataType.findData('f4'))
-
-            notes = 'Pixels:\t128x128\n32-bit Real\n** EMPAD data have 1024-byte frame footers'
-            guessFramesFromSize()
-            getDimFromName(self.ImportWindow.ImpFilePath.text())
+            from callbacks.io.empad import EMPAD_PIXELS, detect_empad  # noqa: E402
+            iw = self.ImportWindow
+            layout = detect_empad(iw.ImpFilePath.text(), self.T.FileSize)
+            iw.DNPxX.setValue(EMPAD_PIXELS)
+            iw.DNPxY.setValue(EMPAD_PIXELS)
+            iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData('f4'))
+            iw.ImpByteOrder.setCurrentIndex(iw.ImpByteOrder.findData('l'))
+            if layout is None:
+                iw.FrFoot.setValue(0)
+                notes = ('The file size does not match EMPAD v1 (128x128 float32 frames + 1024-byte footer) '
+                         'or v2 (no footer). Check the file type.')
+            else:
+                iw.FrFoot.setValue(layout.footer)
+                iw.DNFrX.setValue(layout.scan[0])
+                iw.DNFrY.setValue(layout.scan[1])
+                notes = ('EMPAD v{}: 128x128 pixels, 32-bit real, little endian\n{}\nScan {} x {} ({} frames)'.format(
+                    layout.version,
+                    '1024-byte footer after each frame' if layout.footer else 'no frame footer',
+                    layout.scan[0], layout.scan[1], layout.n_frames))
 
         elif self.ImportWindow.MedipixButton.isChecked():
             # available data types and their plain text names - Medipix edition
@@ -440,18 +453,23 @@ def importFileType(self):
                     case 6:
                         self.ImportWindow.ImpDataType.setCurrentIndex(self.ImportWindow.ImpDataType.findData('u2'))
                         tnote = '16-bit Unsigned Integer'
+                    case 12:
+                        tnote = '16-bit Float, unsupported'
                     case other:
                         tnote = 'Uknown data type'
 
-                self.ImportWindow.DataOffset.setValue(1024)
+                # data start after the 1024-byte header and any extended header (NSYMBT, word 24)
+                n_ext = int(np.fromfile(self.ImportWindow.ImpFilePath.text(), count=1, dtype=np.int32, offset=92)[0])
+                self.ImportWindow.DataOffset.setValue(1024 + max(0, n_ext))
                 notes = 'Dim: X = ' + str(dim[0]) + ', Y = ' + str(dim[1]) + ', Z = ' + str(dim[2]) + \
-                    '\n' + tnote + ', ' + bo + '\n** MRC files have a 1024-byte data offset'
+                    '\n' + tnote + ', ' + bo + '\n** MRC data start after a {}-byte header'.format(
+                        self.ImportWindow.DataOffset.value())
             else:
                 notes = 'Unrecognizable as MRC.\n\n"MAP " word missed.'
                 err = -1
                 return
         elif self.ImportWindow.DM34Button.isChecked():
-            prepDM(self)
+            notes = prepDM(self)
         elif self.ImportWindow.HDF5Button.isChecked():
             try:
                 self.T.h5 = h5py.File(self.ImportWindow.ImpFilePath.text())
@@ -652,15 +670,12 @@ def importBoxInput(self):
         irng = [nPx, nFr]
 
         # Allow for virtual memory mapping in some situations
+        # (no frame header/footer, floating-point data in the native byte order, whole dataset)
         if self.ImportWindow.FrHead.value() == 0 and self.ImportWindow.FrFoot.value() == 0 and (
                 not self.ImportWindow.HDF5Button.isChecked() or self.ImportWindow.DataOffset.value() > 0) and (
                 self.ImportWindow.ImpByteOrder.currentData() == self.C.SysEndian) and (
-                self.ImportWindow.ImpDataType.currentData() is not None and
-                'int' not in self.ImportWindow.ImpDataType.currentData()) and [
-                    self.ImportWindow.DNPxX.value(),
-                    self.ImportWindow.DNPxY.value(),
-                    self.ImportWindow.DNFrX.value(),
-                self.ImportWindow.DNFrY.value()] == irng:
+                str(self.ImportWindow.ImpDataType.currentData() or "").startswith("f")) and (
+                not self.ImportWindow.ImpPxPart.isChecked() and not self.ImportWindow.ImpFrPart.isChecked()):
             self.ImportWindow.ImpMemType.setEnabled(True)
         else:
             self.ImportWindow.ImpMemType.setEnabled(False)
@@ -735,159 +750,64 @@ def getImportInfo(self):
 
 
 def rangeImportExport(self, src):
-    # spinner upper/lower limits must be different, so now set lower limit `0` but force minimum to `1`
-    if hasattr(src, 'value'):
-        val = np.maximum(src.value(), 0)
+    """Keep the partial-import fields of one space consistent and describe the selection.
 
-    # Round positions from ROIs
-    # if hasattr(evt,'CurrentPosition'):
-    #    pos = round(evt.CurrentPosition)
+    *src* is the widget that changed; its accessible description says which
+    space it belongs to ("Import Dfrn" or "Import Real").  Diffraction pixels
+    are binned (each output pixel sums a ``bin x bin`` block); probe positions
+    are sampled (every n-th one is kept).  Start points are 0-based.
 
-    # `sp`/`U`: space/unit, "Dfrn"/"Px" for diffraction/pixel OR "Real"/"Fr" for real-space/frame
-    if "Dfrn" in src.accessibleDescription():
-        sp = "Dfrn"
-        U = "Px"
-    else:
-        sp = "Real"
-        U = "Fr"
+    When the on-disk dimensions change, or partial import is switched on or
+    off, the selection is reset to everything.
 
-    # `io_mode`: "I" or "E" for Import/Export
-    if "Import" in src.accessibleDescription():
-        io_mode = "I"
-        # Raw dataset dimensions, e.g. self.ImportWindow.DNPxX.value()
-        dnp = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox, "DN" + U + "X").value(),
-                         self.ImportWindow.findChild(qtw.QSpinBox, "DN" + U + "Y").value()]).astype(int)
-    else:  # Export
-        io_mode = "E"
-        dnp = np.asarray(getattr(self.D, "N" + U)).astype(int)  # Loaded dataset dimensions
+    Returns
+    -------
+    notes : str
+    step : int
+        Binning distance (diffraction) or sampling interval (scan).
+    start, count, end : np.ndarray of int, each (x, y)
+        First index, number of output points and last index read (inclusive).
+    """
+    iw = self.ImportWindow
+    dfrn = "Dfrn" in src.accessibleDescription()
+    U = "Px" if dfrn else "Fr"
+    n = np.array([getattr(iw, "DN" + U + "X").value(), getattr(iw, "DN" + U + "Y").value()], dtype=int)
+    x1, y1, cx, cy, step_w = (getattr(iw, name) for name in
+                              ("I" + U + "X1", "I" + U + "Y1", "IN" + U + "X", "IN" + U + "Y", "I" + U + "D"))
+    part = getattr(iw, "Imp" + U + "Part")
+    reset = src in (getattr(iw, "DN" + U + "X"), getattr(iw, "DN" + U + "Y"), part) or not part.isChecked()
 
-    # Get values from UI
-    # Binning/Sampling (self.ImportWindow.IPxD, self.ImportWindow.EPxD, self.ImportWindow.IFrD or self.ImportWindow.EFrD)
-    binDist = np.asarray(self.ImportWindow.findChild(qtw.QSpinBox, io_mode + U + "D").value())
+    with signals_blocked(x1, y1, cx, cy, step_w):
+        step_w.setRange(1, max(1, int(n.min())))
+        if reset:
+            step_w.setValue(1)
+        step = step_w.value()
+        for start_w, count_w, size in ((x1, cx, n[0]), (y1, cy, n[1])):
+            # last start that still leaves room for one output point
+            start_w.setRange(0, max(0, size - (step if dfrn else 1)))
+            if reset:
+                start_w.setValue(0)
+            room = size - start_w.value()
+            most = room // step if dfrn else (room - 1) // step + 1
+            count_w.setRange(1, max(1, most))
+            count_w.setValue(max(1, most) if reset else min(count_w.value(), max(1, most)))
 
-    if src.accessibleDescription() == "Export Dfrn ROI":  # From Export Diffraction ROIs
-        initPoint = pos[0:1]
-        numPoints = np.max(np.floor((pos[2:3] + 1) / binDist), 1)
-    elif src.accessibleDescription() == "Export Real ROI":  # From Export Real-space ROIs
-        initPoint = pos[0:1]
-        numPoints = np.floor(pos[2:3] / binDist) + 1
-    else:  # From other sources
-        initPoint = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox,
-                                                            io_mode + U + "X1").value(),
-                                self.ImportWindow.findChild(qtw.QSpinBox,
-                                io_mode + U + "Y1").value()])  # self.IPxX1, self.EFrX1 etc, Point-1 X & Y UIs
-        numPoints = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox,
-                                                            io_mode + "N" + U + "X").value(),
-                                self.ImportWindow.findChild(qtw.QSpinBox,
-                                io_mode + "N" + U + "Y").value()])  # self.INPxX, self.ENFrX etc, N-Points X & Y UIs
+    if not dfrn and src in (iw.DNFrX, iw.DNFrY):   # preview any probe position of the file
+        with all_signals_blocked(self):
+            self.PvFrX.setRange(0, n[0] - 1)
+            self.PvFrY.setRange(0, n[1] - 1)
 
-    # Replace value with current event value
-    if src == getattr(self.ImportWindow, io_mode + U + "D"):
-        binDist = val  # Binning/Sampling UI
-    elif src == getattr(self.ImportWindow, io_mode + U + "X1"):
-        initPoint[0] = val  # Point-1 X UI
-    elif src == getattr(self.ImportWindow, io_mode + U + "Y1"):
-        initPoint[1] = val  # Point-1 Y UI
-    elif src == getattr(self.ImportWindow, io_mode + "N" + U + "X"):
-        numPoints[0] = val  # N-Points X UI
-    elif src == getattr(self.ImportWindow, io_mode + "N" + U + "Y"):
-        numPoints[1] = val  # N-Points Y UI
-    elif src in [getattr(self.ImportWindow, "DN" + U + "X"),
-                 getattr(self.ImportWindow, "DN" + U + "Y"),
-                 getattr(self.ImportWindow, "Imp" + U + "Part"),
-                 getattr(self.SaveWindow, "Exp" + U + "Part")]:
-        # Reset range options if dataset raw dimension changes OR partial selection enables/disables
-        getattr(self.ImportWindow, io_mode + U + "D").setMaximum(min(dnp))  # Update binning/sampling UI limits
-        if io_mode == "I" and U == "Fr":  # Update preview frame limits
-            with all_signals_blocked(self):
-                self.PvFrX.setRange(0, dnp[0] - 1)   # 0-based frame indices
-                self.PvFrX.setValue(dnp[0] - 1)
-                self.PvFrY.setRange(0, dnp[1] - 1)
-                self.PvFrY.setValue(dnp[1] - 1)
-        binDist = 1
-        initPoint = np.asarray([1, 1])
-        numPoints = dnp
+    start = np.array([x1.value(), y1.value()], dtype=int)
+    count = np.array([cx.value(), cy.value()], dtype=int)
+    end = start + count * step - 1 if dfrn else start + (count - 1) * step
 
-    # In general, N-Points are determined by Point-1 and Binning/Sampling, unless N-Points are the source
-    # Whether N-Points X or Y are not the source:
-    # s = [self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"X"), self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"Y")] != src
-    # s = np.asarray([x in src for x in [self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"X"),
-    #                                    self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"Y")]])
-    if src == getattr(self.ImportWindow, io_mode + "N" + U + "X"):
-        s = np.asarray([1])
-    elif src == getattr(self.ImportWindow, io_mode + "N" + U + "Y"):
-        s = np.asarray([0])
-    else:
-        s = np.asarray([0, 1])
+    what = "Diffraction pixels" if dfrn else "Scan positions"
+    unit = "px" if dfrn else "fr"
+    how = (f", binned {step} x {step}" if dfrn else f", every {step}") if step > 1 else ""
+    notes = "{}: {} x {} {} from x = {}-{}, y = {}-{}{}\n".format(
+        what, count[0], count[1], unit, start[0], end[0], start[1], end[1], how)
+    return notes, step, start, count, end
 
-    if U == "Px":
-        numPoints[s] = np.maximum(
-            1,
-            np.minimum(
-                numPoints[s],
-                np.floor(
-                    (dnp[s] -
-                     initPoint[s] +
-                     1) /
-                    binDist)))  # Determine N-Points X/Y if not source
-        # numPoints[s] = np.maximum(np.asarray([1,1]), np.minimum(numPoints[s],
-        # np.floor((dnp[s]-initPoint[s]+1)/binDist)))  # Determine N-Points X/Y if
-        # not source
-        initPoint = np.minimum(initPoint, dnp - numPoints * binDist + 1)
-        endPoint = initPoint + numPoints * binDist - 1  # Endpoints of Pixel ranges
-        l1 = dnp - binDist + 1
-        ln = np.floor(dnp / binDist).astype(int)  # Upper limits of Pixel Point-1 X & Y and N-Points X & Y
-        pos = [initPoint, numPoints * binDist - 1]  # Positions for Export ROI
-        txt = "Diffraction Range (in pixels [px])"
-        u = " px"
-        txtb = "binning to "
-    else:  # "Fr"
-        # Frame sampling has slightly different logics to pixel binning
-        numPoints[s] = np.minimum(numPoints[s], np.floor((dnp[s] - initPoint[s]) / binDist) + 1)
-        initPoint = np.minimum(initPoint, dnp - (numPoints - 1) * binDist)
-        endPoint = initPoint + (numPoints - 1) * binDist  # Endpoints of Frame ranges
-        l1 = dnp
-        ln = np.floor((dnp - 1) / binDist).astype(int) + 1  # Upper limits of Frame Point-1 X & Y and N-Points X & Y
-        pos = [initPoint, (numPoints - 1) * binDist]  # Positions for Export ROI
-        txt = "Real-space Range (in frames [fr])"
-        u = " fr"
-        txtb = "sampling "
-
-    # Set Point-1 X & Y, N-Points X & Y and Binning/Sampling UIs
-    getattr(self.ImportWindow, io_mode + U + "X1").setRange(0, l1[0])
-    getattr(self.ImportWindow, io_mode + U + "Y1").setRange(0, l1[1])
-    getattr(self.ImportWindow, io_mode + "N" + U + "X").setRange(0, ln[0])
-    getattr(self.ImportWindow, io_mode + "N" + U + "Y").setRange(0, ln[1])
-    getattr(self.ImportWindow, io_mode + U + "D").setRange(0, min(dnp))
-
-    getattr(self.ImportWindow, io_mode + U + "X1").setValue(initPoint[0])
-    getattr(self.ImportWindow, io_mode + U + "Y1").setValue(initPoint[1])
-    getattr(self.ImportWindow, io_mode + "N" + U + "X").setValue(numPoints[0])
-    getattr(self.ImportWindow, io_mode + "N" + U + "Y").setValue(numPoints[1])
-    getattr(self.ImportWindow, io_mode + U + "D").setValue(binDist)
-
-    # Try to update Export ROIs
-    # if O == "E":
-    #    set(findobj(self.G.(sp+"Ax"),'Tag',"Export "+sp+" ROI"), 'Position', pos) #TODO
-
-    # Range notes
-    tp = [x1 + u for x1 in [str(ints) for ints in numPoints]]
-
-    if binDist > 1:
-        tp = [x6 + u for x6 in [x4 + x5 for x4,
-                                x5 in list(zip([x3 + " from " for x3 in [txtb + x2 for x2 in tp]],
-                                               [str(ints) for ints in endPoint - initPoint + 1]))]]
-
-    # If not from 1st to last
-    s = np.maximum(initPoint > 1, endPoint < dnp)
-    for i in np.arange(len(s)):
-        if s[i]:
-            tp[i] = str(numPoints[i]) + u + ", " + str(initPoint[i] - 1) + "/" + \
-                str(dnp[i] - endPoint[i]) + u + " offset from start/end"
-    notes = "{}:\n\tX = {}-{} ({})\n\tY = {}-{} ({})\n".format(txt, *
-                                                               [items for sublist in zip(initPoint, endPoint, tp) for items in sublist])
-
-    return notes, binDist, initPoint, numPoints, endPoint
 
 # Function to unload data and clean all images
 

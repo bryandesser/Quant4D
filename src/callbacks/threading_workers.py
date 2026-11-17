@@ -13,48 +13,29 @@ from callbacks.appClass import *
 
 
 class importThread(qtc.QObject):
+    """Reads (part of) a dataset into memory on a worker thread.
+
+    Emits ``result`` with the ``(frame, pixel)`` float array, or ``failed``
+    with a message, and then always ``finished``.
+    """
     result = qtc.pyqtSignal(np.ndarray)
+    failed = qtc.pyqtSignal(str)
     finished = qtc.pyqtSignal()
 
-    def __init__(self, filename, dataType, dtype, pixCount, frameCount, dataOffset):
+    def __init__(self, on_disk, scan, detector, frames, pixels):
         super().__init__()
-        self.filename = filename
-        self.dataType = dataType
-        self.dType = dtype
-        self.pixCount = pixCount
-        self.frameCount = frameCount
-        self.dataOffset = dataOffset
-        self.isInt = np.issubdtype(self.dType, np.integer)
-        if self.isInt:
-            if np.dtype(self.dType).itemsize > 4:
-                self.float = np.float64
-            else:
-                self.float = np.float32
+        self.on_disk = on_disk
+        self.scan, self.detector = scan, detector
+        self.frames, self.pixels = frames, pixels
 
     def run(self):
-        if self.isInt:
-            self.DataMemmap = np.memmap(
-                self.filename,
-                dtype=self.dataType,
-                mode="c",
-                offset=self.dataOffset,
-                shape=(
-                    self.frameCount))["data"]
-            self.Data = np.zeros(shape=self.DataMemmap.shape, dtype=self.float)
-            nThreads = psutil.cpu_count(logical=False)
-            with ThreadPool(processes=nThreads) as pool:
-                pool.map(self.convertInt2Float, range(self.DataMemmap.shape[0]))
-            pool.join()
+        from callbacks.io.raw import read_frames
+        try:
+            data = read_frames(self.on_disk, self.scan, self.detector, self.frames, self.pixels)
+        except (OSError, ValueError, MemoryError) as exc:
+            self.failed.emit(f"{type(exc).__name__}: {exc}")
         else:
-            self.Data = np.fromfile(
-                self.filename,
-                dtype=self.dataType,
-                count=self.frameCount,
-                offset=self.dataOffset)["data"]
-            if not self.Data.dtype.isnative:     # e.g. a big-endian file: compute in native order
-                self.Data = self.Data.astype(self.Data.dtype.newbyteorder("="))
-        self.result.emit(self.Data)
-        self.finished.emit()
-
-    def convertInt2Float(self, val):
-        self.Data[val, :] = self.DataMemmap[val, :].astype(self.float)
+            self.result.emit(data)
+        finally:
+            self.on_disk = None          # close the memory map
+            self.finished.emit()

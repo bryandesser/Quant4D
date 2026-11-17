@@ -43,6 +43,8 @@ from callbacks.threading_workers import importThread  # noqa: E402
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
 from callbacks.startup import enableWindows  # noqa: E402
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape  # noqa: E402
+from callbacks.io.export import Region  # noqa: E402
+from callbacks.io.raw import open_frames  # noqa: E402
 from callbacks.signals import all_signals_blocked  # noqa: E402
 
 
@@ -57,42 +59,41 @@ def readFile(self):
     # while not importDialog.wasCanceled():
     filename = self.D.filePath
 
-    # dataset offset
-    dataOffset = self.D.Offset
-
-    # dataset header/foot sizes (in bytes)
-    header = self.D.FrHead
-    footer = self.D.FrFoot
-
-    # detector shape
-    nopix = self.D.NPxX
-    nopiy = self.D.NPxY
-
-    # real space scan shape
-    framesx = self.D.NFrX
-    framesy = self.D.NFrY
-    # element type in the file's byte order ('l' little / 'b' big endian)
-    order = {"l": "<", "b": ">"}.get(self.D.ByteOrder, "=")
-    dataType = [("header", "{}uint8".format(header)), ("data", "{}{}{}".format(
-        nopix * nopiy, order, self.D.DataType)), ("footer", "{}uint8".format(footer))]
+    d = self.D
+    # what is on disk, and which part of it to read (0-based starts)
+    scan, detector = (d.DNFrX, d.DNFrY), (d.DNPxX, d.DNPxY)
+    frames = Region((d.FrX1, d.FrY1), (d.NFrX, d.NFrY), d.FrD)
+    pixels = Region((d.PxX1, d.PxY1), (d.NPxX, d.NPxY), d.PxD)
+    on_disk = open_frames(filename, d.Offset, scan[0] * scan[1], detector[0] * detector[1],
+                          d.DataType, d.FrHead, d.FrFoot, d.ByteOrder)
 
     # show progressbar to let user know things are happening
     self.progressBarPanel.setVisible(True)
     self.progressBarPanel.setEnabled(True)
 
-    # Read in the file on a separate thread, if dtype is int, default to memmap and convert to float
-    if self.ImportWindow.ImpMemType.currentIndex() == 0:  # physical memory
+    if self.ImportWindow.ImpMemType.currentIndex() == 0:  # physical memory, read on a worker thread
         self.workerThread = qtc.QThread()
-        self.worker = importThread(filename, dataType, self.D.DataType, nopix * nopiy, framesx * framesy, dataOffset)
+        self.worker = importThread(on_disk, scan, detector, frames, pixels)
         self.worker.moveToThread(self.workerThread)
         self.workerThread.started.connect(self.worker.run)
         self.worker.result.connect(self.receiveThreadData)
+        self.worker.failed.connect(lambda msg: importFailed(self, msg))
         self.worker.finished.connect(lambda: finishImport(self))
         self.workerThread.start()
 
-    else:  # lazy loading
-        self.Data = np.memmap(filename, dataType, 'r', offset=dataOffset,
-                              shape=(framesx * framesy,))["data"]
+    else:  # lazy loading: the whole dataset, mapped (only offered for float data without partial import)
+        self.Data = on_disk
+        self.workerThread = None
+        finishImport(self)
+
+
+def importFailed(self, msg):
+    """The worker could not read the file: report it and leave no dataset loaded."""
+    from callbacks.utils import notifDLG
+    from callbacks.import_io import unloadData
+    self.workerThread.quit()
+    unloadData(self)
+    notifDLG(self, self, "error", f"Error during import:\n{msg}", "Import Failed")
 
 
 def prepareData(self):
@@ -213,7 +214,10 @@ def finishImport(self):
 
     # quit the import thread
     from callbacks.startup import reinitializeUI  # noqa: E402
-    self.workerThread.quit()
+    if self.workerThread is not None:
+        self.workerThread.quit()
+    if self.Data is None:        # the worker failed; importFailed has reported it
+        return
 
     # generate placeholder images
     self.Fig.Preview.Image = np.zeros(dfrn_shape(self.D))

@@ -77,3 +77,7 @@ desktop.ini
 *.h5
 *.hdf5
 *.nc
+*.mrc
+*.dm4
+*.mib
+*.raw

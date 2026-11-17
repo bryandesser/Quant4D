@@ -240,6 +240,61 @@ def _reimport(w, path, expected, hdf5, byte_order="l"):
     assert np.allclose(np.asarray(w.Data).reshape(expected.shape), expected, rtol=1e-6), "re-imported data differs"
 
 
+def _import_variants(w, data):
+    """Re-open the synthetic file lazily (memory-mapped), then as a cropped, binned, sampled part."""
+    _import_from_file(w, data)                  # sets up the Import window for this file
+    iw = w.ImportWindow
+    path = iw.ImpFilePath.text()
+    cube = data.reshape(NFY, NFX, NPY, NPX)
+
+    # lazy: float32 in native order, no partial import -> the "Virtual Mapping" option is offered
+    w.ShowImportWdw.trigger()
+    iw.ImpFrPart.setChecked(False)
+    iw.ImpPxPart.setChecked(False)
+    iw.ImpPxPart.clicked.emit(False)
+    qapp.processEvents()
+    assert iw.ImpMemType.isEnabled(), "virtual mapping should be available for this file"
+    iw.ImpMemType.setCurrentIndex(1)
+    iw.ImportDataButton.click()
+    _wait_for_import(w, data.shape)
+    assert isinstance(w.Data, np.memmap) or isinstance(getattr(w.Data, "base", None), np.memmap), type(w.Data)
+    assert np.array_equal(np.asarray(w.Data), data)
+    for m in ("AnnMod", "CoMMod", "VrApMod"):
+        _set_mode(w, m)
+
+    # partial: start (x, y) = (1, 1), every 2nd probe position; diffraction from (2, 3), binned 2
+    w.ShowImportWdw.trigger()
+    iw.ImpMemType.setCurrentIndex(0)
+    iw.ImpFrPart.setChecked(True)
+    iw.ImpFrPart.clicked.emit(True)
+    iw.IFrD.setValue(2)
+    iw.IFrX1.setValue(1)
+    iw.IFrY1.setValue(1)
+    iw.ImpPxPart.setChecked(True)
+    iw.ImpPxPart.clicked.emit(True)
+    assert not iw.ImpMemType.isEnabled(), "virtual mapping cannot crop or bin"
+    iw.IPxD.setValue(2)
+    iw.IPxX1.setValue(2)
+    iw.IPxY1.setValue(3)
+    qapp.processEvents()
+    fx, fy, px, py = iw.INFrX.value(), iw.INFrY.value(), iw.INPxX.value(), iw.INPxY.value()
+    assert (fx, fy, px, py) == ((NFX - 2) // 2 + 1, (NFY - 2) // 2 + 1, (NPX - 2) // 2, (NPY - 3) // 2), (fx, fy, px, py)
+    expected = cube[1:1 + (fy - 1) * 2 + 1:2, 1:1 + (fx - 1) * 2 + 1:2, 3:3 + 2 * py, 2:2 + 2 * px]
+    expected = expected.reshape(fy, fx, py, 2, px, 2).sum(axis=(3, 5))
+    iw.ImportDataButton.click()
+    _wait_for_import(w, (fy * fx, py * px))
+    assert np.allclose(w.Data.reshape(expected.shape), expected, rtol=1e-6), "partial import differs"
+    for m in ("AlignMod", "AnnMod", "CoMMod", "DPCMod", "VrApMod"):
+        w.DetrMode.setCurrentIndex(w.DetrMode.findData(m))
+        qapp.processEvents()
+        assert w.Fig.Dfrn.Image.shape == (py, px) and w.Fig.Real.Image.shape == (fy, fx), m
+    w.ShowImportWdw.trigger()
+    for box in (iw.ImpFrPart, iw.ImpPxPart):
+        box.setChecked(False)
+        box.clicked.emit(False)
+    _import_from_file(w, data)                  # back to the full dataset
+
+
 def _check_images(w, ids):
     for i in ids:
         im = w.Fig[i].Image
@@ -442,6 +497,7 @@ def main():
     _step("update images", lambda: w.UpdateImages.trigger())
     _step("hide all image windows", lambda: hideAllWindows(w))
     _step("re-import same file", lambda: _import_from_file(w, data))
+    _step("lazy import, then partial import (crop, bin, sample)", lambda: _import_variants(w, data))
 
     out = tempfile.mkdtemp()
     _step("mode AnnMod for saving", lambda: _set_mode(w, "AnnMod"))
