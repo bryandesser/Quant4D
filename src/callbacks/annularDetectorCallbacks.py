@@ -1,4 +1,7 @@
-from callbacks.allFunctions import enableWindows, plotImage, isDiffToPrev
+from callbacks.axis_direction import axisDirectionCallbacks
+from callbacks.plotting import plotImage
+from callbacks.utils import isDiffToPrev
+from callbacks.window_manager import enableWindows
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
@@ -491,6 +494,8 @@ def annularDetectorCallbacks(self):
         self.Fig.CoMY.Image = np.asarray(fy).reshape(shape)
         self.Fig.CoMMag.Image, self.Fig.CoMPh.Image = compute.magnitude_phase(
             self.Fig.CoMX.Image, self.Fig.CoMY.Image)
+        # phase shaded by magnitude: the phase image, its opacity set from CoMMag in plotImage
+        self.Fig.CoMPhMag.Image = self.Fig.CoMPh.Image.copy()
         self.Fig.iCoM.Image = compute.integrate_field(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
         self.Fig.dCoM.Image = compute.divergence(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
 
@@ -581,6 +586,8 @@ def annularDetectorCallbacks(self):
               | self.ScanDir | self.ScanDir_NF | self.ScanDirYFlip
               | self.UpdateImages):
             moveAnnDetr()
+            if self.sender() in (self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
+                axisDirectionCallbacks(self, ("Dfrn",))     # scan-direction arrows
         case self.ScanDirUnlock:
             self.P.ScanDirInit = 1
             enableAnnUI()
@@ -600,7 +607,7 @@ def annularDetectorCallbacks(self):
                     setattr(self.A, attr, None)
             if self.ScanDirUnlock.isChecked():
                 drawScanDir()
-            self.SettingsWindow.ShowDfrnAxes.click()
+            axisDirectionCallbacks(self, ("Dfrn",))     # scan arrows hide while aligning
 
 
 # ------------------------------------------------------------------

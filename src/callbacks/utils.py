@@ -23,7 +23,7 @@ def notifDLG(self, parent, icon="", msg="", ttl="", opt=[]):
     icons["warn"] = qtw.QMessageBox.Warning
     icons["error"] = qtw.QMessageBox.Critical
 
-    from callbacks.startup import enableWindows  # noqa: E402  (deferred to avoid circular import)
+    from callbacks.window_manager import enableWindows  # noqa: E402  (deferred to avoid circular import)
     enableWindows(self, False)  # disable windows
 
     if icon == 'list':

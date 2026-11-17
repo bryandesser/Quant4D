@@ -49,9 +49,11 @@ from callbacks.alignment import moveTransBeam, transBeamCallbacks  # noqa: E402
 from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
 from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
 from callbacks.customDetectorCallbacks import connectCustomDetector  # noqa: E402
+from callbacks.axis_direction import connectAxisDirection  # noqa: E402
 from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
 from callbacks.utils import breakpoint  # noqa: E402,A001
 from callbacks.signals import signals_blocked  # noqa: E402
+from callbacks.window_manager import enableWindows  # noqa: E402,F401  (moved; re-exported)
 
 
 def unlockScanDir(self):
@@ -135,6 +137,7 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
 
     # menu action slots/signals
     self.actionShow_Diffraction_Pattern.triggered.connect(
@@ -278,6 +281,8 @@ def slotsSignals(self):
     self.VrApMirror.clicked.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirrRot.valueChanged.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirrRot_NF.valueChanged.connect(lambda: virtualApertureCallbacks(self))
+    self.VrApRotCW.clicked.connect(lambda: virtualApertureCallbacks(self))
+    self.VrApRotCCW.clicked.connect(lambda: virtualApertureCallbacks(self))
 
     # Settings window, units choices
     self.SettingsWindow.DCSys.currentIndexChanged.connect(lambda: detrCoordCallbacks(self))
@@ -638,10 +643,7 @@ def startupFcn(self):
         self.SettingsWindow.DCUnit.addItem('mrad', 'mrad')
         self.SettingsWindow.DCUnit.addItem('Pixel', 'px')
 
-        # settings window, real space rotation options
-        self.SettingsWindow.RotReal.clear()
-        self.SettingsWindow.RotReal.Items = {'0°', '90°', '180°', '-90°'}
-        self.SettingsWindow.RotReal.ItemsData = [0, 90, 180, -90]
+        # settings window, view rotation options: callbacks.axis_direction.connectAxisDirection
 
         # settings window, calculation policy
         self.SettingsWindow.CalcPolicy.clear()
@@ -761,29 +763,6 @@ def resetQuant4DCallbacks(self):
     from callbacks.import_io import unloadData  # noqa: E402
     unloadData(self, False)
     self.DetrMode.setCurrentIndex(self.DetrMode.findData("PrvwMod"))
-
-
-def enableWindows(self, sw=True):
-    """ Function to enable/disable windows/UI; disable is only for notification/progress bar/busy background etc """
-    assert isinstance(sw, bool)
-
-    prvw = self.DetrMode.currentData() == "PrvwMod"  # Preview mode or not
-    # Detector Mode UI, keep disabled in Import Preview Mode unless a dataset is loaded
-    self.DetrMode.setEnabled(sw and not prvw)  # (sw and (not prvw or self.D is not None))
-
-    # Real-space ROI controls, keep disabled in Import Preview Mode
-    self.RealSpacePanel.setEnabled(sw and not prvw)
-
-    # Other UIs can be enabled in Import Preview Mode
-    self.toolBar.setEnabled(sw)
-    self.DfrnDetrTabGroup.setEnabled(sw)
-    self.SettingsWindow.setEnabled(sw)
-    self.SaveWindow.setEnabled(sw)
-    self.ImportWindow.setEnabled(sw)
-
-    # Also reset all windows' mouse pointer when enabling UIs
-    if sw:
-        [ii.setCursor(qtc.Qt.CursorShape.ArrowCursor) for ii in self.G.AllFig]
 
 
 def getDecorSize(self):

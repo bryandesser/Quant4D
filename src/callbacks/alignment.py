@@ -20,7 +20,7 @@ except ImportError:
 
 def transBeamCallbacks(self):
     from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
-    from callbacks.startup import enableWindows  # noqa: E402
+    from callbacks.window_manager import enableWindows  # noqa: E402
     match self.sender():
         case self.DetrMode:  # Entering mode
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern

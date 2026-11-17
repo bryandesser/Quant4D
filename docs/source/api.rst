@@ -94,10 +94,18 @@ callbacks.guiClass
 callbacks.allFunctions
 ----------------------
 
+.. warning::
+   **Deprecated.** ``callbacks.allFunctions`` only re-exports names that now live in other
+   modules (each access warns and names the new module).  Import from those
+   modules instead; this module will be removed in pyQuant4D 2.0.
+
 .. automodule:: callbacks.allFunctions
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
+   :no-undoc-members:
+   :no-special-members:
+
+.. autodata:: callbacks.allFunctions.MOVED
+   :no-value:
 
 callbacks.annularDetectorCallbacks
 -----------------------------------
@@ -106,6 +114,12 @@ callbacks.annularDetectorCallbacks
    :members:
    :undoc-members:
    :show-inheritance:
+
+callbacks.axis_direction
+------------------------
+
+.. automodule:: callbacks.axis_direction
+   :members:
 
 callbacks.customDetectorCallbacks
 ---------------------------------

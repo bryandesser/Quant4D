@@ -1,4 +1,7 @@
-from callbacks.allFunctions import enableWindows, plotImage, notifDLG
+from callbacks.axis_direction import axisDirectionCallbacks, install_view_transform
+from callbacks.plotting import plotImage
+from callbacks.utils import notifDLG
+from callbacks.window_manager import enableWindows
 from callbacks.utils import checkNaN
 from callbacks.importCallbacks import importCallbacks
 import numpy as np
@@ -17,6 +20,8 @@ def previewCallbacks(self):
     match self.sender():
         case self.DetrMode:  # Entering mode
             self.Fig.Preview.ax.cla()
+            install_view_transform(self.Fig.Preview.ax)    # cla() drops the orientation transform
+            axisDirectionCallbacks(self, ("Dfrn",))
             self.Fig.Preview.Image = None  # Clear previous preview
             self.ImageAx.Preview = None  # clear AxesImage
             enableWindows(self, True)  # Enable windows

@@ -41,7 +41,7 @@ except ImportError:
 # Deferred cross-module imports (safe: file_reader is itself only loaded lazily)
 from callbacks.threading_workers import importThread  # noqa: E402
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
-from callbacks.startup import enableWindows  # noqa: E402
+from callbacks.window_manager import enableWindows  # noqa: E402
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape  # noqa: E402
 from callbacks.io.export import Region  # noqa: E402
 from callbacks.io.raw import open_frames  # noqa: E402

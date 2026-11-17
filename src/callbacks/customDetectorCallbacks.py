@@ -508,9 +508,9 @@ def _transform(self, cmask, sender):
     """Flip, transpose or rotate the selected mask about the beam centre."""
     b0 = np.asarray(self.B0, float)
     if sender in (self.CDRotCW, self.CDRotCCW):
+        from callbacks.axis_direction import clockwise_angle  # noqa: E402
         step = float(self.CDRotStep.currentData())
-        # the image is drawn with y pointing down, so a positive angle in (x, y) turns clockwise on screen
-        angle = step if sender is self.CDRotCW else -step
+        angle = clockwise_angle(self, step, sender is self.CDRotCW)     # clockwise as displayed
     if cmask.type == "File":
         m = cmask.file_mask
         if sender is self.CDFlipVert:
@@ -527,6 +527,8 @@ def _transform(self, cmask, sender):
         _update(self, cmask)
         return
 
+    from callbacks.axis_direction import rotate_about  # noqa: E402
+
     def apply(p):
         q = np.asarray(p, float) - b0
         if sender is self.CDFlipVert:
@@ -536,8 +538,7 @@ def _transform(self, cmask, sender):
         elif sender is self.CDTranspose:
             q = q[..., ::-1]
         else:
-            c, s = np.cos(np.radians(angle)), np.sin(np.radians(angle))
-            q = q @ np.array([[c, s], [-s, c]])
+            return rotate_about(q + b0, b0, angle)
         return q + b0
 
     for attr in ("p1", "p2", "vertices"):

@@ -16,7 +16,7 @@ UI controls
   VrApMirror     : add mirror-reflected copy of the full aperture set
   VrApMirrRot    : angle of the mirror line through the beam centre (degrees)
   VrApMirrRot_NF : numerical-field companion to VrApMirrRot
-  VrApRotStep    : step size for rotation-increment buttons (not yet wired)
+  VrApRotStep    : step size of the rotation buttons VrApRotCW / VrApRotCCW
 
 Annotation attributes (self.A.*)
 ---------------------------------
@@ -34,10 +34,8 @@ from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def virtualApertureCallbacks(self):  # noqa: C901
-    # Deferred import to avoid circular dependency with allFunctions.py
-    # (allFunctions imports this module; importing allFunctions here at
-    # module level would create a cycle).
-    from callbacks.allFunctions import plotImage, isDiffToPrev  # noqa: E402
+    from callbacks.plotting import plotImage  # noqa: E402
+    from callbacks.utils import isDiffToPrev  # noqa: E402
 
     if self.blockAllSignals:
         return
@@ -216,6 +214,12 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 self.VrApMirrRot.setValue(int(round(new_ang)))
                 self.VrApMirrRot_NF.setValue(new_ang)
 
+        # --- rotation buttons: turn the aperture about the beam centre (clockwise as displayed) ---
+        elif self.sender() in (self.VrApRotCW, self.VrApRotCCW):
+            from callbacks.axis_direction import clockwise_angle, rotate_about  # noqa: E402
+            angle = clockwise_angle(self, float(self.VrApRotStep.currentData()), self.sender() is self.VrApRotCW)
+            self.P.VrApXY = rotate_about(np.asarray(self.P.VrApXY, float), b0, angle)
+
         # --- sync radius spinbox → stored position ---
         elif self.sender() is self.VrApR:
             pass  # VrApXY unchanged; radius read fresh in calcVrAp
@@ -308,7 +312,8 @@ def virtualApertureCallbacks(self):  # noqa: C901
             plotImage(self, 'Real')
 
         case (self.VrApR | self.VrApSymm | self.VrApInvert
-              | self.VrApMirror | self.VrApMirrRot | self.VrApMirrRot_NF):
+              | self.VrApMirror | self.VrApMirrRot | self.VrApMirrRot_NF
+              | self.VrApRotCW | self.VrApRotCCW):
             moveVrAp()
 
         case self.A.VrAp | self.A.VrApMirP:

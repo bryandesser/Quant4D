@@ -93,6 +93,18 @@ class TestCoMMode:
         assert np.diff(cx, axis=1).mean() == pytest.approx(0.3, abs=0.06)
         assert np.diff(cy, axis=0).mean() == pytest.approx(0.3, abs=0.06)
 
+    def test_straight_from_align_mode(self, loaded_app, qapp):
+        """Align -> CoM with every window open: CoMPhMag used to have no image, so plotting raised
+        and left the Settings window disabled."""
+        set_mode(loaded_app, qapp, "AlignMod")
+        for i in loaded_app.Fig:
+            loaded_app.Fig[i].show()
+        set_mode(loaded_app, qapp, "CoMMod")
+        assert np.allclose(loaded_app.Fig.CoMPhMag.Image, loaded_app.Fig.CoMPh.Image)
+        assert loaded_app.ImageAx.CoMPhMag is not None, "phase-magnitude image not drawn"
+        assert loaded_app.SettingsWindow.isEnabled() and loaded_app.isEnabled()
+        set_mode(loaded_app, qapp, "AnnMod")
+
     def test_no_vector_field_outside_com(self, loaded_app, qapp):
         set_mode(loaded_app, qapp, "AnnMod")
         quivers = [c for c in loaded_app.Fig.Real.ax.get_children() if type(c).__name__ == "Quiver"]

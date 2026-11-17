@@ -27,9 +27,10 @@ from matplotlib.widgets import PolygonSelector
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
 
-from callbacks.allFunctions import (
-    enableWindows, notifDLG, toUpdateImage, plotAllPatterns, importMask
-)
+from callbacks.import_io import importMask
+from callbacks.plotting import plotAllPatterns, toUpdateImage
+from callbacks.utils import notifDLG
+from callbacks.window_manager import enableWindows
 from annotationsClasses.interactiveCircle import InteractiveCircle        # fixed: lowercase 'i'
 from annotationsClasses.interactiveRectangle import InteractiveRectangle
 from annotationsClasses.interactivePolygon import InteractivePolygon

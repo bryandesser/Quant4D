@@ -1,5 +1,7 @@
 from callbacks.appClass import D
-from callbacks.allFunctions import prepareData, unloadData, gatherImportOptions, importData, notifDLG
+from callbacks.import_io import gatherImportOptions, importData, unloadData
+from callbacks.io.file_reader import prepareData
+from callbacks.utils import notifDLG
 import os
 
 

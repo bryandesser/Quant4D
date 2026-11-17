@@ -117,3 +117,26 @@ def resizeWindowCallbacks(self):
                 if fig.space == space:
                     with signals_blocked(fig):
                         fig.resize(width, height)
+
+
+def enableWindows(self, sw=True):
+    """ Function to enable/disable windows/UI; disable is only for notification/progress bar/busy background etc """
+    assert isinstance(sw, bool)
+
+    prvw = self.DetrMode.currentData() == "PrvwMod"  # Preview mode or not
+    # Detector Mode UI, keep disabled in Import Preview Mode unless a dataset is loaded
+    self.DetrMode.setEnabled(sw and not prvw)  # (sw and (not prvw or self.D is not None))
+
+    # Real-space ROI controls, keep disabled in Import Preview Mode
+    self.RealSpacePanel.setEnabled(sw and not prvw)
+
+    # Other UIs can be enabled in Import Preview Mode
+    self.toolBar.setEnabled(sw)
+    self.DfrnDetrTabGroup.setEnabled(sw)
+    self.SettingsWindow.setEnabled(sw)
+    self.SaveWindow.setEnabled(sw)
+    self.ImportWindow.setEnabled(sw)
+
+    # Also reset all windows' mouse pointer when enabling UIs
+    if sw:
+        [ii.setCursor(qtc.Qt.CursorShape.ArrowCursor) for ii in self.G.AllFig]

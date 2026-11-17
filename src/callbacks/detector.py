@@ -46,7 +46,7 @@ def detectorModeCallbacks(self):
     from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
     from callbacks.plotting import plotImage  # noqa: E402
     from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
-    from callbacks.startup import enableWindows  # noqa: E402
+    from callbacks.window_manager import enableWindows  # noqa: E402
     from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
     if self.blockAllSignals:
         return
@@ -142,7 +142,8 @@ def detectorModeCallbacks(self):
         self.SaveWindow.SaveImgList.addItems([self.SettingsWindow.DispImage.itemData(ii)
                                              for ii in range(self.SettingsWindow.DispImage.count())])
     self.SaveWindow.SaveImgPrefix.textChanged.emit(self.SaveWindow.SaveImgPrefix.text())  # Update Image saving prefix
-    self.SettingsWindow.ShowDfrnAxes.clicked.emit()  # Update diffraction axis annotations
+    from callbacks.axis_direction import axisDirectionCallbacks  # noqa: E402
+    axisDirectionCallbacks(self)  # orientation and direction arrows (scan arrows depend on the mode)
 
     # Set detector size when transmitted beam is aligned the first time
     if not (self.P.TransBeamInit) and (dmod != "AlignMod"):

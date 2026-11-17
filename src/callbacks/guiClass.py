@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from callbacks.allFunctions import startupFcn
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import key_press_handler
@@ -40,6 +39,7 @@ class MainWindow(MW_Base, MW_Ui):
         self.setupUi(self)
 
         # startup function
+        from callbacks.startup import startupFcn  # noqa: E402  (startup imports this module)
         startupFcn(self)
 
         # place gui and show
@@ -137,6 +137,9 @@ class ImageWindow(qtw.QMainWindow):
         self.canvas.setFocusPolicy(qtc.Qt.FocusPolicy.StrongFocus)
         self.ax.axis('off')
         self.ax.set_facecolor('black')
+        from callbacks.axis_direction import install_view_transform  # noqa: E402
+        install_view_transform(self.ax)     # flips/rotation of the view (Settings → axis directions)
+        self.axisArrows = []                # kx/ky (rx/ry) direction arrows
 
         layout.addWidget(self.canvas)
 

@@ -143,16 +143,13 @@ def plotImage(self, id):
     # get image figure and axes
     fig = self.Fig[id]  # ImageWindow
     ax = fig.ax         # AxesSubplot
-    im = np.ma.masked_invalid(self.Fig[id].Image)  # numpy masked array
 
-    # clear old image(s)
-    # [ii.remove() for ii in self.Fig[id].ax.get_images()]
-
-    # return if image not yet plotted
-    if im is None:
+    # nothing computed yet (this check came after masked_invalid(None), which raised)
+    if fig.Image is None:
         if id == self.SettingsWindow.DispImage.currentData():
             self.SettingsWindow.ImStatsNotes.setPlainText(fig.name)
         return
+    im = np.ma.masked_invalid(fig.Image)  # numpy masked array
 
     # get image min and max values and resultant range, ignore NaN and +/- Inf
     minVal = im.min()

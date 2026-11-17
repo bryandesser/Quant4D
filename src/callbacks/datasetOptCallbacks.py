@@ -1,4 +1,5 @@
-from callbacks.allFunctions import notifDLG, checkNaN, getImportInfo
+from callbacks.import_io import getImportInfo
+from callbacks.utils import checkNaN, notifDLG
 from callbacks.importCallbacks import importCallbacks
 import numpy as np
 from callbacks import compute  # noqa: E402
