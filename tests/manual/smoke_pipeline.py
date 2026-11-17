@@ -509,6 +509,183 @@ def _check_point_roi(w):
     assert w.FrameX.maximum() == NFX - 1 and w.FrameY.maximum() == NFY - 1
 
 
+def _custom_sum(w):
+    """Real image must be the combined custom mask applied to every pattern."""
+    mask = np.asarray(w.Fig.DfrnMask.Image, float)
+    expected = (np.asarray(w.Data, float) @ mask.ravel()).reshape(NFY, NFX)
+    assert np.allclose(w.Fig.Real.Image, expected, rtol=1e-5), "custom image is not the mask applied to the data"
+
+
+def _cd_select(w, mid):
+    row = list(w.A.Custom).index(mid)
+    w.CDT.selectRow(row)
+    qapp.processEvents()
+
+
+def _check_custom_masks(w):
+    from callbacks.compute import custom as cm
+    _set_mode(w, "CustMod")
+    assert w.CDInterMask.currentText() == "Color Mix" and w.CDRotStep.currentData() == 90
+    b0 = np.asarray(w.B0, float)
+    for btn, typ in ((w.CDNewCircle, "Circle"), (w.CDNewGrid, "Grid"), (w.CDNewGridNoCenter, "GridNoCenter"),
+                     (w.CDNewBandpass, "Bandpass"), (w.CDNewWedge, "Wedge")):
+        n = len(w.A.Custom)
+        btn.click()
+        qapp.processEvents()
+        assert len(w.A.Custom) == n + 1, f"no {typ} mask was created"
+        cmask = list(w.A.Custom.values())[-1]
+        assert cmask.type == typ and cmask.mask is not None and cmask.mask.shape == (NPY, NPX)
+        assert w.CDT.rowCount() == n + 1 and w.CDT.item(n, 0).text() == cmask.id
+        assert w.CDDTable.rowCount() == len(cmask.points()), f"details table rows wrong for {typ}"
+    assert list(w.A.Custom) == ["A", "B", "C", "D", "E"]
+    a = w.A.Custom["A"]
+    assert np.allclose(a.p1, b0) and a.r1 == w.TBR.value(), "circle should start on the transmitted beam"
+    assert np.array_equal(a.mask, cm.circle_detector((NPY, NPX), b0, w.TBR.value(), b0))
+    assert w.A.Custom["E"].mirrored, "wedges are mirrored by default"
+    # Color Mix: RGB images shown, 2-D images kept
+    assert w.Fig.DfrnMask.ColorMix.shape == (NPY, NPX, 3) and w.Fig.Real.ColorMix.shape == (NFY, NFX, 3)
+    assert w.ImageAx.Real.get_array().shape == (NFY, NFX, 3), "Color Mix composite is not displayed"
+    _check_images(w, ["Real", "DfrnMask"])
+    _custom_sum(w)
+
+
+def _check_custom_modes(w):
+    from callbacks.compute import custom as cm
+    masks = [c.mask for c in w.A.Custom.values()]
+    for mode in cm.INTER_MODES:
+        w.CDInterMask.setCurrentIndex(w.CDInterMask.findText(mode))
+        qapp.processEvents()
+        _custom_sum(w)
+        if mode == "Additive":
+            assert np.allclose(w.Fig.DfrnMask.Image, sum(masks)), "additive is not the sum"
+        if mode == "Current-only":
+            sel = w.CDT.item(w.CDT.currentRow(), 0).text()
+            assert np.allclose(w.Fig.DfrnMask.Image, w.A.Custom[sel].mask)
+    w.CDInterMask.setCurrentIndex(w.CDInterMask.findText("Union"))
+    qapp.processEvents()
+    assert w.ImageAx.Real.get_array().ndim == 2, "RGB still shown outside Color Mix"
+    # disabling and weighting via the table
+    from PyQt5 import QtCore as qtc
+    w.CDT.item(1, 3).setCheckState(qtc.Qt.Unchecked)
+    qapp.processEvents()
+    assert not w.A.Custom["B"].enabled
+    w.CDT.item(0, 5).setText("2")
+    qapp.processEvents()
+    assert w.A.Custom["A"].weight == 2
+    w.CDInterMask.setCurrentIndex(w.CDInterMask.findText("Additive"))
+    qapp.processEvents()
+    expected = sum(c.mask * c.weight for c in w.A.Custom.values() if c.enabled)
+    assert np.allclose(w.Fig.DfrnMask.Image, expected), "weights/enable not honoured"
+    _custom_sum(w)
+
+
+def _check_custom_edit(w):
+    _cd_select(w, "A")
+    a = w.A.Custom["A"]
+    b0 = np.asarray(w.B0, float)
+    # move the circle 3 px right through the details table (absolute pixel Cartesian)
+    w.SettingsWindow.DCUnit.setCurrentIndex(w.SettingsWindow.DCUnit.findData("px"))
+    w.SettingsWindow.DCPos.setCurrentIndex(w.SettingsWindow.DCPos.findText("Absolute"))
+    qapp.processEvents()
+    assert w.CDDTable.horizontalHeaderItem(0).text().startswith("X")
+    w.CDDTable.setCurrentCell(0, 0)
+    w.CDDTable.item(0, 0).setText(str(b0[0] + 3))
+    qapp.processEvents()
+    assert np.allclose(a.p1, b0 + [3, 0]), f"table edit gave p1 = {a.p1}"
+    # rotate 90° clockwise on screen (y down): +x -> +y
+    w.CDRotCW.click()
+    qapp.processEvents()
+    assert np.allclose(a.p1, b0 + [0, 3]), f"rotation gave p1 = {a.p1}"
+    w.CDFlipHorz.click()
+    qapp.processEvents()
+    assert np.allclose(a.p1, b0 + [0, -3])
+    w.CDTranspose.click()
+    qapp.processEvents()
+    assert np.allclose(a.p1, b0 + [-3, 0])
+    w.CDFlipVert.click()
+    qapp.processEvents()
+    assert np.allclose(a.p1, b0 + [3, 0])
+    before = a.mask.copy()
+    w.CDMirror.click()
+    qapp.processEvents()
+    assert a.mirrored and a.mask.sum() > before.sum(), "mirror added nothing"
+    mirrored = a.mask.copy()
+    w.CDInvert.click()
+    qapp.processEvents()
+    assert a.inverted and np.array_equal(a.mask, mirrored.max() - mirrored), "invert is not max - mask"
+    w.CDInvert.click()
+    w.CDMirror.click()
+    qapp.processEvents()
+    assert np.array_equal(a.mask, before), "mirror/invert off did not restore the mask"
+    # polar, relative: radius column follows
+    w.SettingsWindow.DCSys.setCurrentIndex(w.SettingsWindow.DCSys.findText("Polar"))
+    qapp.processEvents()
+    assert w.CDDTable.horizontalHeaderItem(0).text().startswith("ρ")
+    assert abs(float(w.CDDTable.item(0, 0).text()) - 3) < 1e-3, "polar ρ wrong"
+    w.SettingsWindow.DCSys.setCurrentIndex(w.SettingsWindow.DCSys.findText("Cartesian"))
+    qapp.processEvents()
+    _custom_sum(w)
+
+
+def _check_custom_polygon_file_math(w):
+    from PIL import Image
+    from PyQt5 import QtWidgets as qtw
+    from callbacks import compute
+    w.CDNewPolygon.click()
+    qapp.processEvents()
+    verts = [(2.0, 2.0), (10.0, 3.0), (5.0, 12.0)]
+    w._cdSelector.onselect(verts)
+    qapp.processEvents()
+    poly = list(w.A.Custom.values())[-1]
+    assert poly.type == "Polygon" and np.array_equal(poly.mask, compute.polygon_mask((NPY, NPX), verts))
+
+    img = np.zeros((NPY, NPX), np.uint8)
+    img[3:8, 5:15] = 255
+    path = os.path.join(tempfile.mkdtemp(), "mask.png")
+    Image.fromarray(img).save(path)
+    old = qtw.QFileDialog.getOpenFileName
+    qtw.QFileDialog.getOpenFileName = staticmethod(lambda *a, **k: (path, ""))
+    try:
+        w.CDNewFromFile.click()
+        qapp.processEvents()
+    finally:
+        qtw.QFileDialog.getOpenFileName = old
+    fm = list(w.A.Custom.values())[-1]
+    assert fm.type == "File" and np.allclose(fm.mask, img / 255), "file mask wrong"
+    w.CDRotCW.click()          # non-square: rotation step is 180 and fixed
+    qapp.processEvents()
+    assert w.CDRotStep.currentData() == 180 and np.allclose(fm.mask, np.rot90(img / 255, 2))
+
+    w.CDNewMath.click()
+    qapp.processEvents()
+    mm = list(w.A.Custom.values())[-1]
+    assert mm.type == "Math" and np.allclose(mm.mask, 1)
+    w.SettingsWindow.MathFormula.setPlainText(f"{poly.id} & ~{fm.id}")
+    w.SettingsWindow.MathEval.click()
+    qapp.processEvents()
+    assert np.array_equal(mm.mask.astype(bool), poly.mask.astype(bool) & ~fm.mask.astype(bool)), "math mask wrong"
+    w.SettingsWindow.MathFormula.setPlainText(f"{mm.id} + 1")       # self-reference is refused
+    w.SettingsWindow.MathEval.click()
+    qapp.processEvents()
+    assert mm.formula.endswith("+ 1")
+    _custom_sum(w)
+
+
+def _check_custom_delete_and_modes(w):
+    n = len(w.A.Custom)
+    _cd_select(w, "B")
+    w.CDDelMask.click()
+    qapp.processEvents()
+    assert "B" not in w.A.Custom and w.CDT.rowCount() == n - 1
+    _custom_sum(w)
+    _set_mode(w, "AnnMod")
+    assert all(not c.handles for c in w.A.Custom.values()), "custom annotations left on other modes"
+    _set_mode(w, "CustMod")
+    assert all(c.handles or c.type in ("File", "Math") for c in w.A.Custom.values()), "annotations not redrawn"
+    _custom_sum(w)
+    _set_mode(w, "AnnMod")
+
+
 def main():
     w = MainWindow()
     _window.append(w)
@@ -550,6 +727,11 @@ def main():
     _step("virtual aperture mask sum", lambda: _check_virtual_sum(w))
     _step("virtual aperture reset", lambda: (w.VrApInvert.click(), w.VrApMirror.click(), w.VrApSymm.setCurrentIndex(0)))
 
+    _step("custom: circle, grids, bandpass, wedge", lambda: _check_custom_masks(w))
+    _step("custom: inter-mask modes, enable, weight", lambda: _check_custom_modes(w))
+    _step("custom: details table, rotate, flip, mirror, invert, polar", lambda: _check_custom_edit(w))
+    _step("custom: polygon, file, math", lambda: _check_custom_polygon_file_math(w))
+    _step("custom: delete, leave and return to mode", lambda: _check_custom_delete_and_modes(w))
     _step("ROI point", lambda: _check_point_roi(w))
     for shape in ["rectangle", "ellipse", "full"]:
         _step("ROI " + shape, lambda s=shape: (w.RealROIShape.setCurrentIndex(w.RealROIShape.findData(s)),

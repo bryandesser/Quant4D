@@ -187,10 +187,15 @@ def plotImage(self, id):
         im = np.double(im > immi)
 
     # display image with gamma and brightness contrast applied
+    disp = im**fig.gamma
+    # Custom detector "Color Mix": show the RGB composite instead (Image keeps the union/real image for saving)
+    colorMix = getattr(fig, "ColorMix", None)
+    if colorMix is not None and self.DetrMode.currentData() == "CustMod":
+        disp = np.clip(colorMix, 0, 1) ** fig.gamma
     if self.ImageAx[id] is None:
-        self.ImageAx[id] = ax.imshow(im**fig.gamma)
+        self.ImageAx[id] = ax.imshow(disp)
     else:
-        self.ImageAx[id].set_data(im**fig.gamma)
+        self.ImageAx[id].set_data(disp)
     self.ImageAx[id].set_clim(0, 1)
 
     # Plot mask opacity on non-mask/non-preview image; maskOpa is in percent (i.e. 50 => 50%)

@@ -46,9 +46,9 @@ from callbacks.window_manager import (  # noqa: E402
 )
 from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
 from callbacks.alignment import moveTransBeam, transBeamCallbacks  # noqa: E402
-from callbacks.data_ops import mathCallbacks  # noqa: E402
 from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
 from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
+from callbacks.customDetectorCallbacks import connectCustomDetector  # noqa: E402
 from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
 from callbacks.utils import breakpoint  # noqa: E402,A001
 from callbacks.signals import signals_blocked  # noqa: E402
@@ -134,6 +134,7 @@ def slotsSignals(self):
         lambda isChecked: self.SaveWindow.SaveImgList.selectAll() if isChecked else self.SaveWindow.SaveImgList.clearSelection())
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
+    connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
 
     # menu action slots/signals
     self.actionShow_Diffraction_Pattern.triggered.connect(
@@ -215,7 +216,6 @@ def slotsSignals(self):
     self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self))
 
     # Math formula (CustMod)
-    self.SettingsWindow.MathEval.clicked.connect(lambda: mathCallbacks(self))
 
     # preview tab on main UI
     self.PvBL.clicked.connect(lambda: previewCallbacks(self))
@@ -654,12 +654,7 @@ def startupFcn(self):
         for rtt, rt in zip(rotTypeText, rotType):
             self.VrApRotStep.addItem(rtt, rt)
 
-        # main UI window, custom aperture rotation options
-        rotType = [90, 60, 45, 30, 22.5, 10, 5, 2, 1, 0.5, 0.25]
-        rotTypeText = ['90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°']
-        self.CDRotStep.clear()
-        for rtt, rt in zip(rotTypeText, rotType):
-            self.CDRotStep.addItem(rtt, rt)
+        # custom detector rotation steps and inter-mask modes: customDetectorCallbacks.connectCustomDetector
 
         # main UI window, virtual aperture symmetry options
         symmType = [1, 2, 3, 4, 6]
@@ -671,10 +666,6 @@ def startupFcn(self):
         # main UI window, custom intramask interactions
         self.CDIntraMask.clear()
         self.CDIntraMask.addItems(['Union', 'Intersection', 'Additive'])
-
-        # main UI window, custom intermask interactions
-        self.CDInterMask.clear()
-        self.CDInterMask.addItems(['Union', 'Intersection', 'Additive', 'Current-only'])
 
     # add class attributes to match those from original Matlab version app.*
     appStruct(self)

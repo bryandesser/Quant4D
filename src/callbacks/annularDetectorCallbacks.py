@@ -564,7 +564,7 @@ def annularDetectorCallbacks(self):
     dmod = self.DetrMode.currentData()
 
     match self.sender():
-        case self.SettingsWindow.DCSys:
+        case self.SettingsWindow.DCSys | self.SettingsWindow.DCPos | self.SettingsWindow.DCUnit:
             limitAnnUI()
         case self.DetrMode:
             limitAnnUI()

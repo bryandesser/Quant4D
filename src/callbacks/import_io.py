@@ -836,7 +836,8 @@ def unloadData(self, keep_p=False):
         setattr(self, 'A', A())
         setattr(self, 'Mask', Mask())
         # self.ImgD = [] #TODO
-        self.CDT.clearContents()  # custom aperture table
+        self.CDT.setRowCount(0)       # custom detector tables
+        self.CDDTable.setRowCount(0)
 
     # Remove all data from GPU if in use #TODO
     # try:

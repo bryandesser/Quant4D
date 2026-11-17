@@ -33,6 +33,12 @@ All detector images are computed here.
 .. automodule:: callbacks.compute.roi
    :members:
 
+.. automodule:: callbacks.compute.custom
+   :members:
+
+.. automodule:: callbacks.compute.mask_math
+   :members:
+
 Reading files
 -------------
 
@@ -96,6 +102,13 @@ callbacks.annularDetectorCallbacks
 .. automodule:: callbacks.annularDetectorCallbacks
    :members:
    :undoc-members:
+   :show-inheritance:
+
+callbacks.customDetectorCallbacks
+---------------------------------
+
+.. automodule:: callbacks.customDetectorCallbacks
+   :members:
    :show-inheritance:
 
 callbacks.displayCallbacks

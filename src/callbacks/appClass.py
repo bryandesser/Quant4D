@@ -242,6 +242,9 @@ class A:
     RealROI: dict = field(default_factory=dict)     # live real-space ROI per image id
     _tmp_selector: Any = None                       # in-progress polygon selector
 
+    # custom detectors: mask ID -> customDetectorCallbacks.CustomMask, in table order
+    Custom: dict = field(default_factory=dict)
+
     # vectorField quivers
     vectField: dict = field(default_factory=_vect_slots)
 

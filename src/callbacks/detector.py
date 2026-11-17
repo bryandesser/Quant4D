@@ -32,9 +32,10 @@ def clearDetectors(self):
             finally:
                 setattr(self.A, ii, None)
 
-    # Custom detectors
-    # Hide Custom ROIs only
-    # set(findobj(self.ImageAx.Dfrn.Children,'-regexp','Tag',"Custom "),'Visible',0) #TODO
+    # Custom detectors: remove their annotations; they are redrawn on returning to CustMod
+    from callbacks.customDetectorCallbacks import _removeArtists  # noqa: E402
+    for cmask in self.A.Custom.values():
+        _removeArtists(cmask)
     # Scan direction alignment
     # delete(findobj(self.ImageAx.Dfrn,'Tag','ScanDirAnnot')) #TODO
 
@@ -229,7 +230,7 @@ def detectorModeCallbacks(self):
             self.SettingsWindow.SettingsTabGroup.setTabVisible(
                 self.SettingsWindow.SettingsTabGroup.indexOf(
                     self.SettingsWindow.MathTab), True)
-            # customDetectorCallbacks(self) #TODO
+            customDetectorCallbacks(self, source=self.DetrMode)
             self.Fig.DfrnMask.activateWindow()
 
     enableWindows(self, True)
@@ -256,17 +257,17 @@ def detrCoordCallbacks(self):
     if self.SettingsWindow.DCPos.currentText() == "Relative":
         self.RB0 = self.B0
 
-    # Update UI
+    # Update the current mode's coordinate displays.  Called directly: re-emitting
+    # DCSys.currentIndexChanged (as before) re-entered this slot without end.
     match self.DetrMode.currentData():
-        case "AlignMod":
-            pass
         case "AnnMod" | "DPCMod" | "CoMMod":
-            self.SettingsWindow.DCSys.currentIndexChanged.emit(self.SettingsWindow.DCSys.currentIndex())
-        case "VrApMod":
-            self.SettingsWindow.DCSys.currentIndexChanged.emit(self.SettingsWindow.DCSys.currentIndex())
+            from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
+            annularDetectorCallbacks(self)      # self.sender() is still the DC* combo box
         case "CustMod":
-            self.SettingsWindow.DCSys.currentIndexChanged.emit(self.SettingsWindow.DCSys.currentIndex())
+            customDetectorCallbacks(self, source=self.SettingsWindow.DCSys)
 
 
-def customDetectorCallbacks(self):
-    pass
+def customDetectorCallbacks(self, source=None):
+    """Custom detector mode; implemented in :mod:`callbacks.customDetectorCallbacks`."""
+    from callbacks.customDetectorCallbacks import customDetectorCallbacks as _custom  # noqa: E402
+    _custom(self, source=source if source is not None else self.sender())
