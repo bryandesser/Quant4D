@@ -44,6 +44,10 @@ class InteractiveCircle(qtc.QObject):
         self.press = None                                           # passes along artist information between on_press and on_motion
         self.color = color                                          # annotation color
         self.interactions = interactions                            # allowed interactions, defined above
+        # Artists that move with this annotation (e.g. symmetry copies, DPC segment lines): a callable
+        # returning them.  While dragged they are blitted with it; left in the background taken at
+        # the press, they would stay at their old place until the drag ends.
+        self.companions: Any = None
 
         # plot circle(s) based on provided radius/radii
         self.circ = axis.plot(self.x[:, None] * self.radius[None, :] + self.center[0],
@@ -214,17 +218,13 @@ class InteractiveCircle(qtc.QObject):
         for circ in self.circ:
             circ.set_animated(True)
         self.point.set_animated(self.point.get_visible())
+        for art in self._companionArtists():
+            art.set_animated(True)
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.axis.bbox)
 
-        # now redraw the circle(s) and point(s)
-        for circ in self.circ:
-            self.axis.draw_artist(circ)
-        if self.point.get_visible():
-            self.axis.draw_artist(self.point)
-
-        # and blit just the redrawn area
-        self.canvas.blit(self.axis.bbox)
+        # now redraw the circle(s), point(s) and companions, and blit just that area
+        self.restoreBackground()
 
     def on_motion(self, event):
         """
@@ -338,6 +338,8 @@ class InteractiveCircle(qtc.QObject):
         self.point.set_animated(False)
         for circ in self.circ:
             circ.set_animated(False)
+        for art in self._companionArtists():
+            art.set_animated(False)
 
         # redraw the full figure
         self.canvas.draw()
@@ -387,7 +389,10 @@ class InteractiveCircle(qtc.QObject):
         # restore the background region
         self.canvas.restore_region(self.background)
 
-        # redraw just the current rectangle
+        # redraw just the annotation and the artists moving with it
+        for art in self._companionArtists():
+            if art.get_visible() and art.axes is self.axis:
+                self.axis.draw_artist(art)
         for circ in self.circ:
             self.axis.draw_artist(circ)
         if self.point.get_visible():
@@ -395,6 +400,12 @@ class InteractiveCircle(qtc.QObject):
 
         # blit just the redrawn area
         self.canvas.blit(self.axis.bbox)
+
+    def _companionArtists(self):
+        try:
+            return [a for a in (self.companions() if self.companions is not None else []) if a is not None]
+        except (AttributeError, TypeError):
+            return []
 
     def updateBackground(self):
         """Redraw the canvas (kept for compatibility; the background is taken when a drag starts)."""

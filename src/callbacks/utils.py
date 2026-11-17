@@ -157,3 +157,13 @@ class Worker(qtc.QRunnable):
 
 def breakpoint(self):
     print()
+
+
+def refreshCanvas(canvas, *annotations) -> None:
+    """Show changes made to artists on *canvas*.  While one of *annotations* is dragged it blits
+    (with the artists that move with it); a full redraw then would drop the dragged artists."""
+    for ann in annotations:
+        if ann is not None and getattr(ann, "dragging", False):
+            ann.restoreBackground()
+            return
+    canvas.draw_idle()

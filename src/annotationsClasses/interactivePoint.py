@@ -1,3 +1,4 @@
+from typing import Any
 from matplotlib.backend_tools import Cursors
 from PyQt5 import QtCore as qtc
 import numpy as np
@@ -30,6 +31,9 @@ class InteractivePoint(qtc.QObject):
         self.idx = 0
         self.background = None
         self.radius = 1
+        # Artists that move with this point (e.g. the DPC segment lines, the scan-direction arrows):
+        # a callable returning them, blitted with the point while it is dragged.
+        self.companions: Any = None
 
     def disconnect(self):
         """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
@@ -87,6 +91,8 @@ class InteractivePoint(qtc.QObject):
         # out, so a draw_event handler takes the new background and paints the point back on.
         canvas = self.point.figure.canvas
         self.point.set_animated(True)
+        for art in self._companionArtists():
+            art.set_animated(True)
         self._ciddraw = (canvas, canvas.mpl_connect('draw_event', self._on_draw))
         canvas.draw()                   # → _on_draw: background + point
 
@@ -100,7 +106,31 @@ class InteractivePoint(qtc.QObject):
             return
         canvas = self.point.figure.canvas
         self.background = canvas.copy_from_bbox(self.point.axes.bbox)
-        self.point.axes.draw_artist(self.point)
+        self._drawArtists()
+
+    def _companionArtists(self):
+        try:
+            return [a for a in (self.companions() if self.companions is not None else []) if a is not None]
+        except (AttributeError, TypeError):
+            return []
+
+    def _drawArtists(self):
+        axes = self.point.axes
+        for art in self._companionArtists():
+            if art.get_visible() and art.axes is axes:
+                axes.draw_artist(art)
+        axes.draw_artist(self.point)
+
+    def restoreBackground(self):
+        """While dragged: the saved background, the point and its companions, put on screen;
+        otherwise a normal redraw."""
+        canvas = self.point.figure.canvas
+        if self.press is None or self.background is None:
+            canvas.draw_idle()
+            return
+        canvas.restore_region(self.background)
+        self._drawArtists()
+        canvas.blit(self.point.axes.bbox)
 
     def on_motion(self, event):
         # monitor mouse location, if hovering over a Draggable point,
@@ -126,14 +156,8 @@ class InteractivePoint(qtc.QObject):
 
         self.point.set_offsets(centers)
 
-        canvas = self.point.figure.canvas
-        axes = self.point.axes
-
-        # restore the background region, draw the point and put it on screen
-        if self.background is not None:
-            canvas.restore_region(self.background)
-        axes.draw_artist(self.point)
-        canvas.blit(axes.bbox)
+        # restore the background region, draw the point (and its companions) and put it on screen
+        self.restoreBackground()
 
         # notify listeners (e.g. associated circle/annulus or ROI callback)
         self.positionChanged.emit()
@@ -152,6 +176,8 @@ class InteractivePoint(qtc.QObject):
 
         # turn off the rect animation property and reset the background
         self.point.set_animated(False)
+        for art in self._companionArtists():
+            art.set_animated(False)
         self.background = None
 
         # redraw the full figure

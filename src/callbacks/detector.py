@@ -36,6 +36,11 @@ def clearDetectors(self):
             finally:
                 setattr(self.A, ii, None)
 
+    # DPC segments and the scan-direction arrows: redrawn by the modes that use them
+    from callbacks.annularDetectorCallbacks import removeScanDir, removeSegDetr  # noqa: E402
+    removeSegDetr(self)
+    removeScanDir(self)
+
     # Virtual aperture's symmetry/mirror copies (plain lines, tagged when drawn)
     for ln in list(self.Fig.Dfrn.ax.lines):
         if getattr(ln, '_vrAp_clone', False):

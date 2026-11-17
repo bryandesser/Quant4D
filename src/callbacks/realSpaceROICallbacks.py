@@ -487,7 +487,14 @@ def connectPatternCombine(self) -> None:
 def diffractionPattern(self, weights):
     """The diffraction image for real-space *weights*, combined as the "Pattern" dropdown says."""
     mode = self.DfrnCombine.currentData() if hasattr(self, "DfrnCombine") else DEFAULT_COMBINE
-    return compute.combine_frames(self.Data, weights, mode, self.D.GPU).reshape(dfrn_shape(self.D))
+    if mode not in ("max", "std"):
+        return compute.combine_frames(self.Data, weights, mode, self.D.GPU).reshape(dfrn_shape(self.D))
+    # per-pixel max/std read every selected frame: show that the app is busy meanwhile
+    qtw.QApplication.setOverrideCursor(qtc.Qt.CursorShape.WaitCursor)
+    try:
+        return compute.combine_frames(self.Data, weights, mode, self.D.GPU).reshape(dfrn_shape(self.D))
+    finally:
+        qtw.QApplication.restoreOverrideCursor()
 
 
 def setPatternModesFor(self, single_frame: bool) -> None:

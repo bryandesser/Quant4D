@@ -231,6 +231,8 @@ class A:
     ScanDirYline: Any = None
     ScanDirXcirc: Any = None
     ScanDirYcirc: Any = None
+    ScanDirXtext: Any = None
+    ScanDirYtext: Any = None
 
     # virtual apertures
     VrApMirL: Any = None

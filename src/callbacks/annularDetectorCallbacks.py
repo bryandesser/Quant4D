@@ -1,6 +1,6 @@
 from callbacks.axis_direction import axisDirectionCallbacks
 from callbacks.plotting import plotImage, toUpdateImage
-from callbacks.utils import isDiffToPrev
+from callbacks.utils import isDiffToPrev, refreshCanvas
 from callbacks.window_manager import enableWindows
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
@@ -64,6 +64,7 @@ def annularDetectorCallbacks(self):
         unlocked = in_com and self.ScanDirUnlock.isChecked()
         self.comControls.setEnabled(in_com)
         self.ScanDirUnlock.setEnabled(in_com)
+        self.AutoCurl.setEnabled(in_com)
         for ctrl in (self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
             ctrl.setEnabled(unlocked)
 
@@ -75,184 +76,113 @@ def annularDetectorCallbacks(self):
         self.comControls.setStyleSheet("background-color:" + bc)
 
     # ------------------------------------------------------------------
-    # drawSegDetr — draw segmented-detector annotations on diffraction ax
+    # drawSegDetr — segmented-detector annotations on the diffraction pattern
     # ------------------------------------------------------------------
     def drawSegDetr():
         """
-        Draw segmented detector overlay on the diffraction pattern.
+        Draw (or move) the segmented detector overlay on the diffraction pattern.
 
-        Creates:
-          self.A.SegDetrL  : list of Line2D objects — one per segment divider
-          self.A.SegDetrL0 : Line2D — highlighted reference line at DetRot=0
-          self.A.SegDetrCir: list of Line2D objects — NRung-1 interior circles
-          self.A.SegDetrP0 : InteractivePoint — drag handle at outer tip of ref line
+          self.A.SegDetrL  : list of Line2D — one per segment divider
+          self.A.SegDetrL0 : Line2D — the thicker reference divider at DetRot
+          self.A.SegDetrCir: list of Line2D — the NRung-1 interior circles
+          self.A.SegDetrP0 : InteractivePoint — rotation handle at the outer tip of the reference line
+
+        Existing artists are updated in place (the handle may be the one being dragged: replacing it
+        would end the drag); only a change of the number of segments/rungs makes new lines.
         """
         ax = self.Fig.Dfrn.ax
-
-        # --- remove existing SegDetr annotations ---
-        for attr in ('SegDetrL', 'SegDetrCir'):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                for item in obj:
-                    try:
-                        item.remove()
-                    except ValueError:
-                        pass
-                setattr(self.A, attr, None)
-        for attr in ('SegDetrL0',):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                try:
-                    obj.remove()
-                except ValueError:
-                    pass
-                setattr(self.A, attr, None)
-        if self.A.SegDetrP0 is not None:
-            self.A.SegDetrP0.remove()
-            self.A.SegDetrP0 = None
-
-        # --- read current parameters ---
         ri_idx, ro_idx = self.AnnRi.value()
         ri_px = ri_idx * self.D.annWidth
         ro_px = ro_idx * self.D.annWidth
         nseg = int(self.NSeg.value())
         nrung = int(self.NRung.value())
         dr = self.DetRot.value()          # degrees
-        b0 = self.B0                      # (x, y) beam centre in pixels
+        b0 = np.asarray(self.B0, float)   # (x, y) beam centre in pixels
 
-        if ro_px <= 0:
-            return  # nothing to draw yet
+        seg_angles = np.radians(np.linspace(dr, dr + 360.0, nseg + 1)[:-1])
+        rung_radii = np.linspace(ri_px, ro_px, nrung + 1)[1:-1] if nrung > 1 else np.array([])
+        theta = np.linspace(0, 2 * np.pi, 361)
 
-        # --- segment divider lines (NSeg lines from inner to outer radius) ---
-        seg_angles = np.linspace(dr, dr + 360.0, nseg + 1)[:-1]  # NSeg angles
-        lines = []
-        for ang in seg_angles:
-            rad = np.radians(ang)
-            x = [b0[0] + ri_px * np.cos(rad), b0[0] + ro_px * np.cos(rad)]
-            y = [b0[1] + ri_px * np.sin(rad), b0[1] + ro_px * np.sin(rad)]
-            line, = ax.plot(x, y, color='w', linewidth=1.5, zorder=5,
-                            solid_capstyle='round')
-            lines.append(line)
-        self.A.SegDetrL = lines if lines else None
+        def spoke(a):
+            return ([b0[0] + ri_px * np.cos(a), b0[0] + ro_px * np.cos(a)],
+                    [b0[1] + ri_px * np.sin(a), b0[1] + ro_px * np.sin(a)])
 
-        # --- highlighted reference line at DetRot (thicker, used as rotation origin) ---
-        rad0 = np.radians(dr)
-        x0 = [b0[0] + ri_px * np.cos(rad0), b0[0] + ro_px * np.cos(rad0)]
-        y0 = [b0[1] + ri_px * np.sin(rad0), b0[1] + ro_px * np.sin(rad0)]
-        self.A.SegDetrL0, = ax.plot(x0, y0, color='w', linewidth=3.0,
-                                    zorder=5, solid_capstyle='round')
+        if len(self.A.SegDetrL or []) != nseg or len(self.A.SegDetrCir or []) != len(rung_radii) \
+                or self.A.SegDetrL0 is None:
+            removeSegDetr(self, keep_handle=True)
+            self.A.SegDetrL = [ax.plot([], [], color='w', linewidth=1.5, zorder=5, solid_capstyle='round')[0]
+                               for _ in range(nseg)]
+            self.A.SegDetrL0, = ax.plot([], [], color='w', linewidth=3.0, zorder=5, solid_capstyle='round')
+            self.A.SegDetrCir = [ax.plot([], [], color='w', linewidth=1.0, zorder=5)[0] for _ in rung_radii]
+        for line, a in zip(self.A.SegDetrL, seg_angles):
+            line.set_data(*spoke(a))
+        self.A.SegDetrL0.set_data(*spoke(np.radians(dr)))
+        for circ, r in zip(self.A.SegDetrCir, rung_radii):
+            circ.set_data(b0[0] + r * np.cos(theta), b0[1] + r * np.sin(theta))
 
-        # --- interior rung circles (NRung > 1 → NRung-1 concentric rings) ---
-        rung_circles = []
-        if nrung > 1:
-            rung_radii = np.linspace(ri_px, ro_px, nrung + 1)[1:-1]
-            theta = np.linspace(0, 2 * np.pi, 361)
-            for r in rung_radii:
-                cx = b0[0] + r * np.cos(theta)
-                cy = b0[1] + r * np.sin(theta)
-                circ, = ax.plot(cx, cy, color='w', linewidth=1.0, zorder=5)
-                rung_circles.append(circ)
-        self.A.SegDetrCir = rung_circles if rung_circles else None
+        tip = b0 + ro_px * np.array([np.cos(np.radians(dr)), np.sin(np.radians(dr))])
+        if self.A.SegDetrP0 is None:
+            pt_artist = ax.scatter(tip[0], tip[1], color='w', s=60, zorder=6, animated=False)
+            self.A.SegDetrP0 = InteractivePoint(pt_artist)
+            self.A.SegDetrP0.connect()
+            # dragging the handle turns the detector; the dividers and rings follow it while dragged
+            self.A.SegDetrP0.companions = lambda: segArtists(self, handle=False)
+            self.A.SegDetrP0.positionChanged.connect(lambda: moveAnnDetr())
+        elif not self.A.SegDetrP0.dragging:
+            self.A.SegDetrP0.point.set_offsets([tip])
+        if self.A.adf is not None:
+            self.A.adf.companions = lambda: segArtists(self) if self.DetrMode.currentData() == "DPCMod" else []
 
-        # --- interactive rotation handle at outer tip of reference line ---
-        pt_artist = ax.scatter(
-            b0[0] + ro_px * np.cos(rad0),
-            b0[1] + ro_px * np.sin(rad0),
-            color='w', s=60, zorder=6, animated=False
-        )
-        self.A.SegDetrP0 = InteractivePoint(pt_artist)
-        self.A.SegDetrP0.connect()
-        # When drag handle moves → update detector rotation and redraw
-        self.A.SegDetrP0.positionChanged.connect(lambda: moveAnnDetr())
-
-        self.Fig.Dfrn.canvas.draw_idle()
+        refreshCanvas(self.Fig.Dfrn.canvas, self.A.adf, self.A.SegDetrP0)
 
     # ------------------------------------------------------------------
-    # drawScanDir — draw scan-direction arrows on diffraction pattern
+    # drawScanDir — scan-direction arrows on the diffraction pattern
     # ------------------------------------------------------------------
     def drawScanDir():
         """
-        Draw scan X/Y direction indicators on the diffraction pattern.
+        Draw (or move) the scan X/Y direction arrows used to align the scan direction.
 
-        Two arrows (Line2D) emanate from the beam centre along the scan X
-        and Y axes; each has an InteractivePoint drag handle at its tip.
-        Dragging the X handle updates ScanDir; dragging the Y handle updates
-        ScanDir – 90° (since Y is always perpendicular to X).
-
-        Annotations stored:
-          self.A.ScanDirXline  : Line2D — X-direction arrow
-          self.A.ScanDirYline  : Line2D — Y-direction arrow
-          self.A.ScanDirXcirc  : InteractivePoint — drag handle at X tip
-          self.A.ScanDirYcirc  : InteractivePoint — drag handle at Y tip
+        Two arrows from the beam centre along the scan X and Y axes, each labelled and with a drag
+        handle at its tip.  Dragging the X handle sets ScanDir; dragging the Y handle sets
+        ScanDir from its angle less 90° (or plus, with Y flipped).  Updated in place: replacing a
+        handle while it is dragged would end the drag, and the labels were added anew on every
+        change, piling up on the pattern.
         """
         ax = self.Fig.Dfrn.ax
-
-        # --- remove existing scan-direction annotations ---
-        for attr in ('ScanDirXline', 'ScanDirYline'):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                try:
-                    obj.remove()
-                except ValueError:
-                    pass
-                setattr(self.A, attr, None)
-        for attr in ('ScanDirXcirc', 'ScanDirYcirc'):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                obj.remove()
-                setattr(self.A, attr, None)
-
-        # --- parameters ---
         sd = self.ScanDir.value()      # scan rotation in degrees
         syf = 1 - 2 * self.ScanDirYFlip.isChecked()   # Y flip: +1 or -1
-        b0 = self.B0                   # beam centre (x, y)
-        # Arrow length: 25% of max scattering radius, min 20 px
+        b0 = np.asarray(self.B0, float)
         arrow_len = max(20.0, 0.25 * self.P.RMax * self.D.annWidth)
+        tips = {"X": b0 + arrow_len * np.array([np.cos(np.radians(sd)), np.sin(np.radians(sd))]),
+                "Y": b0 + arrow_len * np.array([np.cos(np.radians(sd + 90.0 * syf)),
+                                                 np.sin(np.radians(sd + 90.0 * syf))])}
+        colours = {"X": '#FF8C00', "Y": '#00BFFF'}
 
-        rad_x = np.radians(sd)
-        rad_y = np.radians(sd + 90.0 * syf)
+        for k in ("X", "Y"):
+            tip, colour = tips[k], colours[k]
+            line = getattr(self.A, f"ScanDir{k}line")
+            if line is None:
+                line, = ax.plot([], [], color=colour, linewidth=2.0, zorder=7, solid_capstyle='round')
+                setattr(self.A, f"ScanDir{k}line", line)
+            line.set_data([b0[0], tip[0]], [b0[1], tip[1]])
+            label = getattr(self.A, f"ScanDir{k}text")
+            if label is None:
+                label = ax.text(0, 0, k, color=colour, fontsize=8, fontweight='bold', zorder=8,
+                                ha='center', va='center')
+                setattr(self.A, f"ScanDir{k}text", label)
+            label.set_position(tuple(b0 + 1.15 * (tip - b0)))       # just beyond the handle
+            handle = getattr(self.A, f"ScanDir{k}circ")
+            if handle is None:
+                pt = ax.scatter(tip[0], tip[1], color=colour, s=50, zorder=9, animated=False)
+                handle = InteractivePoint(pt)
+                handle.connect()
+                handle.companions = lambda: scanArtists(self)
+                handle.positionChanged.connect(lambda: moveAnnDetr())
+                setattr(self.A, f"ScanDir{k}circ", handle)
+            elif not handle.dragging:
+                handle.point.set_offsets([tip])
 
-        # Tip positions
-        tip_x = np.array([b0[0] + arrow_len * np.cos(rad_x),
-                          b0[1] + arrow_len * np.sin(rad_x)])
-        tip_y = np.array([b0[0] + arrow_len * np.cos(rad_y),
-                          b0[1] + arrow_len * np.sin(rad_y)])
-
-        # --- X-direction line (orange) ---
-        self.A.ScanDirXline, = ax.plot(
-            [b0[0], tip_x[0]], [b0[1], tip_x[1]],
-            color='#FF8C00', linewidth=2.0, zorder=7,
-            solid_capstyle='round'
-        )
-        ax.annotate('X', xy=(tip_x[0], tip_x[1]),
-                    color='#FF8C00', fontsize=8, zorder=8,
-                    ha='center', va='center')
-
-        # --- Y-direction line (cyan) ---
-        self.A.ScanDirYline, = ax.plot(
-            [b0[0], tip_y[0]], [b0[1], tip_y[1]],
-            color='#00BFFF', linewidth=2.0, zorder=7,
-            solid_capstyle='round'
-        )
-        ax.annotate('Y', xy=(tip_y[0], tip_y[1]),
-                    color='#00BFFF', fontsize=8, zorder=8,
-                    ha='center', va='center')
-
-        # --- Drag handle: X tip ---
-        pt_x = ax.scatter(tip_x[0], tip_x[1],
-                          color='#FF8C00', s=50, zorder=9, animated=False)
-        self.A.ScanDirXcirc = InteractivePoint(pt_x)
-        self.A.ScanDirXcirc.connect()
-        self.A.ScanDirXcirc.positionChanged.connect(lambda: moveAnnDetr())
-
-        # --- Drag handle: Y tip ---
-        pt_y = ax.scatter(tip_y[0], tip_y[1],
-                          color='#00BFFF', s=50, zorder=9, animated=False)
-        self.A.ScanDirYcirc = InteractivePoint(pt_y)
-        self.A.ScanDirYcirc.connect()
-        self.A.ScanDirYcirc.positionChanged.connect(lambda: moveAnnDetr())
-
-        self.Fig.Dfrn.canvas.draw_idle()
+        refreshCanvas(self.Fig.Dfrn.canvas, self.A.ScanDirXcirc, self.A.ScanDirYcirc)
 
     # ------------------------------------------------------------------
     # moveAnnDetr — live-update detectors when parameters change
@@ -309,6 +239,10 @@ def annularDetectorCallbacks(self):
 
             self.ImageAx.Real.autoscale()
             self.Fig.Real.canvas.draw()
+
+            # the DPC segments span the annulus: they follow its radii
+            if self.DetrMode.currentData() == "DPCMod":
+                drawSegDetr()
 
         def moveSeg():
             """
@@ -537,6 +471,67 @@ def annularDetectorCallbacks(self):
         setDeflectionImages(dpc_x, dpc_y)
 
     # ------------------------------------------------------------------
+    # autoCurl — scan direction from the curl of the deflection field (MATLAB's AutoCurl)
+    # ------------------------------------------------------------------
+    def autoCurl():
+        """Set the scan direction and Y flip that make the CoM/DPC field curl-free, recompute the
+        images and close the scan-direction alignment (as MATLAB Quant4D's "Auto" button)."""
+        from callbacks.utils import notifDLG
+        from callbacks.window_manager import busyIndicator
+        dmod = self.DetrMode.currentData()
+        if dmod not in ("CoMMod", "DPCMod"):
+            return
+        ri, ro = self.AnnRi.value()
+        dr, sd = self.DetRot.value(), float(self.ScanDir.value())
+        syf = 1 - 2 * self.ScanDirYFlip.isChecked()
+
+        def compute_field(sd, syf):
+            if dmod == "CoMMod":
+                calcCoM(ri, ro, sd, syf)
+            else:
+                calcDPC(ri, ro, dr, sd, syf)
+            # remember what the images now show (the next update need not recompute them)
+            isDiffToPrev(self, 'CoM_P', [dmod, ri, ro, sd, syf, dr, self.NSeg.value(), self.NRung.value()])
+
+        from PyQt5 import QtCore as qtc, QtWidgets as qtw
+        qtw.QApplication.setOverrideCursor(qtc.Qt.CursorShape.WaitCursor)
+        try:
+            with busyIndicator(self):
+                if self.Fig.CoMX.Image is None or isDiffToPrev(
+                        self, 'CoM_P', [dmod, ri, ro, sd, syf, dr, self.NSeg.value(), self.NRung.value()]):
+                    compute_field(sd, syf)
+                if self.Fig.CoMX.Image is None:
+                    return
+                # back to the detector frame: undo the current rotation and Y flip
+                u, v = compute.rotate_field(self.Fig.CoMX.Image, self.Fig.CoMY.Image, -sd)
+                try:
+                    angle, flip, _ = compute.scan_rotation_by_curl(u, v * syf, prefer_deg=sd)
+                except ValueError as exc:
+                    notifDLG(self, self, "warn", f"The scan direction could not be estimated: {exc}\n"
+                                                 "Try changing the detector and repeating.",
+                             "Automatic Curl Minimization Failed")
+                    return
+                with signals_blocked(self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
+                    self.ScanDir.setValue(angle)
+                    self.ScanDir_NF.setValue(angle)
+                    self.ScanDirYFlip.setChecked(flip)
+                compute_field(angle, 1 - 2 * flip)
+        finally:
+            qtw.QApplication.restoreOverrideCursor()
+
+        # the alignment is done: lock the scan direction again
+        self.P.ScanDirInit = 1
+        if self.ScanDirUnlock.isChecked():
+            with signals_blocked(self.ScanDirUnlock):
+                self.ScanDirUnlock.setChecked(False)
+            from callbacks.startup import unlockScanDir
+            unlockScanDir(self)
+        removeScanDir(self)
+        enableAnnUI()
+        plotAllPatterns()
+        axisDirectionCallbacks(self, ("Dfrn",))
+
+    # ------------------------------------------------------------------
     # plotAllPatterns — refresh visible image windows
     # ------------------------------------------------------------------
     def plotAllPatterns():
@@ -585,23 +580,12 @@ def annularDetectorCallbacks(self):
             moveAnnDetr()
             if self.sender() in (self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
                 axisDirectionCallbacks(self, ("Dfrn",))     # scan-direction arrows
+        case self.AutoCurl:
+            autoCurl()
         case self.ScanDirUnlock:
             self.P.ScanDirInit = 1
             enableAnnUI()
-            # Remove any existing scan-direction annotations before redrawing
-            for attr in ('ScanDirXline', 'ScanDirYline'):
-                obj = getattr(self.A, attr)
-                if obj is not None:
-                    try:
-                        obj.remove()
-                    except ValueError:
-                        pass
-                    setattr(self.A, attr, None)
-            for attr in ('ScanDirXcirc', 'ScanDirYcirc'):
-                obj = getattr(self.A, attr)
-                if obj is not None:
-                    obj.remove()
-                    setattr(self.A, attr, None)
+            removeScanDir(self)
             if self.ScanDirUnlock.isChecked():
                 drawScanDir()
             axisDirectionCallbacks(self, ("Dfrn",))     # scan arrows hide while aligning
@@ -610,3 +594,50 @@ def annularDetectorCallbacks(self):
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
+
+
+def segArtists(self, handle=True) -> list:
+    """The segmented-detector artists (dividers, reference divider, rung circles[, handle])."""
+    arts = list(self.A.SegDetrL or []) + [self.A.SegDetrL0] + list(self.A.SegDetrCir or [])
+    if handle and self.A.SegDetrP0 is not None:
+        arts.append(self.A.SegDetrP0.point)
+    return [a for a in arts if a is not None]
+
+
+def scanArtists(self) -> list:
+    """The scan-direction arrows, labels and both handles (each handle blits the others)."""
+    arts = [self.A.ScanDirXline, self.A.ScanDirYline, self.A.ScanDirXtext, self.A.ScanDirYtext]
+    arts += [h.point for h in (self.A.ScanDirXcirc, self.A.ScanDirYcirc) if h is not None]
+    return [a for a in arts if a is not None]
+
+
+def _removeArtist(art) -> None:
+    try:
+        art.remove()
+    except (ValueError, AttributeError, NotImplementedError):
+        pass
+
+
+def removeSegDetr(self, keep_handle=False) -> None:
+    """Remove the segmented-detector overlay (and its rotation handle unless *keep_handle*)."""
+    for line in list(self.A.SegDetrL or []) + list(self.A.SegDetrCir or []) + [self.A.SegDetrL0]:
+        if line is not None:
+            _removeArtist(line)
+    self.A.SegDetrL = self.A.SegDetrCir = self.A.SegDetrL0 = None
+    if not keep_handle and self.A.SegDetrP0 is not None:
+        self.A.SegDetrP0.remove()
+        self.A.SegDetrP0 = None
+
+
+def removeScanDir(self) -> None:
+    """Remove the scan-direction arrows, their labels and handles."""
+    for k in ("X", "Y"):
+        for kind in ("line", "text"):
+            art = getattr(self.A, f"ScanDir{k}{kind}")
+            if art is not None:
+                _removeArtist(art)
+                setattr(self.A, f"ScanDir{k}{kind}", None)
+        handle = getattr(self.A, f"ScanDir{k}circ")
+        if handle is not None:
+            handle.remove()
+            setattr(self.A, f"ScanDir{k}circ", None)

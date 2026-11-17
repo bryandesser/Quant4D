@@ -14,10 +14,11 @@ OWN = {
     "AlignMod": {"tb"},
     "AnnMod": {"adf"},
     "CoMMod": {"adf"},
-    "DPCMod": {"adf"},
+    "DPCMod": {"adf", "SegDetrL0", "SegDetrP0"},
     "VrApMod": {"VrAp", "VrApMirP", "VrApMirL"},
 }
-ALL = {"tb", "adf", "VrAp", "VrApMirP", "VrApMirL"}
+ALL = {"tb", "adf", "VrAp", "VrApMirP", "VrApMirL", "SegDetrL0", "SegDetrP0",
+       "ScanDirXline", "ScanDirXcirc", "ScanDirXtext"}
 
 
 def _present(w):
@@ -31,7 +32,8 @@ def _interactive_circles(w):
 
 
 @pytest.mark.parametrize("path", [("AlignMod", "AnnMod"), ("VrApMod", "AnnMod"), ("VrApMod", "AlignMod"),
-                                  ("AlignMod", "VrApMod", "CoMMod")])
+                                  ("AlignMod", "VrApMod", "CoMMod"), ("DPCMod", "VrApMod"),
+                                  ("DPCMod", "CoMMod"), ("DPCMod", "AnnMod")])
 def test_only_the_modes_own_annotations(loaded_app, qapp, path):
     w = loaded_app
     for mode in path:

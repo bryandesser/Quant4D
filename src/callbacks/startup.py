@@ -279,6 +279,7 @@ def slotsSignals(self):
     self.ScanDirYFlip.clicked.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDir_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDir.valueChanged.connect(lambda: annularDetectorCallbacks(self))
+    self.AutoCurl.clicked.connect(lambda: annularDetectorCallbacks(self))
 
     # virtual aperture connections
     self.VrApR.valueChanged.connect(lambda: virtualApertureCallbacks(self))

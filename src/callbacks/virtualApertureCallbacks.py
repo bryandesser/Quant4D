@@ -36,6 +36,7 @@ import numpy as np
 from callbacks.layout import dfrn_shape, real_shape
 from callbacks import compute  # noqa: E402
 from callbacks.signals import signals_blocked  # noqa: E402
+from callbacks.utils import refreshCanvas  # noqa: E402
 
 
 def _polar(self) -> bool:
@@ -235,7 +236,15 @@ def virtualApertureCallbacks(self):  # noqa: C901
             self.A.VrApMirP.remove()
             self.A.VrApMirP = None
 
-        self.Fig.Dfrn.canvas.draw_idle()
+        # The symmetry/mirror copies (and the mirror line) move with the dragged aperture or mirror
+        # handle: blitted with it.  A full redraw mid-drag drops the dragged artist, and the copies,
+        # left in the background taken at the press, only caught up when the drag ended.
+        def copies():
+            return [ln for ln in ax.lines if getattr(ln, '_vrAp_clone', False)] + [self.A.VrApMirL]
+        self.A.VrAp.companions = copies
+        if self.A.VrApMirP is not None:
+            self.A.VrApMirP.companions = copies
+        refreshCanvas(self.Fig.Dfrn.canvas, self.A.VrAp, self.A.VrApMirP)
 
     # ------------------------------------------------------------------
     # move — handle interactive changes

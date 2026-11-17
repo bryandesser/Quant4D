@@ -8,7 +8,8 @@ import numpy as np
 from callbacks.compute.backend import project
 from callbacks.layout import pixel_grids
 
-__all__ = ["center_of_mass", "weighted_mean_position", "rotate_field", "magnitude_phase", "integrate_field", "divergence"]
+__all__ = ["center_of_mass", "weighted_mean_position", "rotate_field", "magnitude_phase", "integrate_field", "divergence",
+           "curl", "scan_rotation_by_curl"]
 
 _EPS = float(np.finfo(np.float32).eps)
 
@@ -85,3 +86,65 @@ def integrate_field(fx: np.ndarray, fy: np.ndarray) -> np.ndarray:
 def divergence(fx: np.ndarray, fy: np.ndarray) -> np.ndarray:
     """Divergence of a 2-D vector field (dCoM / dDPC): ``d(fx)/dx + d(fy)/dy``."""
     return np.gradient(fx, axis=1) + np.gradient(fy, axis=0)
+
+
+def curl(fx: np.ndarray, fy: np.ndarray) -> np.ndarray:
+    """Curl of a 2-D vector field: ``d(fy)/dx - d(fx)/dy`` (x along columns, y along rows)."""
+    return np.gradient(fy, axis=1) - np.gradient(fx, axis=0)
+
+
+def _mean_abs_curl(curl_p, div_p, angles_deg, batch=64):
+    """Mean |curl| of the field turned by each angle: ``cos·curl + sin·div`` of the unturned field
+    (curl and divergence are linear, so one pair of derivatives serves every angle)."""
+    ok = np.isfinite(curl_p) & np.isfinite(div_p)
+    c_p, d_p = curl_p[ok].astype(np.float64), div_p[ok].astype(np.float64)
+    out = np.empty(len(angles_deg))
+    for k in range(0, len(angles_deg), batch):
+        a = np.radians(np.asarray(angles_deg[k:k + batch], float))[:, None]
+        out[k:k + batch] = np.abs(np.cos(a) * c_p + np.sin(a) * d_p).mean(axis=1)
+    return out
+
+
+def scan_rotation_by_curl(fx: np.ndarray, fy: np.ndarray, prefer_deg: float = 0.0,
+                          step_deg: float = 0.01) -> tuple[float, bool, float]:
+    """Scan rotation (and Y flip) that makes a deflection field curl-free (MATLAB Quant4D's AutoCurl).
+
+    A CoM/DPC deflection field is the gradient of a potential, so it has no curl once it is
+    expressed in the scan's frame.  *fx*, *fy* are the field in the detector frame, before the
+    scan rotation and Y flip (``rotate_field(fx, fy * (-1 if flip else 1), angle)`` is the field
+    in the scan frame).  Every angle (1° steps, refined to *step_deg*) is tried with and without
+    the flip; the smallest mean |curl| wins.  A field and its negative have the same curl, so
+    the angle is found only up to 180°: of the two, the one nearer *prefer_deg* (the current scan
+    direction) is returned.
+
+    Returns
+    -------
+    angle_deg : float in [0, 360)
+    flip : bool
+        Whether the scan's Y direction is flipped.
+    mean_abs_curl : float
+        The remaining mean |curl| (relative to the field's mean magnitude it tells how good the fit is).
+    """
+    fx = np.asarray(fx, dtype=np.float64)
+    fy = np.asarray(fy, dtype=np.float64)
+    if fx.ndim != 2 or fx.shape != fy.shape or min(fx.shape) < 3:
+        raise ValueError("the deflection images must be 2-D, of the same shape, at least 3 x 3")
+    if not (np.isfinite(fx) & np.isfinite(fy)).any():
+        raise ValueError("the deflection images have no finite values")
+    best = None
+    for flip in (False, True):
+        py = -fy if flip else fy
+        curl_p, div_p = curl(fx, py), divergence(fx, py)
+        coarse = np.arange(0.0, 180.0, 1.0)                 # θ and θ+180 have the same |curl|
+        m = _mean_abs_curl(curl_p, div_p, coarse)
+        a0 = coarse[int(np.argmin(m))]
+        fine = np.arange(a0 - 1.0, a0 + 1.0 + step_deg / 2, step_deg)
+        mf = _mean_abs_curl(curl_p, div_p, fine)
+        k = int(np.argmin(mf))
+        if best is None or mf[k] < best[2]:
+            best = (float(fine[k]), flip, float(mf[k]))
+    angle, flip, residual = best
+    # of angle and angle + 180, the nearer to the preferred (current) direction
+    candidates = np.array([angle, angle + 180.0]) % 360.0
+    dist = np.abs((candidates - prefer_deg + 180.0) % 360.0 - 180.0)
+    return float(candidates[int(np.argmin(dist))]), flip, residual

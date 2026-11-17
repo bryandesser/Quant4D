@@ -336,3 +336,39 @@ def test_combine_frames_edge_cases(data):
     assert np.allclose(compute.combine_frames(neg, np.ones(n), "ln"), np.log(n)), "log of the magnitude, as MATLAB real(log(x))"
     with pytest.raises(ValueError):
         compute.combine_frames(data, np.ones(n), "median")
+
+
+# ------------------------------------------------------------------ AutoCurl
+def _potential_field(ny=48, nx=60, seed=1):
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[:ny, :nx]
+    phi = np.zeros((ny, nx))
+    for _ in range(20):
+        cx, cy = rng.uniform(4, nx - 4), rng.uniform(4, ny - 4)
+        phi += np.exp(-((xx - cx) ** 2 + (yy - cy) ** 2) / 8.0)
+    return np.gradient(phi, axis=1), np.gradient(phi, axis=0)
+
+
+@pytest.mark.parametrize("angle, flip", [(37.5, False), (200.0, True), (355.2, False), (90.0, True)])
+def test_scan_rotation_by_curl_recovers_rotation_and_flip(angle, flip):
+    gx, gy = _potential_field()                       # curl-free in the scan frame
+    u, v = compute.rotate_field(gx, gy, -angle)       # the same field in the detector frame
+    raw_y = -v if flip else v
+    got, got_flip, residual = compute.scan_rotation_by_curl(u, raw_y, prefer_deg=angle + 20)
+    assert got_flip == flip
+    assert abs((got - angle + 180) % 360 - 180) < 0.05
+    sx, sy = compute.rotate_field(u, raw_y * (-1 if got_flip else 1), got)
+    assert np.abs(compute.curl(sx, sy)).mean() == pytest.approx(residual)
+
+
+def test_scan_rotation_by_curl_picks_the_nearer_of_the_two_halves():
+    """A field and its negative have the same curl: of angle and angle+180, the nearer to the current one."""
+    gx, gy = _potential_field()
+    u, v = compute.rotate_field(gx, gy, -30.0)
+    assert compute.scan_rotation_by_curl(u, v, prefer_deg=20)[0] == pytest.approx(30.0, abs=0.05)
+    assert compute.scan_rotation_by_curl(u, v, prefer_deg=200)[0] == pytest.approx(210.0, abs=0.05)
+
+
+def test_scan_rotation_by_curl_rejects_empty_fields():
+    with pytest.raises(ValueError):
+        compute.scan_rotation_by_curl(np.full((5, 5), np.nan), np.full((5, 5), np.nan))

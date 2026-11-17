@@ -206,3 +206,16 @@ def test_upload_non_native_byte_order(device):
     compute.release_device_data()
     assert np.allclose(compute.project(swapped, weights, device), data @ weights, rtol=1e-5)
     compute.release_device_data()
+
+
+@pytest.mark.parametrize("mode", ["max", "std"])
+@pytest.mark.parametrize("kind", ["all", "some", "grey"])
+def test_max_std_on_device_match_numpy(data, device, mode, kind):
+    """The diffraction pattern's max/std over a region, computed on the device holding the data."""
+    rng = np.random.default_rng(5)
+    w = {"all": np.ones(data.shape[0]), "some": (rng.random(data.shape[0]) > 0.5).astype(float),
+         "grey": rng.random(data.shape[0])}[kind]
+    expected = compute.combine_frames(data, w, mode)                    # NumPy
+    got = compute.combine_frames(data, w, mode, device)
+    assert compute.device_data_info() is not None, "not computed on the device"
+    np.testing.assert_allclose(got, expected, rtol=1e-4, atol=1e-5)

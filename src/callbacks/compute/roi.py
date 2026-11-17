@@ -55,11 +55,88 @@ def _weighted_sum(data, w, device):
 
 
 def _selected_blocks(data, w, rows_per_block=256):
-    """``data[i] * w[i]`` for the frames with non-zero weight, a block at a time."""
+    """``data[i] * w[i]`` for the frames with non-zero weight, a block at a time, in the data's
+    float precision (float32 for most data).  A contiguous selection (the full image, a
+    rectangle's rows) is read as slices, which are views: no copy of the dataset."""
     selected = np.flatnonzero(w)
+    if selected.size == 0:
+        return
+    dtype = np.result_type(data.dtype, np.float32)
+    contiguous = selected[-1] - selected[0] + 1 == selected.size
     for k in range(0, selected.size, rows_per_block):
-        idx = selected[k:k + rows_per_block]
-        yield np.asarray(data[idx], dtype=np.float64) * w[idx, None]
+        if contiguous:
+            start = int(selected[0]) + k
+            stop = min(start + rows_per_block, int(selected[-1]) + 1)
+            block, ww = np.asarray(data[start:stop], dtype=dtype), w[start:stop]
+        else:
+            idx = selected[k:k + rows_per_block]
+            block, ww = np.asarray(data[idx], dtype=dtype), w[idx]
+        if not np.all(ww == 1.0):
+            block = block * ww.astype(dtype)[:, None]
+        yield block
+
+
+def _max_numpy(data, w, n_pixels):
+    out = np.full(n_pixels, -np.inf)
+    for block in _selected_blocks(data, w):
+        np.maximum(out, block.max(axis=0), out=out)
+    return out
+
+
+def _std_numpy(data, w, n_pixels):
+    """Two passes (mean, then squared deviations from it): accurate in float32 blocks, with
+    float64 accumulators, and without a float64 copy of the data."""
+    n = int(np.count_nonzero(w))
+    if n < 2:
+        return np.zeros(n_pixels)
+    s1 = np.zeros(n_pixels)
+    for block in _selected_blocks(data, w):
+        s1 += block.sum(axis=0, dtype=np.float64)
+    mean = s1 / n
+    m2 = np.zeros(n_pixels)
+    for block in _selected_blocks(data, w):
+        d = block - mean.astype(block.dtype)
+        m2 += np.einsum("ij,ij->j", d, d, dtype=np.float64)
+    return np.sqrt(m2 / (n - 1))
+
+
+def _max_std_on_device(data, w, mode, device) -> Any:
+    """``max``/``std`` on the device holding the dataset (the GPU), or ``None`` to use NumPy."""
+    from callbacks.compute import backend
+    dev = backend.resolve_device(device)
+    if dev is None:
+        return None
+    torch = backend.torch
+    selected = np.flatnonzero(w)
+
+    def run():
+        t = backend._resident.get(data, dev)
+        if t is None:
+            return None
+        sel = torch.from_numpy(selected.astype(np.int64)).to(dev)
+        ww = torch.from_numpy(w[selected].astype(np.float32)).to(dev)
+        n = int(selected.size)
+        step = max(1, backend._frames_per_chunk(data.shape[1], 4))
+        blocks = ((k, t.index_select(0, sel[k:k + step]) * ww[k:k + step, None]) for k in range(0, n, step))
+        if mode == "max":
+            out: Any = None
+            for _, b in blocks:
+                m = b.amax(dim=0)
+                out = m if out is None else torch.maximum(out, m)
+            return out.double().cpu().numpy()
+        if n < 2:
+            return np.zeros(data.shape[1])
+        s1 = torch.zeros(data.shape[1], dtype=torch.float64, device=dev)
+        for _, b in blocks:
+            s1 += b.sum(dim=0, dtype=torch.float64)
+        mean = (s1 / n).float()
+        m2 = torch.zeros(data.shape[1], dtype=torch.float64, device=dev)
+        for k in range(0, n, step):
+            d = t.index_select(0, sel[k:k + step]) * ww[k:k + step, None] - mean
+            m2 += (d * d).sum(dim=0, dtype=torch.float64)
+        return torch.sqrt(m2 / (n - 1)).cpu().numpy()
+
+    return backend._on_device(data, dev, run)
 
 
 def combine_frames(data: np.ndarray, weights: np.ndarray, mode: str = "sum", device: Any = None) -> np.ndarray:
@@ -85,20 +162,12 @@ def combine_frames(data: np.ndarray, weights: np.ndarray, mode: str = "sum", dev
     if not np.any(w):
         return np.zeros(n_pixels)
 
-    if mode == "max":
-        out = np.full(n_pixels, -np.inf)
-        for block in _selected_blocks(data, w):
-            np.maximum(out, block.max(axis=0), out=out)
-        return out
-    if mode == "std":
-        n, s1, s2 = 0, np.zeros(n_pixels), np.zeros(n_pixels)
-        for block in _selected_blocks(data, w):
-            n += block.shape[0]
-            s1 += block.sum(axis=0)
-            s2 += np.square(block).sum(axis=0)
-        if n < 2:
-            return np.zeros(n_pixels)
-        return np.sqrt(np.maximum(s2 - s1 * s1 / n, 0) / (n - 1))
+    if mode in ("max", "std"):
+        # per pixel over the selected frames: on the device holding the dataset if there is one
+        out = _max_std_on_device(data, w, mode, device)
+        if out is not None:
+            return np.asarray(out, dtype=float)
+        return _max_numpy(data, w, n_pixels) if mode == "max" else _std_numpy(data, w, n_pixels)
 
     total = _weighted_sum(data, w, device)
     if mode == "mean":
