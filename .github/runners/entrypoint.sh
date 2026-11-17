@@ -58,6 +58,12 @@ elif [ -z "${RUNNER_TOKEN:-}" ]; then
     exit 1
 fi
 
+# ---- Remove stale local runner config (handles dirty restarts)
+# config.sh refuses to run if .runner already exists on disk.
+# Safe to remove — GitHub registration is what matters, not these local files.
+rm -f /home/runner/.runner /home/runner/.credentials \
+       /home/runner/.credentials_rsaparams /home/runner/.env 2>/dev/null || true
+
 # ---- Ensure _work is writable by the runner user
 sudo chown -R runner:runner /home/runner/_work 2>/dev/null || true
 
