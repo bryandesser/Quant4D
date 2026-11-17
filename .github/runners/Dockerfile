@@ -1,7 +1,7 @@
 # ============================================================
 # pyQuant4D — Self-hosted GitHub Actions GPU runner
 # ============================================================
-# Base: NVIDIA CUDA 12.6 + cuDNN 9 on Ubuntu 22.04
+# Base: NVIDIA CUDA 12.6 + cuDNN on Ubuntu 22.04
 #
 # Host requirements
 #   Linux   : nvidia-container-toolkit installed and configured
@@ -11,7 +11,7 @@
 #             (GPU passthrough through WSL2 is automatic — no extra config needed)
 # ============================================================
 
-FROM nvidia/cuda:12.6.3-cudnn9-runtime-ubuntu22.04
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
 
 # ---- Build arguments ----------------------------------------
 ARG RUNNER_VERSION=2.338.2
