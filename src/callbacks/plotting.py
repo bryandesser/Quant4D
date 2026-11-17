@@ -283,19 +283,25 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
 
             def _on_histbox_change(lo, hi):
                 """Convert dragged limits back to brightness/contrast sliders."""
-                b_new, c_new = histbox_to_sliders(lo, hi, minVal, maxVal)
+                # the box is shared by every image: act on the one selected now, with its current range
+                # (capturing fig/minVal/maxVal at creation adjusted the wrong image after a switch)
+                cur = self.Fig[self.SettingsWindow.DispImage.currentData()]
+                img = np.ma.masked_invalid(cur.Image)
+                b_new, c_new = histbox_to_sliders(lo, hi, float(img.min()), float(img.max()))
+                b_new, c_new = int(round(b_new)), int(round(c_new))   # the spin boxes take ints
                 # Block the other spinbox while updating to avoid re-entry
                 with signals_blocked(self.SettingsWindow.DispBrightness,
                                      self.SettingsWindow.DispContrast,
                                      self.SettingsWindow.DispBrightness_NF,
                                      self.SettingsWindow.DispContrast_NF):
-                    self.SettingsWindow.DispBrightness.setValue(int(round(b_new)))
-                    self.SettingsWindow.DispBrightness_NF.setValue(b_new)
-                    self.SettingsWindow.DispContrast.setValue(int(round(c_new)))
-                    self.SettingsWindow.DispContrast_NF.setValue(c_new)
+                    for box, v in ((self.SettingsWindow.DispBrightness, b_new),
+                                   (self.SettingsWindow.DispBrightness_NF, b_new),
+                                   (self.SettingsWindow.DispContrast, c_new),
+                                   (self.SettingsWindow.DispContrast_NF, c_new)):
+                        box.setValue(type(box.value())(v))
                 # Trigger a display refresh
-                fig.brightness = int(round(b_new))
-                fig.contrast = int(round(c_new))
+                cur.brightness = b_new
+                cur.contrast = c_new
                 displayCallbacks(self)
 
             self.A.histBox = HistBox(hist_ax, limitLow, limitHigh,

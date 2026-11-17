@@ -43,102 +43,127 @@ requires_gpu = pytest.mark.skipif(
 
 
 # ---------------------------------------------------------------------------
-# Minimal synthetic 4D-STEM dataset
+# Synthetic 4D-STEM dataset
 # ---------------------------------------------------------------------------
-SCAN_X, SCAN_Y, DET_X, DET_Y = 8, 8, 32, 32
+# Deliberately non-square scan of non-square patterns, so any x/y swap shows up.
+SCAN_X, SCAN_Y, DET_X, DET_Y = 6, 4, 24, 16
+
+
+def make_dataset(nfx=SCAN_X, nfy=SCAN_Y, npx=DET_X, npy=DET_Y, seed=42) -> np.ndarray:
+    """A bright disc that drifts with probe position (so CoM has a known gradient) on a noisy floor.
+
+    Returned flat, ``(frame, pixel)`` with frame = ry*nfx + rx and pixel = py*npx + px.
+    """
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:npy, 0:npx]
+    data = 0.05 * rng.random((nfy * nfx, npy * npx), dtype=np.float32)
+    for ry in range(nfy):
+        for rx in range(nfx):
+            disc = np.hypot(xx - (0.58 * npx + 0.3 * rx), yy - (0.4 * npy + 0.3 * ry)) < 0.25 * npy
+            data[ry * nfx + rx] += disc.ravel()
+    return data
 
 
 @pytest.fixture(scope="session")
 def synthetic_data() -> np.ndarray:
-    """Return a tiny (8x8 real, 32x32 detector) float32 4D-STEM dataset."""
-    rng = np.random.default_rng(42)
-    # shape: (SCAN_X * SCAN_Y, DET_X * DET_Y)  — the flat 2D layout used internally
-    flat = rng.random((SCAN_X * SCAN_Y, DET_X * DET_Y), dtype=np.float32)
-    return flat
+    return make_dataset()
 
 
-# ---------------------------------------------------------------------------
-# App-level fixture
-# ---------------------------------------------------------------------------
-@pytest.fixture(scope="session")
-def app_session(tmp_path_factory, synthetic_data):
-    """
-    Launch pyQuant4D once for the whole test session, pre-loaded with
-    synthetic data so detector-mode and display tests run without file I/O.
-
-    Uses session scope because constructing the full Qt application is slow.
-    Tests that mutate state heavily should use the function-scoped `app`
-    fixture instead (which reloads).
-    """
-    from callbacks.guiClass import MainWindow  # MainWindow lives in callbacks.guiClass
-
-    win = MainWindow()
-
-    # appStruct() leaves win.D = None until the user imports a file.
-    # Construct a D() instance here so we can inject synthetic data directly
-    # and bypass the file-import pipeline entirely.
-    from callbacks.appClass import D as _D
-    win.D = _D()
-
-    # Inject synthetic data directly so we bypass the file-import pipeline
-    win.D.Data = synthetic_data
-    win.D.NFrX, win.D.NFrY = SCAN_X, SCAN_Y
-    win.D.NPxX, win.D.NPxY = DET_X, DET_Y
-    win.D.NFr = np.array([SCAN_Y, SCAN_X])
-    win.D.NPx = np.array([DET_X, DET_Y])
-    win.D.GPU = None   # CPU-only by default; GPU fixture overrides
-
-    win.show()
-    yield win
-    win.close()
+def wait_until(qapp, condition, timeout=20.0):
+    import time
+    deadline = time.time() + timeout
+    while time.time() < deadline and not condition():
+        qapp.processEvents()
+        time.sleep(0.01)
+    return condition()
 
 
-@pytest.fixture()
-def app(qtbot, tmp_path, synthetic_data):
-    """
-    Function-scoped app fixture — a fresh MainWindow each test.
-    Use this whenever the test modifies persistent state (mode changes,
-    signal wiring, annotations).
-    """
-    from callbacks.guiClass import MainWindow  # MainWindow lives in callbacks.guiClass
-
-    win = MainWindow()
-    qtbot.addWidget(win)
-
-    # appStruct() leaves win.D = None until the user imports a file.
-    from callbacks.appClass import D as _D
-    win.D = _D()
-
-    win.D.Data = synthetic_data.copy()
-    win.D.NFrX, win.D.NFrY = SCAN_X, SCAN_Y
-    win.D.NPxX, win.D.NPxY = DET_X, DET_Y
-    win.D.NFr = np.array([SCAN_Y, SCAN_X])
-    win.D.NPx = np.array([DET_X, DET_Y])
-    win.D.GPU = None
-    win.show()
-    return win
+def import_raw(win, qapp, path, nfx, nfy, npx, npy, dtype="f4"):
+    """Import a headerless binary file through the real Import window, as a user would."""
+    iw = win.ImportWindow
+    win.ShowImportWdw.trigger()
+    iw.ImpFilePath.setText(str(path))
+    iw.ImpFilePath.editingFinished.emit()      # as if typed: runs importSelectFile as a slot
+    iw.CustomButton.click()
+    qapp.processEvents()
+    iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData(dtype))
+    for name in ("DataOffset", "FrHead", "FrFoot"):
+        getattr(iw, name).setValue(0)
+    for name, val in (("DNPxX", npx), ("DNPxY", npy), ("DNFrX", nfx), ("DNFrY", nfy)):
+        getattr(iw, name).setValue(val)
+    qapp.processEvents()
+    iw.ImportDataButton.click()
+    ok = wait_until(qapp, lambda: win.Data is not None and win.Data.shape == (nfx * nfy, npx * npy)
+                    and win.Fig.Dfrn.Image is not None)
+    assert ok, "import did not finish"
 
 
-# ---------------------------------------------------------------------------
-# Sample file fixtures (created on-the-fly from synthetic data)
-# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session", autouse=True)
+def _no_modal_dialogs():
+    """Never block on a message box: notifDLG answers '' and QMessageBox.exec returns Ok."""
+    from PyQt5.QtWidgets import QMessageBox
+    import callbacks.utils as utils
+    saved = (utils.notifDLG, QMessageBox.exec_, QMessageBox.exec)
+    utils.notifDLG = lambda *a, **k: ""
+    QMessageBox.exec_ = lambda self: QMessageBox.Ok
+    QMessageBox.exec = lambda self: QMessageBox.Ok
+    yield
+    utils.notifDLG, QMessageBox.exec_, QMessageBox.exec = saved
+
+
 @pytest.fixture(scope="session")
 def sample_raw_file(tmp_path_factory, synthetic_data):
-    """Write a minimal EMPAD-style raw binary file and return its path."""
-    p = tmp_path_factory.mktemp("data") / "sample_8x8_32x32.raw"
-    # EMPAD: raw float32, no header, row-major
+    """The synthetic dataset as a headerless little-endian float32 file."""
+    p = tmp_path_factory.mktemp("data") / f"sample_x{SCAN_X}_y{SCAN_Y}.raw"
     synthetic_data.astype("<f4").tofile(p)
     return p
 
 
 @pytest.fixture(scope="session")
 def sample_hdf5_file(tmp_path_factory, synthetic_data):
-    """Write a minimal HDF5 file containing the synthetic data."""
+    """The synthetic dataset as HDF5, canonical (ry, rx, py, px) order."""
     h5py = pytest.importorskip("h5py")
     p = tmp_path_factory.mktemp("data") / "sample.h5"
     with h5py.File(p, "w") as f:
-        f.create_dataset("data", data=synthetic_data.reshape(SCAN_X, SCAN_Y, DET_X, DET_Y))
+        f.create_dataset("data", data=synthetic_data.reshape(SCAN_Y, SCAN_X, DET_Y, DET_X))
     return p
+
+
+# ---------------------------------------------------------------------------
+# App fixtures
+# ---------------------------------------------------------------------------
+@pytest.fixture()
+def app(qtbot):
+    """A fresh MainWindow with nothing loaded (startup state)."""
+    from callbacks.guiClass import MainWindow
+    win = MainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    return win
+
+
+@pytest.fixture(scope="module")
+def loaded_app(qapp, sample_raw_file):
+    """A MainWindow with the synthetic dataset imported through the Import window, all
+    image windows shown.  Module-scoped (importing takes ~1 s): tests set the mode and
+    controls they rely on rather than assuming what an earlier test left behind."""
+    from callbacks.guiClass import MainWindow
+    from callbacks.window_manager import showAllWindows
+    win = MainWindow()
+    win.show()
+    import_raw(win, qapp, sample_raw_file, SCAN_X, SCAN_Y, DET_X, DET_Y)
+    showAllWindows(win)
+    win.UpdateImages.trigger()
+    qapp.processEvents()
+    yield win
+    win.close()
+    qapp.processEvents()
+
+
+def set_mode(win, qapp, mode):
+    win.DetrMode.setCurrentIndex(win.DetrMode.findData(mode))
+    qapp.processEvents()
+    assert win.DetrMode.currentData() == mode
 
 
 # ---------------------------------------------------------------------------

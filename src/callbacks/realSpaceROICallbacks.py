@@ -127,10 +127,8 @@ def realSpaceROICallbacks(self):
                            'Draw Polygon ROI', self.G.Img.name[rs_mask])
 
             if sel is None:
-                with signals_blocked(self.RealROIShape):
-                    self.RealROIShape.setCurrentIndex(
-                        self.RealROIShape.findData('full')
-                    )
+                # not blocked: the full ROI must actually be applied, not just shown in the combo
+                self.RealROIShape.setCurrentIndex(self.RealROIShape.findData('full'))
                 return
 
             # Bring the selected image to front for drawing
@@ -157,10 +155,8 @@ def realSpaceROICallbacks(self):
                 enableWindows(self, True)
 
                 if not vertices or len(vertices) < 3:
-                    with signals_blocked(self.RealROIShape):
-                        self.RealROIShape.setCurrentIndex(
-                            self.RealROIShape.findData('full')
-                        )
+                    # cancelled: apply the full ROI (with signals blocked the previous ROI's mask stayed)
+                    self.RealROIShape.setCurrentIndex(self.RealROIShape.findData('full'))
                     return
 
                 poly_verts = np.array(vertices, dtype=float)

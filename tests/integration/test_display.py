@@ -1,118 +1,166 @@
 """
-Integration tests — Section 4.4 (Display controls) and 4.5 (HistBox).
+Integration tests — Section 4.4 (display controls) and 4.5 (histogram box).
 
-Tests are independent of detector mode; they drive the B/C/G/colormap
-controls and verify that plotImage produces expected pixel-intensity results.
-
-NOTE: Most display-control widgets (DispBrightness, DispContrast, DispGamma,
-ColormapSel, InvertCmap) live inside the HistBox sub-widget which is only
-created after a dataset is fully loaded and plotted.  The HideAll/ShowAll
-actions are menu QActions, not standalone buttons.  Fig.Dfrn and Fig.Real
-are None until the import pipeline has run.
-
-These tests are therefore skipped in the automated test suite until a
-fixture that fully bootstraps the display pipeline (creates ImageWindows,
-runs plotImage, etc.) is available.
+The display controls live in the Settings window and act on the image chosen in
+``DispImage``.  Each test drives a control and checks what ``plotImage`` put
+on the axes.
 """
-
 import numpy as np
 import pytest
-from pytestqt.qt_compat import qt_api
-Qt = qt_api.QtCore.Qt
+
+from conftest import set_mode
 
 
-def _image_pixels(app):
-    """Return the RGBA array currently shown on the Real-space axes."""
-    imgs = app.Fig.Real.ax.get_images()
-    assert imgs, "No image on Real axes"
-    return imgs[0].get_array()
+@pytest.fixture()
+def real(loaded_app, qapp):
+    """Select the Real image in the display controls, with default settings."""
+    set_mode(loaded_app, qapp, "AnnMod")
+    loaded_app.AnnRi.setValue((0, 6))
+    sw = loaded_app.SettingsWindow
+    sw.DispImage.setCurrentIndex(sw.DispImage.findData("Real"))
+    sw.DispBrightnessReset.click()
+    sw.DispContrastReset.click()
+    sw.DispGammaReset.click()
+    if sw.DispCMapInvert.isChecked():
+        sw.DispCMapInvert.click()
+    sw.DispCMap.setCurrentIndex(sw.DispCMap.findText("gray"))
+    qapp.processEvents()
+    return loaded_app
 
 
-@pytest.mark.skip(reason="DispBrightness lives in HistBox, only exists after plotImage runs")
-class TestBrightnessContrast:
-    def test_brightness_slider_changes_display(self, app, qtbot):
-        orig = _image_pixels(app).copy()
-        app.DispBrightness.setValue(app.DispBrightness.value() + 10)
-        qtbot.wait(50)
-        new = _image_pixels(app)
-        assert not np.array_equal(orig, new), "Brightness change had no effect"
-
-    def test_contrast_slider_changes_display(self, app, qtbot):
-        orig = _image_pixels(app).copy()
-        app.DispContrast.setValue(app.DispContrast.value() + 10)
-        qtbot.wait(50)
-        new = _image_pixels(app)
-        assert not np.array_equal(orig, new), "Contrast change had no effect"
-
-    def test_gamma_slider_changes_display(self, app, qtbot):
-        orig = _image_pixels(app).copy()
-        app.DispGamma.setValue(2.0)
-        qtbot.wait(50)
-        new = _image_pixels(app)
-        assert not np.array_equal(orig, new)
-
-    def test_gamma_reset_button(self, app, qtbot):
-        app.DispGamma.setValue(3.0)
-        qtbot.wait(20)
-        qtbot.mouseClick(app.GammaReset, Qt.LeftButton)
-        qtbot.wait(20)
-        assert app.DispGamma.value() == pytest.approx(1.0, abs=0.01)
+def _shown(app, id="Real"):
+    return np.ma.getdata(app.ImageAx[id].get_array()).astype(float)
 
 
-@pytest.mark.skip(reason="ColormapSel lives in HistBox, only exists after plotImage runs")
+class TestBrightnessContrastGamma:
+    def test_defaults_span_full_range(self, real):
+        shown = _shown(real)
+        assert shown.min() == pytest.approx(0) and shown.max() == pytest.approx(1)
+
+    def test_brightness(self, real, qapp):
+        before = _shown(real)
+        real.SettingsWindow.DispBrightness.setValue(70)
+        qapp.processEvents()
+        assert real.Fig.Real.brightness == 70
+        assert _shown(real).mean() > before.mean(), "brighter should raise the displayed values"
+
+    def test_contrast(self, real, qapp):
+        before = _shown(real)
+        real.SettingsWindow.DispContrast.setValue(75)
+        qapp.processEvents()
+        assert real.Fig.Real.contrast == 75
+        after = _shown(real)
+        assert after.std() > before.std(), "more contrast should spread the displayed values"
+        assert (after == 0).sum() + (after == 1).sum() > (before == 0).sum() + (before == 1).sum()
+
+    def test_gamma(self, real, qapp):
+        before = _shown(real)
+        real.SettingsWindow.DispGamma.setValue(2.0)
+        qapp.processEvents()
+        assert np.allclose(_shown(real), before ** 2, atol=1e-6)
+
+    def test_resets(self, real, qapp):
+        sw = real.SettingsWindow
+        sw.DispBrightness.setValue(80)
+        sw.DispContrast.setValue(20)
+        sw.DispGamma.setValue(3.0)
+        for b in (sw.DispBrightnessReset, sw.DispContrastReset, sw.DispGammaReset):
+            b.click()
+        qapp.processEvents()
+        assert (sw.DispBrightness.value(), sw.DispContrast.value()) == (50, 50)
+        assert sw.DispGamma.value() == pytest.approx(1.0)
+        f = real.Fig.Real
+        assert (f.brightness, f.contrast, f.gamma) == (50, 50, 1)
+
+    def test_settings_are_per_image(self, real, qapp):
+        sw = real.SettingsWindow
+        sw.DispBrightness.setValue(65)
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        qapp.processEvents()
+        assert real.Fig.Dfrn.brightness == 50 and sw.DispBrightness.value() == 50
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Real"))
+        qapp.processEvents()
+        assert sw.DispBrightness.value() == 65
+
+
 class TestColormap:
-    def test_colormap_dropdown_applies(self, app, qtbot):
-        combo = app.ColormapSel
-        idx = (combo.currentIndex() + 1) % combo.count()
-        combo.setCurrentIndex(idx)
-        qtbot.wait(50)
-        imgs = app.Fig.Real.ax.get_images()
-        assert imgs[0].cmap.name == combo.currentText().lower().replace(" ", "_") \
-               or True
+    def test_colormap_applies(self, real, qapp):
+        sw = real.SettingsWindow
+        sw.DispCMap.setCurrentIndex(sw.DispCMap.findText("inferno"))
+        qapp.processEvents()
+        assert real.ImageAx.Real.get_cmap().name == "inferno"
 
-    def test_invert_colormap(self, app, qtbot):
-        orig_cmap = app.Fig.Real.ax.get_images()[0].cmap.name
-        qtbot.mouseClick(app.InvertCmap, Qt.LeftButton)
-        qtbot.wait(50)
-        new_cmap = app.Fig.Real.ax.get_images()[0].cmap.name
-        assert orig_cmap != new_cmap
+    def test_invert(self, real, qapp):
+        real.SettingsWindow.DispCMapInvert.click()
+        qapp.processEvents()
+        assert real.ImageAx.Real.get_cmap().name == "gray_r"
+        real.SettingsWindow.DispCMapInvert.click()
+        qapp.processEvents()
+        assert real.ImageAx.Real.get_cmap().name == "gray"
 
 
-@pytest.mark.skip(reason="Fig.Dfrn/Fig.Real are None until import pipeline runs; "
-                  "HideAll/ShowAll are menu QActions, not standalone QPushButtons")
+class TestMaskOpacity:
+    def test_unmasked_area_fades(self, real, qapp):
+        real.SettingsWindow.DispMaskOpa.setValue(80)
+        qapp.processEvents()
+        alpha = np.asarray(real.ImageAx.Real.get_alpha(), float)
+        mask = np.asarray(real.Fig.RealMask.Image, bool)
+        assert np.allclose(alpha[mask], 1) and (mask.all() or np.allclose(alpha[~mask], 0.2))
+
+
 class TestWindowVisibility:
-    def test_hide_all_windows(self, app, qtbot):
-        for win in [app.Fig.Dfrn.window, app.Fig.Real.window]:
-            win.show()
-        qtbot.wait(20)
-        qtbot.mouseClick(app.HideAll, Qt.LeftButton)
-        qtbot.wait(50)
-        for win in [app.Fig.Dfrn.window, app.Fig.Real.window]:
-            assert not win.isVisible()
-
-    def test_show_all_windows(self, app, qtbot):
-        for win in [app.Fig.Dfrn.window, app.Fig.Real.window]:
-            win.hide()
-        qtbot.wait(20)
-        qtbot.mouseClick(app.ShowAll, Qt.LeftButton)
-        qtbot.wait(50)
-        for win in [app.Fig.Dfrn.window, app.Fig.Real.window]:
-            assert win.isVisible()
+    def test_hide_and_show_all(self, loaded_app, qapp):
+        loaded_app.actionHide_All_Windows.trigger()
+        qapp.processEvents()
+        assert not loaded_app.Fig.Dfrn.isVisible() and not loaded_app.Fig.Real.isVisible()
+        loaded_app.actionShow_All_Windows.trigger()
+        qapp.processEvents()
+        assert all(loaded_app.Fig[i].isVisible() for i in loaded_app.Fig)
 
 
-@pytest.mark.skip(reason="HistBox only exists after plotImage runs")
-class TestHistBox:
-    def test_histbox_created_after_data_load(self, app, qtbot):
-        """HistBox span should exist on the histogram axes once data is loaded."""
-        app.DispBrightness.setValue(app.DispBrightness.value())
-        qtbot.wait(50)
-        assert hasattr(app, "HistBox") and app.HistBox is not None
+class TestHistogram:
+    def test_histogram_drawn_for_selected_image(self, real, qapp):
+        real.SettingsWindow.DispBrightness.setValue(55)
+        qapp.processEvents()
+        ax = real.SettingsWindow.HistAxes.axes
+        assert ax.patches or ax.lines or ax.collections, "no histogram drawn"
+        assert real.A.histGamma is not None
 
-    def test_bc_spinbox_moves_histbox(self, app, qtbot):
-        """Changing B/C via spinbox must reposition HistBox (no infinite loop)."""
-        app.DispBrightness.setValue(60)
-        qtbot.wait(50)
-        lo_before = app.HistBox.lo
-        app.DispBrightness.setValue(40)
-        qtbot.wait(50)
-        assert app.HistBox.lo != lo_before
+    def test_histbox_follows_brightness(self, real, qapp):
+        """Brightness shifts the display window down: both limits move by the same amount."""
+        real.SettingsWindow.DispBrightness.setValue(40)
+        qapp.processEvents()
+        box = real.A.histBox
+        lo_a, hi_a = box._lo, box._hi
+        real.SettingsWindow.DispBrightness.setValue(60)
+        qapp.processEvents()
+        assert real.A.histBox is box, "histogram box was recreated instead of moved"
+        im = real.Fig.Real.Image
+        shift = 0.2 * (np.nanmax(im) - np.nanmin(im))
+        assert box._lo == pytest.approx(lo_a - shift) and box._hi == pytest.approx(hi_a - shift)
+
+    def test_dragging_histbox_sets_sliders(self, real, qapp):
+        """Moving the box (as a drag would) feeds brightness/contrast back to the sliders."""
+        from callbacks.histBoxWidget import histbox_to_sliders
+        im = real.Fig.Real.Image
+        lo, hi = np.nanmin(im), np.nanmax(im)
+        lo2, hi2 = lo + 0.1 * (hi - lo), hi - 0.3 * (hi - lo)
+        real.A.histBox._on_change(lo2, hi2)
+        qapp.processEvents()
+        b, c = histbox_to_sliders(lo2, hi2, lo, hi)
+        assert real.Fig.Real.brightness == round(b) and real.Fig.Real.contrast == round(c)
+
+    def test_histbox_acts_on_current_image(self, real, qapp):
+        """The box is shared; after switching images a drag must change the new image only."""
+        sw = real.SettingsWindow
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        qapp.processEvents()
+        im = real.Fig.Dfrn.Image
+        lo, hi = float(np.nanmin(im)), float(np.nanmax(im))
+        real.A.histBox._on_change(lo, lo + 0.5 * (hi - lo))
+        qapp.processEvents()
+        assert real.Fig.Dfrn.contrast != 50 and (real.Fig.Real.brightness, real.Fig.Real.contrast) == (50, 50)
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        sw.DispBrightnessReset.click()
+        sw.DispContrastReset.click()
+        qapp.processEvents()
