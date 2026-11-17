@@ -28,7 +28,8 @@ Annotation attributes (self.A.*)
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
-from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
+from callbacks.layout import dfrn_shape, real_shape
+from callbacks import compute  # noqa: E402
 from callbacks.signals import signals_blocked  # noqa: E402
 
 
@@ -86,20 +87,6 @@ def virtualApertureCallbacks(self):  # noqa: C901
         mirrored = np.array([np.cos(a2) * offset[0] + np.sin(a2) * offset[1],
                              np.sin(a2) * offset[0] - np.cos(a2) * offset[1]])
         return mirrored + np.array(centre)
-
-    def _circle_mask(centre_xy, radius, shape):
-        """
-        Boolean mask (shape = (NPxY, NPxX)) that is True inside a circle.
-
-        Parameters
-        ----------
-        centre_xy : array-like, (x, y)
-        radius    : float, in diffraction pixels
-        shape     : (NPxY, NPxX)
-        """
-        yg, xg = np.mgrid[0:shape[0], 0:shape[1]]
-        return ((xg - centre_xy[0]) ** 2 + (yg - centre_xy[1]) ** 2
-                <= radius ** 2)
 
     # ------------------------------------------------------------------
     # draw — build fresh annotations
@@ -284,25 +271,18 @@ def virtualApertureCallbacks(self):  # noqa: C901
             mirrored = [_mirror_pt(c, mirr_ang, b0) for c in centres]
             centres.extend(mirrored)
 
-        # Build union mask (shape: NPxY × NPxX, then flattened)
-        mask = np.zeros(shape, dtype=bool)
-        for ctr in centres:
-            mask |= _circle_mask(ctr, r, shape)
-
+        # Union of all aperture copies, (NPxY, NPxX)
+        mask = compute.circles_mask(shape, centres, r)
         if invert:
             mask = ~mask
 
-        mask_flat = mask.flatten()   # (NPxY*NPxX,)
-
-        if not mask_flat.any():
+        if not mask.any():
             self.Fig.Real.Image = np.zeros(real_shape(self.D),
                                            dtype=self.D.DataType)
             return
 
-        # Virtual image: sum intensity within mask per scan position
-        # self.Data shape: (NFrY*NFrX, NPxY*NPxX)
-        virtual = self.Data[:, mask_flat].sum(axis=1)   # (NFrX*NFrY,)
-        self.Fig.Real.Image = virtual.reshape(real_shape(self.D))
+        # Virtual image: sum intensity within the mask for every probe position
+        self.Fig.Real.Image = compute.masked_sum(self.Data, mask, self.D.GPU).reshape(real_shape(self.D))
 
         # Store the mask for display in the DfrnMask window
         self.Fig.DfrnMask.Image = mask.astype(self.D.DataType)

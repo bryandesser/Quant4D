@@ -40,6 +40,7 @@ __all__ = [
     "real_shape",
     "dfrn_shape",
     "dfrn_grids",
+    "pixel_grids",
     "as_4d",
     "check_layout",
     "ensure_c_contiguous",
@@ -74,7 +75,16 @@ def dfrn_grids(D, origin=(0.0, 0.0)) -> tuple[np.ndarray, np.ndarray]:
         ``xx.ravel()`` / ``yy.ravel()`` line up with the pixel axis of
         ``self.Data``.
     """
-    ny, nx = dfrn_shape(D)
+    return pixel_grids(dfrn_shape(D), origin)
+
+
+def pixel_grids(shape, origin=(0.0, 0.0)) -> tuple[np.ndarray, np.ndarray]:
+    """``(xx, yy)`` coordinate grids for an image of *shape* ``(ny, nx)``.
+
+    ``xx[y, x] == x - origin[0]`` and ``yy[y, x] == y - origin[1]``; *origin* is
+    an ``(x, y)`` point.  This is the shape-only form of :func:`dfrn_grids`.
+    """
+    ny, nx = int(shape[0]), int(shape[1])
     yy, xx = np.mgrid[0:ny, 0:nx]
     return xx - float(origin[0]), yy - float(origin[1])
 

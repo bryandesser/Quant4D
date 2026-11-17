@@ -23,7 +23,6 @@ Replaced MATLAB-only constructs:
 from __future__ import annotations
 
 import numpy as np
-from matplotlib.path import Path
 from matplotlib.widgets import PolygonSelector
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
@@ -36,6 +35,8 @@ from annotationsClasses.interactiveRectangle import InteractiveRectangle
 from annotationsClasses.interactivePolygon import InteractivePolygon
 from annotationsClasses.interactivePoint import InteractivePoint
 from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
+from callbacks import compute  # noqa: E402
+from callbacks.layout import dfrn_shape  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -50,31 +51,15 @@ def _roi_to_mask(roi, shape, typ: str) -> np.ndarray:
     x = column index and y = row index, matching matplotlib's default for
     imshow with origin='upper'.
     """
-    ny, nx = shape
-    yy, xx = np.mgrid[0:ny, 0:nx]
-    pts = np.column_stack([xx.ravel().astype(float),
-                           yy.ravel().astype(float)])
-
-    if typ == 'ellipse':
-        # InteractiveCircle: use the outermost radius
-        dist = np.linalg.norm(pts - roi.center, axis=1)
-        return (dist <= roi.radius[-1]).reshape(ny, nx)
-
-    elif typ == 'rectangle':
-        # InteractiveRectangle: rotation is always 0, so just check bounds
-        theta = np.radians(roi.rotation)        # 0.0 for axis-aligned
-        c, s = np.cos(theta), np.sin(theta)
-        R_inv = np.array([[c, s], [-s, c]])
-        local = (pts - roi.center) @ R_inv.T
-        return np.all(np.abs(local) <= roi.size / 2.0, axis=1).reshape(ny, nx)
-
-    elif typ == 'poly':
-        # InteractivePolygon: point-in-polygon test
-        path = Path(np.vstack([roi.vertices, roi.vertices[0]]))
-        return path.contains_points(pts).reshape(ny, nx)
+    if typ == 'ellipse':        # InteractiveCircle: use the outermost radius
+        return compute.ellipse_mask(shape, roi.center, roi.radius[-1])
+    if typ == 'rectangle':      # InteractiveRectangle
+        return compute.rectangle_mask(shape, roi.center, roi.size, roi.rotation)
+    if typ == 'poly':           # InteractivePolygon
+        return compute.polygon_mask(shape, roi.vertices)
 
     # Fallback — should not be reached for well-typed calls
-    return np.ones((ny, nx), bool)
+    return np.ones((int(shape[0]), int(shape[1])), bool)
 
 
 # ---------------------------------------------------------------------------
@@ -402,15 +387,7 @@ def realSpaceROICallbacks(self):
         self.Fig.RealMask.Image = mask_real
 
         # --- Weighted-average diffraction pattern for selected frames ----
-        # self.Data is (NFr, NPx), so (mask_flat) @ self.Data sums over frames
-        mask_flat = mask_real.ravel()
-        n_sum = float(mask_flat.sum())
-        if n_sum < np.finfo(np.float32).eps:
-            n_sum = float(np.finfo(np.float32).eps)
-
-        self.Fig.Dfrn.Image = (
-            (mask_flat @ self.Data) / n_sum
-        ).reshape(self.D.NPxY, self.D.NPxX)
+        self.Fig.Dfrn.Image = compute.roi_pattern(self.Data, mask_real).reshape(dfrn_shape(self.D))
 
         plotAllPatterns(self)
 

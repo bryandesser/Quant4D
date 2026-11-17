@@ -252,6 +252,7 @@ def slotsSignals(self):
     self.AnnRi_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.AnnRo_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.NSeg.valueChanged.connect(lambda: annularDetectorCallbacks(self))
+    self.NRung.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.DetRot_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.DetRot.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDirUnlock.clicked.connect(lambda: annularDetectorCallbacks(self))
@@ -262,6 +263,9 @@ def slotsSignals(self):
     # virtual aperture connections
     self.VrApR.valueChanged.connect(lambda: virtualApertureCallbacks(self))
     self.VrApSymm.currentIndexChanged.connect(lambda: virtualApertureCallbacks(self))
+    # these two are toggles, but the .ui file does not mark them checkable
+    self.VrApInvert.setCheckable(True)
+    self.VrApMirror.setCheckable(True)
     self.VrApInvert.clicked.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirror.clicked.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirrRot.valueChanged.connect(lambda: virtualApertureCallbacks(self))

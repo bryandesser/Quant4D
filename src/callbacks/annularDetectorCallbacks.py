@@ -2,89 +2,36 @@ from callbacks.allFunctions import enableWindows, plotImage, isDiffToPrev
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
-from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
+from callbacks.layout import dfrn_shape, real_shape
 from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
-try:
-    import torch
-    _TORCH_AVAILABLE = True
-except ImportError:
-    _TORCH_AVAILABLE = False
+from callbacks import compute  # noqa: E402
+from callbacks.compute.backend import _TORCH_AVAILABLE  # noqa: E402,F401  (monkeypatched by tests)
 
 
 # ---------------------------------------------------------------------------
-# Module-level GPU helpers — importable by tests and callable from callbacks
+# Thin object-based wrappers around callbacks.compute, kept for the GPU tests
+# and for code that still calls them with an app-like object
 # ---------------------------------------------------------------------------
 
 
 def integrateAnnular(obj, mask):
-    """GPU-accelerated annular integration.
+    """Sum the intensity within *mask* for every probe position.
 
-    Sum the diffraction-space intensity within *mask* for every probe
-    position.  Returns a 1-D array of shape ``(N_positions,)``.
-
-    Parameters
-    ----------
-    obj :
-        Any object exposing ``obj.D.Data`` (N_pos × N_pix float32 array)
-        and ``obj.D.GPU`` (``"cuda:N"`` string, or *None* for CPU).
-    mask : array-like, shape (DY, DX) bool
-        Boolean annular mask in diffraction space.
+    ``obj.D.Data`` is the ``(N_pos, N_pix)`` dataset and ``obj.D.GPU`` the CUDA
+    device (or *None* for CPU).  Returns an array of shape ``(N_pos,)``.
+    See :func:`callbacks.compute.masked_sum`.
     """
-    data = obj.D.Data
-    flat = np.asarray(mask, dtype=bool).ravel()
-
-    if (
-        _TORCH_AVAILABLE
-        and getattr(obj.D, "GPU", None) is not None
-        and torch.cuda.is_available()
-    ):
-        device = torch.device(obj.D.GPU)
-        sub = torch.from_numpy(np.ascontiguousarray(data[:, flat])).to(device, dtype=torch.float32)
-        return sub.sum(dim=1).cpu().numpy()
-    else:
-        return data[:, flat].sum(axis=1)
+    return compute.masked_sum(obj.D.Data, mask, getattr(obj.D, "GPU", None))
 
 
 def calcCoM(obj, mask, cx, cy):
-    """GPU-accelerated intensity-weighted centre-of-mass.
+    """Intensity-weighted centre of mass within *mask* for every probe position.
 
-    Parameters
-    ----------
-    obj :
-        Any object exposing ``obj.D.Data`` and ``obj.D.GPU``.
-    mask : array-like, shape (DY, DX) bool
-        Boolean mask selecting the diffraction pixels to include.
-    cx, cy : array-like, shape (DY, DX)
-        X and Y coordinate grids for every diffraction pixel.
-
-    Returns
-    -------
-    com_x, com_y : np.ndarray, shape (N_positions,)
+    *cx*, *cy* are the X and Y coordinate grids of the diffraction pixels.
+    Returns ``(com_x, com_y)``, each of shape ``(N_pos,)``.
+    See :func:`callbacks.compute.weighted_mean_position`.
     """
-    data = obj.D.Data
-    flat = np.asarray(mask, dtype=bool).ravel()
-    cx_m = np.asarray(cx).ravel()[flat].astype(np.float32)
-    cy_m = np.asarray(cy).ravel()[flat].astype(np.float32)
-
-    if (
-        _TORCH_AVAILABLE
-        and getattr(obj.D, "GPU", None) is not None
-        and torch.cuda.is_available()
-    ):
-        device = torch.device(obj.D.GPU)
-        sub = torch.from_numpy(np.ascontiguousarray(data[:, flat])).to(device, dtype=torch.float32)
-        cx_t = torch.from_numpy(cx_m).to(device)
-        cy_t = torch.from_numpy(cy_m).to(device)
-        total = sub.sum(dim=1) + 1e-12
-        com_x = (sub * cx_t).sum(dim=1) / total
-        com_y = (sub * cy_t).sum(dim=1) / total
-        return com_x.cpu().numpy(), com_y.cpu().numpy()
-    else:
-        sub = data[:, flat]
-        total = sub.sum(axis=1) + 1e-12
-        com_x = (sub * cx_m).sum(axis=1) / total
-        com_y = (sub * cy_m).sum(axis=1) / total
-        return com_x, com_y
+    return compute.weighted_mean_position(obj.D.Data, mask, cx, cy, getattr(obj.D, "GPU", None))
 
 
 def annularDetectorCallbacks(self):
@@ -106,9 +53,16 @@ def annularDetectorCallbacks(self):
         # Segmented panel only active in DPC mode
         self.dpcControls.setEnabled(dmod == "DPCMod")
 
-        # Scan direction controls follow the unlock checkbox
-        self.comControls.setEnabled(self.ScanDirUnlock.isChecked())
-        self.ScanDirUnlock.setEnabled(dmod in ["CoMMod", "DPCMod"])
+        # The scan-direction panel is available in CoM/DPC modes.  The unlock
+        # button sits inside that panel, so the panel itself must stay enabled
+        # for the button to be clickable; only the controls it guards follow
+        # its checked state.
+        in_com = dmod in ["CoMMod", "DPCMod"]
+        unlocked = in_com and self.ScanDirUnlock.isChecked()
+        self.comControls.setEnabled(in_com)
+        self.ScanDirUnlock.setEnabled(in_com)
+        for ctrl in (self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
+            ctrl.setEnabled(unlocked)
 
         # Highlight scan direction panel if not yet aligned
         if (dmod in ["CoMMod", "DPCMod"]) and (not self.P.ScanDirInit):
@@ -449,7 +403,7 @@ def annularDetectorCallbacks(self):
             if isDiffToPrev(self, 'AnnR', [ri, ro]):
                 # 2D distance matrix is recalculated in integrateAnnular;
                 # here just recompute the real-space image from cached adfImages
-                mask_ann = (self.A.k >= ri) & (self.A.k <= ro)
+                mask_ann = compute.annular_mask(self.A.k, ri, ro)
                 self.Fig.DfrnMask.Image = mask_ann.astype(self.D.DataType)
                 self.Fig.Real.Image = self.adfImages[
                     :, :, ri: ro + 1
@@ -457,11 +411,13 @@ def annularDetectorCallbacks(self):
 
             # CoM or DPC computation
             if dmod in ["CoMMod", "DPCMod"]:
-                if isDiffToPrev(self, 'CoM_P', [ri, ro, sd, syf, dr]):
+                # everything the CoM/DPC images depend on, including the mode itself
+                if isDiffToPrev(self, 'CoM_P', [dmod, ri, ro, sd, syf, dr,
+                                                self.NSeg.value(), self.NRung.value()]):
                     if dmod == "CoMMod":
                         calcCoM(ri, ro, sd, syf)
                     else:                        # DPCMod
-                        calcDPC(ri, ro, dr)
+                        calcDPC(ri, ro, dr, sd, syf)
 
             plotAllPatterns()
 
@@ -488,33 +444,12 @@ def annularDetectorCallbacks(self):
         Only rerun when the transmitted-beam centre changes.
         """
         if isDiffToPrev(self, "B0", self.B0):
-            # (NPxY, NPxX) grids so that k.flatten() lines up with the pixel
-            # axis of self.Data (see callbacks.layout)
-            xgrid, ygrid = dfrn_grids(self.D, self.B0)
-            self.A.k = np.int32(
-                np.sqrt(xgrid ** 2 + ygrid ** 2) / self.D.annWidth
-            )
-            k = self.A.k.flatten()
-
-            # One-hot (pixel, ring) matrix: column r selects the pixels in ring r, so
-            # Data @ adfMask integrates every ring for every probe position in one
-            # BLAS call.  Use a floating dtype so integer datasets cannot overflow.
-            distance = np.arange(0, k.max() + 1)
-            adfMask = (k[:, None] == distance[None, :]).astype(
-                np.result_type(self.Data.dtype, np.float32)
-            )
-
-            # GPU path: use torch CUDA tensor for the large matrix multiply
-            if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
-                device = torch.device(self.D.GPU)
-                Data_t = torch.from_numpy(np.ascontiguousarray(self.Data)).to(device, dtype=torch.float32)
-                adfMask_t = torch.from_numpy(np.ascontiguousarray(adfMask)).to(device, dtype=torch.float32)
-                self.adfImages = (Data_t @ adfMask_t).cpu().numpy()
-                del Data_t, adfMask_t
-            else:
-                self.adfImages = self.Data @ adfMask
-            self.adfImages = np.reshape(
-                self.adfImages, (self.D.NFrY, self.D.NFrX, -1)
+            # ring number of every pixel, (NPxY, NPxX), and the integral of
+            # every ring for every probe position
+            self.A.k = compute.radial_index(dfrn_shape(self.D), self.B0, self.D.annWidth)
+            k = self.A.k
+            self.adfImages = compute.ring_integrals(self.Data, k, self.D.GPU).reshape(
+                self.D.NFrY, self.D.NFrX, -1
             )
 
             # Update UI slider limits
@@ -541,75 +476,36 @@ def annularDetectorCallbacks(self):
         syf : int
             Y-flip factor: +1 (no flip) or -1 (flipped).
         """
-        def integrateCoM():
-            """Tikhonov-regularised Fourier integration of CoM → iCoM phase."""
-            ny, nx = self.Fig.CoMX.Image.shape
-            kx = np.fft.fftfreq(nx)
-            ky = np.fft.fftfreq(ny)
-            KX, KY = np.meshgrid(kx, ky)
-            k2 = KX ** 2 + KY ** 2
-            k2[0, 0] = 1.0  # prevent /0; DC → 0 after IFFT
-
-            FCoMX = np.fft.fft2(self.Fig.CoMX.Image)
-            FCoMY = np.fft.fft2(self.Fig.CoMY.Image)
-
-            # Fourier integration: phase = IFFT[(kx·FCoMX + ky·FCoMY) / (2πi·k²)]
-            self.Fig.iCoM.Image = np.fft.ifft2(
-                (KX * FCoMX + KY * FCoMY) / (2j * np.pi * k2)
-            ).real
-
-            # dCoM: divergence of CoM field
-            dCoMX = np.gradient(self.Fig.CoMX.Image, axis=1)
-            dCoMY = np.gradient(self.Fig.CoMY.Image, axis=0)
-            self.Fig.dCoM.Image = dCoMX + dCoMY
-
-        # Annular mask in diffraction space
-        mask = ((self.A.k >= ri) & (self.A.k <= ro)).flatten()
+        mask = compute.annular_mask(self.A.k, ri, ro)
         if not mask.any():
             return
 
-        # Pixel coordinate grids relative to transmitted beam
-        xgrid, ygrid = dfrn_grids(self.D, self.B0)
-        xweight = xgrid.flatten().astype(np.float32)
-        yweight = ygrid.flatten().astype(np.float32)
+        com_x, com_y = compute.center_of_mass(self.Data, mask, self.B0, self.D.GPU)
+        com_x, com_y = compute.rotate_field(com_x, com_y * syf, sd)   # into the scan frame
+        setDeflectionImages(com_x, com_y)
 
-        # GPU path: move masked data + weight vectors to CUDA for dot products
-        if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
-            device = torch.device(self.D.GPU)
-            data_m_t = torch.from_numpy(np.ascontiguousarray(self.Data[:, mask])).to(device, dtype=torch.float32)
-            xw_t = torch.from_numpy(xweight[mask]).to(device)
-            yw_t = torch.from_numpy(yweight[mask]).to(device)
-            norm_t = data_m_t.sum(dim=1).clamp(min=torch.finfo(torch.float32).tiny)
-            CoMX_flat = (data_m_t @ xw_t / norm_t).cpu().numpy()
-            CoMY_flat = (data_m_t @ yw_t / norm_t).cpu().numpy() * syf
-            del data_m_t, xw_t, yw_t, norm_t
-        else:
-            data_m = self.Data[:, mask].astype(np.float32)   # (NFr, n_masked)
-            norm = data_m.sum(axis=1).clip(np.finfo(np.float32).eps, None)
-            CoMX_flat = (data_m @ xweight[mask]) / norm
-            CoMY_flat = (data_m @ yweight[mask]) / norm * syf
-
-        # Apply scan-direction rotation
-        c, s = np.cos(np.radians(sd)), np.sin(np.radians(sd))
-        CoM = np.array([[c, -s], [s, c]]) @ np.vstack([CoMX_flat, CoMY_flat])
-
-        self.Fig.CoMX.Image = CoM[0].reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMY.Image = CoM[1].reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMMag.Image = np.hypot(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
-        self.Fig.CoMPh.Image = np.arctan2(self.Fig.CoMY.Image, self.Fig.CoMX.Image)
-
-        integrateCoM()
+    def setDeflectionImages(fx, fy):
+        """Store a per-frame deflection field and every image derived from it."""
+        shape = real_shape(self.D)
+        self.Fig.CoMX.Image = np.asarray(fx).reshape(shape)
+        self.Fig.CoMY.Image = np.asarray(fy).reshape(shape)
+        self.Fig.CoMMag.Image, self.Fig.CoMPh.Image = compute.magnitude_phase(
+            self.Fig.CoMX.Image, self.Fig.CoMY.Image)
+        self.Fig.iCoM.Image = compute.integrate_field(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
+        self.Fig.dCoM.Image = compute.divergence(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
 
     # ------------------------------------------------------------------
     # calcDPC — segment-integral DPC calculation (DPCMod)
     # ------------------------------------------------------------------
-    def calcDPC(ri, ro, dr):
+    def calcDPC(ri, ro, dr, sd, syf):
         """
         Compute DPC X/Y deflection images from segmented-detector integrals.
 
-        For NSeg segments at rotation dr, each segment subtends 360/NSeg degrees.
-        The DPC vector is the cos/sin-weighted sum of per-segment intensities,
-        normalised by the total annular intensity — analogous to CoM but discrete.
+        The annulus is divided into NRung rings and NSeg wedges (first wedge at
+        rotation dr).  Each segment's integrated intensity is assigned to the
+        segment's nominal centre of mass, giving a coarse-grained centre of mass
+        in pixels (see compute.segment_weights).  The field is then taken into
+        the scan frame exactly as for CoM.
 
         Results are stored in the same Fig.CoMX / CoMY / CoMMag / CoMPh slots so
         the existing plotAllPatterns() and display pipeline work without changes.
@@ -620,109 +516,23 @@ def annularDetectorCallbacks(self):
             Annular radii indices.
         dr : float
             Detector rotation angle in degrees.
+        sd : float
+            Scan-direction rotation angle in degrees.
+        syf : int
+            Y-flip factor: +1 (no flip) or -1 (flipped).
         """
-        nseg = int(self.NSeg.value())
-        nrung = int(self.NRung.value())
-
-        # Annular mask (combined across all rungs)
-        ann_mask = ((self.A.k >= ri) & (self.A.k <= ro)).flatten()
+        ann_mask = compute.annular_mask(self.A.k, ri, ro)
         if not ann_mask.any():
             return
 
-        # Pixel angle map (degrees, 0–360), computed relative to beam centre
-        xgrid, ygrid = dfrn_grids(self.D, self.B0)
-        px_angle = np.degrees(
-            np.arctan2(ygrid.flatten(), xgrid.flatten())
-        ) % 360.0  # (NPx,) in [0, 360)
-
-        # Build radial rung boundaries in pixel units
-        ri_px = ri * self.D.annWidth
-        ro_px = ro * self.D.annWidth
-        rung_edges = np.linspace(ri_px, ro_px, nrung + 1)   # nrung+1 edges
-
-        # Pixel radial distance (continuous, in pixel units)
-        px_radius = np.hypot(xgrid.flatten(), ygrid.flatten())
-
-        # Segment angular boundaries (degrees, in [dr, dr+360))
-        seg_width = 360.0 / nseg
-        seg_starts = np.array([dr + i * seg_width for i in range(nseg)]) % 360.0
-
-        # Accumulate DPC X/Y deflection across all rung × segment combinations
-        DPC_X = np.zeros(self.D.NFrY * self.D.NFrX, dtype=np.float32)
-        DPC_Y = np.zeros(self.D.NFrY * self.D.NFrX, dtype=np.float32)
-        norm = np.zeros(self.D.NFrY * self.D.NFrX, dtype=np.float32)
-
-        for rung_i in range(nrung):
-            r_lo = rung_edges[rung_i]
-            r_hi = rung_edges[rung_i + 1]
-            rung_mask = (px_radius >= r_lo) & (px_radius < r_hi)
-
-            for seg_i in range(nseg):
-                # Mid-angle of this segment (pointing direction)
-                mid_ang_deg = (seg_starts[seg_i] + 0.5 * seg_width) % 360.0
-                mid_ang_rad = np.radians(mid_ang_deg)
-                cos_w = np.cos(mid_ang_rad)
-                sin_w = np.sin(mid_ang_rad)
-
-                # Angular mask: pixels whose angle falls within this segment
-                ang_lo = seg_starts[seg_i]
-                ang_hi = (ang_lo + seg_width) % 360.0
-
-                if ang_lo < ang_hi:
-                    ang_mask = (px_angle >= ang_lo) & (px_angle < ang_hi)
-                else:
-                    # Segment wraps through 0°
-                    ang_mask = (px_angle >= ang_lo) | (px_angle < ang_hi)
-
-                # Combined mask: annulus ∩ rung ∩ segment
-                seg_mask = ann_mask & rung_mask & ang_mask
-
-                if not seg_mask.any():
-                    continue
-
-                # Segment integral for every scan position:  (NFr,)
-                if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
-                    device = torch.device(self.D.GPU)
-                    seg_t = torch.from_numpy(np.ascontiguousarray(
-                        self.Data[:, seg_mask])).to(device, dtype=torch.float32)
-                    seg_sum = seg_t.sum(dim=1).cpu().numpy()
-                    del seg_t
-                else:
-                    data_seg = self.Data[:, seg_mask].astype(np.float32)
-                    seg_sum = data_seg.sum(axis=1)  # (NFr,)
-
-                # Weighted contribution to DPC vector
-                DPC_X += cos_w * seg_sum
-                DPC_Y += sin_w * seg_sum
-                norm += seg_sum
-
-        # Normalise — avoid /0 at pixels with zero total intensity
-        eps = np.finfo(np.float32).eps
-        safe_norm = norm.clip(eps, None)
-        DPC_X /= safe_norm
-        DPC_Y /= safe_norm
-
-        # Reshape to real-space images and store in the shared CoM slots
-        self.Fig.CoMX.Image = DPC_X.reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMY.Image = DPC_Y.reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMMag.Image = np.hypot(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
-        self.Fig.CoMPh.Image = np.arctan2(self.Fig.CoMY.Image, self.Fig.CoMX.Image)
-
-        # iCoM/dCoM from the DPC field (same Fourier integration as for CoM)
-        ny, nx = self.D.NFrY, self.D.NFrX
-        kx = np.fft.fftfreq(nx)
-        ky = np.fft.fftfreq(ny)
-        KX, KY = np.meshgrid(kx, ky)
-        k2 = KX ** 2 + KY ** 2
-        k2[0, 0] = 1.0
-        FDPC_X = np.fft.fft2(self.Fig.CoMX.Image)
-        FDPC_Y = np.fft.fft2(self.Fig.CoMY.Image)
-        self.Fig.iCoM.Image = np.fft.ifft2(
-            (KX * FDPC_X + KY * FDPC_Y) / (2j * np.pi * k2)
-        ).real
-        dDPC_X = np.gradient(self.Fig.CoMX.Image, axis=1)
-        dDPC_Y = np.gradient(self.Fig.CoMY.Image, axis=0)
-        self.Fig.dCoM.Image = dDPC_X + dDPC_Y
+        weights = compute.segment_weights(
+            ann_mask, self.B0,
+            ri * self.D.annWidth, ro * self.D.annWidth,
+            int(self.NSeg.value()), int(self.NRung.value()), dr,
+        )
+        dpc_x, dpc_y = compute.segmented_dpc(self.Data, weights, self.D.GPU)
+        dpc_x, dpc_y = compute.rotate_field(dpc_x, dpc_y * syf, sd)   # into the scan frame
+        setDeflectionImages(dpc_x, dpc_y)
 
     # ------------------------------------------------------------------
     # plotAllPatterns — refresh visible image windows

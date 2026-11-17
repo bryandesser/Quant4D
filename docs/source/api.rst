@@ -6,6 +6,45 @@ API Reference
    as a public library API — they may change between releases.  This page is
    provided for developers who want to understand the internal structure.
 
+Computation
+-----------
+
+Pure functions that take and return NumPy arrays and never touch the GUI.
+All detector images are computed here.
+
+.. automodule:: callbacks.compute
+   :no-members:
+
+.. automodule:: callbacks.compute.backend
+   :members:
+
+.. automodule:: callbacks.compute.annular
+   :members:
+
+.. automodule:: callbacks.compute.com
+   :members:
+
+.. automodule:: callbacks.compute.dpc
+   :members:
+
+.. automodule:: callbacks.compute.masks
+   :members:
+
+.. automodule:: callbacks.compute.roi
+   :members:
+
+Array layout and coordinates
+----------------------------
+
+.. automodule:: callbacks.layout
+   :members:
+
+Signal blocking
+---------------
+
+.. automodule:: callbacks.signals
+   :members:
+
 callbacks.appClass
 ------------------
 
