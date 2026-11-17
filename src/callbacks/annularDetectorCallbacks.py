@@ -2,6 +2,7 @@ from callbacks.allFunctions import enableWindows, plotImage, isDiffToPrev
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 try:
     import torch
     _TORCH_AVAILABLE = True
@@ -354,9 +355,7 @@ def annularDetectorCallbacks(self):
 
             # Refresh real-space image
             if len(self.Fig.Real.ax.images) == 0:
-                self.Image.Real = self.Data.sum(axis=1).reshape(
-                    self.D.NFrY, self.D.NFrX
-                )
+                self.Image.Real = self.Data.sum(axis=1).reshape(real_shape(self.D))
                 self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Image.Real)
             else:
                 self.Image.Real = self.adfImages[
@@ -470,7 +469,7 @@ def annularDetectorCallbacks(self):
                 # 2D distance matrix is recalculated in integrateAnnular;
                 # here just recompute the real-space image from cached adfImages
                 mask_ann = (self.A.k >= ri) & (self.A.k <= ro)
-                self.Image.DfrnMask = mask_ann.astype(self.D.DataType).T
+                self.Image.DfrnMask = mask_ann.astype(self.D.DataType)
                 self.Image.Real = self.adfImages[
                     :, :, ri: ro + 1
                 ].sum(axis=2)
@@ -512,10 +511,9 @@ def annularDetectorCallbacks(self):
         Only rerun when the transmitted-beam centre changes.
         """
         if isDiffToPrev(self, "B0", self.B0):
-            xgrid, ygrid = np.ogrid[
-                -self.B0[0]: self.D.NPxX - self.B0[0],
-                -self.B0[1]: self.D.NPxY - self.B0[1],
-            ]
+            # (NPxY, NPxX) grids so that k.flatten() lines up with the pixel
+            # axis of self.Data (see callbacks.layout)
+            xgrid, ygrid = dfrn_grids(self.D, self.B0)
             self.A.k = np.int32(
                 np.sqrt(xgrid ** 2 + ygrid ** 2) / self.D.annWidth
             )
@@ -595,9 +593,9 @@ def annularDetectorCallbacks(self):
             return
 
         # Pixel coordinate grids relative to transmitted beam
-        xgrid, ygrid = np.mgrid[0: self.D.NPxX, 0: self.D.NPxY]
-        xweight = (xgrid.flatten() - self.B0[0]).astype(np.float32)
-        yweight = (ygrid.flatten() - self.B0[1]).astype(np.float32)
+        xgrid, ygrid = dfrn_grids(self.D, self.B0)
+        xweight = xgrid.flatten().astype(np.float32)
+        yweight = ygrid.flatten().astype(np.float32)
 
         # GPU path: move masked data + weight vectors to CUDA for dot products
         if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
@@ -656,12 +654,9 @@ def annularDetectorCallbacks(self):
             return
 
         # Pixel angle map (degrees, 0–360), computed relative to beam centre
-        xgrid, ygrid = np.mgrid[0: self.D.NPxX, 0: self.D.NPxY]
+        xgrid, ygrid = dfrn_grids(self.D, self.B0)
         px_angle = np.degrees(
-            np.arctan2(
-                ygrid.flatten() - self.B0[1],
-                xgrid.flatten() - self.B0[0],
-            )
+            np.arctan2(ygrid.flatten(), xgrid.flatten())
         ) % 360.0  # (NPx,) in [0, 360)
 
         # Build radial rung boundaries in pixel units
@@ -670,10 +665,7 @@ def annularDetectorCallbacks(self):
         rung_edges = np.linspace(ri_px, ro_px, nrung + 1)   # nrung+1 edges
 
         # Pixel radial distance (continuous, in pixel units)
-        px_radius = np.sqrt(
-            (xgrid.flatten() - self.B0[0]) ** 2
-            + (ygrid.flatten() - self.B0[1]) ** 2
-        )
+        px_radius = np.hypot(xgrid.flatten(), ygrid.flatten())
 
         # Segment angular boundaries (degrees, in [dr, dr+360))
         seg_width = 360.0 / nseg

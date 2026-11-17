@@ -8,6 +8,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
 try:
@@ -45,8 +46,8 @@ def transBeamCallbacks(self):
 
         case self.UpdateImages:  # Update images
             # Create a summed image of all diffraction patterns simply for alignment and calibration
-            self.Fig.DfrnMask.Image = np.ones(self.D.NPx, self.D.DataType)
-            self.Fig.Real.Image = np.reshape(self.Data.sum(axis=1), self.D.NFr)
+            self.Fig.DfrnMask.Image = np.ones(dfrn_shape(self.D), self.D.DataType)
+            self.Fig.Real.Image = np.reshape(self.Data.sum(axis=1), real_shape(self.D))
 
         case self.TBAutoAlign:  # Auto-align
             autoAlign(self)
@@ -145,7 +146,7 @@ def autoAlign(self):
     """
     from callbacks.imfindcircles import imfindcircles
 
-    nPx = self.D.NPx           # (height, width) tuple
+    nPx = dfrn_shape(self.D)   # (height, width) tuple
     rmax_abs = max(1, self.P.RMax)
 
     # ── Choose the input pattern ──────────────────────────────────────────
@@ -269,8 +270,8 @@ def crossAlign(self):
         if event.button != 1:   # left-click only
             return
 
-        new_x = float(np.clip(event.xdata, 1, self.D.NPx[1]))
-        new_y = float(np.clip(event.ydata, 1, self.D.NPx[0]))
+        new_x = float(np.clip(event.xdata, 1, self.D.NPxX))
+        new_y = float(np.clip(event.ydata, 1, self.D.NPxY))
 
         self.blockAllSignals = True
         self.TBX.setValue(new_x)

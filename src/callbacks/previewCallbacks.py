@@ -77,8 +77,8 @@ def previewCallbacks(self):
                                 dnpx *
                                 dnpy) +
                             d.DataType).reshape(
-                            dnpx,
-                            dnpy)
+                            dnpy,
+                            dnpx)
 
                     self.Fig.Preview.Image = frame
                     plotImage(self, "Preview")  # Plot image

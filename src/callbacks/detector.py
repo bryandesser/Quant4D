@@ -8,6 +8,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
@@ -159,7 +160,7 @@ def detectorModeCallbacks(self):
             previewCallbacks(self)
         case "AlignMod":
             # display the full dataset pacbed
-            self.Fig.Dfrn.Image = self.Data.sum(axis=0).reshape(self.D.NPx)
+            self.Fig.Dfrn.Image = self.Data.sum(axis=0).reshape(dfrn_shape(self.D))
             self.ImageAx.Dfrn = self.Fig.Dfrn.ax.imshow(self.Fig.Dfrn.Image, cmap=self.Fig.Dfrn.cmap)
             self.ImageAx.Dfrn.figure.set_facecolor('black')
             self.Fig.Dfrn.show()
@@ -167,7 +168,7 @@ def detectorModeCallbacks(self):
             self.Fig.Dfrn.canvas.draw_idle()
 
             # initialize real space image with sum over all diffraction space
-            self.Fig.Real.Image = self.Data.sum(axis=1).reshape(self.D.NFrY, self.D.NFrX)
+            self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
             self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Fig.Real.Image, cmap=self.Fig.Real.cmap)
             self.ImageAx.Real.figure.set_facecolor('black')
             self.Fig.Real.show()
@@ -175,14 +176,14 @@ def detectorModeCallbacks(self):
             self.Fig.Real.canvas.draw_idle()
 
             # initial masking for diffraction space should be all ones
-            self.Fig.DfrnMask.Image = np.ones(self.D.NPx)
+            self.Fig.DfrnMask.Image = np.ones(dfrn_shape(self.D))
             self.ImageAx.DfrnMask = self.Fig.DfrnMask.ax.imshow(self.Fig.DfrnMask.Image, cmap=self.Fig.DfrnMask.cmap)
             self.ImageAx.DfrnMask.figure.set_facecolor('black')
             self.Fig.DfrnMask.ax.axis(self.P.DfrnAxLim)
             self.Fig.DfrnMask.canvas.draw_idle()
 
             # initial masking for real space should be all ones
-            self.Fig.RealMask.Image = np.ones(self.D.NFr)
+            self.Fig.RealMask.Image = np.ones(real_shape(self.D))
             self.ImageAx.RealMask = self.Fig.RealMask.ax.imshow(self.Fig.RealMask.Image, cmap=self.Fig.RealMask.cmap)
             self.ImageAx.RealMask.figure.set_facecolor('black')
             self.Fig.RealMask.ax.axis(self.P.RealAxLim)

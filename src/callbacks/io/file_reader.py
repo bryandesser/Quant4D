@@ -42,6 +42,7 @@ except ImportError:
 from callbacks.threading_workers import importThread  # noqa: E402
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
 from callbacks.startup import enableWindows  # noqa: E402
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape  # noqa: E402
 
 
 def readFile(self):
@@ -87,7 +88,8 @@ def readFile(self):
         self.workerThread.start()
 
     else:  # lazy loading
-        self.Data = np.memmap(filename, dataType, 'r')["data"]
+        self.Data = np.memmap(filename, dataType, 'r', offset=dataOffset,
+                              shape=(framesx * framesy,))["data"]
 
 
 def prepareData(self):
@@ -208,11 +210,11 @@ def finishImport(self):
     self.workerThread.quit()
 
     # generate placeholder images
-    self.Fig.Preview.Image = np.zeros(self.D.NPx)
-    self.Fig.Dfrn.Image = np.zeros(self.D.NPx)
-    self.Fig.Dfrn.ImageMask = np.zeros(self.D.NPx)
-    self.Fig.Dfrn.Real = np.zeros(self.D.NFr)
-    self.Fig.Dfrn.RealMask = np.zeros(self.D.NFr)
+    self.Fig.Preview.Image = np.zeros(dfrn_shape(self.D))
+    self.Fig.Dfrn.Image = np.zeros(dfrn_shape(self.D))
+    self.Fig.Dfrn.ImageMask = np.zeros(dfrn_shape(self.D))
+    self.Fig.Dfrn.Real = np.zeros(real_shape(self.D))
+    self.Fig.Dfrn.RealMask = np.zeros(real_shape(self.D))
 
     prepareData(self)
     reinitializeUI(self)

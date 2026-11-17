@@ -28,6 +28,7 @@ Annotation attributes (self.A.*)
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 
 
 def virtualApertureCallbacks(self):  # noqa: C901
@@ -87,15 +88,15 @@ def virtualApertureCallbacks(self):  # noqa: C901
 
     def _circle_mask(centre_xy, radius, shape):
         """
-        Boolean mask (shape = (NPxX, NPxY)) that is True inside a circle.
+        Boolean mask (shape = (NPxY, NPxX)) that is True inside a circle.
 
         Parameters
         ----------
         centre_xy : array-like, (x, y)
         radius    : float, in diffraction pixels
-        shape     : (NPxX, NPxY)
+        shape     : (NPxY, NPxX)
         """
-        xg, yg = np.mgrid[0:shape[0], 0:shape[1]]
+        yg, xg = np.mgrid[0:shape[0], 0:shape[1]]
         return ((xg - centre_xy[0]) ** 2 + (yg - centre_xy[1]) ** 2
                 <= radius ** 2)
 
@@ -274,7 +275,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
         mirror = self.VrApMirror.isChecked()
         mirr_ang = float(self.VrApMirrRot.value())
         xy = np.asarray(self.P.VrApXY, dtype=float)
-        shape = (self.D.NPxX, self.D.NPxY)
+        shape = dfrn_shape(self.D)
 
         # Collect all aperture centre positions
         centres = []
@@ -286,7 +287,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
             mirrored = [_mirror_pt(c, mirr_ang, b0) for c in centres]
             centres.extend(mirrored)
 
-        # Build union mask (shape: NPxX × NPxY, then flattened)
+        # Build union mask (shape: NPxY × NPxX, then flattened)
         mask = np.zeros(shape, dtype=bool)
         for ctr in centres:
             mask |= _circle_mask(ctr, r, shape)
@@ -294,17 +295,17 @@ def virtualApertureCallbacks(self):  # noqa: C901
         if invert:
             mask = ~mask
 
-        mask_flat = mask.flatten()   # (NPxX*NPxY,)
+        mask_flat = mask.flatten()   # (NPxY*NPxX,)
 
         if not mask_flat.any():
-            self.Fig.Real.Image = np.zeros((self.D.NFrY, self.D.NFrX),
+            self.Fig.Real.Image = np.zeros(real_shape(self.D),
                                            dtype=self.D.DataType)
             return
 
         # Virtual image: sum intensity within mask per scan position
-        # self.Data shape: (NFrX*NFrY, NPxX*NPxY)
+        # self.Data shape: (NFrY*NFrX, NPxY*NPxX)
         virtual = self.Data[:, mask_flat].sum(axis=1)   # (NFrX*NFrY,)
-        self.Fig.Real.Image = virtual.reshape(self.D.NFrY, self.D.NFrX)
+        self.Fig.Real.Image = virtual.reshape(real_shape(self.D))
 
         # Store the mask for display in the DfrnMask window
         self.Fig.DfrnMask.Image = mask.astype(self.D.DataType)
