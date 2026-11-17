@@ -9,6 +9,82 @@ except ImportError:
     _TORCH_AVAILABLE = False
 
 
+
+# ---------------------------------------------------------------------------
+# Module-level GPU helpers — importable by tests and callable from callbacks
+# ---------------------------------------------------------------------------
+
+def integrateAnnular(obj, mask):
+    """GPU-accelerated annular integration.
+
+    Sum the diffraction-space intensity within *mask* for every probe
+    position.  Returns a 1-D array of shape ``(N_positions,)``.
+
+    Parameters
+    ----------
+    obj :
+        Any object exposing ``obj.D.Data`` (N_pos × N_pix float32 array)
+        and ``obj.D.GPU`` (``"cuda:N"`` string, or *None* for CPU).
+    mask : array-like, shape (DY, DX) bool
+        Boolean annular mask in diffraction space.
+    """
+    data = obj.D.Data
+    flat = np.asarray(mask, dtype=bool).ravel()
+
+    if (
+        _TORCH_AVAILABLE
+        and getattr(obj.D, "GPU", None) is not None
+        and torch.cuda.is_available()
+    ):
+        device = torch.device(obj.D.GPU)
+        sub = torch.from_numpy(np.ascontiguousarray(data[:, flat])).to(device, dtype=torch.float32)
+        return sub.sum(dim=1).cpu().numpy()
+    else:
+        return data[:, flat].sum(axis=1)
+
+
+def calcCoM(obj, mask, cx, cy):
+    """GPU-accelerated intensity-weighted centre-of-mass.
+
+    Parameters
+    ----------
+    obj :
+        Any object exposing ``obj.D.Data`` and ``obj.D.GPU``.
+    mask : array-like, shape (DY, DX) bool
+        Boolean mask selecting the diffraction pixels to include.
+    cx, cy : array-like, shape (DY, DX)
+        X and Y coordinate grids for every diffraction pixel.
+
+    Returns
+    -------
+    com_x, com_y : np.ndarray, shape (N_positions,)
+    """
+    data = obj.D.Data
+    flat = np.asarray(mask, dtype=bool).ravel()
+    cx_m = np.asarray(cx).ravel()[flat].astype(np.float32)
+    cy_m = np.asarray(cy).ravel()[flat].astype(np.float32)
+
+    if (
+        _TORCH_AVAILABLE
+        and getattr(obj.D, "GPU", None) is not None
+        and torch.cuda.is_available()
+    ):
+        device = torch.device(obj.D.GPU)
+        sub = torch.from_numpy(np.ascontiguousarray(data[:, flat])).to(device, dtype=torch.float32)
+        cx_t = torch.from_numpy(cx_m).to(device)
+        cy_t = torch.from_numpy(cy_m).to(device)
+        total = sub.sum(dim=1) + 1e-12
+        com_x = (sub * cx_t).sum(dim=1) / total
+        com_y = (sub * cy_t).sum(dim=1) / total
+        return com_x.cpu().numpy(), com_y.cpu().numpy()
+    else:
+        sub = data[:, flat]
+        total = sub.sum(axis=1) + 1e-12
+        com_x = (sub * cx_m).sum(axis=1) / total
+        com_y = (sub * cy_m).sum(axis=1) / total
+        return com_x, com_y
+
+
 def annularDetectorCallbacks(self):
 
     def limitAnnUI():

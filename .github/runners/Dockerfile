@@ -1,7 +1,7 @@
 # ============================================================
 # pyQuant4D — Self-hosted GitHub Actions GPU runner
 # ============================================================
-# Base: NVIDIA CUDA 12.1 + cuDNN 8 on Ubuntu 22.04
+# Base: NVIDIA CUDA 12.6 + cuDNN 9 on Ubuntu 22.04
 #
 # Host requirements
 #   Linux   : nvidia-container-toolkit installed and configured
@@ -11,7 +11,7 @@
 #             (GPU passthrough through WSL2 is automatic — no extra config needed)
 # ============================================================
 
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.6.3-cudnn9-runtime-ubuntu22.04
 
 # ---- Build arguments ----------------------------------------
 ARG RUNNER_VERSION=2.338.2
@@ -88,7 +88,7 @@ USER runner
 RUN python${PYTHON_VERSION} -m venv /home/runner/venv
 
 # Install test stack + GPU libraries.
-# PyTorch is installed from the CUDA 12.1 wheel index.
+# PyTorch is installed from the CUDA 12.6 wheel index.
 # CuPy (cupy-cuda12x) is commented out — uncomment if the project
 # switches from torch to cupy for GPU acceleration.
 RUN pip install --upgrade pip && \
@@ -111,11 +111,11 @@ RUN pip install --upgrade pip && \
         # ── Qt (offscreen) ───────────────────────────────────
         PyQt5 \
     && pip install \
-        # ── PyTorch with CUDA 12.1 ───────────────────────────
+        # ── PyTorch with CUDA 12.6 (supports Blackwell sm_120) ─────
         # Installed separately so a failure here doesn't break the base stack
         torch \
         torchvision \
-        --index-url https://download.pytorch.org/whl/cu121
+        --index-url https://download.pytorch.org/whl/cu126
     # Uncomment for CuPy instead of / in addition to PyTorch:
     # && pip install cupy-cuda12x
 
