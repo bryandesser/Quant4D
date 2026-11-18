@@ -139,6 +139,7 @@ class TestVariables:
         qapp.processEvents()
         try:
             assert tabs.isTabVisible(tabs.indexOf(sw.VariablesTab))
+            assert sw.ShowVariables.text() == "Hide variables"
             groups = [sw.VariablesTree.topLevelItem(i).text(0) for i in range(sw.VariablesTree.topLevelItemCount())]
             assert "Dataset (D)" in groups and "Transmitted beam" in groups
             d = sw.VariablesTree.topLevelItem(groups.index("Dataset (D)"))
@@ -148,6 +149,7 @@ class TestVariables:
             sw.ShowVariables.click()
             qapp.processEvents()
         assert not tabs.isTabVisible(tabs.indexOf(sw.VariablesTab))
+        assert sw.ShowVariables.text() == "Show all variables"
 
     def test_describe(self):
         from callbacks.variables import describe

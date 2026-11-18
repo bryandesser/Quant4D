@@ -81,6 +81,7 @@ def _toggle(self) -> None:
     sw = self.SettingsWindow
     tabs = sw.SettingsTabGroup
     shown = sw.ShowVariables.isChecked()
+    sw.ShowVariables.setText("Hide variables" if shown else "Show all variables")
     tabs.setTabVisible(tabs.indexOf(sw.VariablesTab), shown)
     if shown:
         refreshVariables(self)
