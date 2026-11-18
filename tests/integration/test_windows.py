@@ -170,3 +170,36 @@ class TestVectorField:
         set_mode(w, qapp, mode)
         assert not w.DispVecField.isEnabled()
         set_mode(w, qapp, "AnnMod")
+
+
+class TestPreviewTabs:
+    """Import Preview shows no Math (nor Misc/Info) settings tab and no Export tab; the app starts
+    in Preview mode without a mode change, which used to leave them all shown."""
+
+    @staticmethod
+    def _visible(app):
+        sw, tabs = app.SettingsWindow, app.SettingsWindow.SettingsTabGroup
+        names = {"Math": sw.MathTab, "Misc": sw.MiscTab, "Info": sw.InfoTab}
+        out = {k: tabs.isTabVisible(tabs.indexOf(t)) for k, t in names.items()}
+        out["Export"] = app.SaveWindow.SaveTabGroup.isTabVisible(app.SaveWindow.SaveTabGroup.indexOf(app.SaveWindow.ExportTab))
+        return out
+
+    def test_at_startup(self, app):
+        assert app.DetrMode.currentData() == "PrvwMod"
+        assert self._visible(app) == {"Math": False, "Misc": False, "Info": False, "Export": False}
+
+    def test_back_to_preview_from_custom_detectors(self, loaded_app, qapp):
+        w = loaded_app
+        set_mode(w, qapp, "CustMod")
+        assert self._visible(w)["Math"]
+        w.ShowImportWdw.trigger()
+        qapp.processEvents()
+        try:
+            assert self._visible(w) == {"Math": False, "Misc": False, "Info": False, "Export": False}
+        finally:
+            w.ImportWindow.ImportCancelButton.click()
+            qapp.processEvents()
+        assert w.DetrMode.currentData() == "CustMod"
+        assert self._visible(w) == {"Math": True, "Misc": True, "Info": True, "Export": True}
+        set_mode(w, qapp, "AnnMod")
+        assert not self._visible(w)["Math"]

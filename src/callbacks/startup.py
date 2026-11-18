@@ -736,6 +736,11 @@ def startupFcn(self):
     # always keep "Import Preview" hidden from QComboBox
     self.DetrMode.view().setRowHidden(0, True)
 
+    # The app starts in Import Preview mode without a mode change, so apply its tab set here
+    # (the Math, Misc and Info tabs and the Export tab were all shown until a mode change)
+    from callbacks.window_manager import setPreviewTabs  # noqa: E402
+    setPreviewTabs(self, True)
+
     # The app starts in Import Preview mode without a mode change, so the display selector would stay
     # empty (no histogram/statistics for the preview): give it the Preview image, as the mode change does.
     with signals_blocked(self.SettingsWindow.DispImage):

@@ -105,6 +105,18 @@ def showImageContent(self, id) -> None:
         plotImage(self, id)
 
 
+def setPreviewTabs(self, preview: bool) -> None:
+    """Import Preview shows only the tabs that apply to a preview: no Misc, Info or Math settings
+    and no dataset export.  (Math is shown again only in Custom Detectors mode.)"""
+    sw, tabs = self.SettingsWindow, self.SettingsWindow.SettingsTabGroup
+    for tab in (sw.MiscTab, sw.InfoTab):
+        tabs.setTabVisible(tabs.indexOf(tab), not preview)
+    if preview:
+        tabs.setTabVisible(tabs.indexOf(sw.MathTab), False)
+    self.SaveWindow.SaveTabGroup.setTabVisible(self.SaveWindow.SaveTabGroup.indexOf(self.SaveWindow.ExportTab),
+                                               not preview)
+
+
 def setWindowShown(self, id, shown: bool) -> None:
     """Show (and draw) or hide one image window, e.g. from the Window menu."""
     fig = self.Fig[id]

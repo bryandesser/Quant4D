@@ -5,6 +5,7 @@ import traceback
 import numpy as np
 import re
 from callbacks.menus import showPreviewDisplayControls
+from callbacks.window_manager import setPreviewTabs
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
@@ -123,15 +124,7 @@ def detectorModeCallbacks(self):
             self.SettingsWindow.DispImage.addItem("Preview", "Preview")
 
             # Hide other UIs
-            self.SettingsWindow.SettingsTabGroup.setTabVisible(
-                self.SettingsWindow.SettingsTabGroup.indexOf(
-                    self.SettingsWindow.MiscTab), False)
-            self.SettingsWindow.SettingsTabGroup.setTabVisible(
-                self.SettingsWindow.SettingsTabGroup.indexOf(
-                    self.SettingsWindow.InfoTab), False)
-            self.SaveWindow.SaveTabGroup.setTabVisible(
-                self.SaveWindow.SaveTabGroup.indexOf(
-                    self.SaveWindow.ExportTab), False)
+            setPreviewTabs(self, True)
 
             self.Fig.Preview.show()
             showPreviewDisplayControls(self)    # brightness/contrast/gamma pop up with the importer
@@ -142,15 +135,7 @@ def detectorModeCallbacks(self):
             self.Fig.Preview.hide()
 
             # Show all UIs
-            self.SettingsWindow.SettingsTabGroup.setTabVisible(
-                self.SettingsWindow.SettingsTabGroup.indexOf(
-                    self.SettingsWindow.MiscTab), True)
-            self.SettingsWindow.SettingsTabGroup.setTabVisible(
-                self.SettingsWindow.SettingsTabGroup.indexOf(
-                    self.SettingsWindow.InfoTab), True)
-            self.SaveWindow.SaveTabGroup.setTabVisible(
-                self.SaveWindow.SaveTabGroup.indexOf(
-                    self.SaveWindow.ExportTab), True)
+            setPreviewTabs(self, False)
 
     # Define images in the saving list
     with signals_blocked(self.SaveWindow.SaveImgList):
