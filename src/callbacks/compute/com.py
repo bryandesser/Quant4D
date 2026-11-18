@@ -9,7 +9,7 @@ from callbacks.compute.backend import project
 from callbacks.layout import pixel_grids
 
 __all__ = ["center_of_mass", "weighted_mean_position", "rotate_field", "magnitude_phase", "integrate_field", "divergence",
-           "curl", "scan_rotation_by_curl"]
+           "curl", "scan_rotation_by_curl", "fourier_radius", "fourier_bandpass"]
 
 _EPS = float(np.finfo(np.float32).eps)
 
@@ -148,3 +148,22 @@ def scan_rotation_by_curl(fx: np.ndarray, fy: np.ndarray, prefer_deg: float = 0.
     candidates = np.array([angle, angle + 180.0]) % 360.0
     dist = np.abs((candidates - prefer_deg + 180.0) % 360.0 - 180.0)
     return float(candidates[int(np.argmin(dist))]), flip, residual
+
+
+def fourier_radius(shape) -> np.ndarray:
+    """Distance of every Fourier component from zero frequency, in pixels of the transform
+    (``fft2`` order): ``hypot(kx, ky)`` with ``kx`` in -nx/2 .. nx/2 - 1, likewise ``ky``."""
+    ny, nx = int(shape[0]), int(shape[1])
+    kx, ky = np.meshgrid(np.fft.fftfreq(nx) * nx, np.fft.fftfreq(ny) * ny)
+    return np.hypot(kx, ky)
+
+
+def fourier_bandpass(image: np.ndarray, low: float, high: float) -> np.ndarray:
+    """Keep the spatial frequencies with ``low <= |k| <= high`` (pixels of the Fourier transform), as
+    MATLAB Quant4D's iCoM/dCoM bandpass filter.  A filter that keeps everything returns *image*."""
+    image = np.asarray(image, dtype=np.float64)
+    kr = fourier_radius(image.shape)
+    keep = (kr >= low) & (kr <= high)
+    if keep.all():
+        return image
+    return np.fft.ifft2(np.fft.fft2(image) * keep).real

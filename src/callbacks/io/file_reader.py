@@ -133,6 +133,8 @@ def prepareData(self):
         # Detector controls
         self.P.ScanDirInit = 0              # Reset alignments
         self.P.CoMRadiusInit = False
+        from callbacks.annularDetectorCallbacks import resetBandpass  # noqa: E402
+        resetBandpass(self)                 # iCoM/dCoM filter keeps every frequency of this scan
         self.NSeg.setValue(4)               # DPC defaults: 4 segments for DPC
         self.NRung.setValue(1)  # 1 rung for DPC
         self.DetRot.setValue(0)  # 0 detector rotation

@@ -93,8 +93,7 @@ def test_settings_go_left_when_the_right_is_off_screen(app, qapp, monkeypatch):
 
 
 class TestShowWindowButtons:
-    @pytest.mark.parametrize("button, id", [("ShowRealMaskWdw", "RealMask"), ("ShowDfrnMaskWdw", "DfrnMask"),
-                                            ("ShowColorWheelWdw", "ColorWheel")])
+    @pytest.mark.parametrize("button, id", [("ShowRealMaskWdw", "RealMask"), ("ShowDfrnMaskWdw", "DfrnMask")])
     def test_main_window_buttons_show_their_window(self, loaded_app, qapp, button, id):
         w = loaded_app
         set_mode(w, qapp, "CoMMod")                  # the colour wheel button is for CoM/DPC
@@ -144,19 +143,19 @@ class TestVectorField:
             sw.DispImage.setCurrentIndex(sw.DispImage.findData("CoMMag"))
             w.Fig.CoMMag.show()
             qapp.processEvents()
-            assert w.DispVecField.isEnabled()
-            w.DispVecField.setCurrentIndex(1)            # 1:1
+            assert w.SettingsWindow.DispVecField.isEnabled()
+            w.SettingsWindow.DispVecField.setCurrentIndex(1)            # 1:1
             qapp.processEvents()
             quivers = [c for c in w.Fig.CoMMag.ax.collections if isinstance(c, Quiver)]
             assert len(quivers) == 1
-            w.DispVecField.setCurrentIndex(2)            # changing it replaces the arrows
+            w.SettingsWindow.DispVecField.setCurrentIndex(2)            # changing it replaces the arrows
             qapp.processEvents()
             assert len([c for c in w.Fig.CoMMag.ax.collections if isinstance(c, Quiver)]) == 1
-            w.DispVecField.setCurrentIndex(0)
+            w.SettingsWindow.DispVecField.setCurrentIndex(0)
             qapp.processEvents()
             assert not [c for c in w.Fig.CoMMag.ax.collections if isinstance(c, Quiver)]
         finally:
-            w.DispVecField.setCurrentIndex(0)
+            w.SettingsWindow.DispVecField.setCurrentIndex(0)
             set_mode(w, qapp, "AnnMod")
 
     @pytest.mark.parametrize("mode", ["AlignMod", "AnnMod", "VrApMod", "CustMod"])
@@ -166,9 +165,9 @@ class TestVectorField:
         set_mode(w, qapp, "CoMMod")
         sw.DispImage.setCurrentIndex(sw.DispImage.findData("Real"))
         qapp.processEvents()
-        assert w.DispVecField.isEnabled()
+        assert w.SettingsWindow.DispVecField.isEnabled()
         set_mode(w, qapp, mode)
-        assert not w.DispVecField.isEnabled()
+        assert not w.SettingsWindow.DispVecField.isEnabled()
         set_mode(w, qapp, "AnnMod")
 
 

@@ -182,7 +182,8 @@ class P:
     DfrnAxLim: Any = field(default_factory=list)
     RealAxLim: Any = field(default_factory=list)
     TransBeamInit: int = 0
-    RMax: float = 0
+    RMax: float = 0                 # pixels from the beam centre to the farthest pattern corner
+    NRings: int = 0                 # annular rings (of D.annWidth pixels) out to RMax
     DetrMode: Any = None
     detWidth: float = 0
     PreviewAxLim: Any = field(default_factory=lambda: [0, 1, 0, 1])
@@ -197,6 +198,7 @@ class Prev:
     AnnR: Any = None        # annular radii [ri, ro]
     CoM_P: Any = None       # CoM/DPC parameters [ri, ro, sd, syf, dr]
     VrAp: Any = None        # virtual aperture parameters
+    annWidth: Any = None    # ring width the annular images were integrated with
 
 
 def _roi_slots() -> dict:

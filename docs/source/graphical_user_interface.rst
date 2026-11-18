@@ -32,12 +32,18 @@ Opened via the Import button.  Lets you:
 Settings window
 ---------------
 
-Contains tabs for display, layout, and miscellaneous options:
+Contains tabs for display, windows, and miscellaneous options:
 
-- **Display** — colourmap, invert, lock display to a single image
-- **Windows** — show/hide individual image windows; resize controls
-- **Variables** — read-only view of key dataset parameters
-- **Info** — software version and system information
+- **Display** — image selection (and lock), colour map, histogram, brightness,
+  contrast, gamma and mask opacity
+- **Windows** — buttons to show each image window and the vector-field overlay;
+  the iCoM/dCoM bandpass filter; window size and orientation (axis directions,
+  reversal, rotation, size) for diffraction and real space
+- **Misc** — calculation policy, detector coordinate options, byte-order and
+  X/Y swaps of the dataset
+- **Info** — dataset information; **Show all variables** adds a **Variables**
+  tab listing the dataset parameters and settings
+- **Math** — formula for custom-detector Math masks (Custom Detectors mode)
 
 Save / Export window
 --------------------

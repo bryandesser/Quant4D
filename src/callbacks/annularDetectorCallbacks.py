@@ -50,7 +50,7 @@ def annularDetectorCallbacks(self):
             # barely moved and then stuck.)
             ring = self.D.annWidth * self.DfPxR
             for box in (self.AnnRi_NF, self.AnnRo_NF):
-                box.setRange(0, self.P.RMax * ring)
+                box.setRange(0, self.P.NRings * ring)
                 box.setSingleStep(ring)
             ri, ro = self.AnnRi.value()             # and the values in the (possibly new) unit
             self.AnnRi_NF.setValue(ri * ring)
@@ -159,7 +159,7 @@ def annularDetectorCallbacks(self):
         sd = self.ScanDir.value()      # scan rotation in degrees
         syf = 1 - 2 * self.ScanDirYFlip.isChecked()   # Y flip: +1 or -1
         b0 = np.asarray(self.B0, float)
-        arrow_len = max(20.0, 0.25 * self.P.RMax * self.D.annWidth)
+        arrow_len = max(20.0, 0.25 * self.P.RMax)
         tips = {"X": b0 + arrow_len * np.array([np.cos(np.radians(sd)), np.sin(np.radians(sd))]),
                 "Y": b0 + arrow_len * np.array([np.cos(np.radians(sd + 90.0 * syf)),
                                                  np.sin(np.radians(sd + 90.0 * syf))])}
@@ -220,7 +220,7 @@ def annularDetectorCallbacks(self):
                 innerRadius, outerRadius = outerRadius, innerRadius
 
             innerRadius = max(0, innerRadius)
-            outerRadius = min(self.P.RMax, outerRadius)
+            outerRadius = min(self.P.NRings, outerRadius)
 
             # Block signals to avoid update loops
             with signals_blocked(self.AnnRi, self.AnnRi_NF, self.AnnRo_NF):
@@ -232,7 +232,7 @@ def annularDetectorCallbacks(self):
             if self.sender() is not self.A.adf:
                 self.A.adf.radius = (
                     np.array([innerRadius, outerRadius])
-                    .clip(np.finfo(np.single).eps, self.P.RMax)
+                    .clip(np.finfo(np.single).eps, self.P.NRings)
                     * self.D.annWidth
                 )
                 self.A.adf.redraw()
@@ -382,9 +382,12 @@ def annularDetectorCallbacks(self):
     def integrateAnnular():
         """
         Build self.adfImages: (NFrY, NFrX, n_rings) cube of annular integrals.
-        Only rerun when the transmitted-beam centre changes.
+        Only rerun when the transmitted-beam centre or the ring width (Annular Integration Step)
+        changes; the detector radii keep their size in pixels when the ring width changes.
         """
-        if isDiffToPrev(self, "B0", self.B0):
+        old_width = self.Prev.annWidth
+        width_changed = isDiffToPrev(self, "annWidth", float(self.D.annWidth))
+        if isDiffToPrev(self, "B0", self.B0) or width_changed:
             # ring number of every pixel, (NPxY, NPxX), and the integral of
             # every ring for every probe position
             self.A.k = compute.radial_index(dfrn_shape(self.D), self.B0, self.D.annWidth)
@@ -393,12 +396,22 @@ def annularDetectorCallbacks(self):
                 self.D.NFrY, self.D.NFrX, -1
             )
 
-            self.P.RMax = k.max()
+            self.P.NRings = int(k.max())
+            self.Prev.AnnR = self.Prev.CoM_P = None         # images from the old rings are stale
 
-            # Update UI slider limits
+            # Update UI slider limits (and keep the radii in pixels when the ring width changed)
             with all_signals_blocked(self):
-                self.AnnRi.setMaximum(k.max())
+                ri, ro = self.AnnRi.value()
+                self.AnnRi.setMaximum(self.P.NRings)
+                if width_changed and old_width:
+                    scale = float(old_width) / float(self.D.annWidth)
+                    ri, ro = int(round(ri * scale)), int(round(ro * scale))
+                self.AnnRi.setValue((min(ri, self.P.NRings), min(ro, self.P.NRings)))
             limitAnnUI()
+            if self.A.adf is not None:              # the rings drawn on the pattern
+                ri, ro = self.AnnRi.value()
+                self.A.adf.radius = np.array([ri, ro], float).clip(np.finfo(np.single).eps) * self.D.annWidth
+                self.A.adf.redraw()
 
     # ------------------------------------------------------------------
     # calcCoM — intensity-weighted centre-of-mass calculation (CoMMod)
@@ -433,8 +446,7 @@ def annularDetectorCallbacks(self):
             self.Fig.CoMX.Image, self.Fig.CoMY.Image)
         # phase shaded by magnitude: the phase image, its opacity set from CoMMag in plotImage
         self.Fig.CoMPhMag.Image = self.Fig.CoMPh.Image.copy()
-        self.Fig.iCoM.Image = compute.integrate_field(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
-        self.Fig.dCoM.Image = compute.divergence(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
+        integratedImages(self)      # iCoM and dCoM, with the bandpass filter (Settings > Windows)
 
     # ------------------------------------------------------------------
     # calcDPC — segment-integral DPC calculation (DPCMod)
@@ -594,6 +606,11 @@ def annularDetectorCallbacks(self):
                 axisDirectionCallbacks(self, ("Dfrn",))     # scan-direction arrows
         case self.AutoCurl:
             autoCurl()
+        case self.AnnStep:      # new ring width: integrate again, the detector keeps its size
+            integrateAnnular()
+            if dmod == "DPCMod":
+                drawSegDetr()
+            moveAnnDetr()
         case self.ScanDirUnlock:
             self.P.ScanDirInit = 1
             enableAnnUI()
@@ -653,3 +670,103 @@ def removeScanDir(self) -> None:
         if handle is not None:
             handle.remove()
             setattr(self.A, f"ScanDir{k}circ", None)
+
+
+def annStepChanged(self) -> None:
+    """Annular Integration Step (mrad) edited: the ring width in pixels; in Annular/CoM/DPC modes the
+    annular images are integrated again (in Alignment mode that happens on leaving it)."""
+    if self.blockAllSignals or self.Data is None:
+        return
+    mrad_per_px = float(self.mradPx.value())
+    if mrad_per_px <= 0:
+        return
+    self.D.annWidth = float(self.AnnStep.value()) / mrad_per_px
+    if self.DetrMode.currentData() in ("AnnMod", "CoMMod", "DPCMod"):
+        annularDetectorCallbacks(self)
+
+
+def placeAnnStep(self, dmod) -> None:
+    """The Annular Integration Step sits on the Alignment tab in Alignment mode (to be set before the
+    annular images are computed) and on the Annular/CoM/DPC tab otherwise, as in MATLAB."""
+    panel = self.AnnStepPanel
+    if dmod == "AlignMod":
+        target = _alignmentStepLayout(self)
+        if target.indexOf(panel) == -1:
+            target.addWidget(panel)
+    elif dmod in ("AnnMod", "CoMMod", "DPCMod"):
+        target = self.AnnularDetectorTab.layout()
+        if target.indexOf(panel) == -1:
+            target.insertWidget(target.indexOf(self.annularControls) + 1, panel)
+
+
+def _alignmentStepLayout(self):
+    """The layout holding the Alignment tab's help icon (and, in Alignment mode, the step)."""
+    from PyQt5 import QtWidgets as qtw
+    for lay in self.AlignmentTab.findChildren(qtw.QHBoxLayout):
+        if lay.indexOf(self.AlignmentHelpIcon) != -1:
+            return lay
+    raise LookupError("Alignment tab layout with the help icon not found")
+
+
+# ------------------------------------------------------------------
+# iCoM / dCoM bandpass filter (Settings > Windows)
+# ------------------------------------------------------------------
+def bandpassLimits(self) -> tuple:
+    """(low, high) of the iCoM/dCoM bandpass filter, pixels of the scan's Fourier transform."""
+    sw = self.SettingsWindow
+    lo, hi = sw.BandpassFilterLow.value(), sw.BandpassFilterHigh.value()
+    return min(lo, hi), max(lo, hi)
+
+
+def integratedImages(self) -> None:
+    """iCoM and dCoM (iDPC/dDPC) from the CoM X/Y images, bandpass-filtered as set."""
+    fx, fy = self.Fig.CoMX.Image, self.Fig.CoMY.Image
+    if fx is None or fy is None:
+        return
+    lo, hi = bandpassLimits(self)
+    self.Fig.iCoM.Image = compute.fourier_bandpass(compute.integrate_field(fx, fy), lo, hi)
+    self.Fig.dCoM.Image = compute.fourier_bandpass(compute.divergence(fx, fy), lo, hi)
+
+
+def resetBandpass(self) -> None:
+    """New dataset: the filter keeps every spatial frequency of the scan (0 .. the corner of its FFT)."""
+    from callbacks.layout import real_shape
+    ny, nx = real_shape(self.D)
+    kmax = int(np.ceil(np.hypot(nx // 2, ny // 2)))
+    sw = self.SettingsWindow
+    with signals_blocked(sw.BandpassFilter, sw.BandpassFilterLow, sw.BandpassFilterHigh):
+        for w in (sw.BandpassFilterLow, sw.BandpassFilterHigh):
+            w.setRange(0, kmax)
+        sw.BandpassFilter.setRange(0, kmax)
+        sw.BandpassFilter.setValue((0, kmax))
+        sw.BandpassFilterLow.setValue(0)
+        sw.BandpassFilterHigh.setValue(kmax)
+
+
+def bandpassCallbacks(self, source=None) -> None:
+    """Range slider and spin boxes kept in step; iCoM/dCoM recomputed from the stored CoM images."""
+    from callbacks.plotting import plotImage
+    sw = self.SettingsWindow
+    source = source if source is not None else self.sender()
+    with signals_blocked(sw.BandpassFilter, sw.BandpassFilterLow, sw.BandpassFilterHigh):
+        if source is sw.BandpassFilter:
+            lo, hi = sw.BandpassFilter.value()
+            sw.BandpassFilterLow.setValue(int(lo))
+            sw.BandpassFilterHigh.setValue(int(hi))
+        else:
+            lo, hi = bandpassLimits(self)
+            sw.BandpassFilter.setValue((lo, hi))
+            sw.BandpassFilterLow.setValue(lo)
+            sw.BandpassFilterHigh.setValue(hi)
+    if self.DetrMode.currentData() in ("CoMMod", "DPCMod") and self.Fig.CoMX.Image is not None:
+        integratedImages(self)
+        for id in ("iCoM", "dCoM"):
+            if self.Fig[id].isVisible():
+                plotImage(self, id)
+
+
+def connectBandpass(self) -> None:
+    sw = self.SettingsWindow
+    sw.BandpassFilter.valueChanged.connect(lambda *_: bandpassCallbacks(self))
+    sw.BandpassFilterLow.valueChanged.connect(lambda *_: bandpassCallbacks(self))
+    sw.BandpassFilterHigh.valueChanged.connect(lambda *_: bandpassCallbacks(self))

@@ -113,6 +113,9 @@ def setPreviewTabs(self, preview: bool) -> None:
         tabs.setTabVisible(tabs.indexOf(tab), not preview)
     if preview:
         tabs.setTabVisible(tabs.indexOf(sw.MathTab), False)
+        tabs.setTabVisible(tabs.indexOf(sw.VariablesTab), False)
+    else:
+        tabs.setTabVisible(tabs.indexOf(sw.VariablesTab), sw.ShowVariables.isChecked())
     self.SaveWindow.SaveTabGroup.setTabVisible(self.SaveWindow.SaveTabGroup.indexOf(self.SaveWindow.ExportTab),
                                                not preview)
 

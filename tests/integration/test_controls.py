@@ -214,7 +214,7 @@ class TestAnnularSpinners:
             qapp.processEvents()
             ring = w.D.annWidth * w.DfPxR
             assert w.AnnRo_NF.singleStep() == pytest.approx(ring)
-            assert w.AnnRo_NF.maximum() == pytest.approx(w.P.RMax * ring)
+            assert w.AnnRo_NF.maximum() == pytest.approx(w.P.NRings * ring)
             for expected in (4, 5, 6):
                 w.AnnRo_NF.stepBy(1)
                 qapp.processEvents()

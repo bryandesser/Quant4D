@@ -127,6 +127,12 @@ callbacks.view_zoom
 .. automodule:: callbacks.view_zoom
    :members:
 
+callbacks.variables
+-------------------
+
+.. automodule:: callbacks.variables
+   :members:
+
 callbacks.menus
 ---------------
 

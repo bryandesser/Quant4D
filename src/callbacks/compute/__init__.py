@@ -23,8 +23,8 @@ from callbacks.compute.annular import (
     annular_mask, masked_sum, radial_index, ring_integrals, ring_matrix,
 )
 from callbacks.compute.com import (
-    center_of_mass, curl, divergence, integrate_field, magnitude_phase, rotate_field,
-    scan_rotation_by_curl, weighted_mean_position,
+    center_of_mass, curl, divergence, fourier_bandpass, fourier_radius, integrate_field, magnitude_phase,
+    rotate_field, scan_rotation_by_curl, weighted_mean_position,
 )
 from callbacks.compute.dpc import sector_centroid_radius, segment_weights, segmented_dpc
 from callbacks.compute.masks import (
@@ -36,7 +36,7 @@ __all__ = [
     "device_data_info", "project", "project_frames", "release_device_data", "resolve_device",
     "annular_mask", "masked_sum", "radial_index", "ring_integrals", "ring_matrix",
     "center_of_mass", "curl", "divergence", "integrate_field", "magnitude_phase", "rotate_field",
-    "scan_rotation_by_curl",
+    "scan_rotation_by_curl", "fourier_bandpass", "fourier_radius",
     "weighted_mean_position",
     "sector_centroid_radius", "segment_weights", "segmented_dpc",
     "circle_mask", "circles_mask", "ellipse_mask", "polygon_mask", "rectangle_mask",

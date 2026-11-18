@@ -372,3 +372,20 @@ def test_scan_rotation_by_curl_picks_the_nearer_of_the_two_halves():
 def test_scan_rotation_by_curl_rejects_empty_fields():
     with pytest.raises(ValueError):
         compute.scan_rotation_by_curl(np.full((5, 5), np.nan), np.full((5, 5), np.nan))
+
+
+# ------------------------------------------------------------------ iCoM/dCoM bandpass
+def test_fourier_radius_matches_matlab_index_units():
+    kr = compute.fourier_radius((4, 6))
+    assert kr[0, 0] == 0 and kr[0, 3] == 3 and kr[2, 0] == 2 and kr[1, 1] == pytest.approx(np.sqrt(2))
+
+
+def test_fourier_bandpass():
+    rng = np.random.default_rng(0)
+    img = rng.random((16, 20))
+    np.testing.assert_array_equal(compute.fourier_bandpass(img, 0, 100), img)       # all-pass: untouched
+    low = compute.fourier_bandpass(img, 0, 0)
+    np.testing.assert_allclose(low, np.full_like(img, img.mean()))                   # only the mean
+    band = compute.fourier_bandpass(img, 2, 5) + compute.fourier_bandpass(img, 0, 1.99) \
+        + compute.fourier_bandpass(img, 5.01, 100)
+    np.testing.assert_allclose(band, img, atol=1e-12)                                 # bands add up

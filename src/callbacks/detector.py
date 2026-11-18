@@ -149,7 +149,9 @@ def detectorModeCallbacks(self):
     # Set detector size when transmitted beam is aligned the first time
     if not (self.P.TransBeamInit) and (dmod != "AlignMod"):
         with signals_blocked(self.AnnRi):
-            self.AnnRi.setValue((self.TBR.value(), (self.TBR.value() + self.P.RMax) / 3))
+            # radii in rings of D.annWidth pixels: the beam's edge to a third of the way out
+            w = float(self.D.annWidth) if self.D is not None else 1.0
+            self.AnnRi.setValue((int(round(self.TBR.value() / w)), int(round((self.TBR.value() + self.P.RMax) / 3 / w))))
         self.VrApR.setValue(self.TBR.value())
         self.P.VrApXY = self.B0
         self.P.TransBeamInit = 1
@@ -165,6 +167,9 @@ def detectorModeCallbacks(self):
     self.SettingsWindow.SettingsTabGroup.setTabVisible(
         self.SettingsWindow.SettingsTabGroup.indexOf(
             self.SettingsWindow.MathTab), False)
+
+    from callbacks.annularDetectorCallbacks import placeAnnStep  # noqa: E402
+    placeAnnStep(self, dmod)        # Annular Integration Step: Alignment tab, or the annular tab
 
     match dmod:
         case "PrvwMod":

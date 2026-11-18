@@ -53,10 +53,10 @@ def displayCallbacks(self, source=None):
                 backgroundStyle = ""  # default
             self.SettingsWindow.DispImage.setStyleSheet(backgroundStyle)
 
-        case self.DispVecField:
-            fig.vecField = self.DispVecField.currentData()  # Vector field
+        case self.SettingsWindow.DispVecField:
+            fig.vecField = self.SettingsWindow.DispVecField.currentData()  # Vector field
 
-        case self.DispVecColor:  # Vector field color
+        case self.SettingsWindow.DispVecColor:  # Vector field color
             # Vector field color
             c = qtw.QColorDialog.getColor()
             if c.isValid():
@@ -95,10 +95,10 @@ def displayCallbacks(self, source=None):
             # Update GUIs by values stored in `self.ImageAx.(id).UserData` for the current selected image
             self.Fig[id].show()
             self.Fig[id].activateWindow()  # Bring selected image to front
-            self.DispVecField.setCurrentIndex(self.DispVecField.findData(fig.vecField))
+            self.SettingsWindow.DispVecField.setCurrentIndex(self.SettingsWindow.DispVecField.findData(fig.vecField))
             self.SettingsWindow.DispCMap.setCurrentIndex(self.SettingsWindow.DispCMap.findText(fig.cmap))
             self.SettingsWindow.DispCMapInvert.setChecked(fig.invert)
-            self.DispVecColor.setStyleSheet("background-color:" + fig.vecColor.name())
+            self.SettingsWindow.DispVecColor.setStyleSheet("background-color:" + fig.vecColor.name())
 
             # Enable vector field UIs if: 1) in CoM/DPC mode AND 2) real-space image selected
             updateVecFieldUI(self)
@@ -443,7 +443,7 @@ def updateVecFieldUI(self) -> None:
     id = self.SettingsWindow.DispImage.currentData()
     fig = self.Fig[id] if id is not None else None
     enabled = (self.DetrMode.currentData() in ["CoMMod", "DPCMod"]) and fig is not None and fig.space == "Real"
-    for w in (self.DispVecField, self.DispVecFieldLabel, self.DispVecColor):
+    for w in (self.SettingsWindow.DispVecField, self.SettingsWindow.DispVecFieldLabel, self.SettingsWindow.DispVecColor):
         w.setEnabled(enabled)
 
 

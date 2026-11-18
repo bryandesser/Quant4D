@@ -69,7 +69,10 @@ def vrApFromControls(self, a: float, b: float) -> np.ndarray:
 
 def syncVrApControls(self) -> None:
     """Set the limits, labels, units and values of VrApX/Y/R and their number fields."""
-    if self.D is None:
+    # the mirror-plane angle only applies with the mirror on (as MATLAB)
+    for w in (self.VrApMirrRot, self.VrApMirrRot_NF, self.VrApMirrRotLabel):
+        w.setEnabled(self.VrApMirror.isChecked())
+    if self.D is None or getattr(self, "Data", None) is None:
         return
     s = float(self.DfPxR)
     unit = " " + (self.SettingsWindow.DCUnit.currentData() or "px")

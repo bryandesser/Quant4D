@@ -20,6 +20,15 @@ CoM mode produces the following real-space images:
   projected electrostatic potential
 - **dCoM** — divergence of CoM, proportional to the projected charge density
 
+iCoM / dCoM bandpass filter
+---------------------------
+
+**Settings → Windows → iCoM / dCoM Bandpass Filter** keeps only the spatial
+frequencies between the low and high limits (pixels of the scan's Fourier
+transform) in the iCoM and dCoM (iDPC/dDPC) images: a lowpass, highpass or
+bandpass filter.  It covers every frequency after an import; changing it updates
+the two images at once.
+
 Segmented DPC
 -------------
 

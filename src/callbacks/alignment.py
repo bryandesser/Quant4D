@@ -105,7 +105,7 @@ def moveTransBeam(self):
         # Update UI limits
         self.TBR.setRange(0, self.P.RMax)
         self.TBR_NF.setRange(0, self.P.RMax)
-        self.AnnRi.setRange(0, self.P.RMax)
+        self.AnnRi.setRange(0, int(np.ceil(self.P.RMax / float(self.D.annWidth))))   # in rings
         self.VrApR.setRange(0, self.P.RMax)
 
         # Update UI values
@@ -117,6 +117,11 @@ def moveTransBeam(self):
         self.TBY_NF.setValue(b0[1])
         self.Alpha.setValue(a)
         self.mradPx.setValue(mrad_per_px)
+
+        # Annular integration step (MATLAB's AnnularStep): one pixel, but at most 250 rings out to the
+        # farthest corner (finer makes the pre-computed annular images slow), shown in mrad
+        self.D.annWidth = float(max(1.0, self.P.RMax / 250.0))
+        self.AnnStep.setValue(self.D.annWidth * float(self.mradPx.value()))   # the scale as shown (rounded)
 
         # Update transmitted beam annotation
         if (self.sender() is not self.A.tb) and (self.A.tb is not None):

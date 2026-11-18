@@ -199,13 +199,11 @@ def slotsSignals(self):
     self.SettingsWindow.ShowMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
     # the main window's show-window buttons had no accessible name, which names the window to show
     for button, id, tip in ((self.ShowRealMaskWdw, "RealMask", "Show the real-space mask"),
-                            (self.ShowDfrnMaskWdw, "DfrnMask", "Show the diffraction mask"),
-                            (self.ShowColorWheelWdw, "ColorWheel", "Show the colour wheel")):
+                            (self.ShowDfrnMaskWdw, "DfrnMask", "Show the diffraction mask")):
         button.setAccessibleName(id)
         button.setToolTip(tip)
     self.ShowRealMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.ShowDfrnMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
-    self.ShowColorWheelWdw.clicked.connect(lambda: showWindowCallbacks(self))
 
     # transmitted beam controls
     self.TBX.valueChanged.connect(lambda: moveTransBeam(self))
@@ -237,8 +235,8 @@ def slotsSignals(self):
 
     # displayCallbacks
     self.UpdateImages.triggered.connect(lambda: updateImagesCallbacks(self))
-    self.DispVecColor.triggered.connect(lambda: displayCallbacks(self))
-    self.DispVecField.currentIndexChanged.connect(lambda: displayCallbacks(self))
+    self.SettingsWindow.DispVecColor.clicked.connect(lambda: displayCallbacks(self))   # (triggered needs an action)
+    self.SettingsWindow.DispVecField.currentIndexChanged.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispCMap.currentIndexChanged.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispCMapInvert.clicked.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispImage.currentIndexChanged.connect(lambda: displayCallbacks(self))
@@ -278,6 +276,13 @@ def slotsSignals(self):
     self.ScanDir_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDir.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.AutoCurl.clicked.connect(lambda: annularDetectorCallbacks(self))
+    from callbacks.annularDetectorCallbacks import annStepChanged  # noqa: E402
+    from callbacks.annularDetectorCallbacks import connectBandpass  # noqa: E402
+    connectBandpass(self)                            # Settings > Windows: iCoM/dCoM bandpass filter
+    from callbacks.variables import connectVariables  # noqa: E402
+    connectVariables(self)                           # Settings > Info: Show all variables
+    self.AnnStep.setKeyboardTracking(False)          # a typed value counts once confirmed (Enter, focus out)
+    self.AnnStep.valueChanged.connect(lambda *_: annStepChanged(self))
 
     # virtual aperture connections
     self.VrApR.valueChanged.connect(lambda: virtualApertureCallbacks(self))
@@ -557,7 +562,7 @@ def startupFcn(self):
         self.G.CoM_btns = [
             obj for obj in self.SettingsWindow.findChildren(
                 qtw.QPushButton) if "CoM" in obj.objectName()]
-        self.G.CoM_btns.extend([self.ShowColorWheelWdw, self.SettingsWindow.ShowColorWheelWdw_2])
+        self.G.CoM_btns.extend([self.SettingsWindow.ShowColorWheelWdw_2])
 
         # Group all window `figure` `uifigure`
         self.G.AllFig = self.G.ImgFig.copy()
@@ -600,13 +605,13 @@ def startupFcn(self):
         # export window, file format: populated in save_export.connectSaveWindow
 
         # main UI window, diffraction modes
-        diffType = ['PrvwMod', 'AlignMod', 'AnnMod', 'DPCMod', 'CoMMod', 'VrApMod', 'CustMod']
+        diffType = ['PrvwMod', 'AlignMod', 'AnnMod', 'CoMMod', 'DPCMod', 'VrApMod', 'CustMod']   # CoM before DPC, as MATLAB
         diffTypeText = [
             'Import Preview',
             'Alignment',
             'Annular/Round',
-            'Segmented (DPC)',
             'Center of Mass',
+            'Segmented (DPC)',
             'Virtual Aperture',
             'Custom Detectors']
         self.DetrMode.clear()
@@ -623,9 +628,9 @@ def startupFcn(self):
         # main UI window, vecotr overlay sampling options
         vectType = [0, 1, 2, 4, 8, 16]
         vectTypeText = ['None', '1:1', '1:2', '1:4', '1:8', '1:16']
-        self.DispVecField.clear()
+        self.SettingsWindow.DispVecField.clear()
         for vtt, vt in zip(vectTypeText, vectType):
-            self.DispVecField.addItem(vtt, vt)
+            self.SettingsWindow.DispVecField.addItem(vtt, vt)
 
         # import window, GPU selection: filled by getGPU (clearing it here dropped every detected GPU)
 
@@ -735,6 +740,8 @@ def startupFcn(self):
 
     # always keep "Import Preview" hidden from QComboBox
     self.DetrMode.view().setRowHidden(0, True)
+    from callbacks.virtualApertureCallbacks import syncVrApControls  # noqa: E402
+    syncVrApControls(self)        # mirror-angle controls off until the mirror is
 
     # The app starts in Import Preview mode without a mode change, so apply its tab set here
     # (the Math, Misc and Info tabs and the Export tab were all shown until a mode change)
