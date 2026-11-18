@@ -192,8 +192,9 @@ class TestInteractivePolygon:
 # ---------------------------------------------------------------------------
 # Mouse interaction: ellipse handles, rectangle rotation, polygon vertices
 # ---------------------------------------------------------------------------
-def _mouse(ax, *path):
-    """Press at the first data point, move through the others, release at the last."""
+def _mouse(ax, *path, modifiers=None, key=None):
+    """Press at the first data point, move through the others, release at the last
+    (with *modifiers*, e.g. ``{"shift"}``, or a held *key*)."""
     from matplotlib.backend_bases import MouseEvent
     canvas = ax.figure.canvas
     canvas.draw()
@@ -202,7 +203,9 @@ def _mouse(ax, *path):
         + [("button_release_event", pts[-1])]
     for name, (x, y) in steps:
         kw = {"button": 1} if name != "motion_notify_event" else {}
-        canvas.callbacks.process(name, MouseEvent(name, canvas, x, y, **kw))
+        if modifiers is not None:
+            kw["modifiers"] = frozenset(modifiers)
+        canvas.callbacks.process(name, MouseEvent(name, canvas, x, y, key=key, **kw))
 
 
 def _hover(ax, p):
@@ -375,3 +378,47 @@ class TestPolygonVertices:
     def test_remove_takes_every_artist(self):
         self.poly.remove()
         assert not self.ax.patches and not self.ax.lines and not self.ax.collections
+
+
+class TestShiftKeepsTheAspectRatio:
+    """Holding Shift while resizing a rectangle or ellipse keeps its aspect ratio."""
+
+    def test_rectangle_corner(self, roi_ax):
+        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        r = InteractiveRectangle(roi_ax, CENTRE, (10.0, 6.0), rotation=30.0)
+        r.connect()
+        corners = r.handles.get_offsets().copy()
+        _mouse(roi_ax, corners[2], corners[2] + [3.0, 0.5], modifiers={"shift"})
+        assert r.size[0] / r.size[1] == pytest.approx(10.0 / 6.0)
+        assert r.size[0] > 10.0
+        np.testing.assert_allclose(r.handles.get_offsets()[0], corners[0], atol=1e-9)   # opposite corner fixed
+        assert r.rotation == pytest.approx(30.0)
+
+    def test_rectangle_corner_without_shift_is_free(self, roi_ax):
+        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        r = InteractiveRectangle(roi_ax, CENTRE, (10.0, 6.0))
+        r.connect()
+        corner = r.handles.get_offsets()[2].copy()
+        _mouse(roi_ax, corner, corner + [3.0, 0.5])
+        np.testing.assert_allclose(r.size, [13.0, 6.5])
+
+    def test_rectangle_shift_as_held_key(self, roi_ax):
+        """Older matplotlib has no MouseEvent.modifiers: the held key is used."""
+        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        r = InteractiveRectangle(roi_ax, CENTRE, (10.0, 6.0))
+        r.connect()
+        corner = r.handles.get_offsets()[2].copy()
+        _mouse(roi_ax, corner, corner + [3.0, 0.5], key="shift")
+        assert r.size[0] / r.size[1] == pytest.approx(10.0 / 6.0)
+
+    @pytest.mark.parametrize("handle, target, expected", [
+        (0, [0, 8], [8.0, 4.0]),           # major handle out to 8: minor follows 3 -> 4
+        (1, [-6, 0], [12.0, 6.0]),         # minor handle out to 6: major follows 6 -> 12
+    ])
+    def test_ellipse_handle(self, roi_ax, handle, target, expected):
+        from annotationsClasses.interactiveEllipse import InteractiveEllipse
+        e = InteractiveEllipse(roi_ax, CENTRE, semiaxes=(6.0, 3.0))
+        e.connect()
+        start = e.handles.get_offsets()[handle].copy()
+        _mouse(roi_ax, start, CENTRE + target, modifiers={"shift"})
+        np.testing.assert_allclose(e.semiaxes, expected)

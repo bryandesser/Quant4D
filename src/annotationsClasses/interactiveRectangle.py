@@ -4,7 +4,8 @@ InteractiveRectangle — a draggable, resizable, rotatable rectangle annotation.
 Used as MATLAB's rotatable ``images.roi.Rectangle``:
 
 * drag inside               → move
-* drag a corner             → resize, the opposite corner stays put (in the rectangle's own frame)
+* drag a corner             → resize, the opposite corner stays put (in the rectangle's own frame);
+                              hold Shift to keep the aspect ratio
 * drag just outside a corner → rotate about the centre; the cursor shows a curved double arrow there
 
 Signals
@@ -30,7 +31,8 @@ from matplotlib.backend_tools import Cursors
 from matplotlib.patches import Polygon as MplPolygon
 from PyQt5 import QtCore as qtc
 
-from annotationsClasses._geometry import corner_action, rotation_matrix, set_rotate_cursor, to_local, turn
+from annotationsClasses._geometry import (corner_action, rotation_matrix, set_rotate_cursor, shift_held, to_local,
+                                          turn)
 
 _UNIT_CORNERS = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]], float) / 2.0   # in units of (w, h)
 
@@ -196,6 +198,11 @@ class InteractiveRectangle(qtc.QObject):
             fixed = corners0[(i + 2) % 4]                 # the opposite corner stays put
             new = corners0[i] + p - np.array([x0, y0])
             span = R.T @ (new - fixed)                    # diagonal in the rectangle's own frame
+            if shift_held(event) and size0.min() > 0:
+                # Shift: keep the aspect ratio, scaled to the larger of the two stretches
+                scale = max(abs(span[0]) / size0[0], abs(span[1]) / size0[1])
+                span = np.where(span < 0, -1.0, 1.0) * size0 * scale
+                new = fixed + R @ span
             if abs(span[0]) > 1e-6 and abs(span[1]) > 1e-6:
                 self.size = np.abs(span)
                 self.center = (new + fixed) / 2.0

@@ -13,10 +13,11 @@ ROI types
 - **Full** — all frames (default)
 - **Point** — single frame at (FrameX, FrameY)
 - **Rectangle** — drag inside to move, a corner handle to resize (the opposite
-  corner stays put); just outside a corner the cursor turns into a curved double
+  corner stays put; hold ``Shift`` to keep the aspect ratio); just outside a corner the cursor turns into a curved double
   arrow: drag there to rotate the rectangle about its centre
 - **Ellipse** — drag inside to move; each of the two handles sits at the end of a
   semi-axis: dragging it sets that semi-axis and turns the ellipse towards the cursor
+  (hold ``Shift`` to scale the other semi-axis with it, keeping the aspect ratio)
 - **Polygon** — click to place vertices, click the first vertex to close it
   (``Esc`` cancels).  When more than one real-space image is shown you are asked
   which one to draw on.  Afterwards drag a vertex to move it, drag inside to

@@ -1,9 +1,10 @@
 """
 InteractiveEllipse — a draggable, resizable, rotatable ellipse annotation.
 
-Two handles sit at the ends of the semi-axes.  Dragging either sets that semi-axis'
-length and turns the ellipse so the axis points at the cursor (the other axis
-follows, staying perpendicular); dragging inside the ellipse moves it.
+Two handles sit at the ends of the semi-axes.  Dragging either sets that semi-axis' length
+and turns the ellipse so the axis points at the cursor (the other axis
+follows, staying perpendicular); with Shift held the other semi-axis scales with it, keeping the
+aspect ratio.  Dragging inside the ellipse moves it.
 
 Signals
 -------
@@ -28,7 +29,7 @@ from matplotlib.backend_tools import Cursors
 from matplotlib.patches import Ellipse
 from PyQt5 import QtCore as qtc
 
-from annotationsClasses._geometry import HANDLE_PICK_PX, nearest_handle, rotation_matrix, to_local
+from annotationsClasses._geometry import HANDLE_PICK_PX, nearest_handle, rotation_matrix, shift_held, to_local
 
 _MIN_SEMIAXIS = 0.5     # data units (pixels); keeps the ellipse grabbable
 
@@ -176,6 +177,8 @@ class InteractiveEllipse(qtc.QObject):
             v = p - center0
             self.semiaxes = semiaxes0.copy()
             self.semiaxes[k] = max(float(np.hypot(*v)), _MIN_SEMIAXIS)
+            if shift_held(event):               # Shift: keep the aspect ratio (both semi-axes scale)
+                self.semiaxes[1 - k] = max(semiaxes0[1 - k] * self.semiaxes[k] / semiaxes0[k], _MIN_SEMIAXIS)
             # handle k points along the ellipse's own x (k=0) or y (k=1) axis
             self.rotation = float(np.degrees(np.arctan2(v[1], v[0]))) - 90.0 * k
         self._update_artists()

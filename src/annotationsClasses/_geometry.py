@@ -54,6 +54,12 @@ def turn(center, press, now) -> float:
     return float((np.degrees(a1 - a0) + 180.0) % 360.0 - 180.0)    # in [-180, 180)
 
 
+def shift_held(event) -> bool:
+    """True if Shift is held during a mouse *event* (resizing then keeps the aspect ratio)."""
+    mods = getattr(event, "modifiers", None) or ()          # matplotlib >= 3.8
+    return "shift" in mods or "shift" in str(getattr(event, "key", None) or "")
+
+
 # ---------------------------------------------------------------------------- rotation cursor
 _rotate_cursor = None
 
