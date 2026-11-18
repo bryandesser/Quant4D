@@ -574,6 +574,12 @@ def annularDetectorCallbacks(self):
             self.ScanDirUnlock.setChecked(False)
             enableAnnUI()
             integrateAnnular()
+            if dmod in ("CoMMod", "DPCMod") and not self.P.CoMRadiusInit:
+                # first CoM/DPC visit with this dataset: the detector starts at the centre (inner radius 0)
+                self.P.CoMRadiusInit = True
+                with signals_blocked(self.AnnRi):
+                    self.AnnRi.setValue((0, self.AnnRi.value()[1]))
+                limitAnnUI()
             drawAnnDetr()
             if dmod == "DPCMod":
                 drawSegDetr()

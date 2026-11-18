@@ -47,9 +47,18 @@ See :ref:`export` for full details.
 Image windows
 -------------
 
-Each analysis mode opens a set of linked image windows (diffraction pattern,
-real-space image, CoM channels, etc.).  All image windows share the same
-matplotlib toolbar for pan, zoom, and restore-view.
+Each analysis mode opens a set of image windows (diffraction pattern,
+real-space image, CoM channels, etc.), each with a matplotlib toolbar for pan,
+zoom and restore-view.
+
+- **Zoom**: the mouse wheel zooms about the cursor; ``+`` and ``-`` zoom about
+  the centre of the view; ``Home`` (or the toolbar's Home) shows the whole image
+  again.  Views never extend past the image.
+- **One view per space**: zooming or panning one diffraction-space image applies
+  the same view to the other (pattern and mask); likewise for all real-space
+  images (image, mask, CoM/DPC images).
+- **Histogram**: double-click the histogram in Settings → Display to reset the
+  brightness, contrast and gamma of the selected image.
 
 .. note::
    Full screenshot walkthroughs will be added in a future documentation update.

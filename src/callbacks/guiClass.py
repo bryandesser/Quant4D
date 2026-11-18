@@ -140,6 +140,8 @@ class ImageWindow(qtw.QMainWindow):
         from callbacks.axis_direction import install_view_transform  # noqa: E402
         install_view_transform(self.ax)     # flips/rotation of the view (Settings → axis directions)
         self.axisArrows = []                # kx/ky (rx/ry) direction arrows
+        self.menuAction = None              # the Window menu's show/hide action for this image
+        self.zoomKeys = None                # view_zoom.handleKey for this window (set by connectZoom)
 
         layout.addWidget(self.canvas)
 
@@ -188,6 +190,22 @@ class ImageWindow(qtw.QMainWindow):
         # activate native keyboard shortcuts
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
 
+    def _syncMenuAction(self, shown: bool) -> None:
+        """Keep the Window menu's tick for this image in step with the window."""
+        action = getattr(self, "menuAction", None)
+        if action is not None and action.isChecked() != shown:
+            action.blockSignals(True)
+            action.setChecked(shown)
+            action.blockSignals(False)
+
+    def showEvent(self, a0) -> None:
+        self._syncMenuAction(True)
+        return super().showEvent(a0)
+
+    def hideEvent(self, a0) -> None:
+        self._syncMenuAction(False)
+        return super().hideEvent(a0)
+
     # change closeEvent behavior to hide rather than close window
     def closeEvent(self, a0: qtg.QCloseEvent) -> None:
         self.hide()
@@ -196,11 +214,14 @@ class ImageWindow(qtw.QMainWindow):
         return super().closeEvent(a0)
 
     def resizeEvent(self, a0: qtg.QResizeEvent) -> None:
-        sizeChange = a0.size() - a0.oldSize()
-        self.imageResize.emit(sizeChange, self.space)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
+        self.imageResize.emit(a0.size(), self.space)     # the new size (Settings > Misc > window size)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
         return super().resizeEvent(a0)
 
     def on_key_press(self, event):
+        # zoom keys (+, -, Home) and keys that make no sense on an image are handled first
+        zoom_keys = getattr(self, "zoomKeys", None)
+        if zoom_keys is not None and zoom_keys(event):
+            return
         key_press_handler(event, self.canvas, self.toolbar)
 
     def mousePressEvent(self, a0: qtg.QMouseEvent) -> None:

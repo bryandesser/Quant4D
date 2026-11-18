@@ -48,7 +48,10 @@ def vrApToControls(self, xy) -> tuple[float, float]:
     s = float(self.DfPxR)
     if _polar(self):
         d = np.asarray(xy, float) - np.asarray(self.B0, float)
-        return float(np.hypot(*d) * s), float(np.degrees(np.arctan2(d[1], d[0])))
+        rho = float(np.hypot(*d))
+        if rho < 1e-9:      # on the beam centre the angle is undefined: keep the one set
+            return 0.0, float(self.VrApY_NF.value())
+        return rho * s, float(np.degrees(np.arctan2(d[1], d[0])))
     d = np.asarray(xy, float) - np.asarray(self.RB0, float)
     return float(d[0] * s), float(d[1] * s)
 
@@ -72,7 +75,10 @@ def syncVrApControls(self) -> None:
     unit = " " + (self.SettingsWindow.DCUnit.currentData() or "px")
     ny, nx = dfrn_shape(self.D)
     if _polar(self):
-        rmax = float(np.hypot(nx, ny)) * s
+        # out to the pattern's farthest corner from the beam centre (as far as the aperture can go)
+        b0 = np.asarray(self.B0, float)
+        corners = np.array([[0, 0], [nx - 1, 0], [0, ny - 1], [nx - 1, ny - 1]], float)
+        rmax = float(np.hypot(*(corners - b0).T).max()) * s
         limits = ((0.0, rmax), (-180.0, 180.0))
         labels, units = ("Distance", "Rotation"), (unit, " °")
     else:
@@ -231,7 +237,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 mirr_tip_x = b0[0] + reach * np.cos(rad_m)
                 mirr_tip_y = b0[1] + reach * np.sin(rad_m)
                 pt_art = ax.scatter(mirr_tip_x, mirr_tip_y,
-                                    color='r', edgecolors='w', s=60, zorder=8)
+                                    color='#FFD400', edgecolors='k', s=60, zorder=8)   # not red: apart from the apertures
                 self.A.VrApMirP = InteractivePoint(pt_art)
                 self.A.VrApMirP.connect()
                 self.A.VrApMirP.positionChanged.connect(lambda: moveVrAp())
@@ -342,6 +348,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                              self.VrApMirrRot.value()]):
                 calcVrAp()
             plotImage(self, 'Real')
+            plotImage(self, 'DfrnMask')
 
     # ------------------------------------------------------------------
     # calcVrAp — build the mask and compute the virtual image
@@ -383,6 +390,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
         mask = compute.circles_mask(shape, centres, r)
         if invert:
             mask = ~mask
+        self.Fig.DfrnMask.Image = mask.astype(self.D.DataType)      # also when empty or inverted
 
         if not mask.any():
             self.Fig.Real.Image = np.zeros(real_shape(self.D),
@@ -391,9 +399,6 @@ def virtualApertureCallbacks(self):  # noqa: C901
 
         # Virtual image: sum intensity within the mask for every probe position
         self.Fig.Real.Image = compute.masked_sum(self.Data, mask, self.D.GPU).reshape(real_shape(self.D))
-
-        # Store the mask for display in the DfrnMask window
-        self.Fig.DfrnMask.Image = mask.astype(self.D.DataType)
 
     # ------------------------------------------------------------------
     # helper: should we recompute the image now?
@@ -414,6 +419,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
             syncVrApControls(self)
             calcVrAp()
             plotImage(self, 'Real')
+            plotImage(self, 'DfrnMask')
 
         case (self.VrApR | self.VrApSymm | self.VrApInvert
               | self.VrApMirror | self.VrApMirrRot | self.VrApMirrRot_NF
@@ -427,6 +433,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
         case self.UpdateImages:
             calcVrAp()
             plotImage(self, 'Real')
+            plotImage(self, 'DfrnMask')
 
         case _:
             # Fallback: treat any unrecognised sender as a redraw trigger

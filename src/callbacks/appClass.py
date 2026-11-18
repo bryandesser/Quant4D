@@ -175,6 +175,7 @@ class C:
 class P:
     """ Common parameters, should be cleared when a dataset is unloaded """
     ScanDirInit: int = 0
+    CoMRadiusInit: bool = False     # CoM/DPC entered with this dataset (inner radius set to 0 the first time)
     DfCtr: Any = field(default_factory=list)       # (x, y) centre of the diffraction image
     RsCtr: Any = field(default_factory=list)       # (x, y) centre of the real-space image
     VrApXY: Any = field(default_factory=list)      # (x, y) virtual aperture centre

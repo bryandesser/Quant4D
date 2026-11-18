@@ -8,12 +8,27 @@ from callbacks import compute  # noqa: E402
 def datasetOptCallbacks(self):
     match self.sender():
         case self.SettingsWindow.SwapByteOrder:  # Swap byte-order, then ask whether it is right
-            if not swapByteOrder(self):
-                return
-            sel = notifDLG(self, self, 'quest', "Is the current byte-order correct?",
-                           'Byte Order Swap', ["Yes", "No. Revert"])
-            if str(sel or "").startswith("No"):   # None when the dialog is dismissed
-                swapByteOrder(self)              # (re-clicking the button from its own handler did nothing)
+            # Only the diffraction pattern is updated while the user decides: the other windows
+            # would show stale images, so they are hidden until the answer.
+            hidden = [id for id in self.G.ImgID if id != "Dfrn" and self.Fig[id].isVisible()]
+            for id in hidden:
+                self.Fig[id].hide()
+            keep = False
+            try:
+                if not swapByteOrder(self, update=False):
+                    return
+                _showPatternOnly(self)
+                sel = notifDLG(self, self, 'quest', "Is the current byte-order correct?",
+                               'Byte Order Swap', ["Yes", "No. Revert"])
+                keep = not str(sel or "").startswith("No")     # None when the dialog is dismissed
+                if not keep:
+                    swapByteOrder(self, update=False)          # back to the data the other images show
+                    _showPatternOnly(self)
+            finally:
+                for id in hidden:
+                    self.Fig[id].show()
+            if keep:
+                self.UpdateImages.trigger()                    # every image from the swapped data
 
         case self.SettingsWindow.SwapDfrnXY | self.SettingsWindow.SwapRealXY:
             # Diffraction or real-space
@@ -62,8 +77,20 @@ def datasetOptCallbacks(self):
                 compute.release_device_data()   # the GPU copy is now stale
 
 
-def swapByteOrder(self) -> bool:
-    """Reinterpret the dataset with the other byte order and update the images.
+def _showPatternOnly(self) -> None:
+    """Recompute and show just the diffraction pattern (of the current real-space region)."""
+    from callbacks.plotting import plotImage  # noqa: E402
+    from callbacks.realSpaceROICallbacks import diffractionPattern  # noqa: E402
+    weights = self.Fig.RealMask.Image
+    if weights is None:
+        weights = np.ones(self.Data.shape[0])
+    self.Fig.Dfrn.Image = diffractionPattern(self, np.asarray(weights, float).ravel())
+    self.Fig.Dfrn.show()
+    plotImage(self, "Dfrn")
+
+
+def swapByteOrder(self, update: bool = True) -> bool:
+    """Reinterpret the dataset with the other byte order and (if *update*) update the images.
 
     In-memory data is byte-swapped in place (it stays in the native byte order the compute and
     GPU paths need); a lazily loaded dataset is a read-only memory map, so it is viewed with the
@@ -84,7 +111,8 @@ def swapByteOrder(self) -> bool:
     compute.release_device_data()   # the GPU copy is now stale
     self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b`
     self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
-    self.UpdateImages.trigger()
+    if update:
+        self.UpdateImages.trigger()
     return True
 
 

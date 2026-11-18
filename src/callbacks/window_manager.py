@@ -105,6 +105,17 @@ def showImageContent(self, id) -> None:
         plotImage(self, id)
 
 
+def setWindowShown(self, id, shown: bool) -> None:
+    """Show (and draw) or hide one image window, e.g. from the Window menu."""
+    fig = self.Fig[id]
+    if shown:
+        fig.show()
+        fig.activateWindow()
+        showImageContent(self, id)
+    else:
+        fig.hide()
+
+
 def showWindowCallbacks(self):
     id = self.SettingsWindow.DispImage.currentData()
     match self.sender():

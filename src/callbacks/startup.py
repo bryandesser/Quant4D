@@ -141,41 +141,27 @@ def slotsSignals(self):
     connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
     connectMenus(self)            # menu-bar actions and help icons
     connectPatternCombine(self)   # diffraction window: how a region's patterns are combined
+    from callbacks.view_zoom import connectZoom  # noqa: E402
+    connectZoom(self)             # wheel/keys zoom, Home, one view per space
+    from callbacks.plotting import connectHistogramReset  # noqa: E402
+    connectHistogramReset(self)   # double-click the histogram: default brightness/contrast/gamma
+    from callbacks.alignment import connectBeamPick  # noqa: E402
+    connectBeamPick(self)         # Alignment mode: double-click a disk to make it the transmitted beam
 
-    # menu action slots/signals
-    self.actionShow_Diffraction_Pattern.triggered.connect(
-        lambda: self.Fig.Dfrn.show(
-            self.actionShow_Diffraction_Pattern.isChecked()))
-    self.actionShow_Diffraction_Mask.triggered.connect(
-        lambda: self.Fig.DfrnMask.show(
-            self.actionShow_Diffraction_Mask.isChecked()))
-    self.actionShow_Real_Space_Image.triggered.connect(
-        lambda: self.Fig.Real.show(
-            self.actionShow_Real_Space_Image.isChecked()))
-    self.actionShow_Real_Space_Mask.triggered.connect(
-        lambda: self.Fig.RealMask.show(
-            self.actionShow_Real_Space_Mask.isChecked()))
-    self.actionShow_Center_of_Mass_Magnitude_CoM.triggered.connect(
-        lambda: self.Fig.CoMMag.show(self.actionShow_Center_of_Mass_Magnitude_CoM.isChecked()))
-    self.actionShow_Center_of_Mass_X.triggered.connect(
-        lambda: self.Fig.CoMX.show(
-            self.actionShow_Center_of_Mass_X.isChecked()))
-    self.actionShow_Center_of_Mass_Y.triggered.connect(
-        lambda: self.Fig.CoMY.show(
-            self.actionShow_Center_of_Mass_Y.isChecked()))
-    self.actionShow_Colorwheel.triggered.connect(
-        lambda: self.Fig.ColorWheel.show(
-            self.actionShow_Colorwheel.isChecked()))
-    self.actionShow_Differential_Center_of_Mass_dCoM.triggered.connect(
-        lambda: self.Fig.dCoM.show(self.actionShow_Differential_Center_of_Mass_dCoM.isChecked()))
-    self.actionShow_Integrated_Center_of_Mass_iCoM.triggered.connect(
-        lambda: self.Fig.iCoM.show(self.actionShow_Integrated_Center_of_Mass_iCoM.isChecked()))
-    self.actionShow_Phase_Magnitude.triggered.connect(
-        lambda: self.Fig.CoMPhMag.show(
-            self.actionShow_Phase_Magnitude.isChecked()))
-    self.actionShow_Phase_Vector_Image.triggered.connect(
-        lambda: self.Fig.CoMPh.show(
-            self.actionShow_Phase_Vector_Image.isChecked()))
+    # menu action slots/signals: show/hide an image window (QWidget.show takes no argument: passing
+    # the checked state raised a TypeError).  The action's tick follows the window (guiClass).
+    from callbacks.window_manager import setWindowShown  # noqa: E402
+    for action, id in ((self.actionShow_Diffraction_Pattern, "Dfrn"), (self.actionShow_Diffraction_Mask, "DfrnMask"),
+                       (self.actionShow_Real_Space_Image, "Real"), (self.actionShow_Real_Space_Mask, "RealMask"),
+                       (self.actionShow_Center_of_Mass_Magnitude_CoM, "CoMMag"),
+                       (self.actionShow_Center_of_Mass_X, "CoMX"), (self.actionShow_Center_of_Mass_Y, "CoMY"),
+                       (self.actionShow_Colorwheel, "ColorWheel"),
+                       (self.actionShow_Differential_Center_of_Mass_dCoM, "dCoM"),
+                       (self.actionShow_Integrated_Center_of_Mass_iCoM, "iCoM"),
+                       (self.actionShow_Phase_Magnitude, "CoMPhMag"), (self.actionShow_Phase_Vector_Image, "CoMPh")):
+        action.setCheckable(True)
+        self.Fig[id].menuAction = action
+        action.triggered.connect(lambda checked, _id=id: setWindowShown(self, _id, checked))
     self.actionShow_All_Windows.triggered.connect(lambda: showAllWindows(self))
     self.actionHide_All_Windows.triggered.connect(lambda: hideAllWindows(self))
     self.ShowSettingsWdw.triggered.connect(lambda: self.SettingsWindow.show())
@@ -572,13 +558,17 @@ def startupFcn(self):
         self.G.AllFig.extend([self, self.SettingsWindow, self.ImportWindow, self.SaveWindow])
 
     def updateImageWindowSize(self, size, space):
-        match space:
-            case "Dfrn":
-                self.SettingsWindow.WdwHDfrn.setValue(self.SettingsWindow.WdwHDfrn.value() + size.height())
-                self.SettingsWindow.WdwWDfrn.setValue(self.SettingsWindow.WdwWDfrn.value() + size.width())
-            case "Real":
-                self.SettingsWindow.WdwHReal.setValue(self.SettingsWindow.WdwHReal.value() + size.height())
-                self.SettingsWindow.WdwWReal.setValue(self.SettingsWindow.WdwWReal.value() + size.width())
+        """Settings > Misc > window size: the image area of the window just resized, i.e. its size less
+        the toolbar/decoration (``mplDecor``, which the Set buttons add back).  This used to add each
+        resize's change to the fields, and the first change of a new window is its whole size
+        (Qt's old size is -1 x -1), so the fields filled up to about the monitor's size."""
+        boxes = {"Dfrn": (self.SettingsWindow.WdwWDfrn, self.SettingsWindow.WdwHDfrn),
+                 "Real": (self.SettingsWindow.WdwWReal, self.SettingsWindow.WdwHReal)}.get(space)
+        if boxes is None or size.width() <= 0 or size.height() <= 0:
+            return
+        with signals_blocked(*boxes):
+            boxes[0].setValue(max(1, size.width() - self.C.mplDecor.width()))
+            boxes[1].setValue(max(1, size.height() - self.C.mplDecor.height()))
 
     def updateDispImg(self, id):
         """Clicking an image window selects it for the display controls, unless the selection is locked."""

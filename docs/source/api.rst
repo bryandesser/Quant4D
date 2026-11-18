@@ -121,6 +121,12 @@ callbacks.axis_direction
 .. automodule:: callbacks.axis_direction
    :members:
 
+callbacks.view_zoom
+-------------------
+
+.. automodule:: callbacks.view_zoom
+   :members:
+
 callbacks.menus
 ---------------
 

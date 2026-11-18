@@ -198,6 +198,7 @@ class TestVirtualApertureLook:
     def test_red_with_a_mirror_handle_away_from_the_centre(self, loaded_app, qapp):
         from matplotlib.colors import to_rgba
         w = loaded_app
+        rmax = w.P.RMax
         w.P.RMax = 0                                  # as before Annular mode was ever used
         set_mode(w, qapp, "VrApMod")
         try:
@@ -207,6 +208,7 @@ class TestVirtualApertureLook:
                 qapp.processEvents()
             handle = w.A.VrApMirP
             assert handle is not None and handle.point.get_visible()
+            assert to_rgba(handle.point.get_facecolor()[0]) != to_rgba("r"), "mirror handle lost among the apertures"
             pos = np.asarray(handle.position, float)
             b0 = np.asarray(w.B0, float)
             assert np.hypot(*(pos - b0)) > 2, "mirror handle hidden on the beam centre"
@@ -221,4 +223,70 @@ class TestVirtualApertureLook:
         finally:
             if w.VrApMirror.isChecked():
                 w.VrApMirror.click()
+            w.P.RMax = rmax
             set_mode(w, qapp, "AnnMod")
+
+
+class TestVirtualApertureControls:
+    @pytest.fixture()
+    def polar(self, loaded_app, qapp):
+        sw = loaded_app.SettingsWindow
+        saved = (sw.DCSys.currentIndex(), sw.DCPos.currentIndex(), sw.DCUnit.currentIndex())
+        sw.DCSys.setCurrentIndex(sw.DCSys.findText("Polar"))
+        sw.DCPos.setCurrentIndex(sw.DCPos.findText("Relative"))
+        sw.DCUnit.setCurrentIndex(sw.DCUnit.findData("px"))
+        set_mode(loaded_app, qapp, "VrApMod")
+        yield loaded_app
+        set_mode(loaded_app, qapp, "AnnMod")
+        sw.DCSys.setCurrentIndex(saved[0])
+        sw.DCPos.setCurrentIndex(saved[1])
+        sw.DCUnit.setCurrentIndex(saved[2])
+
+    def test_distance_range_reaches_the_farthest_corner(self, polar):
+        w = polar
+        ny, nx = w.Fig.Dfrn.Image.shape
+        b0 = np.asarray(w.B0, float)
+        corners = np.array([[0, 0], [nx - 1, 0], [0, ny - 1], [nx - 1, ny - 1]], float)
+        assert w.VrApX_NF.maximum() == pytest.approx(np.hypot(*(corners - b0).T).max(), abs=0.01)   # 2 decimals
+
+    def test_angle_kept_at_zero_distance(self, polar, qapp):
+        w = polar
+        w.VrApY_NF.setValue(37.0)
+        w.VrApX_NF.setValue(3.0)
+        qapp.processEvents()
+        w.VrApX_NF.setValue(0.0)
+        qapp.processEvents()
+        assert w.VrApY_NF.value() == pytest.approx(37.0), "the angle reverted to 0 on the beam centre"
+        w.VrApX_NF.setValue(4.0)
+        qapp.processEvents()
+        d = np.asarray(w.P.VrApXY, float) - np.asarray(w.B0, float)
+        assert np.degrees(np.arctan2(d[1], d[0])) == pytest.approx(37.0, abs=0.5)
+
+    def test_invert_shows_in_the_diffraction_mask(self, polar, qapp):
+        w = polar
+        w.Fig.DfrnMask.show()
+        before = np.asarray(w.Fig.DfrnMask.Image, bool).copy()
+        w.VrApInvert.click()
+        qapp.processEvents()
+        try:
+            np.testing.assert_array_equal(np.asarray(w.Fig.DfrnMask.Image, bool), ~before)
+            shown = np.asarray(w.ImageAx.DfrnMask.get_array())
+            assert shown.mean() == pytest.approx((~before).mean(), abs=1e-6), "the mask window was not redrawn"
+        finally:
+            w.VrApInvert.click()
+            qapp.processEvents()
+
+
+def test_com_starts_with_inner_radius_zero_once(loaded_app, qapp):
+    w = loaded_app
+    w.P.CoMRadiusInit = False
+    set_mode(w, qapp, "AnnMod")
+    w.AnnRi.setValue((2, 6))
+    qapp.processEvents()
+    set_mode(w, qapp, "CoMMod")
+    assert w.AnnRi.value() == (0, 6)
+    w.AnnRi.setValue((1, 6))
+    qapp.processEvents()
+    set_mode(w, qapp, "DPCMod")                  # not the first time any more: left alone
+    assert w.AnnRi.value() == (1, 6)
+    set_mode(w, qapp, "AnnMod")

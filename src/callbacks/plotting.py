@@ -136,6 +136,23 @@ def displayCallbacks(self, source=None):
     plotImage(self, id)  # Re-plot image
 
 
+def resetDisplay(self) -> None:
+    """Brightness, contrast and gamma of the selected image back to their defaults."""
+    id = self.SettingsWindow.DispImage.currentData()
+    if id is None:
+        return
+    fig = self.Fig[id]
+    fig.brightness, fig.contrast, fig.gamma = 50, 50, 1
+    displayCallbacks(self, source="refresh")        # the controls follow the image, which is redrawn
+
+
+def connectHistogramReset(self) -> None:
+    """Double-click the histogram to reset brightness, contrast and gamma; called once from slotsSignals."""
+    canvas = self.SettingsWindow.HistAxes.figure.canvas
+    canvas.mpl_connect("button_press_event", lambda e: resetDisplay(self) if e.dblclick else None)
+    canvas.setToolTip("Drag the box to set the display range; double-click to reset brightness, contrast and gamma")
+
+
 def plotImage(self, id):
     """Generic function for plotting an image on a given axis with brightness/contrast/gamma values"""
 
@@ -196,6 +213,8 @@ def plotImage(self, id):
     if self.ImageAx[id] is None:
         self.ImageAx[id] = ax.imshow(disp)
         fitAxesToImage(ax, disp.shape)
+        from callbacks.view_zoom import ensureLinked  # noqa: E402
+        ensureLinked(self, id)      # zoom clamping and one view per space (cla() drops the callbacks)
     else:
         same_shape = np.shape(self.ImageAx[id].get_array())[:2] == disp.shape[:2]
         self.ImageAx[id].set_data(disp)
@@ -240,6 +259,8 @@ def fitAxesToImage(ax, shape) -> None:
     ax.set_xlim(-0.5, nx - 0.5)
     ax.set_ylim(ny - 0.5, -0.5)
     ax.set_autoscale_on(False)
+    from callbacks.view_zoom import resetNavigation  # noqa: E402
+    resetNavigation(ax)         # the toolbar's Home goes back to this view
 
 
 def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange):

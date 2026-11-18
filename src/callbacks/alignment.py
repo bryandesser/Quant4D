@@ -127,24 +127,11 @@ def moveTransBeam(self):
     detrCoordCallbacks(self)
 
 
-def autoAlign(self):
-    """
-    Auto-detect the transmitted beam centre (and radius) using the
-    Circular Hough Transform (imfindcircles.py).
+def _beamCandidates(self, broad=False):
+    """Circles found on the pattern used for alignment: ``(centers (n, 2), radii (n,))``, best first.
 
-    Input pattern
-    -------------
-    * No real-space ROI active (RealROIShape == 'full'):
-        PACBED = sum of ALL probe positions.
-    * Real-space ROI active:
-        Weighted average over the probe positions selected by the ROI
-        (uses self.Fig.RealMask.Image as weights), so e.g. a single
-        point ROI gives the pattern of exactly that probe position.
-
-    In either case ``self.Fig.Dfrn.Image`` already holds the correct
-    pattern (it is updated whenever the ROI changes), so we read it
-    directly rather than re-computing the sum.
-    """
+    *broad* searches every radius up to a quarter of the pattern even after the first alignment
+    (for picking another disk than the one auto-alignment chose)."""
     from callbacks.imfindcircles import imfindcircles
 
     nPx = dfrn_shape(self.D)   # (height, width) tuple
@@ -152,70 +139,96 @@ def autoAlign(self):
 
     # ── Choose the input pattern ──────────────────────────────────────────
     roi_shape = self.RealROIShape.currentData()   # 'full', 'point', …
-
     if roi_shape == 'full' or self.Fig.Dfrn.Image is None:
         # Full PACBED: sum every probe position
         pacbed = np.nansum(self.Data, axis=0).reshape(nPx).astype(np.float64)
     else:
         # ROI-weighted average: already computed and stored in Fig.Dfrn.Image
-        # (shape = nPx, normalised by the number of included probe positions)
         pacbed = np.asarray(self.Fig.Dfrn.Image, dtype=np.float64).reshape(nPx)
 
     # ── Radius search range ───────────────────────────────────────────────
     tbr = self.TBR.value()
-    if self.P.TransBeamInit and tbr > 1:
+    if self.P.TransBeamInit and tbr > 1 and not broad:
         # Use ±50 % of the current beam-disc radius, clamped to sensible values
         rmin = max(1, int(np.floor(0.5 * tbr)))
         rmax = min(rmax_abs, int(np.ceil(1.5 * tbr)))
     else:
-        # First-time call: search over the central quarter of the pattern
+        # First-time call (or picking): up to a quarter of the pattern
         rmin = 1
         rmax = max(2, int(np.ceil(min(nPx) / 4)))
-
     if rmax <= rmin:
         rmax = rmin + 1
 
     # ── Run circle finder ─────────────────────────────────────────────────
-    try:
-        centers, radii, metric = imfindcircles(
-            pacbed, [rmin, rmax],
-            ObjectPolarity='bright',
-            Method='PhaseCode',
-            Sensitivity=0.85,
-        )
-    except Exception:
-        # PhaseCode requires rmax > rmin; fall back to TwoStage if needed
+    sensitivity = 0.9 if broad else 0.85            # more candidates when the user picks one
+    for method in ('PhaseCode', 'TwoStage'):          # PhaseCode can fail on a narrow range
         try:
-            centers, radii, metric = imfindcircles(
-                pacbed, [rmin, rmax],
-                ObjectPolarity='bright',
-                Method='TwoStage',
-                Sensitivity=0.85,
-            )
+            centers, radii, _ = imfindcircles(pacbed, [rmin, rmax], ObjectPolarity='bright',
+                                              Method=method, Sensitivity=sensitivity)
+            return np.asarray(centers, float).reshape(-1, 2), np.asarray(radii, float).ravel()
         except Exception:
-            return   # give up gracefully — leave B0/TBR unchanged
+            continue
+    return np.zeros((0, 2)), np.zeros(0)
 
-    if len(centers) == 0:
-        return  # no circle found — leave B0 unchanged
 
-    # Best match: imfindcircles already sorts by descending metric
-    cx, cy = float(centers[0, 0]), float(centers[0, 1])
-    r = float(radii[0])
-
-    # Clamp to valid pixel range
-    cx = np.clip(cx, 0, nPx[1] - 1)
-    cy = np.clip(cy, 0, nPx[0] - 1)
-    r = np.clip(r, np.finfo(np.single).eps, rmax_abs)
-
+def _setBeam(self, cx, cy, r=None):
+    nPx = dfrn_shape(self.D)
+    cx = float(np.clip(cx, 0, nPx[1] - 1))
+    cy = float(np.clip(cy, 0, nPx[0] - 1))
     with all_signals_blocked(self):
         self.TBX.setValue(cx)
         self.TBX_NF.setValue(cx)
         self.TBY.setValue(cy)
         self.TBY_NF.setValue(cy)
-        self.TBR.setValue(r)
-        self.TBR_NF.setValue(r)
-
+        if r is not None:
+            r = float(np.clip(r, np.finfo(np.single).eps, max(1, self.P.RMax)))
+            self.TBR.setValue(r)
+            self.TBR_NF.setValue(r)
     moveTransBeam(self)
+
+
+def autoAlign(self, near=None):
+    """
+    Auto-detect the transmitted beam centre (and radius) using the
+    Circular Hough Transform (imfindcircles.py).
+
+    Input pattern: the sum of all probe positions (full real-space ROI), otherwise the pattern of
+    the real-space ROI (``self.Fig.Dfrn.Image``), so e.g. a point ROI aligns on that frame.
+
+    Without *near* the strongest circle is taken.  With *near* = (x, y) (the user double-clicked
+    the diffraction pattern in Alignment mode, because auto-alignment chose the wrong disk) the
+    circle nearest that point is taken; if none is found near it, the beam centre goes to the
+    point and keeps its radius.  Returns True if a detected circle was used.
+    """
+    centers, radii = _beamCandidates(self, broad=near is not None)
+    if near is None:
+        if len(centers) == 0:
+            return False    # no circle found — leave B0 unchanged
+        _setBeam(self, centers[0, 0], centers[0, 1], radii[0])   # sorted by descending metric
+        return True
+
+    near = np.asarray(near, float)
+    if len(centers):
+        d = np.hypot(*(centers - near).T)
+        k = int(np.argmin(d))
+        if d[k] <= max(1.5 * radii[k], 3.0):           # the click is on (or just beside) that disk
+            _setBeam(self, centers[k, 0], centers[k, 1], radii[k])
+            return True
+    _setBeam(self, near[0], near[1])                   # nothing detected there: centre on the click
+    return False
+
+
+def connectBeamPick(self) -> None:
+    """Alignment mode: double-click a disk on the diffraction pattern to make it the transmitted beam
+    (refit to the detected circle nearest the click); called once from slotsSignals."""
+    def on_press(event):
+        if (event.dblclick and event.button == 1 and event.inaxes is self.Fig.Dfrn.ax
+                and event.xdata is not None and self.DetrMode.currentData() == "AlignMod"
+                and self.Data is not None):
+            autoAlign(self, near=(event.xdata, event.ydata))
+    self.Fig.Dfrn.canvas.mpl_connect("button_press_event", on_press)
+    self.TBAutoAlign.setToolTip("Find the transmitted beam automatically.  If it picks the wrong disk, "
+                                "double-click the right one on the diffraction pattern.")
 
 
 def crossAlign(self):
