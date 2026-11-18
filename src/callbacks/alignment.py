@@ -63,8 +63,17 @@ def transBeamCallbacks(self):
     moveTransBeam(self)
 
 
-def moveTransBeam(self):
-    """ Function to sync UIs/ROIs depending on the central beam location """
+_FROM_SIGNAL = object()
+
+
+def moveTransBeam(self, sender=_FROM_SIGNAL):
+    """ Function to sync UIs/ROIs depending on the central beam location
+
+    Connected slots leave *sender* unset and it is read from ``self.sender()``.  Direct calls from
+    outside a Qt slot (matplotlib events, auto-alignment) pass ``sender=None``: ``QObject.sender()``
+    is only valid while a slot runs, and outside one it can return a dangling pointer (segfault on
+    Linux).
+    """
     from callbacks.detector import detrCoordCallbacks  # noqa: E402
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
@@ -77,18 +86,19 @@ def moveTransBeam(self):
     mrad_per_px = a / r
     nPix = self.D.NPx
 
-    match self.sender():
+    src = self.sender() if sender is _FROM_SIGNAL else sender
+    match src:
         case self.TBX | self.TBX_NF:
-            b0[0] = max(0, self.sender().value())  # Force X >= 0
+            b0[0] = max(0, src.value())  # Force X >= 0
         case self.TBY | self.TBY_NF:
-            b0[1] = max(0, self.sender().value())  # Force Y >= 0
+            b0[1] = max(0, src.value())  # Force Y >= 0
         case self.TBR | self.TBR_NF:
-            r = self.sender().value()  # Radius
+            r = src.value()  # Radius
         case self.Alpha:
-            a = self.sender().value()
+            a = src.value()
             mrad_per_px = a / r  # Calculate the diffraction scale
         case self.mradPx:
-            mrad_per_px = self.sender().value()
+            mrad_per_px = src.value()
             a = mrad_per_px * r  # Manually set the diffraction scale
         case self.A.tb:   # dragged: the annotation holds an array of radii (one here) and its own centre array
             b0 = np.array(self.A.tb.center, dtype=float)
@@ -124,7 +134,7 @@ def moveTransBeam(self):
         self.AnnStep.setValue(self.D.annWidth * float(self.mradPx.value()))   # the scale as shown (rounded)
 
         # Update transmitted beam annotation
-        if (self.sender() is not self.A.tb) and (self.A.tb is not None):
+        if (src is not self.A.tb) and (self.A.tb is not None):
             self.A.tb.center = b0
             self.A.tb.radius = np.array([r])
             self.A.tb.redraw()
@@ -189,7 +199,7 @@ def _setBeam(self, cx, cy, r=None):
             r = float(np.clip(r, np.finfo(np.single).eps, max(1, self.P.RMax)))
             self.TBR.setValue(r)
             self.TBR_NF.setValue(r)
-    moveTransBeam(self)
+    moveTransBeam(self, sender=None)
 
 
 def autoAlign(self, near=None):
@@ -299,7 +309,7 @@ def crossAlign(self):
 
         # Tear down the crosshair
         crossAlign(self)   # second call → removes state
-        moveTransBeam(self)
+        moveTransBeam(self, sender=None)
 
     cids = [
         canvas.mpl_connect('motion_notify_event', _on_move),
