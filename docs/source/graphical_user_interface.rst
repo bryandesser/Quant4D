@@ -51,6 +51,7 @@ Each analysis mode opens a set of image windows (diffraction pattern,
 real-space image, CoM channels, etc.), each with a matplotlib toolbar for pan,
 zoom and restore-view.
 
+- **Pan**: drag the image (anywhere that is not an annotation) when zoomed in.
 - **Zoom**: the mouse wheel zooms about the cursor; ``+`` and ``-`` zoom about
   the centre of the view; ``Home`` (or the toolbar's Home) shows the whole image
   again.  Views never extend past the image.

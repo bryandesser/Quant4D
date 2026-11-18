@@ -186,10 +186,12 @@ class InteractiveCircle(qtc.QObject):
         if InteractiveCircle.lock is not None:
             return
 
-        # update center and radii
-        self.center = np.mean(self.circ[0]._xy[:-1], axis=0)
+        # update center and radii (get_xydata, not the cached _xy: that is only refreshed when the
+        # line is drawn, so right after a programmatic move it still held the old circle and the
+        # annotation "stayed" at its old place for hover/clicks until the next redraw)
+        self.center = np.mean(self.circ[0].get_xydata()[:-1], axis=0)
         for ii in range(len(self.circ)):
-            self.radius[ii] = np.mean(np.linalg.norm(self.circ[ii]._xy - self.center, axis=1))
+            self.radius[ii] = np.mean(np.linalg.norm(self.circ[ii].get_xydata() - self.center, axis=1))
 
         # check that mouse press contains the outer circle
         containsPoint, contains = self.containsArtist(event)
@@ -215,7 +217,7 @@ class InteractiveCircle(qtc.QObject):
             self.transform = None
 
         # save info to the self.press
-        self.press = [circ._xy for circ in self.circ], self.point.get_offsets(), (event.xdata, event.ydata)
+        self.press = [circ.get_xydata().copy() for circ in self.circ], self.point.get_offsets(), (event.xdata, event.ydata)
 
         # block any other InteractiveCircle interactions
         InteractiveCircle.lock = self
@@ -283,7 +285,7 @@ class InteractiveCircle(qtc.QObject):
             self.point.set_offsets(ptData + (dx, dy))
 
             # update center by (dx,dy)
-            self.center = np.mean(self.circ[0]._xy[:-1], axis=0)
+            self.center = np.mean(self.circ[0].get_xydata()[:-1], axis=0)
 
         # if the user is attempting a resize and that is allowed, update point(s) locations and circle(s) radius
         elif (self.transform == 'resize') and (self.interactions in ["all", "resize"]) and (self.selectedPoint is not None):
@@ -369,7 +371,7 @@ class InteractiveCircle(qtc.QObject):
         """ in the case where center/radius are updated externally, redraw all point(s) and circle(s) """
 
         # keep points in the same relative position on the circle, only scale radius
-        vec = self.point.get_offsets() - np.mean([circ._xy[:-1] for circ in self.circ], axis=1)
+        vec = self.point.get_offsets() - np.mean([circ.get_xydata()[:-1] for circ in self.circ], axis=1)
         vec /= np.linalg.norm(vec, axis=1)[:, None]
         self.point.set_offsets(vec * self.radius[:, None] + self.center)
 

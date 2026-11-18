@@ -89,6 +89,58 @@ class TestZoom:
         assert fig.ax.get_yscale() == "linear" and fig.ax.get_xscale() == "linear"
 
 
+class TestPan:
+    def _drag(self, fig, start, end, steps=4):
+        canvas = fig.canvas
+        canvas.draw()
+        p0, p1 = np.asarray(fig.ax.transData.transform(start)), np.asarray(fig.ax.transData.transform(end))
+        canvas.callbacks.process("button_press_event", MouseEvent("button_press_event", canvas, *p0, button=1))
+        for t in np.linspace(0, 1, steps + 1)[1:]:
+            p = p0 + t * (p1 - p0)
+            canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, *p))
+        canvas.callbacks.process("button_release_event", MouseEvent("button_release_event", canvas, *p1, button=1))
+
+    def test_drag_pans_a_zoomed_view_and_its_linked_windows(self, ann):
+        fig = ann.Fig.Dfrn
+        for _ in range(3):
+            _scroll(fig, (12.0, 8.0), +1)
+        fig.canvas.draw()                                # settle the view (equal aspect) first
+        x0, y0 = fig.ax.get_xlim(), fig.ax.get_ylim()
+        self._drag(fig, (12.0, 8.0), (10.0, 7.0))        # the content moves with the mouse
+        # (mouse events carry whole pixels: allow a pixel's worth of rounding)
+        assert np.diff([x0[0], fig.ax.get_xlim()[0]])[0] == pytest.approx(2.0, abs=0.1)
+        assert np.diff([y0[0], fig.ax.get_ylim()[0]])[0] == pytest.approx(1.0, abs=0.1)
+        assert ann.Fig.DfrnMask.ax.get_xlim() == pytest.approx(fig.ax.get_xlim())
+
+    def test_dragging_an_annotation_does_not_pan(self, ann, qapp):
+        fig = ann.Fig.Dfrn
+        ann.AnnRi.setValue((1, 6))
+        qapp.processEvents()
+        for _ in range(2):
+            _scroll(fig, tuple(ann.B0), +1)
+        fig.canvas.draw()
+        xlim, ylim = fig.ax.get_xlim(), fig.ax.get_ylim()
+        handle = ann.A.adf.point.get_offsets()[-1].copy()
+        self._drag(fig, handle, handle + [1.5, 0.0])
+        assert fig.ax.get_xlim() == pytest.approx(xlim) and fig.ax.get_ylim() == pytest.approx(ylim)
+
+    def test_a_click_does_not_pan(self, ann):
+        fig = ann.Fig.Real
+        _scroll(fig, (2.0, 2.0), +1)
+        fig.canvas.draw()
+        lims = fig.ax.get_xlim()
+        self._drag(fig, (2.0, 2.0), (2.01, 2.0), steps=1)   # under the threshold
+        assert fig.ax.get_xlim() == pytest.approx(lims)
+
+
+class TestTooltips:
+    def test_shown_in_inactive_windows(self, loaded_app):
+        from PyQt5 import QtCore as qtc
+        w = loaded_app
+        for window in (w, w.SettingsWindow, w.ImportWindow, w.SaveWindow, w.Fig.Dfrn):
+            assert window.testAttribute(qtc.Qt.WidgetAttribute.WA_AlwaysShowToolTips), window
+
+
 class TestWindowMenu:
     def test_show_after_hide_all(self, loaded_app, qapp):
         w = loaded_app
@@ -199,6 +251,36 @@ class TestPickTheBeam:
             self._dblclick(w, (19.0, 2.0))                 # nowhere near a disk: centre on the click
             qapp.processEvents()
             assert (w.TBX.value(), w.TBY.value(), w.TBR.value()) == pytest.approx((19.0, 2.0, 2.5))
+        finally:
+            al._setBeam(w, *before)
+            set_mode(w, qapp, "AnnMod")
+
+    def test_no_phantom_at_the_old_place(self, loaded_app, qapp, monkeypatch):
+        """After a double-click moved the beam, hovering the old place still gave the move cursor:
+        the circle's centre was re-read from matplotlib's line cache, which still held the old
+        circle until the next redraw."""
+        import callbacks.alignment as al
+        w = loaded_app
+        set_mode(w, qapp, "AlignMod")
+        before = (w.TBX.value(), w.TBY.value(), w.TBR.value())
+        monkeypatch.setattr(al, "_beamCandidates", lambda self, broad=False: (
+            np.array([[18.0, 10.0]]), np.array([2.0])))
+        try:
+            old = np.array(w.B0, float)
+            fig = w.Fig.Dfrn
+            fig.canvas.draw()
+            x, y = fig.ax.transData.transform((17.5, 10.5))
+            for dbl in (False, True):            # a real double-click: two presses and releases
+                fig.canvas.callbacks.process("button_press_event", MouseEvent(
+                    "button_press_event", fig.canvas, x, y, button=1, dblclick=dbl))
+                fig.canvas.callbacks.process("button_release_event", MouseEvent(
+                    "button_release_event", fig.canvas, x, y, button=1))
+            qapp.processEvents()
+            tb = w.A.tb
+            np.testing.assert_allclose(tb.center, (18.0, 10.0))
+            px, py = fig.ax.transData.transform(old)
+            _, contains = tb.containsArtist(MouseEvent("motion_notify_event", fig.canvas, px, py))
+            assert not contains, "the beam annotation still answers at its old place"
         finally:
             al._setBeam(w, *before)
             set_mode(w, qapp, "AnnMod")

@@ -148,6 +148,12 @@ def slotsSignals(self):
     from callbacks.alignment import connectBeamPick  # noqa: E402
     connectBeamPick(self)         # Alignment mode: double-click a disk to make it the transmitted beam
 
+    # Tooltips also when the window is not the active one (Qt shows them only in the active window,
+    # yet hovering highlights buttons in any window, which made the missing tooltip look like a bug)
+    for window in [self, self.SettingsWindow, self.ImportWindow, self.SaveWindow] + \
+            [self.Fig[id] for id in self.G.ImgID if self.Fig[id] is not None]:
+        window.setAttribute(qtc.Qt.WidgetAttribute.WA_AlwaysShowToolTips, True)
+
     # menu action slots/signals: show/hide an image window (QWidget.show takes no argument: passing
     # the checked state raised a TypeError).  The action's tick follows the window (guiClass).
     from callbacks.window_manager import setWindowShown  # noqa: E402
