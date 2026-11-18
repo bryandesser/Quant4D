@@ -25,6 +25,16 @@ diffraction-pattern window.
 The ``Ri`` and ``Ro`` values are synchronised with the spinboxes in the main
 window.
 
+Annular integration step
+------------------------
+
+The ring images behind the annular detector are pre-computed in steps of the
+**Annular Integration Step** (mrad), shown on the Alignment tab in Alignment
+mode and on the Annular/CoM/DPC tab otherwise.  It defaults to one pixel, but at
+most 250 steps out to the farthest corner of the pattern (finer steps cost
+computation time and memory).  Changing it integrates the rings again; the
+detector keeps its size, and the radius sliders and spin boxes step one ring.
+
 .. note::
    Full walkthrough with screenshots will be added in a future documentation
    update.

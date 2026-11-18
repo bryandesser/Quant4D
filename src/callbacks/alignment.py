@@ -8,8 +8,10 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
+from callbacks.signals import all_signals_blocked  # noqa: E402
 try:
     from callbacks.imfindcircles import imfindcircles
 except ImportError:
@@ -17,6 +19,8 @@ except ImportError:
 
 
 def transBeamCallbacks(self):
+    from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
+    from callbacks.window_manager import enableWindows  # noqa: E402
     match self.sender():
         case self.DetrMode:  # Entering mode
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
@@ -33,7 +37,8 @@ def transBeamCallbacks(self):
                 self.Fig.Dfrn.canvas.flush_events()
 
             # Select `Dfrn` image and bring window to the front
-            self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData("Dfrn"))
+            if not self.SettingsWindow.DispLock.isChecked():
+                self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData("Dfrn"))
             self.Fig.Dfrn.activateWindow()
 
             # If this is the initializing alignment, then do swap byte check and auto-align
@@ -45,8 +50,8 @@ def transBeamCallbacks(self):
 
         case self.UpdateImages:  # Update images
             # Create a summed image of all diffraction patterns simply for alignment and calibration
-            self.Fig.DfrnMask.Image = np.ones(self.D.NPx, self.D.DataType)
-            self.Fig.Real.Image = np.reshape(self.Data.sum(axis=1), self.D.NFr)
+            self.Fig.DfrnMask.Image = np.ones(dfrn_shape(self.D), self.D.DataType)
+            self.Fig.Real.Image = np.reshape(self.Data.sum(axis=1), real_shape(self.D))
 
         case self.TBAutoAlign:  # Auto-align
             autoAlign(self)
@@ -58,8 +63,18 @@ def transBeamCallbacks(self):
     moveTransBeam(self)
 
 
-def moveTransBeam(self):
-    """ Function to sync UIs/ROIs depending on the central beam location """
+_FROM_SIGNAL = object()
+
+
+def moveTransBeam(self, sender=_FROM_SIGNAL):
+    """ Function to sync UIs/ROIs depending on the central beam location
+
+    Connected slots leave *sender* unset and it is read from ``self.sender()``.  Direct calls from
+    outside a Qt slot (matplotlib events, auto-alignment) pass ``sender=None``: ``QObject.sender()``
+    is only valid while a slot runs, and outside one it can return a dangling pointer (segfault on
+    Linux).
+    """
+    from callbacks.detector import detrCoordCallbacks  # noqa: E402
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
@@ -71,150 +86,164 @@ def moveTransBeam(self):
     mrad_per_px = a / r
     nPix = self.D.NPx
 
-    match self.sender():
+    src = self.sender() if sender is _FROM_SIGNAL else sender
+    match src:
         case self.TBX | self.TBX_NF:
-            b0[0] = max(1, self.sender().value())  # Force X >= 1
+            b0[0] = max(0, src.value())  # Force X >= 0
         case self.TBY | self.TBY_NF:
-            b0[1] = max(1, self.sender().value())  # Force Y >= 1
+            b0[1] = max(0, src.value())  # Force Y >= 0
         case self.TBR | self.TBR_NF:
-            r = self.sender().value()  # Radius
+            r = src.value()  # Radius
         case self.Alpha:
-            a = self.sender().value()
+            a = src.value()
             mrad_per_px = a / r  # Calculate the diffraction scale
         case self.mradPx:
-            mrad_per_px = self.sender().value()
+            mrad_per_px = src.value()
             a = mrad_per_px * r  # Manually set the diffraction scale
-        case self.A.tb:
-            b0 = self.A.tb.center
-            r = self.A.tb.radius
+        case self.A.tb:   # dragged: the annotation holds an array of radii (one here) and its own centre array
+            b0 = np.array(self.A.tb.center, dtype=float)
+            r = float(np.ravel(self.A.tb.radius)[-1])
 
     # Restrict transmitted beam location/size
-    b0 = b0.clip([1, 1], nPix)
+    b0 = b0.clip([0, 0], nPix - 1)   # 0-based: valid pixel centres are 0 .. N-1
     self.B0 = b0
     self.P.RMax = np.ceil(np.linalg.norm(abs(self.P.DfCtr - b0) + self.P.DfCtr))  # Find the max allowed radius
     r = np.clip(r, np.finfo(np.single).eps, self.P.RMax)  # 0 < r <= RMax
 
     # avoid triggering a valueChanged loop by blocking signals
-    self.blockAllSignals = True
+    with all_signals_blocked(self):
+        # Update UI limits
+        self.TBR.setRange(0, self.P.RMax)
+        self.TBR_NF.setRange(0, self.P.RMax)
+        self.AnnRi.setRange(0, int(np.ceil(self.P.RMax / float(self.D.annWidth))))   # in rings
+        self.VrApR.setRange(0, self.P.RMax)
 
-    # Update UI limits
-    self.TBR.setRange(0, self.P.RMax)
-    self.TBR_NF.setRange(0, self.P.RMax)
-    self.AnnRi.setRange(0, self.P.RMax)
-    self.VrApR.setRange(0, self.P.RMax)
+        # Update UI values
+        self.TBR.setValue(r)
+        self.TBX.setValue(b0[0])
+        self.TBY.setValue(b0[1])
+        self.TBR_NF.setValue(r)
+        self.TBX_NF.setValue(b0[0])
+        self.TBY_NF.setValue(b0[1])
+        self.Alpha.setValue(a)
+        self.mradPx.setValue(mrad_per_px)
 
-    # Update UI values
-    self.TBR.setValue(r)
-    self.TBX.setValue(b0[0])
-    self.TBY.setValue(b0[1])
-    self.TBR_NF.setValue(r)
-    self.TBX_NF.setValue(b0[0])
-    self.TBY_NF.setValue(b0[1])
-    self.Alpha.setValue(a)
-    self.mradPx.setValue(mrad_per_px)
+        # Annular integration step (MATLAB's AnnularStep): one pixel, but at most 250 rings out to the
+        # farthest corner (finer makes the pre-computed annular images slow), shown in mrad
+        self.D.annWidth = float(max(1.0, self.P.RMax / 250.0))
+        self.AnnStep.setValue(self.D.annWidth * float(self.mradPx.value()))   # the scale as shown (rounded)
 
-    # Update transmitted beam annotation
-    if (self.sender() is not self.A.tb) and (self.A.tb is not None):
-        self.A.tb.center = b0
-        self.A.tb.radius = np.array([r])
-        self.A.tb.redraw()
-
-    # unblock trigger signals
-    self.blockAllSignals = False
+        # Update transmitted beam annotation
+        if (src is not self.A.tb) and (self.A.tb is not None):
+            self.A.tb.center = b0
+            self.A.tb.radius = np.array([r])
+            self.A.tb.redraw()
 
     detrCoordCallbacks(self)
 
 
-def autoAlign(self):
-    """
-    Auto-detect the transmitted beam centre (and radius) using the
-    Circular Hough Transform (imfindcircles.py).
+def _beamCandidates(self, broad=False):
+    """Circles found on the pattern used for alignment: ``(centers (n, 2), radii (n,))``, best first.
 
-    Input pattern
-    -------------
-    * No real-space ROI active (RealROIShape == 'full'):
-        PACBED = sum of ALL probe positions.
-    * Real-space ROI active:
-        Weighted average over the probe positions selected by the ROI
-        (uses self.Fig.RealMask.Image as weights), so e.g. a single
-        point ROI gives the pattern of exactly that probe position.
-
-    In either case ``self.Fig.Dfrn.Image`` already holds the correct
-    pattern (it is updated whenever the ROI changes), so we read it
-    directly rather than re-computing the sum.
-    """
+    *broad* searches every radius up to a quarter of the pattern even after the first alignment
+    (for picking another disk than the one auto-alignment chose)."""
     from callbacks.imfindcircles import imfindcircles
 
-    nPx = self.D.NPx           # (height, width) tuple
+    nPx = dfrn_shape(self.D)   # (height, width) tuple
     rmax_abs = max(1, self.P.RMax)
 
     # ── Choose the input pattern ──────────────────────────────────────────
     roi_shape = self.RealROIShape.currentData()   # 'full', 'point', …
-
     if roi_shape == 'full' or self.Fig.Dfrn.Image is None:
         # Full PACBED: sum every probe position
         pacbed = np.nansum(self.Data, axis=0).reshape(nPx).astype(np.float64)
     else:
         # ROI-weighted average: already computed and stored in Fig.Dfrn.Image
-        # (shape = nPx, normalised by the number of included probe positions)
         pacbed = np.asarray(self.Fig.Dfrn.Image, dtype=np.float64).reshape(nPx)
 
     # ── Radius search range ───────────────────────────────────────────────
     tbr = self.TBR.value()
-    if tbr > 1:
+    if self.P.TransBeamInit and tbr > 1 and not broad:
         # Use ±50 % of the current beam-disc radius, clamped to sensible values
         rmin = max(1, int(np.floor(0.5 * tbr)))
         rmax = min(rmax_abs, int(np.ceil(1.5 * tbr)))
     else:
-        # First-time call: search over the central quarter of the pattern
+        # First-time call (or picking): up to a quarter of the pattern
         rmin = 1
         rmax = max(2, int(np.ceil(min(nPx) / 4)))
-
     if rmax <= rmin:
         rmax = rmin + 1
 
     # ── Run circle finder ─────────────────────────────────────────────────
-    try:
-        centers, radii, metric = imfindcircles(
-            pacbed, [rmin, rmax],
-            ObjectPolarity='bright',
-            Method='PhaseCode',
-            Sensitivity=0.85,
-        )
-    except Exception:
-        # PhaseCode requires rmax > rmin; fall back to TwoStage if needed
+    sensitivity = 0.9 if broad else 0.85            # more candidates when the user picks one
+    for method in ('PhaseCode', 'TwoStage'):          # PhaseCode can fail on a narrow range
         try:
-            centers, radii, metric = imfindcircles(
-                pacbed, [rmin, rmax],
-                ObjectPolarity='bright',
-                Method='TwoStage',
-                Sensitivity=0.85,
-            )
+            centers, radii, _ = imfindcircles(pacbed, [rmin, rmax], ObjectPolarity='bright',
+                                              Method=method, Sensitivity=sensitivity)
+            return np.asarray(centers, float).reshape(-1, 2), np.asarray(radii, float).ravel()
         except Exception:
-            return   # give up gracefully — leave B0/TBR unchanged
+            continue
+    return np.zeros((0, 2)), np.zeros(0)
 
-    if len(centers) == 0:
-        return  # no circle found — leave B0 unchanged
 
-    # Best match: imfindcircles already sorts by descending metric
-    cx, cy = float(centers[0, 0]), float(centers[0, 1])
-    r = float(radii[0])
+def _setBeam(self, cx, cy, r=None):
+    nPx = dfrn_shape(self.D)
+    cx = float(np.clip(cx, 0, nPx[1] - 1))
+    cy = float(np.clip(cy, 0, nPx[0] - 1))
+    with all_signals_blocked(self):
+        self.TBX.setValue(cx)
+        self.TBX_NF.setValue(cx)
+        self.TBY.setValue(cy)
+        self.TBY_NF.setValue(cy)
+        if r is not None:
+            r = float(np.clip(r, np.finfo(np.single).eps, max(1, self.P.RMax)))
+            self.TBR.setValue(r)
+            self.TBR_NF.setValue(r)
+    moveTransBeam(self, sender=None)
 
-    # Clamp to valid pixel range
-    cx = np.clip(cx, 1, nPx[1])
-    cy = np.clip(cy, 1, nPx[0])
-    r = np.clip(r, np.finfo(np.single).eps, rmax_abs)
 
-    self.blockAllSignals = True
-    self.TBX.setValue(cx)
-    self.TBX_NF.setValue(cx)
-    self.TBY.setValue(cy)
-    self.TBY_NF.setValue(cy)
-    self.TBR.setValue(r)
-    self.TBR_NF.setValue(r)
-    self.blockAllSignals = False
+def autoAlign(self, near=None):
+    """
+    Auto-detect the transmitted beam centre (and radius) using the
+    Circular Hough Transform (imfindcircles.py).
 
-    moveTransBeam(self)
+    Input pattern: the sum of all probe positions (full real-space ROI), otherwise the pattern of
+    the real-space ROI (``self.Fig.Dfrn.Image``), so e.g. a point ROI aligns on that frame.
+
+    Without *near* the strongest circle is taken.  With *near* = (x, y) (the user double-clicked
+    the diffraction pattern in Alignment mode, because auto-alignment chose the wrong disk) the
+    circle nearest that point is taken; if none is found near it, the beam centre goes to the
+    point and keeps its radius.  Returns True if a detected circle was used.
+    """
+    centers, radii = _beamCandidates(self, broad=near is not None)
+    if near is None:
+        if len(centers) == 0:
+            return False    # no circle found — leave B0 unchanged
+        _setBeam(self, centers[0, 0], centers[0, 1], radii[0])   # sorted by descending metric
+        return True
+
+    near = np.asarray(near, float)
+    if len(centers):
+        d = np.hypot(*(centers - near).T)
+        k = int(np.argmin(d))
+        if d[k] <= max(1.5 * radii[k], 3.0):           # the click is on (or just beside) that disk
+            _setBeam(self, centers[k, 0], centers[k, 1], radii[k])
+            return True
+    _setBeam(self, near[0], near[1])                   # nothing detected there: centre on the click
+    return False
+
+
+def connectBeamPick(self) -> None:
+    """Alignment mode: double-click a disk on the diffraction pattern to make it the transmitted beam
+    (refit to the detected circle nearest the click); called once from slotsSignals."""
+    def on_press(event):
+        if (event.dblclick and event.button == 1 and event.inaxes is self.Fig.Dfrn.ax
+                and event.xdata is not None and self.DetrMode.currentData() == "AlignMod"
+                and self.Data is not None):
+            autoAlign(self, near=(event.xdata, event.ydata))
+    self.Fig.Dfrn.canvas.mpl_connect("button_press_event", on_press)
+    self.TBAutoAlign.setToolTip("Find the transmitted beam automatically.  If it picks the wrong disk, "
+                                "double-click the right one on the diffraction pattern.")
 
 
 def crossAlign(self):
@@ -269,19 +298,18 @@ def crossAlign(self):
         if event.button != 1:   # left-click only
             return
 
-        new_x = float(np.clip(event.xdata, 1, self.D.NPx[1]))
-        new_y = float(np.clip(event.ydata, 1, self.D.NPx[0]))
+        new_x = float(np.clip(event.xdata, 0, self.D.NPxX - 1))
+        new_y = float(np.clip(event.ydata, 0, self.D.NPxY - 1))
 
-        self.blockAllSignals = True
-        self.TBX.setValue(new_x)
-        self.TBX_NF.setValue(new_x)
-        self.TBY.setValue(new_y)
-        self.TBY_NF.setValue(new_y)
-        self.blockAllSignals = False
+        with all_signals_blocked(self):
+            self.TBX.setValue(new_x)
+            self.TBX_NF.setValue(new_x)
+            self.TBY.setValue(new_y)
+            self.TBY_NF.setValue(new_y)
 
         # Tear down the crosshair
         crossAlign(self)   # second call → removes state
-        moveTransBeam(self)
+        moveTransBeam(self, sender=None)
 
     cids = [
         canvas.mpl_connect('motion_notify_event', _on_move),

@@ -32,12 +32,18 @@ Opened via the Import button.  Lets you:
 Settings window
 ---------------
 
-Contains tabs for display, layout, and miscellaneous options:
+Contains tabs for display, windows, and miscellaneous options:
 
-- **Display** — colourmap, invert, lock display to a single image
-- **Windows** — show/hide individual image windows; resize controls
-- **Variables** — read-only view of key dataset parameters
-- **Info** — software version and system information
+- **Display** — image selection (and lock), colour map, histogram, brightness,
+  contrast, gamma and mask opacity
+- **Windows** — buttons to show each image window and the vector-field overlay;
+  the iCoM/dCoM bandpass filter; window size and orientation (axis directions,
+  reversal, rotation, size) for diffraction and real space
+- **Misc** — calculation policy, detector coordinate options, byte-order and
+  X/Y swaps of the dataset
+- **Info** — dataset information; **Show all variables** adds a **Variables**
+  tab listing the dataset parameters and settings
+- **Math** — formula for custom-detector Math masks (Custom Detectors mode)
 
 Save / Export window
 --------------------
@@ -47,9 +53,19 @@ See :ref:`export` for full details.
 Image windows
 -------------
 
-Each analysis mode opens a set of linked image windows (diffraction pattern,
-real-space image, CoM channels, etc.).  All image windows share the same
-matplotlib toolbar for pan, zoom, and restore-view.
+Each analysis mode opens a set of image windows (diffraction pattern,
+real-space image, CoM channels, etc.), each with a matplotlib toolbar for pan,
+zoom and restore-view.
+
+- **Pan**: drag the image (anywhere that is not an annotation) when zoomed in.
+- **Zoom**: the mouse wheel zooms about the cursor; ``+`` and ``-`` zoom about
+  the centre of the view; ``Home`` (or the toolbar's Home) shows the whole image
+  again.  Views never extend past the image.
+- **One view per space**: zooming or panning one diffraction-space image applies
+  the same view to the other (pattern and mask); likewise for all real-space
+  images (image, mask, CoM/DPC images).
+- **Histogram**: double-click the histogram in Settings → Display to reset the
+  brightness, contrast and gamma of the selected image.
 
 .. note::
    Full screenshot walkthroughs will be added in a future documentation update.

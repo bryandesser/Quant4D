@@ -10,7 +10,7 @@ It is a Python port of the original
 developed at `Monash Imaging Physics <https://www.monash.edu/medicine/ccs/research/monash-imaging-physics>`_.
 
 .. note::
-   pyQuant4D is currently in early development (v0.1.0 alpha).
+   pyQuant4D is currently in early development (v0.2.0 alpha).
    The API and UI may change without notice.
 
 |

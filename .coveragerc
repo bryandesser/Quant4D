@@ -1,0 +1,4 @@
+[run]
+# Running one test file (e.g. tests/unit/test_compute_torch.py) imports only part of the code, and
+# coverage then warns that a package given to --cov was "never imported".  Harmless: silence it.
+disable_warnings = module-not-imported

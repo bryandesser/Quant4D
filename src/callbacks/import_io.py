@@ -18,6 +18,9 @@ import matplotlib
 from PIL import Image
 # Deferred cross-module imports (safe: import_io is itself only loaded lazily)
 from callbacks.utils import notifDLG, checkNaN  # noqa: E402
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
+from callbacks import compute  # noqa: E402
+from callbacks.axis_direction import install_view_transform  # noqa: E402
 # NOTE: enableWindows is imported inside the functions that need it (unloadData,
 # importData) to avoid a circular import with callbacks.startup, which imports
 # from this module at its own module level.
@@ -37,6 +40,10 @@ except ImportError:
 
             @staticmethod
             def get_device_name(i):
+                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+
+            @staticmethod
+            def mem_get_info(i=0):
                 raise RuntimeError("torch not installed; install pyquant4d[gpu]")
 
         @staticmethod
@@ -94,15 +101,17 @@ def gatherImportOptions(self, preview):
     d.DNFrY = self.ImportWindow.DNFrY.value()
     d.FrD = self.ImportWindow.IFrD.value()
 
-    # Starting points and number of pixels/frames after binning/sampling
-    d.PxX1 = self.ImportWindow.IPxX1.value()
-    d.PxY1 = self.ImportWindow.IPxY1.value()
-    d.NPxX = self.ImportWindow.INPxX.value()
-    d.NPxY = self.ImportWindow.INPxY.value()
-    d.FrX1 = self.ImportWindow.IFrX1.value()
-    d.FrY1 = self.ImportWindow.IFrY1.value()
-    d.NFrX = self.ImportWindow.INFrX.value()
-    d.NFrY = self.ImportWindow.INFrY.value()
+    # Starting points (0-based) and number of pixels/frames after binning/sampling;
+    # the whole dataset when partial import is off
+    iw = self.ImportWindow
+    if iw.ImpPxPart.isChecked():
+        d.PxX1, d.PxY1, d.NPxX, d.NPxY = iw.IPxX1.value(), iw.IPxY1.value(), iw.INPxX.value(), iw.INPxY.value()
+    else:
+        d.PxX1, d.PxY1, d.NPxX, d.NPxY, d.PxD = 0, 0, d.DNPxX, d.DNPxY, 1
+    if iw.ImpFrPart.isChecked():
+        d.FrX1, d.FrY1, d.NFrX, d.NFrY = iw.IFrX1.value(), iw.IFrY1.value(), iw.INFrX.value(), iw.INFrY.value()
+    else:
+        d.FrX1, d.FrY1, d.NFrX, d.NFrY, d.FrD = 0, 0, d.DNFrX, d.DNFrY, 1
 
     # Frequently used dimension parameters
     d.NPx = np.array([d.NPxX, d.NPxY])
@@ -216,7 +225,17 @@ def importSelectFile(self):
     importFileType(self)
 
 
+def _h5dataset(h5file, key: str) -> "h5py.Dataset":
+    """The dataset at *key* (``returnKeys`` lists datasets only; committed datatypes are refused)."""
+    obj = h5file[key]
+    if not isinstance(obj, h5py.Dataset):
+        raise TypeError(f"{key} is not a dataset")
+    return obj
+
+
 def importFileType(self):
+    from callbacks.io.dm import prepDM  # noqa: E402
+
     def guessFramesFromSize():
         """ Make an initial guess at the file dimensions (assume ~square field of view: NFrX≈NFrY) """
         if self.ImportWindow.DNPxX.value() > 1 and self.ImportWindow.DNPxY.value() > 1:
@@ -231,6 +250,8 @@ def importFileType(self):
 
     def guessFramesFromDimZ(z):
         """ Guess number of frames (x,y) from 3D dataset by finding the two largest integer factors that go into z without remainder """
+        if z < 1:   # file holds less than one frame with the current settings; nothing to guess
+            return
         x = round(np.sqrt(z))
         while z % x > 0:
             x -= 1
@@ -248,27 +269,21 @@ def importFileType(self):
                             D = NFrY
         """
 
-        try:
-            # standard EMPAD naming scheme
-            s = re.search(r'_x(\d+)_y(\d+).raw', filename)
+        name = os.path.basename(filename)
+        s = re.search(r'_x(\d+)_y(\d+)\.raw$', name)             # standard EMPAD naming scheme
+        t = re.search(r'(\d+)x(\d+)x(\d+)x(\d+)', name)          # above described naming scheme
+        if s:
             DNFrX, DNFrY = [int(ii) for ii in s.groups()]
-            DNPxX = DNPxY = int(128)
+            DNPxX = DNPxY = 128
+        elif t:
+            DNPxX, DNPxY, DNFrX, DNFrY = [int(ii) for ii in t.groups()]
+        else:
+            return  # no match; leave the UI values as they are
 
-        except BaseException:
-            try:
-                # above described naming scheme
-                t = re.search(r'(\d+)x(\d+)x(\d+)x(\d+)', filename)
-                DNPxX, DNPxY, DNFrX, DNFrY = [int(ii) for ii in t.groups()]
-            except BaseException:
-                # failure, quit now
-                return
-
-        finally:
-            # if the above passed, set the import window UI values
-            self.ImportWindow.DNPxX.setValue(DNPxX)
-            self.ImportWindow.DNPxY.setValue(DNPxY)
-            self.ImportWindow.DNFrX.setValue(DNFrX)
-            self.ImportWindow.DNFrY.setValue(DNFrY)
+        self.ImportWindow.DNPxX.setValue(DNPxX)
+        self.ImportWindow.DNPxY.setValue(DNPxY)
+        self.ImportWindow.DNFrX.setValue(DNFrX)
+        self.ImportWindow.DNFrY.setValue(DNFrY)
 
     def returnKeys(obj):
         datasetKeys = []
@@ -287,72 +302,79 @@ def importFileType(self):
         return datasetKeys
 
     # block slots/signals whilst updating UI values
-    self.blockAllSignals = True
+    with all_signals_blocked(self):
+        # Default values/properties
+        notes = None
+        err = 0  # TODO
+        self.T.dm = []
+        self.T.h5 = []
+        self.T.fileTail = 0
+        self.ImportWindow.DataOffset.setValue(0)
+        self.ImportWindow.FrHead.setValue(0)
+        self.ImportWindow.FrFoot.setValue(0)
+        self.ImportWindow.DNPxX.setValue(1)
+        self.ImportWindow.DNPxY.setValue(1)
+        self.ImportWindow.DNFrX.setValue(1)
+        self.ImportWindow.DNFrY.setValue(1)
 
-    # Default values/properties
-    notes = None
-    err = 0  # TODO
-    self.T.dm = []
-    self.T.h5 = []
-    self.T.fileTail = 0
-    self.ImportWindow.DataOffset.setValue(0)
-    self.ImportWindow.FrHead.setValue(0)
-    self.ImportWindow.FrFoot.setValue(0)
-    self.ImportWindow.DNPxX.setValue(1)
-    self.ImportWindow.DNPxY.setValue(1)
-    self.ImportWindow.DNFrX.setValue(1)
-    self.ImportWindow.DNFrY.setValue(1)
+        # Medipix data are saved as a .mib file of varying bit-depth as unsigned integers of the next highest class
+        #   (i.e. 12-bit is saved as a 16-bit unsigned integer) with big-endian ordering.
+        # EMPAD data are saved as a .raw file with 32-bit depth with little endian ordering.
+        # Fiji/ImageJ tend to save their files with big-endian ordering, though this is also system- and user-dependent.
+        # H5 and other binary/raw data types are allowed, but user-dependent.
 
-    # Medipix data are saved as a .mib file of varying bit-depth as unsigned integers of the next highest class
-    #   (i.e. 12-bit is saved as a 16-bit unsigned integer) with big-endian ordering.
-    # EMPAD data are saved as a .raw file with 32-bit depth with little endian ordering.
-    # Fiji/ImageJ tend to save their files with big-endian ordering, though this is also system- and user-dependent.
-    # H5 and other binary/raw data types are allowed, but user-dependent.
+        # available data types and their plain text names
+        dataType = ['unknown', 'i1', 'u1', 'i2', 'u2', 'f4', 'i4', 'u4', 'f8', 'i8', 'u8']
+        dataTypeText = [
+            'Select Data Type...',
+            '8-bit Signed',
+            '8-bit Unsigned',
+            '16-bit Signed',
+            '16-bit Unsigned',
+            '32-bit Real',
+            '32-bit Signed',
+            '32-bit Unsigned',
+            '64-bit Real',
+            '64-bit Signed',
+            '64-bit Unsigned']
 
-    # available data types and their plain text names
-    dataType = ['unknown', 'i1', 'u1', 'i2', 'u2', 'f4', 'i4', 'u4', 'f8', 'i8', 'u8']
-    dataTypeText = [
-        'Select Data Type...',
-        '8-bit Signed',
-        '8-bit Unsigned',
-        '16-bit Signed',
-        '16-bit Unsigned',
-        '32-bit Real',
-        '32-bit Signed',
-        '32-bit Unsigned',
-        '64-bit Real',
-        '64-bit Signed',
-        '64-bit Unsigned']
+        # add to combobox
+        self.ImportWindow.ImpDataType.clear()
+        for dtt, dt in zip(dataTypeText, dataType):
+            self.ImportWindow.ImpDataType.addItem(dtt, dt)
 
-    # add to combobox
-    self.ImportWindow.ImpDataType.clear()
-    for dtt, dt in zip(dataTypeText, dataType):
-        self.ImportWindow.ImpDataType.addItem(dtt, dt)
+        # default to "Select Data Type..." prompt
+        self.ImportWindow.ImpDataType.setCurrentIndex(0)
 
-    # default to "Select Data Type..." prompt
-    self.ImportWindow.ImpDataType.setCurrentIndex(0)
+        # start with h5 directory combobox cleared and disabled
+        if self.sender() == self.ImportWindow.ImpFileSelect:
+            self.ImportWindow.ImpSubImg.clear()
+            self.ImportWindow.ImpSubImg.setEnabled(False)
 
-    # start with h5 directory combobox cleared and disabled
-    if self.sender() == self.ImportWindow.ImpFileSelect:
-        self.ImportWindow.ImpSubImg.clear()
-        self.ImportWindow.ImpSubImg.setEnabled(False)
-
-    # default to "little endian"
-    self.ImportWindow.ImpByteOrder.setCurrentIndex(0)
-
-    # unblock slots/signals
-    self.blockAllSignals = False
+        # default to "little endian"
+        self.ImportWindow.ImpByteOrder.setCurrentIndex(0)
 
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
         if self.ImportWindow.EMPADButton.isChecked():
-            self.ImportWindow.FrFoot.setValue(1024)
-            self.ImportWindow.DNPxX.setValue(128)
-            self.ImportWindow.DNPxY.setValue(128)
-            self.ImportWindow.ImpDataType.setCurrentIndex(self.ImportWindow.ImpDataType.findData('f4'))
-
-            notes = 'Pixels:\t128x128\n32-bit Real\n** EMPAD data have 1024-byte frame footers'
-            guessFramesFromSize()
-            getDimFromName(self.ImportWindow.ImpFilePath.text())
+            from callbacks.io.empad import EMPAD_PIXELS, detect_empad  # noqa: E402
+            iw = self.ImportWindow
+            layout = detect_empad(iw.ImpFilePath.text(), self.T.FileSize)
+            iw.DNPxX.setValue(EMPAD_PIXELS)
+            iw.DNPxY.setValue(EMPAD_PIXELS)
+            iw.ImpDataType.setCurrentIndex(iw.ImpDataType.findData('f4'))
+            iw.ImpByteOrder.setCurrentIndex(iw.ImpByteOrder.findData('l'))
+            if layout is None:
+                iw.FrFoot.setValue(0)
+                notes = ('The file size does not match EMPAD v1 (128x128 float32 frames + 1024-byte footer) '
+                         'or v2 (no footer). Check the file type.')
+            else:
+                iw.FrFoot.setValue(layout.footer)
+                iw.DNFrX.setValue(layout.scan[0])
+                iw.DNFrY.setValue(layout.scan[1])
+                notes = ('EMPAD v{}: 128x128 pixels, 32-bit real, little endian\n{}\nScan {} x {} ({} frames)'.format(
+                    layout.version,
+                    '1024-byte footer after each frame' if layout.footer else 'no frame footer',
+                    layout.scan[0], layout.scan[1], layout.n_frames))
 
         elif self.ImportWindow.MedipixButton.isChecked():
             # available data types and their plain text names - Medipix edition
@@ -364,11 +386,10 @@ def importFileType(self):
                 '24-bit Padded Unsigned']
 
             # add to combobox
-            self.ImportWindow.ImpDataType.blockSignals(True)
-            self.ImportWindow.ImpDataType.clear()
-            for dtt, dt in zip(dataTypeText, dataType):
-                self.ImportWindow.ImpDataType.addItem(dtt, dt)
-            self.ImportWindow.ImpDataType.blockSignals(True)
+            with signals_blocked(self.ImportWindow.ImpDataType):
+                self.ImportWindow.ImpDataType.clear()
+                for dtt, dt in zip(dataTypeText, dataType):
+                    self.ImportWindow.ImpDataType.addItem(dtt, dt)
 
             # check .mib file header
             fmeta = np.fromfile(self.ImportWindow.ImpFilePath.text(), dtype=np.uint8, count=128)
@@ -445,18 +466,23 @@ def importFileType(self):
                     case 6:
                         self.ImportWindow.ImpDataType.setCurrentIndex(self.ImportWindow.ImpDataType.findData('u2'))
                         tnote = '16-bit Unsigned Integer'
+                    case 12:
+                        tnote = '16-bit Float, unsupported'
                     case other:
                         tnote = 'Uknown data type'
 
-                self.ImportWindow.DataOffset.setValue(1024)
+                # data start after the 1024-byte header and any extended header (NSYMBT, word 24)
+                n_ext = int(np.fromfile(self.ImportWindow.ImpFilePath.text(), count=1, dtype=np.int32, offset=92)[0])
+                self.ImportWindow.DataOffset.setValue(1024 + max(0, n_ext))
                 notes = 'Dim: X = ' + str(dim[0]) + ', Y = ' + str(dim[1]) + ', Z = ' + str(dim[2]) + \
-                    '\n' + tnote + ', ' + bo + '\n** MRC files have a 1024-byte data offset'
+                    '\n' + tnote + ', ' + bo + '\n** MRC data start after a {}-byte header'.format(
+                        self.ImportWindow.DataOffset.value())
             else:
                 notes = 'Unrecognizable as MRC.\n\n"MAP " word missed.'
                 err = -1
                 return
         elif self.ImportWindow.DM34Button.isChecked():
-            prepDM(self)
+            notes = prepDM(self)
         elif self.ImportWindow.HDF5Button.isChecked():
             try:
                 self.T.h5 = h5py.File(self.ImportWindow.ImpFilePath.text())
@@ -472,27 +498,27 @@ def importFileType(self):
                 # Select sub-image with the 1st largest dimension; unless manually selected
                 if self.sender() is not self.ImportWindow.ImpSubImg:
                     # List all images' names in `self.ImportWindow.ImpSubImg`
-                    self.ImportWindow.ImpSubImg.blockSignals(True)
-                    pdim = [self.T.h5[key].size for key in keys]
-                    self.ImportWindow.ImpSubImg.clear()
-                    self.ImportWindow.ImpSubImg.addItems(keys)
-                    self.ImportWindow.ImpSubImg.blockSignals(False)
+                    with signals_blocked(self.ImportWindow.ImpSubImg):
+                        pdim = [_h5dataset(self.T.h5, key).size for key in keys]
+                        self.ImportWindow.ImpSubImg.clear()
+                        self.ImportWindow.ImpSubImg.addItems(keys)
                     self.ImportWindow.ImpSubImg.setCurrentIndex(np.argmax(pdim))
 
                 # Info of selected sub-image
-                h5i = self.T.h5[keys[self.ImportWindow.ImpSubImg.currentIndex()]]
+                h5i = _h5dataset(self.T.h5, keys[self.ImportWindow.ImpSubImg.currentIndex()])
 
-                # Read dimensions,
-                dims = h5i.shape
-                if len(dims) < 4:
-                    np.append(dims, np.ones(4 - len(dims), dtype=int))
+                # Read dimensions (ry, rx, py, px); a 3-D stack (n, py, px) has n frames, a 2-D dataset one
+                # (the old padding discarded its result, so anything below 4-D raised IndexError)
+                from callbacks.io.hdf5 import dims4
+                dims = dims4(h5i.shape)
                 self.ImportWindow.DNPxX.setValue(dims[3])
                 self.ImportWindow.DNPxY.setValue(dims[2])
                 self.ImportWindow.DNFrX.setValue(dims[1])
                 self.ImportWindow.DNFrY.setValue(dims[0])
 
                 # Find offset, file tail, data type, byte-order of dataset
-                offset = int(h5i.id.get_offset())
+                offset = h5i.id.get_offset()      # None for chunked/compressed datasets (read via h5py)
+                offset = -1 if offset is None else int(offset)
                 if offset == -1:
                     self.ImportWindow.DataOffset.setValue(0)
                     noteoffs = 'This dataset is not "contiguous", thus data offset is unknown.'
@@ -515,8 +541,8 @@ def importFileType(self):
 
                 notes = "Dim: X = {:d}, Y = {:d}, Z = {:d}, W = {:d}\n{:s}, {:s}\n{:s}".format(
                     *dims, bo, str(h5i.dtype), noteoffs)
-                if dims[3] == 1:
-                    guessFramesFromDimZ(dims[2])
+                if len(h5i.shape) == 3:       # a stack of frames: guess the scan from the frame count
+                    guessFramesFromDimZ(dims[1])
         else:
             getDimFromName(self.ImportWindow.ImpFilePath.text())
             self.ImportWindow.ImpDataType.setCurrentIndex(self.ImportWindow.ImpDataType.findData("f4"))  # 32-bit float
@@ -574,57 +600,38 @@ def importBoxInput(self):
 
         notes = "Estimated memory usage: {:.3f} GiB.".format(self.T.EstMem / (1024**3))
 
-        # warn if the dataset will not fit in memory
+        # note it if the dataset will not fit in memory (asked once, on Import — a dialog here
+        # popped up on every keystroke while the dimensions were being typed)
         if self.T.EstMem > self.C.MemTot:
-            msg = "WARNING: Size of dataset is larger than the system memory!"
-            _ = notifDLG(self, self.ImportWindow, "warn", msg, "Size Exceeds System Memory!")
-            notes += "\n" + msg
+            notes += "\nWARNING: Size of dataset is larger than the system memory!"
 
         notes += "\nSystem byte order: " + self.C.EndianTxt[self.C.SysEndian] + "."
 
         return notes
 
     def checkGPUMEM(nPx, nFr):
+        """Note whether the dataset fits on the selected GPU.
+
+        Only the dataset goes to the GPU, as float32, and the compute code falls back to the CPU
+        by itself when it does not fit (``compute.backend``), so this informs and never switches
+        the GPU off.  (The old check compared the system-RAM estimate for everything with the
+        card's total memory, and switched the GPU off.)
+        """
+        from callbacks.compute.backend import RESIDENT_FRACTION
         igpu = self.ImportWindow.ImpGPU.currentData()
         if igpu is None:
-            gpu_note = 'GPU disabled.'
-        else:
-            tgpu = f"GPU {igpu:.0f}. " + self.C.GPU(igpu).name + f" {self.C.GPU(igpu).mem / 1024**3:.2f} GiB"
-            try:
-                device = torch.device(igpu if torch.cuda.is_available() else "cpu")
-                amem = torch.cuda.get_device_properties(igpu).total_memory
-                # If GPU is already in use, taking the current data size into account
-                if self.D.GPU == self.ImportWindow.ImpGPU.value():
-                    try:
-                        amem = amem + self.D.EstMem
-                    except BaseException:
-                        pass
-
-                amem_t = '{:.3f} GiB'.format(amem / 1024**3)
-                wt = None
-                # TODO - this seems really arbitrary
-                if self.T.EstMem > amem - 128 * 1024**2:  # Has 128 MiB extra?
-                    gpu_note = tgpu + \
-                        " has NOT enough free memory (" + amem_t + "). 128 MiB EXTRA free memory is also required."
-                    wt = 'GPU Not Enough Free Memory!'
-                    self.ImportWindow.ImpGPU.setCurrentIndex(self.ImportWindow.ImpGPU.findData(None))
-
-                elif self.T.EstMem > (amem - 512 * 1024**2):  # Has 512 MiB extra?
-                    gpu_note = tgpu + " has LIMITED free memory (" + amem_t + ") and may cause errors."
-                    wt = 'GPU Limited Free Memory!'
-
-                else:
-                    gpu_note = tgpu + " has enough free memory (" + amem_t + ") for the selected dataset."
-
-                # Notify warnings if any
-                if wt:
-                    _ = notifDLG(self, self.ImportWindow, "warn", gpu_note, wt)
-            except BaseException:
-                gpu_note = "Failed to select " + tgpu + "!"
-                _ = notifDLG(self, self.ImportWindow, "warn", gpu_note, "Error Selecting GPU")
-                self.ImportWindow.ImpGPU.setCurrentIndex(self.ImportWindow.ImpGPU.findData(None))
-
-        return gpu_note
+            return "GPU off: computing on the CPU."
+        name = self.C.GPUname[igpu] if igpu < len(self.C.GPUname) else f"GPU {igpu}"
+        need = float(np.prod(nPx)) * float(np.prod(nFr)) * 4
+        try:
+            free, total = torch.cuda.mem_get_info(igpu)
+        except Exception as exc:                     # driver problem etc.: say so, keep the choice
+            return f"GPU {igpu} ({name}): could not read its memory ({exc}); the CPU is used if it fails."
+        gib = 1024**3
+        head = f"GPU {igpu} ({name}): {free / gib:.2f} of {total / gib:.2f} GiB free; dataset needs {need / gib:.2f} GiB."
+        if need > RESIDENT_FRACTION * free:
+            return head + " It will not fit, so computations run on the CPU."
+        return head + " The dataset is kept on the GPU."
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
@@ -658,15 +665,12 @@ def importBoxInput(self):
         irng = [nPx, nFr]
 
         # Allow for virtual memory mapping in some situations
+        # (no frame header/footer, floating-point data in the native byte order, whole dataset)
         if self.ImportWindow.FrHead.value() == 0 and self.ImportWindow.FrFoot.value() == 0 and (
                 not self.ImportWindow.HDF5Button.isChecked() or self.ImportWindow.DataOffset.value() > 0) and (
                 self.ImportWindow.ImpByteOrder.currentData() == self.C.SysEndian) and (
-                self.ImportWindow.ImpDataType.currentData() is not None and
-                'int' not in self.ImportWindow.ImpDataType.currentData()) and [
-                    self.ImportWindow.DNPxX.value(),
-                    self.ImportWindow.DNPxY.value(),
-                    self.ImportWindow.DNFrX.value(),
-                self.ImportWindow.DNFrY.value()] == irng:
+                str(self.ImportWindow.ImpDataType.currentData() or "").startswith("f")) and (
+                not self.ImportWindow.ImpPxPart.isChecked() and not self.ImportWindow.ImpFrPart.isChecked()):
             self.ImportWindow.ImpMemType.setEnabled(True)
         else:
             self.ImportWindow.ImpMemType.setEnabled(False)
@@ -741,170 +745,72 @@ def getImportInfo(self):
 
 
 def rangeImportExport(self, src):
-    # spinner upper/lower limits must be different, so now set lower limit `0` but force minimum to `1`
-    if hasattr(src, 'value'):
-        val = np.maximum(src.value(), 0)
+    """Keep the partial-import fields of one space consistent and describe the selection.
 
-    # Round positions from ROIs
-    # if hasattr(evt,'CurrentPosition'):
-    #    pos = round(evt.CurrentPosition)
+    *src* is the widget that changed; its accessible description says which
+    space it belongs to ("Import Dfrn" or "Import Real").  Diffraction pixels
+    are binned (each output pixel sums a ``bin x bin`` block); probe positions
+    are sampled (every n-th one is kept).  Start points are 0-based.
 
-    # `sp`/`U`: space/unit, "Dfrn"/"Px" for diffraction/pixel OR "Real"/"Fr" for real-space/frame
-    if "Dfrn" in src.accessibleDescription():
-        sp = "Dfrn"
-        U = "Px"
-    else:
-        sp = "Real"
-        U = "Fr"
+    When the on-disk dimensions change, or partial import is switched on or
+    off, the selection is reset to everything.
 
-    # `io_mode`: "I" or "E" for Import/Export
-    if "Import" in src.accessibleDescription():
-        io_mode = "I"
-        # Raw dataset dimensions, e.g. self.ImportWindow.DNPxX.value()
-        dnp = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox, "DN" + U + "X").value(),
-                         self.ImportWindow.findChild(qtw.QSpinBox, "DN" + U + "Y").value()]).astype(int)
-    else:  # Export
-        io_mode = "E"
-        dnp = np.asarray(getattr(self.D, "N" + U)).astype(int)  # Loaded dataset dimensions
+    Returns
+    -------
+    notes : str
+    step : int
+        Binning distance (diffraction) or sampling interval (scan).
+    start, count, end : np.ndarray of int, each (x, y)
+        First index, number of output points and last index read (inclusive).
+    """
+    iw = self.ImportWindow
+    dfrn = "Dfrn" in src.accessibleDescription()
+    U = "Px" if dfrn else "Fr"
+    n = np.array([getattr(iw, "DN" + U + "X").value(), getattr(iw, "DN" + U + "Y").value()], dtype=int)
+    x1, y1, cx, cy, step_w = (getattr(iw, name) for name in
+                              ("I" + U + "X1", "I" + U + "Y1", "IN" + U + "X", "IN" + U + "Y", "I" + U + "D"))
+    part = getattr(iw, "Imp" + U + "Part")
+    reset = src in (getattr(iw, "DN" + U + "X"), getattr(iw, "DN" + U + "Y"), part) or not part.isChecked()
 
-    # Get values from UI
-    # Binning/Sampling (self.ImportWindow.IPxD, self.ImportWindow.EPxD, self.ImportWindow.IFrD or self.ImportWindow.EFrD)
-    binDist = np.asarray(self.ImportWindow.findChild(qtw.QSpinBox, io_mode + U + "D").value())
+    with signals_blocked(x1, y1, cx, cy, step_w):
+        step_w.setRange(1, max(1, int(n.min())))
+        if reset:
+            step_w.setValue(1)
+        step = step_w.value()
+        for start_w, count_w, size in ((x1, cx, n[0]), (y1, cy, n[1])):
+            # last start that still leaves room for one output point
+            start_w.setRange(0, max(0, size - (step if dfrn else 1)))
+            if reset:
+                start_w.setValue(0)
+            room = size - start_w.value()
+            most = room // step if dfrn else (room - 1) // step + 1
+            count_w.setRange(1, max(1, most))
+            count_w.setValue(max(1, most) if reset else min(count_w.value(), max(1, most)))
 
-    if src.accessibleDescription() == "Export Dfrn ROI":  # From Export Diffraction ROIs
-        initPoint = pos[0:1]
-        numPoints = np.max(np.floor((pos[2:3] + 1) / binDist), 1)
-    elif src.accessibleDescription() == "Export Real ROI":  # From Export Real-space ROIs
-        initPoint = pos[0:1]
-        numPoints = np.floor(pos[2:3] / binDist) + 1
-    else:  # From other sources
-        initPoint = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox,
-                                                            io_mode + U + "X1").value(),
-                                self.ImportWindow.findChild(qtw.QSpinBox,
-                                io_mode + U + "Y1").value()])  # self.IPxX1, self.EFrX1 etc, Point-1 X & Y UIs
-        numPoints = np.asarray([self.ImportWindow.findChild(qtw.QSpinBox,
-                                                            io_mode + "N" + U + "X").value(),
-                                self.ImportWindow.findChild(qtw.QSpinBox,
-                                io_mode + "N" + U + "Y").value()])  # self.INPxX, self.ENFrX etc, N-Points X & Y UIs
+    if not dfrn and src in (iw.DNFrX, iw.DNFrY):   # preview any probe position of the file
+        with all_signals_blocked(self):
+            self.PvFrX.setRange(0, n[0] - 1)
+            self.PvFrY.setRange(0, n[1] - 1)
 
-    # Replace value with current event value
-    if src == getattr(self.ImportWindow, io_mode + U + "D"):
-        binDist = val  # Binning/Sampling UI
-    elif src == getattr(self.ImportWindow, io_mode + U + "X1"):
-        initPoint[0] = val  # Point-1 X UI
-    elif src == getattr(self.ImportWindow, io_mode + U + "Y1"):
-        initPoint[1] = val  # Point-1 Y UI
-    elif src == getattr(self.ImportWindow, io_mode + "N" + U + "X"):
-        numPoints[0] = val  # N-Points X UI
-    elif src == getattr(self.ImportWindow, io_mode + "N" + U + "Y"):
-        numPoints[1] = val  # N-Points Y UI
-    elif src in [getattr(self.ImportWindow, "DN" + U + "X"),
-                 getattr(self.ImportWindow, "DN" + U + "Y"),
-                 getattr(self.ImportWindow, "Imp" + U + "Part"),
-                 getattr(self.SaveWindow, "Exp" + U + "Part")]:
-        # Reset range options if dataset raw dimension changes OR partial selection enables/disables
-        getattr(self.ImportWindow, io_mode + U + "D").setMaximum(min(dnp))  # Update binning/sampling UI limits
-        if io_mode == "I" and U == "Fr":  # Update preview frame limits
-            self.blockAllSignals = True
-            self.PvFrX.setRange(1, dnp[0])
-            self.PvFrX.setValue(dnp[0])
-            self.PvFrY.setRange(1, dnp[1])
-            self.PvFrY.setValue(dnp[1])
-            self.blockAllSignals = False
-        binDist = 1
-        initPoint = np.asarray([1, 1])
-        numPoints = dnp
+    start = np.array([x1.value(), y1.value()], dtype=int)
+    count = np.array([cx.value(), cy.value()], dtype=int)
+    end = start + count * step - 1 if dfrn else start + (count - 1) * step
 
-    # In general, N-Points are determined by Point-1 and Binning/Sampling, unless N-Points are the source
-    # Whether N-Points X or Y are not the source:
-    # s = [self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"X"), self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"Y")] != src
-    # s = np.asarray([x in src for x in [self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"X"),
-    #                                    self.ImportWindow.findChild(qtw.QSpinBox,io_mode+"N"+U+"Y")]])
-    if src == getattr(self.ImportWindow, io_mode + "N" + U + "X"):
-        s = np.asarray([1])
-    elif src == getattr(self.ImportWindow, io_mode + "N" + U + "Y"):
-        s = np.asarray([0])
-    else:
-        s = np.asarray([0, 1])
+    what = "Diffraction pixels" if dfrn else "Scan positions"
+    unit = "px" if dfrn else "fr"
+    how = (f", binned {step} x {step}" if dfrn else f", every {step}") if step > 1 else ""
+    notes = "{}: {} x {} {} from x = {}-{}, y = {}-{}{}\n".format(
+        what, count[0], count[1], unit, start[0], end[0], start[1], end[1], how)
+    return notes, step, start, count, end
 
-    if U == "Px":
-        numPoints[s] = np.maximum(
-            1,
-            np.minimum(
-                numPoints[s],
-                np.floor(
-                    (dnp[s] -
-                     initPoint[s] +
-                     1) /
-                    binDist)))  # Determine N-Points X/Y if not source
-        # numPoints[s] = np.maximum(np.asarray([1,1]), np.minimum(numPoints[s],
-        # np.floor((dnp[s]-initPoint[s]+1)/binDist)))  # Determine N-Points X/Y if
-        # not source
-        initPoint = np.minimum(initPoint, dnp - numPoints * binDist + 1)
-        endPoint = initPoint + numPoints * binDist - 1  # Endpoints of Pixel ranges
-        l1 = dnp - binDist + 1
-        ln = np.floor(dnp / binDist).astype(int)  # Upper limits of Pixel Point-1 X & Y and N-Points X & Y
-        pos = [initPoint, numPoints * binDist - 1]  # Positions for Export ROI
-        txt = "Diffraction Range (in pixels [px])"
-        u = " px"
-        txtb = "binning to "
-    else:  # "Fr"
-        # Frame sampling has slightly different logics to pixel binning
-        numPoints[s] = np.minimum(numPoints[s], np.floor((dnp[s] - initPoint[s]) / binDist) + 1)
-        initPoint = np.minimum(initPoint, dnp - (numPoints - 1) * binDist)
-        endPoint = initPoint + (numPoints - 1) * binDist  # Endpoints of Frame ranges
-        l1 = dnp
-        ln = np.floor((dnp - 1) / binDist).astype(int) + 1  # Upper limits of Frame Point-1 X & Y and N-Points X & Y
-        pos = [initPoint, (numPoints - 1) * binDist]  # Positions for Export ROI
-        txt = "Real-space Range (in frames [fr])"
-        u = " fr"
-        txtb = "sampling "
-
-    # Set Point-1 X & Y, N-Points X & Y and Binning/Sampling UIs
-    getattr(self.ImportWindow, io_mode + U + "X1").setRange(0, l1[0])
-    getattr(self.ImportWindow, io_mode + U + "Y1").setRange(0, l1[1])
-    getattr(self.ImportWindow, io_mode + "N" + U + "X").setRange(0, ln[0])
-    getattr(self.ImportWindow, io_mode + "N" + U + "Y").setRange(0, ln[1])
-    getattr(self.ImportWindow, io_mode + U + "D").setRange(0, min(dnp))
-
-    getattr(self.ImportWindow, io_mode + U + "X1").setValue(initPoint[0])
-    getattr(self.ImportWindow, io_mode + U + "Y1").setValue(initPoint[1])
-    getattr(self.ImportWindow, io_mode + "N" + U + "X").setValue(numPoints[0])
-    getattr(self.ImportWindow, io_mode + "N" + U + "Y").setValue(numPoints[1])
-    getattr(self.ImportWindow, io_mode + U + "D").setValue(binDist)
-
-    # Try to update Export ROIs
-    # if O == "E":
-    #    set(findobj(self.G.(sp+"Ax"),'Tag',"Export "+sp+" ROI"), 'Position', pos) #TODO
-
-    # Range notes
-    tp = [x1 + u for x1 in [str(ints) for ints in numPoints]]
-
-    if binDist > 1:
-        tp = [x6 + u for x6 in [x4 + x5 for x4,
-                                x5 in list(zip([x3 + " from " for x3 in [txtb + x2 for x2 in tp]],
-                                               [str(ints) for ints in endPoint - initPoint + 1]))]]
-
-    # If not from 1st to last
-    s = np.maximum(initPoint > 1, endPoint < dnp)
-    for i in np.arange(len(s)):
-        if s[i]:
-            tp[i] = str(numPoints[i]) + u + ", " + str(initPoint[i] - 1) + "/" + \
-                str(dnp[i] - endPoint[i]) + u + " offset from start/end"
-    notes = "{}:\n\tX = {}-{} ({})\n\tY = {}-{} ({})\n".format(txt, *
-                                                               [items for sublist in zip(initPoint, endPoint, tp) for items in sublist])
-
-    return notes, binDist, initPoint, numPoints, endPoint
 
 # Function to unload data and clean all images
 
 
 def unloadData(self, keep_p=False):
-    importlib.reload(appClass)
-    from callbacks.appClass import A, P, Mask, D, Prev
-
     """ Function to unload data and clean all images """
-    from callbacks.startup import enableWindows  # deferred to break circular import
+    from callbacks.appClass import A, P, Mask, Prev
+    from callbacks.window_manager import enableWindows  # deferred to break circular import
     enableWindows(self, False)  # Disable windows for the data unload process
     self.setWindowTitle('Quant4D')
     # Whether to swap dataset only, without changing any existing parameters
@@ -914,27 +820,21 @@ def unloadData(self, keep_p=False):
             fig = self.Fig[id]
             fig.Image = None
             fig.ax.cla()
+            install_view_transform(fig.ax)     # cla() drops the orientation transform
+            fig.axisArrows = []
             fig.canvas.draw_idle()
             self.ImageAx[id] = None
         self.SettingsWindow.HistAxes.axes.cla()
         self.SettingsWindow.HistAxes.figure.canvas.draw_idle()
 
-        # clear annotations (lines and draggable points)
-        for ii in dir(self.A):
-            if type(
-                getattr(
-                    self.A,
-                    ii)) in (
-                InteractivePoint,
-                InteractiveCircle,
-                    matplotlib.lines.Line2D):  # ,InteractiveBox #TODO
-                setattr(self.A, ii, None)
-
+        # the axes were cleared above, so the annotation artists are already gone;
+        # fresh namespaces drop every remaining reference to them
         setattr(self, 'P', P())
         setattr(self, 'A', A())
         setattr(self, 'Mask', Mask())
         # self.ImgD = [] #TODO
-        self.CDT.clearContents()  # custom aperture table
+        self.CDT.setRowCount(0)       # custom detector tables
+        self.CDDTable.setRowCount(0)
 
     # Remove all data from GPU if in use #TODO
     # try:
@@ -944,7 +844,8 @@ def unloadData(self, keep_p=False):
     # except:
     #    pass
 
-    # Clear data, parameters and Axes
+    # Clear data, parameters and Axes; free the copy of the dataset held on the GPU
+    compute.release_device_data()
     self.Data = None
     self.Memfile = None
     # setattr(self,'D',D()) #TODO #DELTE
@@ -953,6 +854,7 @@ def unloadData(self, keep_p=False):
 
 
 def importData(self):
+    from callbacks.io.file_reader import readFile  # noqa: E402
     assert (os.path.isfile(self.ImportWindow.ImpFilePath.text())), "File does not exist at the specified location"
 
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
@@ -974,7 +876,7 @@ def importData(self):
         except BaseException:
             unloadData(self)
             notifDLG(self, self, 'error', 'Error during Import!', 'Error!')
-            from callbacks.startup import enableWindows  # deferred to break circular import
+            from callbacks.window_manager import enableWindows  # deferred to break circular import
             enableWindows(self, True)
 
         # Start file reading here
@@ -1043,82 +945,30 @@ def importData(self):
         notifDLG(self, self.ImportWindow, 'error', msg, ttl)
 
 
-def importMask(self, space):
-    if space == "Real":
-        spaceName = "Real-space"
-        imShape = self.D.NFr
-    else:  # "Dfrn"
-        spaceName = "Diffraction"
-        imShape = self.D.NPx
+def importMask(self, space, path=None):
+    """Ask for (or take) a mask image for ``space`` ("Real" or "Dfrn") and load it.
 
-    im = []
-    msg = ""
+    Returns the mask as a float array of the image shape of that space, or
+    ``None`` if the user cancelled or the file could not be used (the user is
+    told why).
+    """
+    from callbacks.io.mask_file import MASK_EXTENSIONS, load_mask_image
+    from callbacks.layout import dfrn_shape, real_shape
 
-    fDialog = qtw.QFileDialog(self)
-    fDialog.setWindowTitle("Select a mask image with shape [{:d},{:d}]".format(*imShape))
-    fDialog.setNameFilter("('*.tif;*.tiff;*.png;*.jpg;*.jpeg;*.bmp;*.gif);;(*.*)")
-    fDialog.setFileMode(qtw.QFileDialog.ExistingFile)
-    fDialog.setDirectory(qtc.QDir.currentPath())
-    file = None
-    if fDialog.exec_() == qtw.QDialog.Accepted:
-        file = fDialog.selectedFiles()
-
-    _, ext = os.path.splitext(file)
-
-    match ext.lower():  # force lowercase
-        case '.tif' | '.tiff' | '.png' | '.jpg' | '.jpeg' | '.bmp' | '.gif':
-
-            # directly convert image to grayscale floating point numpy array
-            im = np.array(Image.open(file).convert("L")).astype(np.float64)
-
-            # get mask shape
-            isize = im.shape
-
-            # if imported dimensions do not matched data dimensions
-            if ~all(isize == imShape):
-                # check for a transpose
-                if all(isize == np.flip(imShape)):
-                    im = im.T
-                    msg += "Image shape ({:d},{:d}) transposed to fit data's {:s} shape ({:d},{:d}).\n".format(*
-                                                                                                               isize, spaceName, *imShape)
-                else:  # throw error
-                    notifDLG(
-                        self,
-                        self,
-                        'warn',
-                        "Image size ({:d},{:d}) does not fit data's {:s} size ({:d},{:d})!".format(
-                            *
-                            isize,
-                            spaceName,
-                            *
-                            imShape),
-                        'Dimension Mismatch')
-                    return
-
-        case "":  # Canceled, etc.
-            return
-
-        case other:  # unsupported filetype
-            _ = notifDLG(self, self, 'warn', "File type '*" + ext + "' currently unsupported!", 'Import Failed')
-            return
-
-    # check for invalid data (nan or inf) and replace with zeros
-    invalidMask = np.ma.masked_invalid(im).mask
-    if invalidMask.any():
-        im[invalidMask] = 0
-        msg += "NaN/Inf found in image, and set to 0.\n"
-
-    # scale the maximum to 1
-    imax = im.max()
-    if (imax != 0) and (imax != 1):
-        im /= imax
-        msg += "The maximum was {:d}; now scaled to 1, by `IMG = IMG/{:d}`.\n".format(imax, imax)
-
-    # notify user of what has been done and return the mask
-    if msg != "":
-        msg = "Please note:\n" + msg + "\n"
-
-    _ = notifDLG(self, self, 'help', msg + "Please check the " + spaceName + " Mask image.", 'Mask Imported')
-    self.Fig[space + "Mask"].activateWindow()
-
+    space_name = "Real-space" if space == "Real" else "Diffraction"
+    shape = real_shape(self.D) if space == "Real" else dfrn_shape(self.D)
+    if path is None:
+        patterns = " ".join("*" + e for e in MASK_EXTENSIONS)
+        path, _ = qtw.QFileDialog.getOpenFileName(
+            self, f"Select a {space_name} mask image of {shape[1]} x {shape[0]} pixels",
+            qtc.QDir.currentPath(), f"Images ({patterns});;All files (*.*)")
+    if not path:
+        return None
+    try:
+        im, notes = load_mask_image(path, shape)
+    except (OSError, ValueError) as exc:
+        notifDLG(self, self, 'warn', f"Could not use {os.path.basename(path)} as a mask:\n{exc}", 'Mask Not Imported')
+        return None
+    if notes:
+        notifDLG(self, self, 'help', "Please note:\n" + "\n".join(notes), 'Mask Imported')
     return im

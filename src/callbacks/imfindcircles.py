@@ -87,7 +87,7 @@ def _to_grayscale_double(image: np.ndarray) -> np.ndarray:
 
     # Normalize integer-typed images to [0, 1]
     if np.issubdtype(img.dtype, np.integer):
-        info = np.iinfo(img.dtype)
+        info = np.iinfo(img.dtype)   # pyright: ignore[reportCallIssue, reportArgumentType] (integer, checked above)
         gray = gray / float(info.max)
     else:
         if gray.max() > 1.0 + 1e-6:
@@ -150,8 +150,8 @@ def _gaussian_smooth_2d_complex(a: np.ndarray, sigma: float) -> np.ndarray:
     """Gaussian-smooth a complex array by filtering real/imag parts separately."""
     if sigma <= 0:
         return a
-    real = ndimage.gaussian_filter(a.real, sigma=sigma, mode="nearest")
-    imag = ndimage.gaussian_filter(a.imag, sigma=sigma, mode="nearest")
+    real = ndimage.gaussian_filter(np.real(a), sigma=sigma, mode="nearest")
+    imag = ndimage.gaussian_filter(np.imag(a), sigma=sigma, mode="nearest")
     return real + 1j * imag
 
 
@@ -164,8 +164,8 @@ def _gaussian_smooth_1d(a: np.ndarray, sigma: float) -> np.ndarray:
 def _bilinear_sample_complex(a: np.ndarray, x: float, y: float) -> complex:
     """Bilinearly interpolate a complex 2-D array at continuous (x, y)."""
     coords = np.array([[y], [x]], dtype=np.float64)
-    real = ndimage.map_coordinates(a.real, coords, order=1, mode="nearest")[0]
-    imag = ndimage.map_coordinates(a.imag, coords, order=1, mode="nearest")[0]
+    real = ndimage.map_coordinates(np.real(a), coords, order=1, mode="nearest")[0]
+    imag = ndimage.map_coordinates(np.imag(a), coords, order=1, mode="nearest")[0]
     return complex(real, imag)
 
 
@@ -275,7 +275,7 @@ def _phase_of_radius(r: np.ndarray, ln_rmin: float, ln_rmax: float) -> np.ndarra
     return 2.0 * np.pi * (ln_r - ln_rmin) / (ln_rmax - ln_rmin) - np.pi
 
 
-def _radius_of_phase(phase: np.ndarray, ln_rmin: float, ln_rmax: float) -> np.ndarray:
+def _radius_of_phase(phase, ln_rmin: float, ln_rmax: float):
     """
     Decode a phase (radians) back to a radius.
     """

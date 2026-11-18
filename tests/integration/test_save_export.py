@@ -1,111 +1,120 @@
 """
-Integration tests — Section 4.9 (Save / Export).
+Integration tests — Section 4.9 (save images / export dataset).
 
-Each test writes to a pytest tmp_path and reads back to verify correctness.
-No real data file is required — the synthetic dataset from conftest is used.
-
-NOTE: Widget-name mapping (actual SavePanelForm.ui names):
-  SaveDir        — directory path QLineEdit
-  SaveImgPrefix  — filename prefix QLineEdit
-  SaveImgTIF     — save TIFF QPushButton
-  SaveImgPNG     — save PNG QPushButton
-  ExportTab      — export QTabWidget
-  ExpFilename    — export filename QLineEdit
-  ExpByteOrder   — export byte-order QComboBox
-
-The underlying save callbacks (saveCallbacks, exportHDF5, saveVect) also
-need a fully-initialized display pipeline (plotImage has run, CoM data
-computed, etc.) to write meaningful output.  These tests are skipped
-until a display-pipeline fixture is available.
+Files are written through the Save window into a pytest tmp_path and read
+back.  Partial/binned/big-endian export and re-import are covered by
+tests/manual/smoke_pipeline.py.
 """
-
 import numpy as np
 import pytest
-from pytestqt.qt_compat import qt_api
-Qt = qt_api.QtCore.Qt
-from pathlib import Path
+from PIL import Image
+
+from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, set_mode
 
 
-@pytest.mark.skip(reason="Save callbacks require a fully-initialized display pipeline")
-class TestSaveTIFF:
-    def test_save_tiff_float32(self, app, qtbot, tmp_path):
-        """saveCallbacks should write a 32-bit float TIFF."""
-        import tifffile
-
-        out = tmp_path / "real.tif"
-        app.SaveWindow.SaveDir.setText(str(out.parent))
-        app.SaveWindow.SaveImgPrefix.setText("real")
-        qtbot.mouseClick(app.SaveWindow.SaveImgTIF, Qt.LeftButton)
-        qtbot.wait(200)
-
-        assert out.exists(), f"TIFF not created at {out}"
-        arr = tifffile.imread(out)
-        assert arr.dtype == np.float32
-        assert arr.ndim == 2
-
-    def test_save_png(self, app, qtbot, tmp_path):
-        from PIL import Image
-
-        out = tmp_path / "real.png"
-        app.SaveWindow.SaveDir.setText(str(out.parent))
-        app.SaveWindow.SaveImgPrefix.setText("real")
-        qtbot.mouseClick(app.SaveWindow.SaveImgPNG, Qt.LeftButton)
-        qtbot.wait(200)
-
-        assert out.exists()
-        img = Image.open(out)
-        assert img.size[0] > 0
+@pytest.fixture()
+def save_window(loaded_app, qapp, tmp_path):
+    sw = loaded_app.SaveWindow
+    loaded_app.ShowSaveWdw.trigger()
+    sw.SaveDir.setText(str(tmp_path))
+    sw.SaveImgPrefix.setText("t_")
+    sw.SavePrfxRi.setChecked(False)
+    sw.SavePrfxRo.setChecked(False)
+    qapp.processEvents()
+    return sw
 
 
-@pytest.mark.skip(reason="Export callbacks require a fully-initialized display pipeline")
-class TestExportHDF5:
-    def test_hdf5_structure(self, app, qtbot, tmp_path):
+def _select_images(sw, ids):
+    sw.SaveImgList.clearSelection()
+    for i in range(sw.SaveImgList.count()):
+        item = sw.SaveImgList.item(i)
+        item.setSelected(item.text() in ids)
+
+
+def _save(sw, qapp, ids, tif=False, png=False, annot=False):
+    sw.SaveTabGroup.setCurrentWidget(sw.SaveImgTab)
+    _select_images(sw, ids)
+    sw.SaveImgTIF.setChecked(tif)
+    sw.SaveImgPNG.setChecked(png)
+    sw.SaveImgPNGAnnot.setChecked(annot)
+    assert sw.SaveExport.text() == "Save Images"
+    sw.SaveExport.click()
+    qapp.processEvents()
+
+
+class TestSaveImages:
+    def test_tiff_is_raw_float32(self, loaded_app, qapp, save_window, tmp_path):
+        set_mode(loaded_app, qapp, "AnnMod")
+        _save(save_window, qapp, ["Real", "Dfrn"], tif=True)
+        real = np.array(Image.open(tmp_path / "t_Real.tif"))
+        dfrn = np.array(Image.open(tmp_path / "t_Dfrn.tif"))
+        assert real.dtype == np.float32 and real.shape == (SCAN_Y, SCAN_X)
+        assert np.allclose(real, loaded_app.Fig.Real.Image)
+        assert dfrn.shape == (DET_Y, DET_X) and np.allclose(dfrn, loaded_app.Fig.Dfrn.Image)
+
+    def test_png_as_displayed(self, loaded_app, qapp, save_window, tmp_path):
+        set_mode(loaded_app, qapp, "AnnMod")
+        _save(save_window, qapp, ["Real"], png=True)
+        png = np.array(Image.open(tmp_path / "t_Real.png"))
+        assert png.shape == (SCAN_Y, SCAN_X, 3), "one pixel per probe position"
+        from callbacks.io.export import rgb_as_displayed
+        assert np.array_equal(png, rgb_as_displayed(loaded_app.ImageAx.Real))
+
+    def test_annotated_png_is_the_figure(self, loaded_app, qapp, save_window, tmp_path):
+        _save(save_window, qapp, ["Dfrn"], png=True, annot=True)
+        png = np.array(Image.open(tmp_path / "t_Dfrn.png"))
+        assert png.shape[0] > DET_Y and png.shape[2] in (3, 4)
+
+    def test_detector_angles_in_name(self, loaded_app, qapp, save_window, tmp_path):
+        set_mode(loaded_app, qapp, "AnnMod")
+        save_window.SavePrfxRi.setChecked(True)
+        save_window.SavePrfxRo.setChecked(True)
+        _save(save_window, qapp, ["Real"], tif=True)
+        names = [p.name for p in tmp_path.iterdir()]
+        assert len(names) == 1 and "_ri" in names[0] and "_ro" in names[0], names
+
+    def test_com_images_saved(self, loaded_app, qapp, save_window, tmp_path):
+        set_mode(loaded_app, qapp, "CoMMod")
+        _save(save_window, qapp, ["CoMX", "CoMY"], tif=True)
+        for i in ("CoMX", "CoMY"):
+            arr = np.array(Image.open(tmp_path / f"t_{i}.tif"))
+            assert arr.dtype == np.float32 and np.allclose(arr, loaded_app.Fig[i].Image)
+        set_mode(loaded_app, qapp, "AnnMod")
+
+    def test_missing_folder_writes_nothing(self, loaded_app, qapp, save_window, tmp_path):
+        save_window.SaveDir.setText(str(tmp_path / "missing"))
+        _save(save_window, qapp, ["Real"], tif=True)
+        assert not (tmp_path / "missing").exists()
+
+
+class TestExportDataset:
+    def _export(self, sw, qapp, tmp_path, fmt, byte_order="l"):
+        sw.SaveDir.setText(str(tmp_path))
+        sw.SaveTabGroup.setCurrentWidget(sw.ExportTab)
+        sw.ExpFormat.setCurrentIndex(sw.ExpFormat.findData(fmt))
+        sw.ExpByteOrder.setCurrentIndex(sw.ExpByteOrder.findData(byte_order))
+        sw.ExpFilename.setText("export")
+        sw.ExpDimSuff.setChecked(fmt == "raw")
+        sw.ExpFrPart.setChecked(False)
+        sw.ExpPxPart.setChecked(False)
+        sw.ExpPxPart.clicked.emit(False)
+        assert sw.SaveExport.text() == "Export Dataset"
+        path = sw.ExpNotes.toPlainText().splitlines()[0].replace("File: ", "")
+        sw.SaveExport.click()
+        qapp.processEvents()
+        return path
+
+    def test_hdf5(self, loaded_app, qapp, save_window, tmp_path):
         h5py = pytest.importorskip("h5py")
+        path = self._export(save_window, qapp, tmp_path, "h5")
+        with h5py.File(path) as f:
+            assert np.array_equal(f["data"][()], np.asarray(loaded_app.Data).reshape(SCAN_Y, SCAN_X, DET_Y, DET_X))
+            meta = dict(f["metadata"].attrs)
+        assert np.allclose(meta["beam_center_xy"], loaded_app.B0)
 
-        out = tmp_path / "export.h5"
-        app.SaveWindow.ExpFilename.setText(str(out.parent / "export"))
-        qtbot.mouseClick(app.SaveWindow.ExportTab, Qt.LeftButton)
-        qtbot.wait(500)
-
-        assert out.exists()
-        with h5py.File(out, "r") as f:
-            assert "data" in f
-            assert "metadata" in f
-
-    def test_hdf5_values_match(self, app, qtbot, tmp_path):
-        h5py = pytest.importorskip("h5py")
-
-        out = tmp_path / "values.h5"
-        app.SaveWindow.ExpFilename.setText(str(out.parent / "values"))
-        qtbot.mouseClick(app.SaveWindow.ExportTab, Qt.LeftButton)
-        qtbot.wait(500)
-
-        with h5py.File(out, "r") as f:
-            stored = f["data"][:]
-
-        np.testing.assert_allclose(
-            stored.reshape(app.D.Data.shape),
-            app.D.Data,
-            rtol=1e-5
-        )
-
-
-@pytest.mark.skip(reason="saveVect requires CoM data computed by the display pipeline")
-class TestSaveVect:
-    def test_com_tiffs_written(self, app, qtbot, tmp_path):
-        """saveVect should produce CoMX.tif and CoMY.tif as float32."""
-        import tifffile
-
-        app.D.CoMX = np.random.rand(8, 8).astype(np.float32)
-        app.D.CoMY = np.random.rand(8, 8).astype(np.float32)
-
-        app.SaveWindow.SaveDir.setText(str(tmp_path))
-        app.SaveWindow.SaveImgPrefix.setText("stem")
-        qtbot.mouseClick(app.SaveWindow.SaveImgTIF, Qt.LeftButton)
-        qtbot.wait(200)
-
-        for name in ("stem_CoMX.tif", "stem_CoMY.tif"):
-            p = tmp_path / name
-            assert p.exists(), f"Missing {name}"
-            arr = tifffile.imread(p)
-            assert arr.dtype == np.float32
+    @pytest.mark.parametrize("order, dtype", [("l", "<f4"), ("b", ">f4")])
+    def test_raw(self, loaded_app, qapp, save_window, tmp_path, order, dtype):
+        path = self._export(save_window, qapp, tmp_path, "raw", order)
+        assert path.endswith(f"_{DET_X}x{DET_Y}x{SCAN_X}x{SCAN_Y}.raw"), path
+        got = np.fromfile(path, dtype=dtype).reshape(SCAN_X * SCAN_Y, DET_X * DET_Y)
+        assert np.array_equal(got, np.asarray(loaded_app.Data))

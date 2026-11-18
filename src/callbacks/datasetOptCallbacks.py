@@ -1,36 +1,34 @@
-from callbacks.allFunctions import notifDLG, checkNaN, getImportInfo
+from callbacks.import_io import getImportInfo
+from callbacks.utils import checkNaN, notifDLG
 from callbacks.importCallbacks import importCallbacks
 import numpy as np
+from callbacks import compute  # noqa: E402
 
 
 def datasetOptCallbacks(self):
     match self.sender():
-        case self.SettingsWindow.SwapByteOrder:  # Swap byte-order
-            # msg = "Swapping byte order ..." #TODO
-            # self.T.progDLG = progDLG(self, sprintf("\n#s\n",msg), "Byte Order Swap") #TODO
-            self.progressBar.setMaximum(0)
+        case self.SettingsWindow.SwapByteOrder:  # Swap byte-order, then ask whether it is right
+            # Only the diffraction pattern is updated while the user decides: the other windows
+            # would show stale images, so they are hidden until the answer.
+            hidden = [id for id in self.G.ImgID if id != "Dfrn" and self.Fig[id].isVisible()]
+            for id in hidden:
+                self.Fig[id].hide()
+            keep = False
             try:
-                self.Data.byteswap(inplace=True)
-            except BaseException:
-                notifDLG(
-                    self,
-                    'error',
-                    "It seems the system does not have enough memory for this process! Maybe try to increase system's virtual memory.",
-                    "Out of Memory")
-                return
-
-            self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b` at `self.D.ByteOrder`
-            self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
-            self.UpdateImages.tirgger()
-            # delete(self.T.progDLG) #TODO
-            self.progressBar.setValue(1)
-            self.progressBar.setMaximum(1)
-            sel = notifDLG(self, 'quest', "Is the current byte-order correct?",
-                           'Byte Order Swap', ["Yes", "No. Revert"])
-
-            # Run the process again if selected "No ....."
-            if sel.startswith("No"):
-                self.SettingsWindow.SwapByteOrder.click()  # datasetOptCallbacks(self,struct('Source',self.SwapByteOrder,'EventName',"")) #TODO?
+                if not swapByteOrder(self, update=False):
+                    return
+                _showPatternOnly(self)
+                sel = notifDLG(self, self, 'quest', "Is the current byte-order correct?",
+                               'Byte Order Swap', ["Yes", "No. Revert"])
+                keep = not str(sel or "").startswith("No")     # None when the dialog is dismissed
+                if not keep:
+                    swapByteOrder(self, update=False)          # back to the data the other images show
+                    _showPatternOnly(self)
+            finally:
+                for id in hidden:
+                    self.Fig[id].show()
+            if keep:
+                self.UpdateImages.trigger()                    # every image from the swapped data
 
         case self.SettingsWindow.SwapDfrnXY | self.SettingsWindow.SwapRealXY:
             # Diffraction or real-space
@@ -65,16 +63,57 @@ def datasetOptCallbacks(self):
 
         case self.PreviewButton:
             # Check data NaN/Inf, without asking to sway byte-order
-            sel = checkNaN(self, image=self.Image.Preview.get_array(), preview=True)
+            sel = checkNaN(self, image=self.ImageAx.Preview.get_array(), preview=True)
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
+                compute.release_device_data()   # the GPU copy is now stale
 
         case other:
-            self.DataInfo.Value = getImportInfo()
+            self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
             # Check data NaN/Inf, ask whether to sway byte-order
-            sel = checkNaN(self, image=self.Image.Dfrn.get_array(), preview=False)
+            sel = checkNaN(self, image=self.ImageAx.Dfrn.get_array(), preview=False)
             if sel == 'Set NaNs to 0':
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
+                compute.release_device_data()   # the GPU copy is now stale
+
+
+def _showPatternOnly(self) -> None:
+    """Recompute and show just the diffraction pattern (of the current real-space region)."""
+    from callbacks.plotting import plotImage  # noqa: E402
+    from callbacks.realSpaceROICallbacks import diffractionPattern  # noqa: E402
+    weights = self.Fig.RealMask.Image
+    if weights is None:
+        weights = np.ones(self.Data.shape[0])
+    self.Fig.Dfrn.Image = diffractionPattern(self, np.asarray(weights, float).ravel())
+    self.Fig.Dfrn.show()
+    plotImage(self, "Dfrn")
+
+
+def swapByteOrder(self, update: bool = True) -> bool:
+    """Reinterpret the dataset with the other byte order and (if *update*) update the images.
+
+    In-memory data is byte-swapped in place (it stays in the native byte order the compute and
+    GPU paths need); a lazily loaded dataset is a read-only memory map, so it is viewed with the
+    swapped dtype instead (no copy, nothing written to the file).  Returns False on failure.
+    """
+    from callbacks.window_manager import busyIndicator  # noqa: E402
+    try:
+        with busyIndicator(self):
+            if isinstance(self.Data, np.memmap) or not self.Data.flags.writeable:
+                self.Data = self.Data.view(self.Data.dtype.newbyteorder())
+            else:
+                self.Data.byteswap(inplace=True)
+    except MemoryError:
+        notifDLG(self, self, 'error',
+                 "It seems the system does not have enough memory for this process! "
+                 "Maybe try to increase system's virtual memory.", "Out of Memory")
+        return False
+    compute.release_device_data()   # the GPU copy is now stale
+    self.D.ByteOrder = ['b', 'l'][self.D.ByteOrder == 'b']  # swap `l`<->`b`
+    self.SettingsWindow.DataInfo.setPlainText(getImportInfo(self))
+    if update:
+        self.UpdateImages.trigger()
+    return True
 
 
 def getImportInfo(self):

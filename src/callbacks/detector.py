@@ -3,21 +3,29 @@ import os
 import sys
 import traceback
 import numpy as np
+import re
+from callbacks.menus import showPreviewDisplayControls
+from callbacks.window_manager import setPreviewTabs
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
+from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
+from callbacks.signals import signals_blocked  # noqa: E402
 
 
 def clearDetectors(self):
 
     detectorList = [
         "adf",
-        "tb"]
+        "tb",
+        "VrAp",         # virtual aperture, its mirror handle and mirror line
+        "VrApMirP",
+        "VrApMirL"]
 
     # Try removing annotations and then setting to None so that they can be replotted later
     for ii in detectorList:
@@ -29,15 +37,32 @@ def clearDetectors(self):
             finally:
                 setattr(self.A, ii, None)
 
-    # Custom detectors
-    # Hide Custom ROIs only
-    # set(findobj(self.ImageAx.Dfrn.Children,'-regexp','Tag',"Custom "),'Visible',0) #TODO
+    # DPC segments and the scan-direction arrows: redrawn by the modes that use them
+    from callbacks.annularDetectorCallbacks import removeScanDir, removeSegDetr  # noqa: E402
+    removeSegDetr(self)
+    removeScanDir(self)
+
+    # Virtual aperture's symmetry/mirror copies (plain lines, tagged when drawn)
+    for ln in list(self.Fig.Dfrn.ax.lines):
+        if getattr(ln, '_vrAp_clone', False):
+            ln.remove()
+
+    # Custom detectors: remove their annotations; they are redrawn on returning to CustMod
+    from callbacks.customDetectorCallbacks import _removeArtists  # noqa: E402
+    for cmask in self.A.Custom.values():
+        _removeArtists(cmask)
     # Scan direction alignment
     # delete(findobj(self.ImageAx.Dfrn,'Tag','ScanDirAnnot')) #TODO
 
 
 def detectorModeCallbacks(self):
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
+    from callbacks.alignment import moveTransBeam, transBeamCallbacks  # noqa: E402
+    from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
+    from callbacks.plotting import plotImage  # noqa: E402
+    from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
+    from callbacks.window_manager import enableWindows  # noqa: E402
+    from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
     if self.blockAllSignals:
         return
 
@@ -57,136 +82,117 @@ def detectorModeCallbacks(self):
     for btn in self.G.CoM_btns:
         btn.setEnabled(dmod in ["CoMMod", "DPCMod"])
 
+    # a locked display selection survives the mode change (if the image is still listed)
+    locked_id = self.SettingsWindow.DispImage.currentData() if self.SettingsWindow.DispLock.isChecked() else None
+
     # block singals whilst updating DispImage QComboBox
-    self.SettingsWindow.DispImage.blockSignals(True)
+    with signals_blocked(self.SettingsWindow.DispImage):
+        if dmod in ["CoMMod", "DPCMod"]:
+            # add all images to dropdown list in the Settings Window and
+            # Subsitute "CoM"/"DPC" in image names and window titles
+            imageNames = [re.sub('DPC|CoM', dmod[:3], ii) for ii in self.G.ImgName]
 
-    if dmod in ["CoMMod", "DPCMod"]:
-        # add all images to dropdown list in the Settings Window and
-        # Subsitute "CoM"/"DPC" in image names and window titles
-        imageNames = [re.sub('DPC|CoM', dmod[:3], ii) for ii in self.G.ImgName]
-
-        self.SettingsWindow.DispImage.clear()
-        for itemText, itemID in zip(imageNames, self.G.ImgID):
-            self.SettingsWindow.DispImage.addItem(itemText, itemID)  # drop down items
-            self.Fig[itemID].setWindowTitle(itemText)  # window title
-
-        # Subsitute "CoM"/"DPC" in button text
-        for btn in self.G.CoM_btns:
-            re.sub('DPC|CoM', dmod[:3], btn.text())
-
-    else:
-        self.SettingsWindow.DispImage.clear()
-        for itemText, itemID, itemType in zip(self.G.ImgName, self.G.ImgID, self.G.ImgType):
-            if "CoM" not in itemType:
+            self.SettingsWindow.DispImage.clear()
+            for itemText, itemID in zip(imageNames, self.G.ImgID):
                 self.SettingsWindow.DispImage.addItem(itemText, itemID)  # drop down items
-            else:
-                self.Fig[itemID].hide()  # Image windows
+                self.Fig[itemID].setWindowTitle(itemText)  # window title
 
-    # Show primary diffraction/real-space image when mode changes unless in Preview mode
-    if dmod != "PrvwMod":
-        self.Fig.Dfrn.show()
-        self.Fig.Real.show()
-    else:
-        self.Fig.Dfrn.hide()
-        self.Fig.Real.hide()
+            # Subsitute "CoM"/"DPC" in button text
+            for btn in self.G.CoM_btns:
+                re.sub('DPC|CoM', dmod[:3], btn.text())
 
-    # Special case for Import Preview Mode
-    if dmod == "PrvwMod":
-        # Keep only "Preview" image
-        self.SettingsWindow.DispImage.clear()
-        self.SettingsWindow.DispImage.addItem("Preview", "Preview")
+        else:
+            self.SettingsWindow.DispImage.clear()
+            for itemText, itemID, itemType in zip(self.G.ImgName, self.G.ImgID, self.G.ImgType):
+                if "CoM" not in itemType:
+                    self.SettingsWindow.DispImage.addItem(itemText, itemID)  # drop down items
+                else:
+                    self.Fig[itemID].hide()  # Image windows
 
-        # Hide other UIs
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.MiscTab), False)
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.InfoTab), False)
-        self.SaveWindow.SaveTabGroup.setTabVisible(
-            self.SaveWindow.SaveTabGroup.indexOf(
-                self.SaveWindow.ExportTab), False)
+        # Show primary diffraction/real-space image when mode changes unless in Preview mode
+        if dmod != "PrvwMod":
+            self.Fig.Dfrn.show()
+            self.Fig.Real.show()
+        else:
+            self.Fig.Dfrn.hide()
+            self.Fig.Real.hide()
 
-        self.Fig.Preview.show()
-        self.ImportWindow.show()
-        self.SettingsWindow.show()
-    else:
-        self.P.DetrMode = self.DetrMode.currentData()  # Note current mode
-        # Remove "Preview" image from drop down
-        self.SettingsWindow.DispImage.removeItem(self.SettingsWindow.DispImage.findData("Preview"))
-        self.Fig.Preview.hide()
+        # Special case for Import Preview Mode
+        if dmod == "PrvwMod":
+            # Keep only "Preview" image
+            self.SettingsWindow.DispImage.clear()
+            self.SettingsWindow.DispImage.addItem("Preview", "Preview")
 
-        # Show all UIs
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.MiscTab), True)
-        self.SettingsWindow.SettingsTabGroup.setTabVisible(
-            self.SettingsWindow.SettingsTabGroup.indexOf(
-                self.SettingsWindow.InfoTab), True)
-        self.SaveWindow.SaveTabGroup.setTabVisible(
-            self.SaveWindow.SaveTabGroup.indexOf(
-                self.SaveWindow.ExportTab), True)
+            # Hide other UIs
+            setPreviewTabs(self, True)
 
-    # unblock singals after updating DispImage QComboBox
-    self.SettingsWindow.DispImage.blockSignals(False)
+            self.Fig.Preview.show()
+            showPreviewDisplayControls(self)    # brightness/contrast/gamma pop up with the importer
+        else:
+            self.P.DetrMode = self.DetrMode.currentData()  # Note current mode
+            # Remove "Preview" image from drop down
+            self.SettingsWindow.DispImage.removeItem(self.SettingsWindow.DispImage.findData("Preview"))
+            self.Fig.Preview.hide()
+
+            # Show all UIs
+            setPreviewTabs(self, False)
 
     # Define images in the saving list
-    self.SaveWindow.SaveImgList.blockSignals(True)
-    self.SaveWindow.SaveImgList.clear()
-    self.SaveWindow.SaveImgList.addItems([self.SettingsWindow.DispImage.itemData(ii)
-                                         for ii in range(self.SettingsWindow.DispImage.count())])
-    self.SaveWindow.SaveImgList.blockSignals(False)
+    with signals_blocked(self.SaveWindow.SaveImgList):
+        self.SaveWindow.SaveImgList.clear()
+        self.SaveWindow.SaveImgList.addItems([self.SettingsWindow.DispImage.itemData(ii)
+                                             for ii in range(self.SettingsWindow.DispImage.count())])
     self.SaveWindow.SaveImgPrefix.textChanged.emit(self.SaveWindow.SaveImgPrefix.text())  # Update Image saving prefix
-    self.SettingsWindow.ShowDfrnAxes.clicked.emit()  # Update diffraction axis annotations
+    from callbacks.axis_direction import axisDirectionCallbacks  # noqa: E402
+    axisDirectionCallbacks(self)  # orientation and direction arrows (scan arrows depend on the mode)
 
     # Set detector size when transmitted beam is aligned the first time
     if not (self.P.TransBeamInit) and (dmod != "AlignMod"):
-        self.AnnRi.blockSignals(True)
-        self.AnnRi.setValue((self.TBR.value(), (self.TBR.value() + self.P.RMax) / 3))
-        self.AnnRi.blockSignals(False)
+        with signals_blocked(self.AnnRi):
+            # radii in rings of D.annWidth pixels: the beam's edge to a third of the way out
+            w = float(self.D.annWidth) if self.D is not None else 1.0
+            self.AnnRi.setValue((int(round(self.TBR.value() / w)), int(round((self.TBR.value() + self.P.RMax) / 3 / w))))
         self.VrApR.setValue(self.TBR.value())
         self.P.VrApXY = self.B0
         self.P.TransBeamInit = 1
+
+    if locked_id is not None and self.SettingsWindow.DispImage.findData(locked_id) != -1:
+        with signals_blocked(self.SettingsWindow.DispImage):
+            self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData(locked_id))
+
+    from callbacks.plotting import updateVecFieldUI  # noqa: E402
+    updateVecFieldUI(self)          # vector fields only in CoM/DPC modes
 
     # hide custom mask maths tab
     self.SettingsWindow.SettingsTabGroup.setTabVisible(
         self.SettingsWindow.SettingsTabGroup.indexOf(
             self.SettingsWindow.MathTab), False)
 
+    from callbacks.annularDetectorCallbacks import placeAnnStep  # noqa: E402
+    placeAnnStep(self, dmod)        # Annular Integration Step: Alignment tab, or the annular tab
+
     match dmod:
         case "PrvwMod":
             self.DfrnDetrTabGroup.setCurrentIndex(0)
             previewCallbacks(self)
         case "AlignMod":
-            # display the full dataset pacbed
-            self.Fig.Dfrn.Image = self.Data.sum(axis=0).reshape(self.D.NPx)
-            self.ImageAx.Dfrn = self.Fig.Dfrn.ax.imshow(self.Fig.Dfrn.Image, cmap=self.Fig.Dfrn.cmap)
-            self.ImageAx.Dfrn.figure.set_facecolor('black')
+            # The full dataset: pattern (combined as the Pattern dropdown says, default mean), the real-space
+            # image of an all-ones detector, and all-ones masks (MATLAB's alignment view).  Drawn through
+            # plotImage — a bare imshow here skipped the histogram/statistics and the display settings,
+            # and stacked a new image on the axes every time Align mode was entered.
+            from callbacks.realSpaceROICallbacks import diffractionPattern  # noqa: E402
+            from callbacks.plotting import plotImage  # noqa: E402
+            self.Fig.Dfrn.Image = diffractionPattern(self, np.ones(self.Data.shape[0]))
+            self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
+            self.Fig.DfrnMask.Image = np.ones(dfrn_shape(self.D))
+            self.Fig.RealMask.Image = np.ones(real_shape(self.D))
+            for id, limits in (("DfrnMask", self.P.DfrnAxLim), ("RealMask", self.P.RealAxLim),
+                               ("Dfrn", self.P.DfrnAxLim), ("Real", self.P.RealAxLim)):
+                plotImage(self, id)
+                self.Fig[id].fig.set_facecolor('black')
+                self.Fig[id].ax.axis(limits)
             self.Fig.Dfrn.show()
-            self.Fig.Dfrn.ax.axis(self.P.DfrnAxLim)
-            self.Fig.Dfrn.canvas.draw_idle()
-
-            # initialize real space image with sum over all diffraction space
-            self.Fig.Real.Image = self.Data.sum(axis=1).reshape(self.D.NFrY, self.D.NFrX)
-            self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Fig.Real.Image, cmap=self.Fig.Real.cmap)
-            self.ImageAx.Real.figure.set_facecolor('black')
             self.Fig.Real.show()
-            self.Fig.Real.ax.axis(self.P.RealAxLim)
-            self.Fig.Real.canvas.draw_idle()
-
-            # initial masking for diffraction space should be all ones
-            self.Fig.DfrnMask.Image = np.ones(self.D.NPx)
-            self.ImageAx.DfrnMask = self.Fig.DfrnMask.ax.imshow(self.Fig.DfrnMask.Image, cmap=self.Fig.DfrnMask.cmap)
-            self.ImageAx.DfrnMask.figure.set_facecolor('black')
-            self.Fig.DfrnMask.ax.axis(self.P.DfrnAxLim)
-            self.Fig.DfrnMask.canvas.draw_idle()
-
-            # initial masking for real space should be all ones
-            self.Fig.RealMask.Image = np.ones(self.D.NFr)
-            self.ImageAx.RealMask = self.Fig.RealMask.ax.imshow(self.Fig.RealMask.Image, cmap=self.Fig.RealMask.cmap)
-            self.ImageAx.RealMask.figure.set_facecolor('black')
-            self.Fig.RealMask.ax.axis(self.P.RealAxLim)
-            self.Fig.RealMask.canvas.draw_idle()
 
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
             if self.A.tb is None:
@@ -226,7 +232,7 @@ def detectorModeCallbacks(self):
             self.SettingsWindow.SettingsTabGroup.setTabVisible(
                 self.SettingsWindow.SettingsTabGroup.indexOf(
                     self.SettingsWindow.MathTab), True)
-            # customDetectorCallbacks(self) #TODO
+            customDetectorCallbacks(self, source=self.DetrMode)
             self.Fig.DfrnMask.activateWindow()
 
     enableWindows(self, True)
@@ -253,17 +259,20 @@ def detrCoordCallbacks(self):
     if self.SettingsWindow.DCPos.currentText() == "Relative":
         self.RB0 = self.B0
 
-    # Update UI
+    # Update the current mode's coordinate displays.  Called directly: re-emitting
+    # DCSys.currentIndexChanged (as before) re-entered this slot without end.
     match self.DetrMode.currentData():
-        case "AlignMod":
-            pass
         case "AnnMod" | "DPCMod" | "CoMMod":
-            self.SettingsWindow.DCSys.currentIndexChanged.emit(self.SettingsWindow.DCSys.currentIndex())
+            from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
+            annularDetectorCallbacks(self)      # self.sender() is still the DC* combo box
         case "VrApMod":
-            self.SettingsWindow.DCSys.currentIndexChanged.emit(self.SettingsWindow.DCSys.currentIndex())
+            from callbacks.virtualApertureCallbacks import syncVrApControls  # noqa: E402
+            syncVrApControls(self)
         case "CustMod":
-            self.SettingsWindow.DCSys.currentIndexChanged.emit(self.SettingsWindow.DCSys.currentIndex())
+            customDetectorCallbacks(self, source=self.SettingsWindow.DCSys)
 
 
-def customDetectorCallbacks(self):
-    pass
+def customDetectorCallbacks(self, source=None):
+    """Custom detector mode; implemented in :mod:`callbacks.customDetectorCallbacks`."""
+    from callbacks.customDetectorCallbacks import customDetectorCallbacks as _custom  # noqa: E402
+    _custom(self, source=source if source is not None else self.sender())

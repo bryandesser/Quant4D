@@ -10,13 +10,18 @@ form a virtual bright-field / dark-field real-space image.
 
 UI controls
 -----------
-  VrApR          : aperture radius (spinbox, in diffraction-pixel units)
+  VrApR          : aperture radius slider, diffraction pixels
+  VrApR_NF       : the radius in the display unit (px or mrad)
+  VrApX/Y(_NF)   : aperture centre in the current coordinate system (Settings →
+                   detector coordinates): Cartesian X/Y relative to the reference
+                   point, or polar distance/angle about the beam centre
+  VrApReset      : back onto the transmitted beam, with its radius
   VrApSymm       : n-fold rotational symmetry count (1, 2, 3, 4, 6)
   VrApInvert     : invert mask (complement) — virtual dark-field
   VrApMirror     : add mirror-reflected copy of the full aperture set
   VrApMirrRot    : angle of the mirror line through the beam centre (degrees)
   VrApMirrRot_NF : numerical-field companion to VrApMirrRot
-  VrApRotStep    : step size for rotation-increment buttons (not yet wired)
+  VrApRotStep    : step size of the rotation buttons VrApRotCW / VrApRotCCW
 
 Annotation attributes (self.A.*)
 ---------------------------------
@@ -28,13 +33,82 @@ Annotation attributes (self.A.*)
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
+from callbacks.layout import dfrn_shape, real_shape
+from callbacks import compute  # noqa: E402
+from callbacks.signals import signals_blocked  # noqa: E402
+from callbacks.utils import refreshCanvas  # noqa: E402
+
+
+def _polar(self) -> bool:
+    return self.SettingsWindow.DCSys.currentText() == "Polar"
+
+
+def vrApToControls(self, xy) -> tuple[float, float]:
+    """Aperture centre (pixels) -> the two values shown in VrApX/Y (current coordinate system)."""
+    s = float(self.DfPxR)
+    if _polar(self):
+        d = np.asarray(xy, float) - np.asarray(self.B0, float)
+        rho = float(np.hypot(*d))
+        if rho < 1e-9:      # on the beam centre the angle is undefined: keep the one set
+            return 0.0, float(self.VrApY_NF.value())
+        return rho * s, float(np.degrees(np.arctan2(d[1], d[0])))
+    d = np.asarray(xy, float) - np.asarray(self.RB0, float)
+    return float(d[0] * s), float(d[1] * s)
+
+
+def vrApFromControls(self, a: float, b: float) -> np.ndarray:
+    """Inverse of :func:`vrApToControls`, clamped to the diffraction pattern."""
+    s = float(self.DfPxR)
+    if _polar(self):
+        xy = np.asarray(self.B0, float) + a / s * np.array([np.cos(np.radians(b)), np.sin(np.radians(b))])
+    else:
+        xy = np.asarray(self.RB0, float) + np.array([a, b]) / s
+    ny, nx = dfrn_shape(self.D)
+    return np.clip(xy, 0, [nx - 1, ny - 1])
+
+
+def syncVrApControls(self) -> None:
+    """Set the limits, labels, units and values of VrApX/Y/R and their number fields."""
+    # the mirror-plane angle only applies with the mirror on (as MATLAB)
+    for w in (self.VrApMirrRot, self.VrApMirrRot_NF, self.VrApMirrRotLabel):
+        w.setEnabled(self.VrApMirror.isChecked())
+    if self.D is None or getattr(self, "Data", None) is None:
+        return
+    s = float(self.DfPxR)
+    unit = " " + (self.SettingsWindow.DCUnit.currentData() or "px")
+    ny, nx = dfrn_shape(self.D)
+    if _polar(self):
+        # out to the pattern's farthest corner from the beam centre (as far as the aperture can go)
+        b0 = np.asarray(self.B0, float)
+        corners = np.array([[0, 0], [nx - 1, 0], [0, ny - 1], [nx - 1, ny - 1]], float)
+        rmax = float(np.hypot(*(corners - b0).T).max()) * s
+        limits = ((0.0, rmax), (-180.0, 180.0))
+        labels, units = ("Distance", "Rotation"), (unit, " °")
+    else:
+        r0 = np.asarray(self.RB0, float)
+        limits = ((-r0[0] * s, (nx - 1 - r0[0]) * s), (-r0[1] * s, (ny - 1 - r0[1]) * s))
+        labels, units = ("X", "Y"), (unit, unit)
+    values = vrApToControls(self, self.P.VrApXY)
+    widgets = (self.VrApX, self.VrApX_NF, self.VrApY, self.VrApY_NF, self.VrApR_NF)
+    with signals_blocked(*widgets):
+        for k, (slider, field) in enumerate(((self.VrApX, self.VrApX_NF), (self.VrApY, self.VrApY_NF))):
+            lo, hi = limits[k]
+            for w in (slider, field):
+                w.setRange(lo, hi)
+                w.setValue(min(max(values[k], lo), hi))
+            field.setSuffix(units[k])
+            field.setSingleStep(0.25 * s if units[k] != " °" else 1.0)
+        self.VrApR_NF.setRange(0, self.VrApR.maximum() * s)
+        self.VrApR_NF.setValue(float(self.VrApR.value()) * s)
+        self.VrApR_NF.setSuffix(unit)
+        self.VrApR_NF.setSingleStep(0.25 * s)
+    self.VrApXLabel.setText(labels[0])
+    self.VrApYLabel.setText(labels[1])
 
 
 def virtualApertureCallbacks(self):  # noqa: C901
-    # Deferred import to avoid circular dependency with allFunctions.py
-    # (allFunctions imports this module; importing allFunctions here at
-    # module level would create a cycle).
-    from callbacks.allFunctions import plotImage, isDiffToPrev  # noqa: E402
+    from callbacks.plotting import plotImage  # noqa: E402
+    from callbacks.utils import isDiffToPrev  # noqa: E402
 
     if self.blockAllSignals:
         return
@@ -43,17 +117,13 @@ def virtualApertureCallbacks(self):  # noqa: C901
     # helpers
     # ------------------------------------------------------------------
 
-    def _remove_vr_annotations():
-        """Remove all existing virtual aperture annotations."""
-        if self.A.VrAp is not None:
-            # InteractiveCircle stores artists in .circ (list of Line2D) and .point (scatter)
-            for line in self.A.VrAp.circ:
-                try:
-                    line.remove()
-                except ValueError:
-                    pass
+    def _remove_vr_annotations(keep_primary=False, keep_mirror=False):
+        """Remove the virtual aperture annotations, except the one being dragged: replacing the
+        annotation that is emitting (self.sender()) mid-drag would end the drag, and freeing a
+        QObject while it emits crashes."""
+        if self.A.VrAp is not None and not keep_primary:
             try:
-                self.A.VrAp.point.remove()
+                self.A.VrAp.remove()          # its artists and its mouse handlers
             except ValueError:
                 pass
             self.A.VrAp = None
@@ -65,7 +135,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 pass
             self.A.VrApMirL = None
 
-        if self.A.VrApMirP is not None:
+        if self.A.VrApMirP is not None and not keep_mirror:
             self.A.VrApMirP.remove()
             self.A.VrApMirP = None
 
@@ -85,25 +155,11 @@ def virtualApertureCallbacks(self):  # noqa: C901
                              np.sin(a2) * offset[0] - np.cos(a2) * offset[1]])
         return mirrored + np.array(centre)
 
-    def _circle_mask(centre_xy, radius, shape):
-        """
-        Boolean mask (shape = (NPxX, NPxY)) that is True inside a circle.
-
-        Parameters
-        ----------
-        centre_xy : array-like, (x, y)
-        radius    : float, in diffraction pixels
-        shape     : (NPxX, NPxY)
-        """
-        xg, yg = np.mgrid[0:shape[0], 0:shape[1]]
-        return ((xg - centre_xy[0]) ** 2 + (yg - centre_xy[1]) ** 2
-                <= radius ** 2)
-
     # ------------------------------------------------------------------
     # draw — build fresh annotations
     # ------------------------------------------------------------------
 
-    def drawVrAp():
+    def drawVrAp(keep_primary=False, keep_mirror=False):
         """
         Draw the virtual aperture annotation(s) on the diffraction pattern.
 
@@ -122,24 +178,25 @@ def virtualApertureCallbacks(self):  # noqa: C901
         mirror = self.VrApMirror.isChecked()
         mirr_ang = float(self.VrApMirrRot.value())
 
-        _remove_vr_annotations()
+        _remove_vr_annotations(keep_primary, keep_mirror)
 
         # Remove leftover clone circles from a previous draw
         for ln in list(ax.lines):
             if getattr(ln, '_vrAp_clone', False):
                 ln.remove()
 
-        # Primary aperture — draggable, resizable
+        # Primary aperture — draggable, resizable (kept as is while it is being dragged)
         xy = np.asarray(self.P.VrApXY, dtype=float)
-        self.A.VrAp = InteractiveCircle(
-            axis=ax,
-            center=xy,
-            radius=r,
-            color='w',
-            interactions='all'
-        )
-        self.A.VrAp.connect()
-        self.A.VrAp.updateCircle.connect(lambda: moveVrAp())
+        if self.A.VrAp is None:
+            self.A.VrAp = InteractiveCircle(
+                axis=ax,
+                center=xy,
+                radius=r,
+                color='r',
+                interactions='all'
+            )
+            self.A.VrAp.connect()
+            self.A.VrAp.updateCircle.connect(lambda: moveVrAp())
 
         # Rotational symmetry clones (k = 1 … nsym-1)
         theta_circ = np.linspace(0, 2 * np.pi, 361)
@@ -148,7 +205,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
             cloned_ctr = _rotate_pt(xy, rot_ang, b0)
             cx = cloned_ctr[0] + r * np.cos(theta_circ)
             cy = cloned_ctr[1] + r * np.sin(theta_circ)
-            ln, = ax.plot(cx, cy, color='w', linewidth=1.0,
+            ln, = ax.plot(cx, cy, color='r', linewidth=1.0,
                           linestyle='--', zorder=5)
             ln._vrAp_clone = True  # mark for cleanup
 
@@ -160,7 +217,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 mir_ctr = _mirror_pt(orig_ctr, mirr_ang, b0)
                 cx = mir_ctr[0] + r * np.cos(theta_circ)
                 cy = mir_ctr[1] + r * np.sin(theta_circ)
-                ln, = ax.plot(cx, cy, color='w', linewidth=1.0,
+                ln, = ax.plot(cx, cy, color='r', linewidth=1.0,
                               linestyle=':', zorder=5)
                 ln._vrAp_clone = True
 
@@ -175,16 +232,31 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 color='#AAAAAA', linewidth=1.0, linestyle='--', zorder=4
             )
 
-            # Drag handle to rotate the mirror line
-            mirr_tip_x = b0[0] + 0.6 * self.P.RMax * np.cos(rad_m)
-            mirr_tip_y = b0[1] + 0.6 * self.P.RMax * np.sin(rad_m)
-            pt_art = ax.scatter(mirr_tip_x, mirr_tip_y,
-                                color='#AAAAAA', s=50, zorder=8)
-            self.A.VrApMirP = InteractivePoint(pt_art)
-            self.A.VrApMirP.connect()
-            self.A.VrApMirP.positionChanged.connect(lambda: moveVrAp())
+            # Drag handle to rotate the mirror line (kept as is while it is being dragged)
+            if self.A.VrApMirP is None:
+                # on the mirror line, well away from the centre (it was 0.6 * RMax, and RMax is 0
+                # until Annular mode has been used: the handle sat hidden on the beam centre)
+                reach = 0.4 * min(self.D.NPxX, self.D.NPxY)
+                mirr_tip_x = b0[0] + reach * np.cos(rad_m)
+                mirr_tip_y = b0[1] + reach * np.sin(rad_m)
+                pt_art = ax.scatter(mirr_tip_x, mirr_tip_y,
+                                    color='#FFD400', edgecolors='k', s=60, zorder=8)   # not red: apart from the apertures
+                self.A.VrApMirP = InteractivePoint(pt_art)
+                self.A.VrApMirP.connect()
+                self.A.VrApMirP.positionChanged.connect(lambda: moveVrAp())
+        elif self.A.VrApMirP is not None:       # mirror switched off while its handle was kept
+            self.A.VrApMirP.remove()
+            self.A.VrApMirP = None
 
-        self.Fig.Dfrn.canvas.draw_idle()
+        # The symmetry/mirror copies (and the mirror line) move with the dragged aperture or mirror
+        # handle: blitted with it.  A full redraw mid-drag drops the dragged artist, and the copies,
+        # left in the background taken at the press, only caught up when the drag ended.
+        def copies():
+            return [ln for ln in ax.lines if getattr(ln, '_vrAp_clone', False)] + [self.A.VrApMirL]
+        self.A.VrAp.companions = copies
+        if self.A.VrApMirP is not None:
+            self.A.VrApMirP.companions = copies
+        refreshCanvas(self.Fig.Dfrn.canvas, self.A.VrAp, self.A.VrApMirP)
 
     # ------------------------------------------------------------------
     # move — handle interactive changes
@@ -213,9 +285,8 @@ def virtualApertureCallbacks(self):  # noqa: C901
 
             self.P.VrApXY = new_ctr
 
-            self.VrApR.blockSignals(True)
-            self.VrApR.setValue(new_r)
-            self.VrApR.blockSignals(False)
+            with signals_blocked(self.VrApR):
+                self.VrApR.setValue(new_r)
 
         # --- sync mirror-drag handle → mirror-angle UI ---
         elif (self.A.VrApMirP is not None
@@ -224,22 +295,53 @@ def virtualApertureCallbacks(self):  # noqa: C901
             new_ang = float(
                 np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
             ) % 180.0  # mirror angle is defined mod 180°
-            self.VrApMirrRot.blockSignals(True)
-            self.VrApMirrRot_NF.blockSignals(True)
-            self.VrApMirrRot.setValue(int(round(new_ang)))
-            self.VrApMirrRot_NF.setValue(new_ang)
-            self.VrApMirrRot.blockSignals(False)
-            self.VrApMirrRot_NF.blockSignals(False)
+            with signals_blocked(self.VrApMirrRot, self.VrApMirrRot_NF):
+                self.VrApMirrRot.setValue(int(round(new_ang)))
+                self.VrApMirrRot_NF.setValue(new_ang)
+
+        # --- typed/slid position, in the current coordinate system ---
+        elif self.sender() in (self.VrApX, self.VrApX_NF, self.VrApY, self.VrApY_NF):
+            a = float(self.sender().value()) if self.sender() in (self.VrApX, self.VrApX_NF) else float(self.VrApX_NF.value())
+            b = float(self.sender().value()) if self.sender() in (self.VrApY, self.VrApY_NF) else float(self.VrApY_NF.value())
+            self.P.VrApXY = vrApFromControls(self, a, b)
+
+        # --- radius typed in the display unit ---
+        elif self.sender() is self.VrApR_NF:
+            with signals_blocked(self.VrApR):
+                self.VrApR.setValue(float(self.VrApR_NF.value()) / float(self.DfPxR))
+
+        # --- back onto the transmitted beam, with its radius ---
+        elif self.sender() is self.VrApReset:
+            self.P.VrApXY = np.asarray(self.B0, float).copy()
+            with signals_blocked(self.VrApR):
+                self.VrApR.setValue(float(self.TBR.value()))
+
+        # --- rotation buttons: turn the aperture about the beam centre (clockwise as displayed) ---
+        elif self.sender() in (self.VrApRotCW, self.VrApRotCCW):
+            from callbacks.axis_direction import clockwise_angle, rotate_about  # noqa: E402
+            angle = clockwise_angle(self, float(self.VrApRotStep.currentData()), self.sender() is self.VrApRotCW)
+            self.P.VrApXY = rotate_about(np.asarray(self.P.VrApXY, float), b0, angle)
 
         # --- sync radius spinbox → stored position ---
         elif self.sender() is self.VrApR:
             pass  # VrApXY unchanged; radius read fresh in calcVrAp
 
-        # Redraw with updated values
-        drawVrAp()
+        # Outside Virtual Aperture mode only the settings change (e.g. Align mode sets the radius to the
+        # beam's): drawing here put an interactive aperture on another mode's pattern, and dragging it
+        # replaced that mode's real-space image.
+        if self.DetrMode.currentData() != "VrApMod":
+            return
+
+        # decide before redrawing: the redraw replaces the annotation that may be self.sender()
+        update = _toUpdateImage()
+
+        # Redraw with updated values, keeping whichever annotation is being dragged
+        sender = self.sender()
+        drawVrAp(keep_primary=sender is self.A.VrAp, keep_mirror=sender is self.A.VrApMirP)
+        syncVrApControls(self)
 
         # --- compute image ---
-        if _toUpdateImage():
+        if update:
             if isDiffToPrev(self, 'VrAp',
                             [list(self.P.VrApXY),
                              self.VrApR.value(),
@@ -249,6 +351,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                              self.VrApMirrRot.value()]):
                 calcVrAp()
             plotImage(self, 'Real')
+            plotImage(self, 'DfrnMask')
 
     # ------------------------------------------------------------------
     # calcVrAp — build the mask and compute the virtual image
@@ -274,7 +377,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
         mirror = self.VrApMirror.isChecked()
         mirr_ang = float(self.VrApMirrRot.value())
         xy = np.asarray(self.P.VrApXY, dtype=float)
-        shape = (self.D.NPxX, self.D.NPxY)
+        shape = dfrn_shape(self.D)
 
         # Collect all aperture centre positions
         centres = []
@@ -286,37 +389,27 @@ def virtualApertureCallbacks(self):  # noqa: C901
             mirrored = [_mirror_pt(c, mirr_ang, b0) for c in centres]
             centres.extend(mirrored)
 
-        # Build union mask (shape: NPxX × NPxY, then flattened)
-        mask = np.zeros(shape, dtype=bool)
-        for ctr in centres:
-            mask |= _circle_mask(ctr, r, shape)
-
+        # Union of all aperture copies, (NPxY, NPxX)
+        mask = compute.circles_mask(shape, centres, r)
         if invert:
             mask = ~mask
+        self.Fig.DfrnMask.Image = mask.astype(self.D.DataType)      # also when empty or inverted
 
-        mask_flat = mask.flatten()   # (NPxX*NPxY,)
-
-        if not mask_flat.any():
-            self.Fig.Real.Image = np.zeros((self.D.NFrY, self.D.NFrX),
+        if not mask.any():
+            self.Fig.Real.Image = np.zeros(real_shape(self.D),
                                            dtype=self.D.DataType)
             return
 
-        # Virtual image: sum intensity within mask per scan position
-        # self.Data shape: (NFrX*NFrY, NPxX*NPxY)
-        virtual = self.Data[:, mask_flat].sum(axis=1)   # (NFrX*NFrY,)
-        self.Fig.Real.Image = virtual.reshape(self.D.NFrY, self.D.NFrX)
-
-        # Store the mask for display in the DfrnMask window
-        self.Fig.DfrnMask.Image = mask.astype(self.D.DataType)
+        # Virtual image: sum intensity within the mask for every probe position
+        self.Fig.Real.Image = compute.masked_sum(self.Data, mask, self.D.GPU).reshape(real_shape(self.D))
 
     # ------------------------------------------------------------------
     # helper: should we recompute the image now?
     # ------------------------------------------------------------------
 
     def _toUpdateImage():
-        calc = self.SettingsWindow.CalcPolicy.currentData()
-        return (calc == 2) or (self.sender() in [self.UpdateImages,
-                                                 self.DetrMode])
+        from callbacks.plotting import toUpdateImage  # noqa: E402
+        return toUpdateImage(self)
 
     # ------------------------------------------------------------------
     # Main dispatch
@@ -326,11 +419,15 @@ def virtualApertureCallbacks(self):  # noqa: C901
         case self.DetrMode:
             # Entering VrApMod: draw the aperture and compute for the first time
             drawVrAp()
+            syncVrApControls(self)
             calcVrAp()
             plotImage(self, 'Real')
+            plotImage(self, 'DfrnMask')
 
         case (self.VrApR | self.VrApSymm | self.VrApInvert
-              | self.VrApMirror | self.VrApMirrRot | self.VrApMirrRot_NF):
+              | self.VrApMirror | self.VrApMirrRot | self.VrApMirrRot_NF
+              | self.VrApRotCW | self.VrApRotCCW
+              | self.VrApX | self.VrApX_NF | self.VrApY | self.VrApY_NF | self.VrApR_NF | self.VrApReset):
             moveVrAp()
 
         case self.A.VrAp | self.A.VrApMirP:
@@ -339,6 +436,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
         case self.UpdateImages:
             calcVrAp()
             plotImage(self, 'Real')
+            plotImage(self, 'DfrnMask')
 
         case _:
             # Fallback: treat any unrecognised sender as a redraw trigger

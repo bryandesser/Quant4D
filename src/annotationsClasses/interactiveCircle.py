@@ -4,6 +4,8 @@ from matplotlib.backend_bases import MouseEvent
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtGui as qtg
+from typing import Any
+
 import numpy as np
 
 
@@ -25,7 +27,7 @@ class InteractiveCircle(qtc.QObject):
 
     lock = None  # only one InteractiveCircle can be interactived with at a time
 
-    def __init__(self, axis, center=None, radius=None, color='r', interactions='all'):
+    def __init__(self, axis, center=None, radius=None, color: Any = 'r', interactions='all'):
         super().__init__()
 
         # set defaults for center and radius if none are provided
@@ -42,6 +44,10 @@ class InteractiveCircle(qtc.QObject):
         self.press = None                                           # passes along artist information between on_press and on_motion
         self.color = color                                          # annotation color
         self.interactions = interactions                            # allowed interactions, defined above
+        # Artists that move with this annotation (e.g. symmetry copies, DPC segment lines): a callable
+        # returning them.  While dragged they are blitted with it; left in the background taken at
+        # the press, they would stay at their old place until the drag ends.
+        self.companions: Any = None
 
         # plot circle(s) based on provided radius/radii
         self.circ = axis.plot(self.x[:, None] * self.radius[None, :] + self.center[0],
@@ -64,14 +70,10 @@ class InteractiveCircle(qtc.QObject):
         self.canvas = self.circ[0].figure.canvas
         self.axis = self.circ[0].axes
 
-        # annotations are animated for quick blitting
-        for circ in self.circ:
-            circ.set_animated(True)
-        self.point.set_animated(True)
-
-        # update axis with new annotations
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(axis.bbox)
+        # Ordinary artists, drawn by every redraw; they are animated (blitted) only while dragged.
+        # (Created animated, they were invisible until first clicked once nothing blitted them.)
+        self.background = None                  # taken when a drag starts
+        self.canvas.draw_idle()
 
     def containsArtist(self, event):
         """
@@ -114,15 +116,36 @@ class InteractiveCircle(qtc.QObject):
         # are any artists included in the click?
         contains = containsCirc or containsPoint
 
-        # check if press is within the radius of the outer circle (i.e. not ON the circle)
-        if (np.linalg.norm((event.xdata, event.ydata) - self.center) <=
-                self.radius[-1]) and (self.interactions in ["all", "translate"]):
+        # check if press is within the radius of the outer circle (i.e. not ON the circle);
+        # outside the axes (e.g. a drag released beyond the image) there are no data coordinates
+        inside_axes = event.xdata is not None and event.ydata is not None
+        if inside_axes and (np.linalg.norm((event.xdata, event.ydata) - self.center) <= self.radius[-1]) \
+                and (self.interactions in ["all", "translate"]):
             contains = True
 
         return containsPoint, contains
 
+    @property
+    def shown(self) -> bool:
+        """A hidden annotation (circles not visible, e.g. a disabled custom mask) takes no mouse
+        input and keeps its handle hidden (the handle used to reappear on the next mouse move)."""
+        return bool(self.circ) and self.circ[0].get_visible()
+
+    def disconnect(self):
+        """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
+        to every hover/click on the canvas (drawing artists no longer in a figure, emitting moves)."""
+        canvas = self.canvas
+        for name in ('cidpress', 'cidrelease', 'cidmotion'):
+            cid = getattr(self, name, None)
+            if cid is not None and canvas is not None:
+                canvas.mpl_disconnect(cid)
+            setattr(self, name, None)
+        if InteractiveCircle.lock is self:
+            InteractiveCircle.lock = None
+
     def remove(self):
-        ''' remove all circle(s) and points(s) from axes '''
+        ''' remove all circle(s) and points(s) from axes, and stop listening to the mouse '''
+        self.disconnect()
         for circ in self.circ:
             circ.remove()
         self.point.remove()
@@ -135,7 +158,7 @@ class InteractiveCircle(qtc.QObject):
 
     def pointVisibility(self):
         # in case self.interactions is changed programmatically, monitor point visibility
-        if (self.interactions in ["all", "resize"]) and (not self.point.get_visible()):
+        if (self.interactions in ["all", "resize"]) and (not self.point.get_visible()) and self.shown:
             self.point.set_visible(True)
         elif (self.interactions in ["none", "translate"]) and (self.point.get_visible()):
             self.point.set_visible(False)
@@ -155,18 +178,20 @@ class InteractiveCircle(qtc.QObject):
         # monitor point visibility
         self.pointVisibility()
 
-        # exit if no interactions allowed, press is not in the axes, or another circle is being interacted with
-        if self.interactions == "none":
+        # exit if no interactions allowed, hidden, press is not in the axes, or another circle is being interacted with
+        if self.interactions == "none" or not self.shown:
             return
         if event.inaxes != self.axis:
             return
         if InteractiveCircle.lock is not None:
             return
 
-        # update center and radii
-        self.center = np.mean(self.circ[0]._xy[:-1], axis=0)
+        # update center and radii (get_xydata, not the cached _xy: that is only refreshed when the
+        # line is drawn, so right after a programmatic move it still held the old circle and the
+        # annotation "stayed" at its old place for hover/clicks until the next redraw)
+        self.center = np.mean(self.circ[0].get_xydata()[:-1], axis=0)
         for ii in range(len(self.circ)):
-            self.radius[ii] = np.mean(np.linalg.norm(self.circ[ii]._xy - self.center, axis=1))
+            self.radius[ii] = np.mean(np.linalg.norm(self.circ[ii].get_xydata() - self.center, axis=1))
 
         # check that mouse press contains the outer circle
         containsPoint, contains = self.containsArtist(event)
@@ -192,7 +217,7 @@ class InteractiveCircle(qtc.QObject):
             self.transform = None
 
         # save info to the self.press
-        self.press = [circ._xy for circ in self.circ], self.point.get_offsets(), (event.xdata, event.ydata)
+        self.press = [circ.get_xydata().copy() for circ in self.circ], self.point.get_offsets(), (event.xdata, event.ydata)
 
         # block any other InteractiveCircle interactions
         InteractiveCircle.lock = self
@@ -201,17 +226,13 @@ class InteractiveCircle(qtc.QObject):
         for circ in self.circ:
             circ.set_animated(True)
         self.point.set_animated(self.point.get_visible())
+        for art in self._companionArtists():
+            art.set_animated(True)
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.axis.bbox)
 
-        # now redraw the circle(s) and point(s)
-        for circ in self.circ:
-            self.axis.draw_artist(circ)
-        if self.point.get_visible():
-            self.axis.draw_artist(self.point)
-
-        # and blit just the redrawn area
-        self.canvas.blit(self.axis.bbox)
+        # now redraw the circle(s), point(s) and companions, and blit just that area
+        self.restoreBackground()
 
     def on_motion(self, event):
         """
@@ -222,8 +243,8 @@ class InteractiveCircle(qtc.QObject):
         # monitor point visibility
         self.pointVisibility()
 
-        # exit if no interactions allowed, press is not in the axes
-        if self.interactions == "none":
+        # exit if no interactions allowed (or hidden), press is not in the axes
+        if self.interactions == "none" or not self.shown:
             return
         if event.inaxes != self.axis:
             return
@@ -244,6 +265,8 @@ class InteractiveCircle(qtc.QObject):
             return
 
         # get artist info from the initial mouse press event
+        if self.press is None:
+            return
         circData, ptData, (xpress, ypress) = self.press
 
         # get mouse movement vector from event and press location
@@ -262,7 +285,7 @@ class InteractiveCircle(qtc.QObject):
             self.point.set_offsets(ptData + (dx, dy))
 
             # update center by (dx,dy)
-            self.center = np.mean(self.circ[0]._xy[:-1], axis=0)
+            self.center = np.mean(self.circ[0].get_xydata()[:-1], axis=0)
 
         # if the user is attempting a resize and that is allowed, update point(s) locations and circle(s) radius
         elif (self.transform == 'resize') and (self.interactions in ["all", "resize"]) and (self.selectedPoint is not None):
@@ -323,6 +346,8 @@ class InteractiveCircle(qtc.QObject):
         self.point.set_animated(False)
         for circ in self.circ:
             circ.set_animated(False)
+        for art in self._companionArtists():
+            art.set_animated(False)
 
         # redraw the full figure
         self.canvas.draw()
@@ -334,11 +359,19 @@ class InteractiveCircle(qtc.QObject):
             self.point.set_offsets(self.point.get_offsets()[sortIdx, :])
             self.radius = self.radius[sortIdx]
 
+        # the drag is over: a final update (the Reduced calculation policy waits for this one)
+        self.updateCircle.emit()
+
+    @property
+    def dragging(self) -> bool:
+        """True while the user is dragging this annotation."""
+        return self.press is not None
+
     def redraw(self):
         """ in the case where center/radius are updated externally, redraw all point(s) and circle(s) """
 
         # keep points in the same relative position on the circle, only scale radius
-        vec = self.point.get_offsets() - np.mean([circ._xy[:-1] for circ in self.circ], axis=1)
+        vec = self.point.get_offsets() - np.mean([circ.get_xydata()[:-1] for circ in self.circ], axis=1)
         vec /= np.linalg.norm(vec, axis=1)[:, None]
         self.point.set_offsets(vec * self.radius[:, None] + self.center)
 
@@ -352,6 +385,11 @@ class InteractiveCircle(qtc.QObject):
 
     def restoreBackground(self):
         """ this function is used to restore background for blitting """
+        # Outside a drag the saved background is stale (the image may have changed since it was
+        # taken, e.g. brightness/contrast), so blitting it would paint the old image back: redraw.
+        if not self.dragging:
+            self.canvas.draw_idle()
+            return
 
         # monitor point visibility
         self.pointVisibility()
@@ -359,7 +397,10 @@ class InteractiveCircle(qtc.QObject):
         # restore the background region
         self.canvas.restore_region(self.background)
 
-        # redraw just the current rectangle
+        # redraw just the annotation and the artists moving with it
+        for art in self._companionArtists():
+            if art.get_visible() and art.axes is self.axis:
+                self.axis.draw_artist(art)
         for circ in self.circ:
             self.axis.draw_artist(circ)
         if self.point.get_visible():
@@ -368,21 +409,12 @@ class InteractiveCircle(qtc.QObject):
         # blit just the redrawn area
         self.canvas.blit(self.axis.bbox)
 
+    def _companionArtists(self):
+        try:
+            return [a for a in (self.companions() if self.companions is not None else []) if a is not None]
+        except (AttributeError, TypeError):
+            return []
+
     def updateBackground(self):
-        """ this function is used to redraw artists and update background for blitting """
-
-        # draw everything but the selected circle and store the pixel buffer
-        for circ in self.circ:
-            circ.set_animated(True)
-        self.point.set_animated(True)
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(self.axis.bbox)
-
-        # now redraw the circle(s) and point(s)
-        for circ in self.circ:
-            self.axis.draw_artist(circ)
-        if self.point.get_visible():
-            self.axis.draw_artist(self.point)
-
-        # and blit just the redrawn area
-        self.canvas.blit(self.axis.bbox)
+        """Redraw the canvas (kept for compatibility; the background is taken when a drag starts)."""
+        self.canvas.draw_idle()

@@ -23,7 +23,7 @@ def notifDLG(self, parent, icon="", msg="", ttl="", opt=[]):
     icons["warn"] = qtw.QMessageBox.Warning
     icons["error"] = qtw.QMessageBox.Critical
 
-    from callbacks.startup import enableWindows  # noqa: E402  (deferred to avoid circular import)
+    from callbacks.window_manager import enableWindows  # noqa: E402  (deferred to avoid circular import)
     enableWindows(self, False)  # disable windows
 
     if icon == 'list':
@@ -83,14 +83,14 @@ def checkNaN(self, image, preview=False):
         else:
             msg += "\n\nDo you want to swap the byte-order?"
             opt = ["Yes, try to swap the byte-order", "No"]
-            self.SettingsWindow.activate()
+            self.SettingsWindow.activateWindow()
             self.SettingsWindow.SettingsTabGroup.setCurrentWidget(
                 self.SettingsWindow.InfoTab)  # Select the Data Info tab
 
         sel = notifDLG(self, self.ImportWindow, 'quest', msg, ttl, opt)
 
         # Execute the swap byte order callbacks
-        if sel.startswith("Yes"):
+        if str(sel or "").startswith("Yes"):   # None when the dialog is dismissed
             self.SettingsWindow.SwapByteOrder.click()
 
         return sel  # string of button, will be checked outside function for further action
@@ -99,16 +99,29 @@ def checkNaN(self, image, preview=False):
         return None
 
 
+def _same(a, b) -> bool:
+    """True if *a* and *b* hold the same value; arrays must match in shape and in every element."""
+    if isinstance(a, np.ndarray) or isinstance(b, np.ndarray):
+        a, b = np.ma.getdata(a), np.ma.getdata(b)
+        if np.shape(a) != np.shape(b):
+            return False
+        try:
+            return bool(np.array_equal(a, b, equal_nan=True))
+        except TypeError:   # non-numeric dtype
+            return bool(np.array_equal(a, b))
+    try:
+        return bool(a == b)
+    except (TypeError, ValueError):
+        return False
+
+
 def isDiffToPrev(self, name, val):
     """Function to check whether the named given value is changed compared to the previous value, and store the new value"""
-    c = (not hasattr(self.Prev, name)) or (getattr(self.Prev, name) != val)
-
-    # in case an image is being compared to an image, c will be an array of bool, not a single bool
-    if isinstance(c, np.ndarray):
-        c = c.all()
-
+    prev = getattr(self.Prev, name)   # AttributeError here means `name` is not declared on appClass.Prev
+    c = not _same(prev, val)
     if c:
-        setattr(self.Prev, name, val)
+        # keep our own copy so in-place edits of `val` are still detected next time
+        setattr(self.Prev, name, val.copy() if isinstance(val, np.ndarray) else val)
     return c
 
 
@@ -144,3 +157,13 @@ class Worker(qtc.QRunnable):
 
 def breakpoint(self):
     print()
+
+
+def refreshCanvas(canvas, *annotations) -> None:
+    """Show changes made to artists on *canvas*.  While one of *annotations* is dragged it blits
+    (with the artists that move with it); a full redraw then would drop the dragged artists."""
+    for ann in annotations:
+        if ann is not None and getattr(ann, "dragging", False):
+            ann.restoreBackground()
+            return
+    canvas.draw_idle()

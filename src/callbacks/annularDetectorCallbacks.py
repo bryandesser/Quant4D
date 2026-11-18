@@ -1,104 +1,60 @@
-from callbacks.allFunctions import enableWindows, plotImage, isDiffToPrev
+from callbacks.axis_direction import axisDirectionCallbacks
+from callbacks.plotting import plotImage, toUpdateImage
+from callbacks.utils import isDiffToPrev, refreshCanvas
+from callbacks.window_manager import enableWindows
 from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 import numpy as np
-try:
-    import torch
-    _TORCH_AVAILABLE = True
-except ImportError:
-    _TORCH_AVAILABLE = False
+from callbacks.layout import dfrn_shape, real_shape
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
+from callbacks import compute  # noqa: E402
+from callbacks.compute.backend import _TORCH_AVAILABLE  # noqa: E402,F401  (monkeypatched by tests)
 
 
 # ---------------------------------------------------------------------------
-# Module-level GPU helpers — importable by tests and callable from callbacks
+# Thin object-based wrappers around callbacks.compute, kept for the GPU tests
+# and for code that still calls them with an app-like object
 # ---------------------------------------------------------------------------
 
 
 def integrateAnnular(obj, mask):
-    """GPU-accelerated annular integration.
+    """Sum the intensity within *mask* for every probe position.
 
-    Sum the diffraction-space intensity within *mask* for every probe
-    position.  Returns a 1-D array of shape ``(N_positions,)``.
-
-    Parameters
-    ----------
-    obj :
-        Any object exposing ``obj.D.Data`` (N_pos × N_pix float32 array)
-        and ``obj.D.GPU`` (``"cuda:N"`` string, or *None* for CPU).
-    mask : array-like, shape (DY, DX) bool
-        Boolean annular mask in diffraction space.
+    ``obj.D.Data`` is the ``(N_pos, N_pix)`` dataset and ``obj.D.GPU`` the CUDA
+    device (or *None* for CPU).  Returns an array of shape ``(N_pos,)``.
+    See :func:`callbacks.compute.masked_sum`.
     """
-    data = obj.D.Data
-    flat = np.asarray(mask, dtype=bool).ravel()
-
-    if (
-        _TORCH_AVAILABLE
-        and getattr(obj.D, "GPU", None) is not None
-        and torch.cuda.is_available()
-    ):
-        device = torch.device(obj.D.GPU)
-        sub = torch.from_numpy(np.ascontiguousarray(data[:, flat])).to(device, dtype=torch.float32)
-        return sub.sum(dim=1).cpu().numpy()
-    else:
-        return data[:, flat].sum(axis=1)
+    return compute.masked_sum(obj.D.Data, mask, getattr(obj.D, "GPU", None))
 
 
 def calcCoM(obj, mask, cx, cy):
-    """GPU-accelerated intensity-weighted centre-of-mass.
+    """Intensity-weighted centre of mass within *mask* for every probe position.
 
-    Parameters
-    ----------
-    obj :
-        Any object exposing ``obj.D.Data`` and ``obj.D.GPU``.
-    mask : array-like, shape (DY, DX) bool
-        Boolean mask selecting the diffraction pixels to include.
-    cx, cy : array-like, shape (DY, DX)
-        X and Y coordinate grids for every diffraction pixel.
-
-    Returns
-    -------
-    com_x, com_y : np.ndarray, shape (N_positions,)
+    *cx*, *cy* are the X and Y coordinate grids of the diffraction pixels.
+    Returns ``(com_x, com_y)``, each of shape ``(N_pos,)``.
+    See :func:`callbacks.compute.weighted_mean_position`.
     """
-    data = obj.D.Data
-    flat = np.asarray(mask, dtype=bool).ravel()
-    cx_m = np.asarray(cx).ravel()[flat].astype(np.float32)
-    cy_m = np.asarray(cy).ravel()[flat].astype(np.float32)
-
-    if (
-        _TORCH_AVAILABLE
-        and getattr(obj.D, "GPU", None) is not None
-        and torch.cuda.is_available()
-    ):
-        device = torch.device(obj.D.GPU)
-        sub = torch.from_numpy(np.ascontiguousarray(data[:, flat])).to(device, dtype=torch.float32)
-        cx_t = torch.from_numpy(cx_m).to(device)
-        cy_t = torch.from_numpy(cy_m).to(device)
-        total = sub.sum(dim=1) + 1e-12
-        com_x = (sub * cx_t).sum(dim=1) / total
-        com_y = (sub * cy_t).sum(dim=1) / total
-        return com_x.cpu().numpy(), com_y.cpu().numpy()
-    else:
-        sub = data[:, flat]
-        total = sub.sum(axis=1) + 1e-12
-        com_x = (sub * cx_m).sum(axis=1) / total
-        com_y = (sub * cy_m).sum(axis=1) / total
-        return com_x, com_y
+    return compute.weighted_mean_position(obj.D.Data, mask, cx, cy, getattr(obj.D, "GPU", None))
 
 
 def annularDetectorCallbacks(self):
 
     def limitAnnUI():
         """Update annular detector UI limits/labels when coordinate options change."""
-        self.AnnRi_NF.blockSignals(True)
-        self.AnnRo_NF.blockSignals(True)
-        self.AnnRi_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
-        self.AnnRo_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
-        self.AnnRi_NF.setRange(0, self.P.RMax * self.DfPxR)
-        self.AnnRo_NF.setRange(0, self.P.RMax * self.DfPxR)
-        self.AnnRi_NF.setSingleStep(0.25 * self.DfPxR)
-        self.AnnRo_NF.setSingleStep(0.25 * self.DfPxR)
-        self.AnnRi_NF.blockSignals(False)
-        self.AnnRo_NF.blockSignals(False)
+        with signals_blocked(self.AnnRi_NF, self.AnnRo_NF):
+            self.AnnRi_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
+            self.AnnRo_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
+            # radii are whole rings (annWidth pixels each): the range is RMax rings and one step is one
+            # ring, in the display unit.  (The range left out annWidth and was overwritten in pixels
+            # on import, and a quarter-pixel step rounded back to the same ring, so the arrows
+            # barely moved and then stuck.)
+            ring = self.D.annWidth * self.DfPxR
+            for box in (self.AnnRi_NF, self.AnnRo_NF):
+                box.setRange(0, self.P.NRings * ring)
+                box.setSingleStep(ring)
+            ri, ro = self.AnnRi.value()             # and the values in the (possibly new) unit
+            self.AnnRi_NF.setValue(ri * ring)
+            self.AnnRo_NF.setValue(ro * ring)
 
     def enableAnnUI():
         """Enable/disable UI elements based on current detector mode."""
@@ -107,197 +63,133 @@ def annularDetectorCallbacks(self):
         # Segmented panel only active in DPC mode
         self.dpcControls.setEnabled(dmod == "DPCMod")
 
-        # Scan direction controls follow the unlock checkbox
-        self.comControls.setEnabled(self.ScanDirUnlock.isChecked())
-        self.ScanDirUnlock.setEnabled(dmod in ["CoMMod", "DPCMod"])
+        # The scan-direction panel is available in CoM/DPC modes.  The unlock
+        # button sits inside that panel, so the panel itself must stay enabled
+        # for the button to be clickable; only the controls it guards follow
+        # its checked state.
+        in_com = dmod in ["CoMMod", "DPCMod"]
+        unlocked = in_com and self.ScanDirUnlock.isChecked()
+        self.comControls.setEnabled(in_com)
+        self.ScanDirUnlock.setEnabled(in_com)
+        self.AutoCurl.setEnabled(in_com)
+        for ctrl in (self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
+            ctrl.setEnabled(unlocked)
 
         # Highlight scan direction panel if not yet aligned
         if (dmod in ["CoMMod", "DPCMod"]) and (not self.P.ScanDirInit):
             bc = self.C.WarnC.name()
         else:
             bc = self.C.BgC.name()
-        self.ScanDirGrid.setStyleSheet("background-color:" + bc)
         self.comControls.setStyleSheet("background-color:" + bc)
 
     # ------------------------------------------------------------------
-    # drawSegDetr — draw segmented-detector annotations on diffraction ax
+    # drawSegDetr — segmented-detector annotations on the diffraction pattern
     # ------------------------------------------------------------------
     def drawSegDetr():
         """
-        Draw segmented detector overlay on the diffraction pattern.
+        Draw (or move) the segmented detector overlay on the diffraction pattern.
 
-        Creates:
-          self.A.SegDetrL  : list of Line2D objects — one per segment divider
-          self.A.SegDetrL0 : Line2D — highlighted reference line at DetRot=0
-          self.A.SegDetrCir: list of Line2D objects — NRung-1 interior circles
-          self.A.SegDetrP0 : InteractivePoint — drag handle at outer tip of ref line
+          self.A.SegDetrL  : list of Line2D — one per segment divider
+          self.A.SegDetrL0 : Line2D — the thicker reference divider at DetRot
+          self.A.SegDetrCir: list of Line2D — the NRung-1 interior circles
+          self.A.SegDetrP0 : InteractivePoint — rotation handle at the outer tip of the reference line
+
+        Existing artists are updated in place (the handle may be the one being dragged: replacing it
+        would end the drag); only a change of the number of segments/rungs makes new lines.
         """
         ax = self.Fig.Dfrn.ax
-
-        # --- remove existing SegDetr annotations ---
-        for attr in ('SegDetrL', 'SegDetrCir'):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                for item in obj:
-                    try:
-                        item.remove()
-                    except ValueError:
-                        pass
-                setattr(self.A, attr, None)
-        for attr in ('SegDetrL0',):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                try:
-                    obj.remove()
-                except ValueError:
-                    pass
-                setattr(self.A, attr, None)
-        if self.A.SegDetrP0 is not None:
-            self.A.SegDetrP0.remove()
-            self.A.SegDetrP0 = None
-
-        # --- read current parameters ---
         ri_idx, ro_idx = self.AnnRi.value()
         ri_px = ri_idx * self.D.annWidth
         ro_px = ro_idx * self.D.annWidth
         nseg = int(self.NSeg.value())
         nrung = int(self.NRung.value())
         dr = self.DetRot.value()          # degrees
-        b0 = self.B0                      # (x, y) beam centre in pixels
+        b0 = np.asarray(self.B0, float)   # (x, y) beam centre in pixels
 
-        if ro_px <= 0:
-            return  # nothing to draw yet
+        seg_angles = np.radians(np.linspace(dr, dr + 360.0, nseg + 1)[:-1])
+        rung_radii = np.linspace(ri_px, ro_px, nrung + 1)[1:-1] if nrung > 1 else np.array([])
+        theta = np.linspace(0, 2 * np.pi, 361)
 
-        # --- segment divider lines (NSeg lines from inner to outer radius) ---
-        seg_angles = np.linspace(dr, dr + 360.0, nseg + 1)[:-1]  # NSeg angles
-        lines = []
-        for ang in seg_angles:
-            rad = np.radians(ang)
-            x = [b0[0] + ri_px * np.cos(rad), b0[0] + ro_px * np.cos(rad)]
-            y = [b0[1] + ri_px * np.sin(rad), b0[1] + ro_px * np.sin(rad)]
-            line, = ax.plot(x, y, color='w', linewidth=1.5, zorder=5,
-                            solid_capstyle='round')
-            lines.append(line)
-        self.A.SegDetrL = lines if lines else None
+        def spoke(a):
+            return ([b0[0] + ri_px * np.cos(a), b0[0] + ro_px * np.cos(a)],
+                    [b0[1] + ri_px * np.sin(a), b0[1] + ro_px * np.sin(a)])
 
-        # --- highlighted reference line at DetRot (thicker, used as rotation origin) ---
-        rad0 = np.radians(dr)
-        x0 = [b0[0] + ri_px * np.cos(rad0), b0[0] + ro_px * np.cos(rad0)]
-        y0 = [b0[1] + ri_px * np.sin(rad0), b0[1] + ro_px * np.sin(rad0)]
-        self.A.SegDetrL0, = ax.plot(x0, y0, color='w', linewidth=3.0,
-                                    zorder=5, solid_capstyle='round')
+        if len(self.A.SegDetrL or []) != nseg or len(self.A.SegDetrCir or []) != len(rung_radii) \
+                or self.A.SegDetrL0 is None:
+            removeSegDetr(self, keep_handle=True)
+            self.A.SegDetrL = [ax.plot([], [], color='w', linewidth=1.5, zorder=5, solid_capstyle='round')[0]
+                               for _ in range(nseg)]
+            self.A.SegDetrL0, = ax.plot([], [], color='w', linewidth=3.0, zorder=5, solid_capstyle='round')
+            self.A.SegDetrCir = [ax.plot([], [], color='w', linewidth=1.0, zorder=5)[0] for _ in rung_radii]
+        for line, a in zip(self.A.SegDetrL, seg_angles):
+            line.set_data(*spoke(a))
+        self.A.SegDetrL0.set_data(*spoke(np.radians(dr)))
+        for circ, r in zip(self.A.SegDetrCir, rung_radii):
+            circ.set_data(b0[0] + r * np.cos(theta), b0[1] + r * np.sin(theta))
 
-        # --- interior rung circles (NRung > 1 → NRung-1 concentric rings) ---
-        rung_circles = []
-        if nrung > 1:
-            rung_radii = np.linspace(ri_px, ro_px, nrung + 1)[1:-1]
-            theta = np.linspace(0, 2 * np.pi, 361)
-            for r in rung_radii:
-                cx = b0[0] + r * np.cos(theta)
-                cy = b0[1] + r * np.sin(theta)
-                circ, = ax.plot(cx, cy, color='w', linewidth=1.0, zorder=5)
-                rung_circles.append(circ)
-        self.A.SegDetrCir = rung_circles if rung_circles else None
+        tip = b0 + ro_px * np.array([np.cos(np.radians(dr)), np.sin(np.radians(dr))])
+        if self.A.SegDetrP0 is None:
+            pt_artist = ax.scatter(tip[0], tip[1], color='w', s=60, zorder=6, animated=False)
+            self.A.SegDetrP0 = InteractivePoint(pt_artist)
+            self.A.SegDetrP0.connect()
+            # dragging the handle turns the detector; the dividers and rings follow it while dragged
+            self.A.SegDetrP0.companions = lambda: segArtists(self, handle=False)
+            self.A.SegDetrP0.positionChanged.connect(lambda: moveAnnDetr())
+        elif not self.A.SegDetrP0.dragging:
+            self.A.SegDetrP0.point.set_offsets([tip])
+        if self.A.adf is not None:
+            self.A.adf.companions = lambda: segArtists(self) if self.DetrMode.currentData() == "DPCMod" else []
 
-        # --- interactive rotation handle at outer tip of reference line ---
-        pt_artist = ax.scatter(
-            b0[0] + ro_px * np.cos(rad0),
-            b0[1] + ro_px * np.sin(rad0),
-            color='w', s=60, zorder=6, animated=False
-        )
-        self.A.SegDetrP0 = InteractivePoint(pt_artist)
-        self.A.SegDetrP0.connect()
-        # When drag handle moves → update detector rotation and redraw
-        self.A.SegDetrP0.positionChanged.connect(lambda: moveAnnDetr())
-
-        self.Fig.Dfrn.canvas.draw_idle()
+        refreshCanvas(self.Fig.Dfrn.canvas, self.A.adf, self.A.SegDetrP0)
 
     # ------------------------------------------------------------------
-    # drawScanDir — draw scan-direction arrows on diffraction pattern
+    # drawScanDir — scan-direction arrows on the diffraction pattern
     # ------------------------------------------------------------------
     def drawScanDir():
         """
-        Draw scan X/Y direction indicators on the diffraction pattern.
+        Draw (or move) the scan X/Y direction arrows used to align the scan direction.
 
-        Two arrows (Line2D) emanate from the beam centre along the scan X
-        and Y axes; each has an InteractivePoint drag handle at its tip.
-        Dragging the X handle updates ScanDir; dragging the Y handle updates
-        ScanDir – 90° (since Y is always perpendicular to X).
-
-        Annotations stored:
-          self.A.ScanDirXline  : Line2D — X-direction arrow
-          self.A.ScanDirYline  : Line2D — Y-direction arrow
-          self.A.ScanDirXcirc  : InteractivePoint — drag handle at X tip
-          self.A.ScanDirYcirc  : InteractivePoint — drag handle at Y tip
+        Two arrows from the beam centre along the scan X and Y axes, each labelled and with a drag
+        handle at its tip.  Dragging the X handle sets ScanDir; dragging the Y handle sets
+        ScanDir from its angle less 90° (or plus, with Y flipped).  Updated in place: replacing a
+        handle while it is dragged would end the drag, and the labels were added anew on every
+        change, piling up on the pattern.
         """
         ax = self.Fig.Dfrn.ax
-
-        # --- remove existing scan-direction annotations ---
-        for attr in ('ScanDirXline', 'ScanDirYline'):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                try:
-                    obj.remove()
-                except ValueError:
-                    pass
-                setattr(self.A, attr, None)
-        for attr in ('ScanDirXcirc', 'ScanDirYcirc'):
-            obj = getattr(self.A, attr)
-            if obj is not None:
-                obj.remove()
-                setattr(self.A, attr, None)
-
-        # --- parameters ---
         sd = self.ScanDir.value()      # scan rotation in degrees
         syf = 1 - 2 * self.ScanDirYFlip.isChecked()   # Y flip: +1 or -1
-        b0 = self.B0                   # beam centre (x, y)
-        # Arrow length: 25% of max scattering radius, min 20 px
-        arrow_len = max(20.0, 0.25 * self.P.RMax * self.D.annWidth)
+        b0 = np.asarray(self.B0, float)
+        arrow_len = max(20.0, 0.25 * self.P.RMax)
+        tips = {"X": b0 + arrow_len * np.array([np.cos(np.radians(sd)), np.sin(np.radians(sd))]),
+                "Y": b0 + arrow_len * np.array([np.cos(np.radians(sd + 90.0 * syf)),
+                                                 np.sin(np.radians(sd + 90.0 * syf))])}
+        colours = {"X": '#FF8C00', "Y": '#00BFFF'}
 
-        rad_x = np.radians(sd)
-        rad_y = np.radians(sd + 90.0 * syf)
+        for k in ("X", "Y"):
+            tip, colour = tips[k], colours[k]
+            line = getattr(self.A, f"ScanDir{k}line")
+            if line is None:
+                line, = ax.plot([], [], color=colour, linewidth=2.0, zorder=7, solid_capstyle='round')
+                setattr(self.A, f"ScanDir{k}line", line)
+            line.set_data([b0[0], tip[0]], [b0[1], tip[1]])
+            label = getattr(self.A, f"ScanDir{k}text")
+            if label is None:
+                label = ax.text(0, 0, k, color=colour, fontsize=8, fontweight='bold', zorder=8,
+                                ha='center', va='center')
+                setattr(self.A, f"ScanDir{k}text", label)
+            label.set_position(tuple(b0 + 1.15 * (tip - b0)))       # just beyond the handle
+            handle = getattr(self.A, f"ScanDir{k}circ")
+            if handle is None:
+                pt = ax.scatter(tip[0], tip[1], color=colour, s=50, zorder=9, animated=False)
+                handle = InteractivePoint(pt)
+                handle.connect()
+                handle.companions = lambda: scanArtists(self)
+                handle.positionChanged.connect(lambda: moveAnnDetr())
+                setattr(self.A, f"ScanDir{k}circ", handle)
+            elif not handle.dragging:
+                handle.point.set_offsets([tip])
 
-        # Tip positions
-        tip_x = np.array([b0[0] + arrow_len * np.cos(rad_x),
-                          b0[1] + arrow_len * np.sin(rad_x)])
-        tip_y = np.array([b0[0] + arrow_len * np.cos(rad_y),
-                          b0[1] + arrow_len * np.sin(rad_y)])
-
-        # --- X-direction line (orange) ---
-        self.A.ScanDirXline, = ax.plot(
-            [b0[0], tip_x[0]], [b0[1], tip_x[1]],
-            color='#FF8C00', linewidth=2.0, zorder=7,
-            solid_capstyle='round'
-        )
-        ax.annotate('X', xy=(tip_x[0], tip_x[1]),
-                    color='#FF8C00', fontsize=8, zorder=8,
-                    ha='center', va='center')
-
-        # --- Y-direction line (cyan) ---
-        self.A.ScanDirYline, = ax.plot(
-            [b0[0], tip_y[0]], [b0[1], tip_y[1]],
-            color='#00BFFF', linewidth=2.0, zorder=7,
-            solid_capstyle='round'
-        )
-        ax.annotate('Y', xy=(tip_y[0], tip_y[1]),
-                    color='#00BFFF', fontsize=8, zorder=8,
-                    ha='center', va='center')
-
-        # --- Drag handle: X tip ---
-        pt_x = ax.scatter(tip_x[0], tip_x[1],
-                          color='#FF8C00', s=50, zorder=9, animated=False)
-        self.A.ScanDirXcirc = InteractivePoint(pt_x)
-        self.A.ScanDirXcirc.connect()
-        self.A.ScanDirXcirc.positionChanged.connect(lambda: moveAnnDetr())
-
-        # --- Drag handle: Y tip ---
-        pt_y = ax.scatter(tip_y[0], tip_y[1],
-                          color='#00BFFF', s=50, zorder=9, animated=False)
-        self.A.ScanDirYcirc = InteractivePoint(pt_y)
-        self.A.ScanDirYcirc.connect()
-        self.A.ScanDirYcirc.positionChanged.connect(lambda: moveAnnDetr())
-
-        self.Fig.Dfrn.canvas.draw_idle()
+        refreshCanvas(self.Fig.Dfrn.canvas, self.A.ScanDirXcirc, self.A.ScanDirYcirc)
 
     # ------------------------------------------------------------------
     # moveAnnDetr — live-update detectors when parameters change
@@ -328,44 +220,36 @@ def annularDetectorCallbacks(self):
                 innerRadius, outerRadius = outerRadius, innerRadius
 
             innerRadius = max(0, innerRadius)
-            outerRadius = min(self.P.RMax, outerRadius)
+            outerRadius = min(self.P.NRings, outerRadius)
 
             # Block signals to avoid update loops
-            self.AnnRi.blockSignals(True)
-            self.AnnRi_NF.blockSignals(True)
-            self.AnnRo_NF.blockSignals(True)
-
-            self.AnnRi.setValue((innerRadius, outerRadius))
-            self.AnnRi_NF.setValue(innerRadius * self.D.annWidth * scale)
-            self.AnnRo_NF.setValue(outerRadius * self.D.annWidth * scale)
-
-            self.AnnRi.blockSignals(False)
-            self.AnnRi_NF.blockSignals(False)
-            self.AnnRo_NF.blockSignals(False)
+            with signals_blocked(self.AnnRi, self.AnnRi_NF, self.AnnRo_NF):
+                self.AnnRi.setValue((innerRadius, outerRadius))
+                self.AnnRi_NF.setValue(innerRadius * self.D.annWidth * scale)
+                self.AnnRo_NF.setValue(outerRadius * self.D.annWidth * scale)
 
             # Sync the InteractiveAnnulus if the sender was not the annotation
             if self.sender() is not self.A.adf:
                 self.A.adf.radius = (
                     np.array([innerRadius, outerRadius])
-                    .clip(np.finfo(np.single).eps, self.P.RMax)
+                    .clip(np.finfo(np.single).eps, self.P.NRings)
                     * self.D.annWidth
                 )
                 self.A.adf.redraw()
 
             # Refresh real-space image
             if len(self.Fig.Real.ax.images) == 0:
-                self.Image.Real = self.Data.sum(axis=1).reshape(
-                    self.D.NFrY, self.D.NFrX
-                )
-                self.ImageAx.Real = self.Fig.Real.ax.imshow(self.Image.Real)
-            else:
-                self.Image.Real = self.adfImages[
-                    :, :, innerRadius: outerRadius + 1
-                ].sum(axis=2)
-                self.ImageAx.Real.set_data(self.Image.Real)
+                self.Fig.Real.Image = self.Data.sum(axis=1).reshape(real_shape(self.D))
+                plotImage(self, 'Real')
+            # otherwise the image follows in moveAnnDetr, when the calculation policy allows
+            # (this used to update it unconditionally and show it without brightness/contrast)
 
             self.ImageAx.Real.autoscale()
             self.Fig.Real.canvas.draw()
+
+            # the DPC segments span the annulus: they follow its radii
+            if self.DetrMode.currentData() == "DPCMod":
+                drawSegDetr()
 
         def moveSeg():
             """
@@ -384,12 +268,9 @@ def annularDetectorCallbacks(self):
                     np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
                 ) % 360.0
 
-                self.DetRot.blockSignals(True)
-                self.DetRot_NF.blockSignals(True)
-                self.DetRot.setValue(int(round(new_rot)))
-                self.DetRot_NF.setValue(new_rot)
-                self.DetRot.blockSignals(False)
-                self.DetRot_NF.blockSignals(False)
+                with signals_blocked(self.DetRot, self.DetRot_NF):
+                    self.DetRot.setValue(int(round(new_rot)))
+                    self.DetRot_NF.setValue(new_rot)
 
             # Redraw all SegDetr annotations with updated parameters
             drawSegDetr()
@@ -414,12 +295,9 @@ def annularDetectorCallbacks(self):
                 new_sd = float(
                     np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
                 ) % 360.0
-                self.ScanDir.blockSignals(True)
-                self.ScanDir_NF.blockSignals(True)
-                self.ScanDir.setValue(int(round(new_sd)))
-                self.ScanDir_NF.setValue(new_sd)
-                self.ScanDir.blockSignals(False)
-                self.ScanDir_NF.blockSignals(False)
+                with signals_blocked(self.ScanDir, self.ScanDir_NF):
+                    self.ScanDir.setValue(int(round(new_sd)))
+                    self.ScanDir_NF.setValue(new_sd)
 
             elif (self.A.ScanDirYcirc is not None
                   and self.sender() is self.A.ScanDirYcirc):
@@ -429,12 +307,9 @@ def annularDetectorCallbacks(self):
                     np.degrees(np.arctan2(xy[1] - b0[1], xy[0] - b0[0]))
                 )
                 new_sd = (y_ang - 90.0 * syf) % 360.0
-                self.ScanDir.blockSignals(True)
-                self.ScanDir_NF.blockSignals(True)
-                self.ScanDir.setValue(int(round(new_sd)))
-                self.ScanDir_NF.setValue(new_sd)
-                self.ScanDir.blockSignals(False)
-                self.ScanDir_NF.blockSignals(False)
+                with signals_blocked(self.ScanDir, self.ScanDir_NF):
+                    self.ScanDir.setValue(int(round(new_sd)))
+                    self.ScanDir_NF.setValue(new_sd)
 
             # Redraw scan direction arrows with updated angle
             drawScanDir()
@@ -469,19 +344,21 @@ def annularDetectorCallbacks(self):
             if isDiffToPrev(self, 'AnnR', [ri, ro]):
                 # 2D distance matrix is recalculated in integrateAnnular;
                 # here just recompute the real-space image from cached adfImages
-                mask_ann = (self.A.k >= ri) & (self.A.k <= ro)
-                self.Image.DfrnMask = mask_ann.astype(self.D.DataType).T
-                self.Image.Real = self.adfImages[
+                mask_ann = compute.annular_mask(self.A.k, ri, ro)
+                self.Fig.DfrnMask.Image = mask_ann.astype(self.D.DataType)
+                self.Fig.Real.Image = self.adfImages[
                     :, :, ri: ro + 1
                 ].sum(axis=2)
 
             # CoM or DPC computation
             if dmod in ["CoMMod", "DPCMod"]:
-                if isDiffToPrev(self, 'CoM_P', [ri, ro, sd, syf, dr]):
+                # everything the CoM/DPC images depend on, including the mode itself
+                if isDiffToPrev(self, 'CoM_P', [dmod, ri, ro, sd, syf, dr,
+                                                self.NSeg.value(), self.NRung.value()]):
                     if dmod == "CoMMod":
                         calcCoM(ri, ro, sd, syf)
                     else:                        # DPCMod
-                        calcDPC(ri, ro, dr)
+                        calcDPC(ri, ro, dr, sd, syf)
 
             plotAllPatterns()
 
@@ -495,13 +372,9 @@ def annularDetectorCallbacks(self):
         r2 = self.AnnRi.value()[1] * self.D.annWidth
 
         if self.A.adf is None:
-            self.A.adf = InteractiveAnnulus(
-                center=c, radius=(r1, r2),
-                axis=self.Fig.Dfrn.ax,
-                color='r', interactions='resize'
-            )
+            self.A.adf = InteractiveAnnulus(self.Fig.Dfrn.ax, c, r1, r2, color='r')
             self.A.adf.connect()
-            self.A.adf.updateAnnulus.connect(lambda: moveAnnDetr())
+            self.A.adf.updateCircle.connect(lambda: moveAnnDetr())
 
     # ------------------------------------------------------------------
     # integrateAnnular — build the adfImages cube
@@ -509,47 +382,36 @@ def annularDetectorCallbacks(self):
     def integrateAnnular():
         """
         Build self.adfImages: (NFrY, NFrX, n_rings) cube of annular integrals.
-        Only rerun when the transmitted-beam centre changes.
+        Only rerun when the transmitted-beam centre or the ring width (Annular Integration Step)
+        changes; the detector radii keep their size in pixels when the ring width changes.
         """
-        if isDiffToPrev(self, "B0", self.B0):
-            xgrid, ygrid = np.ogrid[
-                -self.B0[0]: self.D.NPxX - self.B0[0],
-                -self.B0[1]: self.D.NPxY - self.B0[1],
-            ]
-            self.A.k = np.int32(
-                np.sqrt(xgrid ** 2 + ygrid ** 2) / self.D.annWidth
-            )
-            k = self.A.k.flatten()
-
-            distance = np.arange(0, k.max() + 1)
-            adfMask = np.where(
-                (k.reshape(1, len(k)) >= distance.reshape(len(distance), 1))
-                & (k.reshape(1, len(k)) < distance.reshape(len(distance), 1) + 0.5),
-                True,
-                False,
-            ).T
-
-            # GPU path: use torch CUDA tensor for the large matrix multiply
-            if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
-                device = torch.device(self.D.GPU)
-                Data_t = torch.from_numpy(np.ascontiguousarray(self.Data)).to(device, dtype=torch.float32)
-                adfMask_t = torch.from_numpy(np.ascontiguousarray(adfMask)).to(device, dtype=torch.float32)
-                self.adfImages = (Data_t @ adfMask_t).cpu().numpy()
-                del Data_t, adfMask_t
-            else:
-                self.adfImages = self.Data @ adfMask
-            self.adfImages = np.reshape(
-                self.adfImages, (self.D.NFrY, self.D.NFrX, -1)
+        old_width = self.Prev.annWidth
+        width_changed = isDiffToPrev(self, "annWidth", float(self.D.annWidth))
+        if isDiffToPrev(self, "B0", self.B0) or width_changed:
+            # ring number of every pixel, (NPxY, NPxX), and the integral of
+            # every ring for every probe position
+            self.A.k = compute.radial_index(dfrn_shape(self.D), self.B0, self.D.annWidth)
+            k = self.A.k
+            self.adfImages = compute.ring_integrals(self.Data, k, self.D.GPU).reshape(
+                self.D.NFrY, self.D.NFrX, -1
             )
 
-            # Update UI slider limits
-            self.blockAllSignals = True
-            self.AnnRi.setMaximum(k.max())
-            self.AnnRi_NF.setMaximum(k.max() * self.D.annWidth)
-            self.AnnRo_NF.setMaximum(k.max() * self.D.annWidth)
-            self.blockAllSignals = False
+            self.P.NRings = int(k.max())
+            self.Prev.AnnR = self.Prev.CoM_P = None         # images from the old rings are stale
 
-            self.P.RMax = k.max()
+            # Update UI slider limits (and keep the radii in pixels when the ring width changed)
+            with all_signals_blocked(self):
+                ri, ro = self.AnnRi.value()
+                self.AnnRi.setMaximum(self.P.NRings)
+                if width_changed and old_width:
+                    scale = float(old_width) / float(self.D.annWidth)
+                    ri, ro = int(round(ri * scale)), int(round(ro * scale))
+                self.AnnRi.setValue((min(ri, self.P.NRings), min(ro, self.P.NRings)))
+            limitAnnUI()
+            if self.A.adf is not None:              # the rings drawn on the pattern
+                ri, ro = self.AnnRi.value()
+                self.A.adf.radius = np.array([ri, ro], float).clip(np.finfo(np.single).eps) * self.D.annWidth
+                self.A.adf.redraw()
 
     # ------------------------------------------------------------------
     # calcCoM — intensity-weighted centre-of-mass calculation (CoMMod)
@@ -567,75 +429,37 @@ def annularDetectorCallbacks(self):
         syf : int
             Y-flip factor: +1 (no flip) or -1 (flipped).
         """
-        def integrateCoM():
-            """Tikhonov-regularised Fourier integration of CoM → iCoM phase."""
-            ny, nx = self.Fig.CoMX.Image.shape
-            kx = np.fft.fftfreq(nx)
-            ky = np.fft.fftfreq(ny)
-            KX, KY = np.meshgrid(kx, ky)
-            k2 = KX ** 2 + KY ** 2
-            k2[0, 0] = 1.0  # prevent /0; DC → 0 after IFFT
-
-            FCoMX = np.fft.fft2(self.Fig.CoMX.Image)
-            FCoMY = np.fft.fft2(self.Fig.CoMY.Image)
-
-            # Fourier integration: phase = IFFT[(kx·FCoMX + ky·FCoMY) / (2πi·k²)]
-            self.Fig.iCoM.Image = np.fft.ifft2(
-                (KX * FCoMX + KY * FCoMY) / (2j * np.pi * k2)
-            ).real
-
-            # dCoM: divergence of CoM field
-            dCoMX = np.gradient(self.Fig.CoMX.Image, axis=1)
-            dCoMY = np.gradient(self.Fig.CoMY.Image, axis=0)
-            self.Fig.dCoM.Image = dCoMX + dCoMY
-
-        # Annular mask in diffraction space
-        mask = ((self.A.k >= ri) & (self.A.k <= ro)).flatten()
+        mask = compute.annular_mask(self.A.k, ri, ro)
         if not mask.any():
             return
 
-        # Pixel coordinate grids relative to transmitted beam
-        xgrid, ygrid = np.mgrid[0: self.D.NPxX, 0: self.D.NPxY]
-        xweight = (xgrid.flatten() - self.B0[0]).astype(np.float32)
-        yweight = (ygrid.flatten() - self.B0[1]).astype(np.float32)
+        com_x, com_y = compute.center_of_mass(self.Data, mask, self.B0, self.D.GPU)
+        com_x, com_y = compute.rotate_field(com_x, com_y * syf, sd)   # into the scan frame
+        setDeflectionImages(com_x, com_y)
 
-        # GPU path: move masked data + weight vectors to CUDA for dot products
-        if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
-            device = torch.device(self.D.GPU)
-            data_m_t = torch.from_numpy(np.ascontiguousarray(self.Data[:, mask])).to(device, dtype=torch.float32)
-            xw_t = torch.from_numpy(xweight[mask]).to(device)
-            yw_t = torch.from_numpy(yweight[mask]).to(device)
-            norm_t = data_m_t.sum(dim=1).clamp(min=torch.finfo(torch.float32).tiny)
-            CoMX_flat = (data_m_t @ xw_t / norm_t).cpu().numpy()
-            CoMY_flat = (data_m_t @ yw_t / norm_t).cpu().numpy() * syf
-            del data_m_t, xw_t, yw_t, norm_t
-        else:
-            data_m = self.Data[:, mask].astype(np.float32)   # (NFr, n_masked)
-            norm = data_m.sum(axis=1).clip(np.finfo(np.float32).eps, None)
-            CoMX_flat = (data_m @ xweight[mask]) / norm
-            CoMY_flat = (data_m @ yweight[mask]) / norm * syf
-
-        # Apply scan-direction rotation
-        c, s = np.cos(np.radians(sd)), np.sin(np.radians(sd))
-        CoM = np.array([[c, -s], [s, c]]) @ np.vstack([CoMX_flat, CoMY_flat])
-
-        self.Fig.CoMX.Image = CoM[0].reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMY.Image = CoM[1].reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMMag.Image = np.hypot(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
-        self.Fig.CoMPh.Image = np.arctan2(self.Fig.CoMY.Image, self.Fig.CoMX.Image)
-
-        integrateCoM()
+    def setDeflectionImages(fx, fy):
+        """Store a per-frame deflection field and every image derived from it."""
+        shape = real_shape(self.D)
+        self.Fig.CoMX.Image = np.asarray(fx).reshape(shape)
+        self.Fig.CoMY.Image = np.asarray(fy).reshape(shape)
+        self.Fig.CoMMag.Image, self.Fig.CoMPh.Image = compute.magnitude_phase(
+            self.Fig.CoMX.Image, self.Fig.CoMY.Image)
+        # phase shaded by magnitude: the phase image, its opacity set from CoMMag in plotImage
+        self.Fig.CoMPhMag.Image = self.Fig.CoMPh.Image.copy()
+        integratedImages(self)      # iCoM and dCoM, with the bandpass filter (Settings > Windows)
 
     # ------------------------------------------------------------------
     # calcDPC — segment-integral DPC calculation (DPCMod)
     # ------------------------------------------------------------------
-    def calcDPC(ri, ro, dr):
+    def calcDPC(ri, ro, dr, sd, syf):
         """
         Compute DPC X/Y deflection images from segmented-detector integrals.
 
-        For NSeg segments at rotation dr, each segment subtends 360/NSeg degrees.
-        The DPC vector is the cos/sin-weighted sum of per-segment intensities,
-        normalised by the total annular intensity — analogous to CoM but discrete.
+        The annulus is divided into NRung rings and NSeg wedges (first wedge at
+        rotation dr).  Each segment's integrated intensity is assigned to the
+        segment's nominal centre of mass, giving a coarse-grained centre of mass
+        in pixels (see compute.segment_weights).  The field is then taken into
+        the scan frame exactly as for CoM.
 
         Results are stored in the same Fig.CoMX / CoMY / CoMMag / CoMPh slots so
         the existing plotAllPatterns() and display pipeline work without changes.
@@ -646,115 +470,84 @@ def annularDetectorCallbacks(self):
             Annular radii indices.
         dr : float
             Detector rotation angle in degrees.
+        sd : float
+            Scan-direction rotation angle in degrees.
+        syf : int
+            Y-flip factor: +1 (no flip) or -1 (flipped).
         """
-        nseg = int(self.NSeg.value())
-        nrung = int(self.NRung.value())
-
-        # Annular mask (combined across all rungs)
-        ann_mask = ((self.A.k >= ri) & (self.A.k <= ro)).flatten()
+        ann_mask = compute.annular_mask(self.A.k, ri, ro)
         if not ann_mask.any():
             return
 
-        # Pixel angle map (degrees, 0–360), computed relative to beam centre
-        xgrid, ygrid = np.mgrid[0: self.D.NPxX, 0: self.D.NPxY]
-        px_angle = np.degrees(
-            np.arctan2(
-                ygrid.flatten() - self.B0[1],
-                xgrid.flatten() - self.B0[0],
-            )
-        ) % 360.0  # (NPx,) in [0, 360)
-
-        # Build radial rung boundaries in pixel units
-        ri_px = ri * self.D.annWidth
-        ro_px = ro * self.D.annWidth
-        rung_edges = np.linspace(ri_px, ro_px, nrung + 1)   # nrung+1 edges
-
-        # Pixel radial distance (continuous, in pixel units)
-        px_radius = np.sqrt(
-            (xgrid.flatten() - self.B0[0]) ** 2
-            + (ygrid.flatten() - self.B0[1]) ** 2
+        weights = compute.segment_weights(
+            ann_mask, self.B0,
+            ri * self.D.annWidth, ro * self.D.annWidth,
+            int(self.NSeg.value()), int(self.NRung.value()), dr,
         )
+        dpc_x, dpc_y = compute.segmented_dpc(self.Data, weights, self.D.GPU)
+        dpc_x, dpc_y = compute.rotate_field(dpc_x, dpc_y * syf, sd)   # into the scan frame
+        setDeflectionImages(dpc_x, dpc_y)
 
-        # Segment angular boundaries (degrees, in [dr, dr+360))
-        seg_width = 360.0 / nseg
-        seg_starts = np.array([dr + i * seg_width for i in range(nseg)]) % 360.0
+    # ------------------------------------------------------------------
+    # autoCurl — scan direction from the curl of the deflection field (MATLAB's AutoCurl)
+    # ------------------------------------------------------------------
+    def autoCurl():
+        """Set the scan direction and Y flip that make the CoM/DPC field curl-free, recompute the
+        images and close the scan-direction alignment (as MATLAB Quant4D's "Auto" button)."""
+        from callbacks.utils import notifDLG
+        from callbacks.window_manager import busyIndicator
+        dmod = self.DetrMode.currentData()
+        if dmod not in ("CoMMod", "DPCMod"):
+            return
+        ri, ro = self.AnnRi.value()
+        dr, sd = self.DetRot.value(), float(self.ScanDir.value())
+        syf = 1 - 2 * self.ScanDirYFlip.isChecked()
 
-        # Accumulate DPC X/Y deflection across all rung × segment combinations
-        DPC_X = np.zeros(self.D.NFrY * self.D.NFrX, dtype=np.float32)
-        DPC_Y = np.zeros(self.D.NFrY * self.D.NFrX, dtype=np.float32)
-        norm = np.zeros(self.D.NFrY * self.D.NFrX, dtype=np.float32)
+        def compute_field(sd, syf):
+            if dmod == "CoMMod":
+                calcCoM(ri, ro, sd, syf)
+            else:
+                calcDPC(ri, ro, dr, sd, syf)
+            # remember what the images now show (the next update need not recompute them)
+            isDiffToPrev(self, 'CoM_P', [dmod, ri, ro, sd, syf, dr, self.NSeg.value(), self.NRung.value()])
 
-        for rung_i in range(nrung):
-            r_lo = rung_edges[rung_i]
-            r_hi = rung_edges[rung_i + 1]
-            rung_mask = (px_radius >= r_lo) & (px_radius < r_hi)
+        from PyQt5 import QtCore as qtc, QtWidgets as qtw
+        qtw.QApplication.setOverrideCursor(qtc.Qt.CursorShape.WaitCursor)
+        try:
+            with busyIndicator(self):
+                if self.Fig.CoMX.Image is None or isDiffToPrev(
+                        self, 'CoM_P', [dmod, ri, ro, sd, syf, dr, self.NSeg.value(), self.NRung.value()]):
+                    compute_field(sd, syf)
+                if self.Fig.CoMX.Image is None:
+                    return
+                # back to the detector frame: undo the current rotation and Y flip
+                u, v = compute.rotate_field(self.Fig.CoMX.Image, self.Fig.CoMY.Image, -sd)
+                try:
+                    angle, flip, _ = compute.scan_rotation_by_curl(u, v * syf, prefer_deg=sd)
+                except ValueError as exc:
+                    notifDLG(self, self, "warn", f"The scan direction could not be estimated: {exc}\n"
+                                                 "Try changing the detector and repeating.",
+                             "Automatic Curl Minimization Failed")
+                    return
+                with signals_blocked(self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
+                    self.ScanDir.setValue(angle)
+                    self.ScanDir_NF.setValue(angle)
+                    self.ScanDirYFlip.setChecked(flip)
+                compute_field(angle, 1 - 2 * flip)
+        finally:
+            qtw.QApplication.restoreOverrideCursor()
 
-            for seg_i in range(nseg):
-                # Mid-angle of this segment (pointing direction)
-                mid_ang_deg = (seg_starts[seg_i] + 0.5 * seg_width) % 360.0
-                mid_ang_rad = np.radians(mid_ang_deg)
-                cos_w = np.cos(mid_ang_rad)
-                sin_w = np.sin(mid_ang_rad)
-
-                # Angular mask: pixels whose angle falls within this segment
-                ang_lo = seg_starts[seg_i]
-                ang_hi = (ang_lo + seg_width) % 360.0
-
-                if ang_lo < ang_hi:
-                    ang_mask = (px_angle >= ang_lo) & (px_angle < ang_hi)
-                else:
-                    # Segment wraps through 0°
-                    ang_mask = (px_angle >= ang_lo) | (px_angle < ang_hi)
-
-                # Combined mask: annulus ∩ rung ∩ segment
-                seg_mask = ann_mask & rung_mask & ang_mask
-
-                if not seg_mask.any():
-                    continue
-
-                # Segment integral for every scan position:  (NFr,)
-                if _TORCH_AVAILABLE and self.D.GPU is not None and torch.cuda.is_available():
-                    device = torch.device(self.D.GPU)
-                    seg_t = torch.from_numpy(np.ascontiguousarray(
-                        self.Data[:, seg_mask])).to(device, dtype=torch.float32)
-                    seg_sum = seg_t.sum(dim=1).cpu().numpy()
-                    del seg_t
-                else:
-                    data_seg = self.Data[:, seg_mask].astype(np.float32)
-                    seg_sum = data_seg.sum(axis=1)  # (NFr,)
-
-                # Weighted contribution to DPC vector
-                DPC_X += cos_w * seg_sum
-                DPC_Y += sin_w * seg_sum
-                norm += seg_sum
-
-        # Normalise — avoid /0 at pixels with zero total intensity
-        eps = np.finfo(np.float32).eps
-        safe_norm = norm.clip(eps, None)
-        DPC_X /= safe_norm
-        DPC_Y /= safe_norm
-
-        # Reshape to real-space images and store in the shared CoM slots
-        self.Fig.CoMX.Image = DPC_X.reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMY.Image = DPC_Y.reshape(self.D.NFrY, self.D.NFrX)
-        self.Fig.CoMMag.Image = np.hypot(self.Fig.CoMX.Image, self.Fig.CoMY.Image)
-        self.Fig.CoMPh.Image = np.arctan2(self.Fig.CoMY.Image, self.Fig.CoMX.Image)
-
-        # iCoM/dCoM from the DPC field (same Fourier integration as for CoM)
-        ny, nx = self.D.NFrY, self.D.NFrX
-        kx = np.fft.fftfreq(nx)
-        ky = np.fft.fftfreq(ny)
-        KX, KY = np.meshgrid(kx, ky)
-        k2 = KX ** 2 + KY ** 2
-        k2[0, 0] = 1.0
-        FDPC_X = np.fft.fft2(self.Fig.CoMX.Image)
-        FDPC_Y = np.fft.fft2(self.Fig.CoMY.Image)
-        self.Fig.iCoM.Image = np.fft.ifft2(
-            (KX * FDPC_X + KY * FDPC_Y) / (2j * np.pi * k2)
-        ).real
-        dDPC_X = np.gradient(self.Fig.CoMX.Image, axis=1)
-        dDPC_Y = np.gradient(self.Fig.CoMY.Image, axis=0)
-        self.Fig.dCoM.Image = dDPC_X + dDPC_Y
+        # the alignment is done: lock the scan direction again
+        self.P.ScanDirInit = 1
+        if self.ScanDirUnlock.isChecked():
+            with signals_blocked(self.ScanDirUnlock):
+                self.ScanDirUnlock.setChecked(False)
+            from callbacks.startup import unlockScanDir
+            unlockScanDir(self)
+        removeScanDir(self)
+        enableAnnUI()
+        plotAllPatterns()
+        axisDirectionCallbacks(self, ("Dfrn",))
 
     # ------------------------------------------------------------------
     # plotAllPatterns — refresh visible image windows
@@ -786,13 +579,19 @@ def annularDetectorCallbacks(self):
     dmod = self.DetrMode.currentData()
 
     match self.sender():
-        case self.DCSys:
+        case self.SettingsWindow.DCSys | self.SettingsWindow.DCPos | self.SettingsWindow.DCUnit:
             limitAnnUI()
         case self.DetrMode:
             limitAnnUI()
             self.ScanDirUnlock.setChecked(False)
             enableAnnUI()
             integrateAnnular()
+            if dmod in ("CoMMod", "DPCMod") and not self.P.CoMRadiusInit:
+                # first CoM/DPC visit with this dataset: the detector starts at the centre (inner radius 0)
+                self.P.CoMRadiusInit = True
+                with signals_blocked(self.AnnRi):
+                    self.AnnRi.setValue((0, self.AnnRi.value()[1]))
+                limitAnnUI()
             drawAnnDetr()
             if dmod == "DPCMod":
                 drawSegDetr()
@@ -803,40 +602,171 @@ def annularDetectorCallbacks(self):
               | self.ScanDir | self.ScanDir_NF | self.ScanDirYFlip
               | self.UpdateImages):
             moveAnnDetr()
+            if self.sender() in (self.ScanDir, self.ScanDir_NF, self.ScanDirYFlip):
+                axisDirectionCallbacks(self, ("Dfrn",))     # scan-direction arrows
+        case self.AutoCurl:
+            autoCurl()
+        case self.AnnStep:      # new ring width: integrate again, the detector keeps its size
+            integrateAnnular()
+            if dmod == "DPCMod":
+                drawSegDetr()
+            moveAnnDetr()
         case self.ScanDirUnlock:
             self.P.ScanDirInit = 1
             enableAnnUI()
-            # Remove any existing scan-direction annotations before redrawing
-            for attr in ('ScanDirXline', 'ScanDirYline'):
-                obj = getattr(self.A, attr)
-                if obj is not None:
-                    try:
-                        obj.remove()
-                    except ValueError:
-                        pass
-                    setattr(self.A, attr, None)
-            for attr in ('ScanDirXcirc', 'ScanDirYcirc'):
-                obj = getattr(self.A, attr)
-                if obj is not None:
-                    obj.remove()
-                    setattr(self.A, attr, None)
+            removeScanDir(self)
             if self.ScanDirUnlock.isChecked():
                 drawScanDir()
-            self.SettingsWindow.ShowDfrnAxes.click()
+            axisDirectionCallbacks(self, ("Dfrn",))     # scan arrows hide while aligning
 
 
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
 
-def toUpdateImage(self):
-    """
-    Return True if images should be recomputed now.
 
-    Rules:
-      calc == 2  → always update (active policy)
-      calc == 1  → reduced (not yet implemented; treated as always)
-      sender is UpdateImages or DetrMode → manual trigger
-    """
-    calc = self.SettingsWindow.CalcPolicy.currentData()
-    return (calc == 2) or (self.sender() in [self.UpdateImages, self.DetrMode])
+def segArtists(self, handle=True) -> list:
+    """The segmented-detector artists (dividers, reference divider, rung circles[, handle])."""
+    arts = list(self.A.SegDetrL or []) + [self.A.SegDetrL0] + list(self.A.SegDetrCir or [])
+    if handle and self.A.SegDetrP0 is not None:
+        arts.append(self.A.SegDetrP0.point)
+    return [a for a in arts if a is not None]
+
+
+def scanArtists(self) -> list:
+    """The scan-direction arrows, labels and both handles (each handle blits the others)."""
+    arts = [self.A.ScanDirXline, self.A.ScanDirYline, self.A.ScanDirXtext, self.A.ScanDirYtext]
+    arts += [h.point for h in (self.A.ScanDirXcirc, self.A.ScanDirYcirc) if h is not None]
+    return [a for a in arts if a is not None]
+
+
+def _removeArtist(art) -> None:
+    try:
+        art.remove()
+    except (ValueError, AttributeError, NotImplementedError):
+        pass
+
+
+def removeSegDetr(self, keep_handle=False) -> None:
+    """Remove the segmented-detector overlay (and its rotation handle unless *keep_handle*)."""
+    for line in list(self.A.SegDetrL or []) + list(self.A.SegDetrCir or []) + [self.A.SegDetrL0]:
+        if line is not None:
+            _removeArtist(line)
+    self.A.SegDetrL = self.A.SegDetrCir = self.A.SegDetrL0 = None
+    if not keep_handle and self.A.SegDetrP0 is not None:
+        self.A.SegDetrP0.remove()
+        self.A.SegDetrP0 = None
+
+
+def removeScanDir(self) -> None:
+    """Remove the scan-direction arrows, their labels and handles."""
+    for k in ("X", "Y"):
+        for kind in ("line", "text"):
+            art = getattr(self.A, f"ScanDir{k}{kind}")
+            if art is not None:
+                _removeArtist(art)
+                setattr(self.A, f"ScanDir{k}{kind}", None)
+        handle = getattr(self.A, f"ScanDir{k}circ")
+        if handle is not None:
+            handle.remove()
+            setattr(self.A, f"ScanDir{k}circ", None)
+
+
+def annStepChanged(self) -> None:
+    """Annular Integration Step (mrad) edited: the ring width in pixels; in Annular/CoM/DPC modes the
+    annular images are integrated again (in Alignment mode that happens on leaving it)."""
+    if self.blockAllSignals or self.Data is None:
+        return
+    mrad_per_px = float(self.mradPx.value())
+    if mrad_per_px <= 0:
+        return
+    self.D.annWidth = float(self.AnnStep.value()) / mrad_per_px
+    if self.DetrMode.currentData() in ("AnnMod", "CoMMod", "DPCMod"):
+        annularDetectorCallbacks(self)
+
+
+def placeAnnStep(self, dmod) -> None:
+    """The Annular Integration Step sits on the Alignment tab in Alignment mode (to be set before the
+    annular images are computed) and on the Annular/CoM/DPC tab otherwise, as in MATLAB."""
+    panel = self.AnnStepPanel
+    if dmod == "AlignMod":
+        target = _alignmentStepLayout(self)
+        if target.indexOf(panel) == -1:
+            target.addWidget(panel)
+    elif dmod in ("AnnMod", "CoMMod", "DPCMod"):
+        target = self.AnnularDetectorTab.layout()
+        if target.indexOf(panel) == -1:
+            target.insertWidget(target.indexOf(self.annularControls) + 1, panel)
+
+
+def _alignmentStepLayout(self):
+    """The layout holding the Alignment tab's help icon (and, in Alignment mode, the step)."""
+    from PyQt5 import QtWidgets as qtw
+    for lay in self.AlignmentTab.findChildren(qtw.QHBoxLayout):
+        if lay.indexOf(self.AlignmentHelpIcon) != -1:
+            return lay
+    raise LookupError("Alignment tab layout with the help icon not found")
+
+
+# ------------------------------------------------------------------
+# iCoM / dCoM bandpass filter (Settings > Windows)
+# ------------------------------------------------------------------
+def bandpassLimits(self) -> tuple:
+    """(low, high) of the iCoM/dCoM bandpass filter, pixels of the scan's Fourier transform."""
+    sw = self.SettingsWindow
+    lo, hi = sw.BandpassFilterLow.value(), sw.BandpassFilterHigh.value()
+    return min(lo, hi), max(lo, hi)
+
+
+def integratedImages(self) -> None:
+    """iCoM and dCoM (iDPC/dDPC) from the CoM X/Y images, bandpass-filtered as set."""
+    fx, fy = self.Fig.CoMX.Image, self.Fig.CoMY.Image
+    if fx is None or fy is None:
+        return
+    lo, hi = bandpassLimits(self)
+    self.Fig.iCoM.Image = compute.fourier_bandpass(compute.integrate_field(fx, fy), lo, hi)
+    self.Fig.dCoM.Image = compute.fourier_bandpass(compute.divergence(fx, fy), lo, hi)
+
+
+def resetBandpass(self) -> None:
+    """New dataset: the filter keeps every spatial frequency of the scan (0 .. the corner of its FFT)."""
+    from callbacks.layout import real_shape
+    ny, nx = real_shape(self.D)
+    kmax = int(np.ceil(np.hypot(nx // 2, ny // 2)))
+    sw = self.SettingsWindow
+    with signals_blocked(sw.BandpassFilter, sw.BandpassFilterLow, sw.BandpassFilterHigh):
+        for w in (sw.BandpassFilterLow, sw.BandpassFilterHigh):
+            w.setRange(0, kmax)
+        sw.BandpassFilter.setRange(0, kmax)
+        sw.BandpassFilter.setValue((0, kmax))
+        sw.BandpassFilterLow.setValue(0)
+        sw.BandpassFilterHigh.setValue(kmax)
+
+
+def bandpassCallbacks(self, source=None) -> None:
+    """Range slider and spin boxes kept in step; iCoM/dCoM recomputed from the stored CoM images."""
+    from callbacks.plotting import plotImage
+    sw = self.SettingsWindow
+    source = source if source is not None else self.sender()
+    with signals_blocked(sw.BandpassFilter, sw.BandpassFilterLow, sw.BandpassFilterHigh):
+        if source is sw.BandpassFilter:
+            lo, hi = sw.BandpassFilter.value()
+            sw.BandpassFilterLow.setValue(int(lo))
+            sw.BandpassFilterHigh.setValue(int(hi))
+        else:
+            lo, hi = bandpassLimits(self)
+            sw.BandpassFilter.setValue((lo, hi))
+            sw.BandpassFilterLow.setValue(lo)
+            sw.BandpassFilterHigh.setValue(hi)
+    if self.DetrMode.currentData() in ("CoMMod", "DPCMod") and self.Fig.CoMX.Image is not None:
+        integratedImages(self)
+        for id in ("iCoM", "dCoM"):
+            if self.Fig[id].isVisible():
+                plotImage(self, id)
+
+
+def connectBandpass(self) -> None:
+    sw = self.SettingsWindow
+    sw.BandpassFilter.valueChanged.connect(lambda *_: bandpassCallbacks(self))
+    sw.BandpassFilterLow.valueChanged.connect(lambda *_: bandpassCallbacks(self))
+    sw.BandpassFilterHigh.valueChanged.connect(lambda *_: bandpassCallbacks(self))

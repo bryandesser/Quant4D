@@ -8,6 +8,41 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
 import callbacks.appClass as appClass
 from callbacks.appClass import *
+from callbacks.signals import signals_blocked  # noqa: E402
+from contextlib import contextmanager  # noqa: E402
+
+
+def placeBesideMain(self, window) -> None:
+    """Put *window* to the right of the main window, tops aligned (on the left if it would leave
+    the screen).  New windows otherwise open centred on the screen, under whatever is there."""
+    main = self.frameGeometry()
+    pad = int(self.C.decorPad or 0) * 2
+    geo = window.frameGeometry()
+    x = main.right() + 1 + pad
+    screen = self.screen().availableGeometry() if self.screen() is not None else None
+    if screen is not None and x + geo.width() > screen.right():
+        x = max(screen.left(), main.left() - geo.width() - pad)
+    window.move(x, main.top())
+
+
+@contextmanager
+def busyIndicator(self):
+    """Show the progress bar at the bottom of the main window as "busy" for the duration, then hide it."""
+    self.progressBar.setTextVisible(False)
+    self.progressBar.setMaximum(0)
+    self.progressBarPanel.setVisible(True)
+    self.progressBarPanel.setEnabled(True)
+    try:
+        yield
+    finally:
+        hideProgressBar(self)
+
+
+def hideProgressBar(self) -> None:
+    """The work is done: no progress bar left on the main window."""
+    self.progressBar.setMaximum(1)
+    self.progressBar.setValue(1)
+    self.progressBarPanel.setVisible(False)
 
 
 def toggleWindows(self):
@@ -56,21 +91,64 @@ def on_ShowImportWdw_triggered(self):
         unHideOpenWindows(self)
 
 
+def showImageContent(self, id) -> None:
+    """A window that was hidden is not redrawn (only visible images are): draw it now that it is
+    shown.  CoM/DPC images not computed yet are computed first."""
+    from callbacks.plotting import plotImage  # noqa: E402
+    fig = self.Fig[id]
+    if fig.Image is None and fig.type == "CoM" and id != "ColorWheel" \
+            and self.DetrMode.currentData() in ("CoMMod", "DPCMod") and self.Data is not None:
+        self.Prev.CoM_P = None              # whatever was computed before, it is not there now
+        self.UpdateImages.trigger()         # computes every CoM/DPC image and draws the visible ones
+        return
+    if fig.Image is not None or id == "ColorWheel":
+        plotImage(self, id)
+
+
+def setPreviewTabs(self, preview: bool) -> None:
+    """Import Preview shows only the tabs that apply to a preview: no Misc, Info or Math settings
+    and no dataset export.  (Math is shown again only in Custom Detectors mode.)"""
+    sw, tabs = self.SettingsWindow, self.SettingsWindow.SettingsTabGroup
+    for tab in (sw.MiscTab, sw.InfoTab):
+        tabs.setTabVisible(tabs.indexOf(tab), not preview)
+    if preview:
+        tabs.setTabVisible(tabs.indexOf(sw.MathTab), False)
+        tabs.setTabVisible(tabs.indexOf(sw.VariablesTab), False)
+    else:
+        tabs.setTabVisible(tabs.indexOf(sw.VariablesTab), sw.ShowVariables.isChecked())
+    self.SaveWindow.SaveTabGroup.setTabVisible(self.SaveWindow.SaveTabGroup.indexOf(self.SaveWindow.ExportTab),
+                                               not preview)
+
+
+def setWindowShown(self, id, shown: bool) -> None:
+    """Show (and draw) or hide one image window, e.g. from the Window menu."""
+    fig = self.Fig[id]
+    if shown:
+        fig.show()
+        fig.activateWindow()
+        showImageContent(self, id)
+    else:
+        fig.hide()
+
+
 def showWindowCallbacks(self):
     id = self.SettingsWindow.DispImage.currentData()
     match self.sender():
         case self.SettingsWindow.ShowImageWdw:  # Show selected image
             self.Fig[id].show()
             self.Fig[id].activateWindow()
+            showImageContent(self, id)
         case self.SettingsWindow.ShowMaskWdw:  # Show diffraction or Real `space` mask for the selected image
             id = self.Fig[id].space + "Mask"
             self.Fig[id].show()
             self.Fig[id].activateWindow()
+            showImageContent(self, id)
         case other:  # All other `self.Show***Wdw` buttons
             id = self.sender().accessibleName()
             if id in self.G.ImgID:
                 self.Fig[id].show()
                 self.Fig[id].activateWindow()
+                showImageContent(self, id)
                 # If `id` is one of the available images, select it
                 if (not self.SettingsWindow.DispLock.isChecked()) and (self.SettingsWindow.DispImage.currentData()
                                                                        != id) and (self.SettingsWindow.DispImage.findData(id) != -1):
@@ -107,17 +185,35 @@ def resizeWindowCallbacks(self):
                 id = space
 
             # temporarily block slots/signals to avoid recursion
-            self.Fig[id].blockSignals(True)
-
-            # set the height and wdith
-            self.Fig[id].resize(width, height)
-
-            # unblock slots/signals
-            self.Fig[id].blockSignals(False)
+            with signals_blocked(self.Fig[id]):
+                # set the height and wdith
+                self.Fig[id].resize(width, height)
 
         case self.SettingsWindow.WdwSetAllDfrn | self.SettingsWindow.WdwSetAllReal:  # Set all image windows of the given space to the same size
             for fig in self.G.ImgFig:
                 if fig.space == space:
-                    fig.blockSignals(True)
-                    fig.resize(width, height)
-                    fig.blockSignals(False)
+                    with signals_blocked(fig):
+                        fig.resize(width, height)
+
+
+def enableWindows(self, sw=True):
+    """ Function to enable/disable windows/UI; disable is only for notification/progress bar/busy background etc """
+    assert isinstance(sw, bool)
+
+    prvw = self.DetrMode.currentData() == "PrvwMod"  # Preview mode or not
+    # Detector Mode UI, keep disabled in Import Preview Mode unless a dataset is loaded
+    self.DetrMode.setEnabled(sw and not prvw)  # (sw and (not prvw or self.D is not None))
+
+    # Real-space ROI controls, keep disabled in Import Preview Mode
+    self.RealSpacePanel.setEnabled(sw and not prvw)
+
+    # Other UIs can be enabled in Import Preview Mode
+    self.toolBar.setEnabled(sw)
+    self.DfrnDetrTabGroup.setEnabled(sw)
+    self.SettingsWindow.setEnabled(sw)
+    self.SaveWindow.setEnabled(sw)
+    self.ImportWindow.setEnabled(sw)
+
+    # Also reset all windows' mouse pointer when enabling UIs
+    if sw:
+        [ii.setCursor(qtc.Qt.CursorShape.ArrowCursor) for ii in self.G.AllFig]

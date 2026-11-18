@@ -1,130 +1,188 @@
 """
-Integration tests — Section 4.3 (Detector Mode switching).
+Integration tests — Section 4.3 (detector modes).
 
-Each test switches the detector mode and asserts:
-  - the correct annotation appears on the diffraction axes
-  - the correct real-space image is computed / displayed
-  - no unhandled exceptions are raised
+Each test drives the real widgets of a window that has imported the synthetic
+dataset (``loaded_app``) and checks the annotation drawn on the diffraction
+pattern and the images computed from the data against direct NumPy references.
 """
-
+import numpy as np
 import pytest
-from pytestqt.qt_compat import qt_api
-Qt = qt_api.QtCore.Qt
+from matplotlib.lines import Line2D
+
+from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
+from annotationsClasses.interactiveCircle import InteractiveCircle
+from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, set_mode
 
 
-MODES = {
-    "AlignMod": "InteractiveCircle",
-    "AnnMod":   "InteractiveAnnulus",
-    "CoMMod":   None,          # no single annotation class
-    "DPCMod":   None,
-    "VrApMod":  "InteractiveCircle",
-}
+def _cube(app):
+    return np.asarray(app.Data, float).reshape(SCAN_Y * SCAN_X, DET_Y, DET_X)
 
 
-def _set_mode(app, qtbot, mode_text):
-    """Select a detector mode and wait for the UI to settle."""
-    combo = app.DetrMode
-    idx = combo.findText(mode_text)
-    assert idx >= 0, f"Mode {mode_text!r} not found in DetectorMode combo"
-    combo.setCurrentIndex(idx)
-    # Give Qt a moment to process the signal
-    qtbot.wait(100)
+def _disc_mask(center, r):
+    yy, xx = np.mgrid[0:DET_Y, 0:DET_X]
+    return np.hypot(xx - center[0], yy - center[1]) <= r
 
 
-@pytest.mark.skip(reason="Requires initialized display pipeline with real data")
 class TestAlignMode:
-    def test_circle_appears(self, app, qtbot):
-        _set_mode(app, qtbot, "AlignMod")
-        from annotationsClasses.interactiveCircle import InteractiveCircle
-        assert isinstance(app.A.Circle, InteractiveCircle)
+    def test_circle_on_beam(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "AlignMod")
+        tb = loaded_app.A.tb
+        assert isinstance(tb, InteractiveCircle)
+        assert np.allclose(tb.center, loaded_app.B0)
+        assert tb.radius[-1] == pytest.approx(loaded_app.TBR.value())
 
-    def test_tbox_updates_on_spinbox_change(self, app, qtbot):
-        _set_mode(app, qtbot, "AlignMod")
-        old_x = app.A.Circle.center[0]
-        # Change TBX spinbox
-        app.TBX.setValue(app.TBX.value() + 2)
-        qtbot.wait(50)
-        assert app.A.Circle.center[0] != old_x
+    def test_spinboxes_move_circle(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "AlignMod")
+        x0 = loaded_app.TBX.value()
+        loaded_app.TBX.setValue(x0 + 1.5)
+        loaded_app.TBR.setValue(3.0)
+        qapp.processEvents()
+        assert loaded_app.B0[0] == pytest.approx(x0 + 1.5)
+        assert loaded_app.A.tb.center[0] == pytest.approx(x0 + 1.5)
+        assert loaded_app.A.tb.radius[-1] == pytest.approx(3.0)
+        loaded_app.TBX.setValue(x0)
+        qapp.processEvents()
+
+    def test_drag_circle(self, loaded_app, qapp):
+        """Dragging the transmitted-beam circle (it emits updateCircle) used to raise: its radius
+        is an array, which went straight into the radius slider."""
+        set_mode(loaded_app, qapp, "AlignMod")
+        tb = loaded_app.A.tb
+        old = (np.array(loaded_app.B0, float).copy(), loaded_app.TBR.value())
+        tb.center = np.asarray(old[0]) + [1.5, -0.5]
+        tb.radius = np.array([old[1] + 1])
+        tb.updateCircle.emit()
+        qapp.processEvents()
+        assert np.allclose(loaded_app.B0, old[0] + [1.5, -0.5])
+        assert loaded_app.TBR.value() == pytest.approx(old[1] + 1)
+        assert loaded_app.TBX_NF.value() == pytest.approx(old[0][0] + 1.5)
+        tb.center, tb.radius = old[0], np.array([old[1]])
+        tb.updateCircle.emit()
+        qapp.processEvents()
+
+    def test_auto_align_finds_disc(self, loaded_app, qapp):
+        """The disc centre averaged over the scan is ~ (0.58*DET_X + 0.75, 0.4*DET_Y + 0.45)."""
+        set_mode(loaded_app, qapp, "AlignMod")
+        expected = np.array([0.58 * DET_X + 0.3 * (SCAN_X - 1) / 2, 0.4 * DET_Y + 0.3 * (SCAN_Y - 1) / 2])
+        assert np.abs(np.asarray(loaded_app.B0) - expected).max() < 1.0, loaded_app.B0
 
 
-@pytest.mark.skip(reason="Requires initialized display pipeline with real data")
 class TestAnnularMode:
-    def test_annulus_appears(self, app, qtbot):
-        _set_mode(app, qtbot, "AnnMod")
-        from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
-        assert isinstance(app.A.Annulus, InteractiveAnnulus)
+    def test_annulus_matches_controls(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "AnnMod")
+        loaded_app.AnnRi.setValue((1, 6))
+        qapp.processEvents()
+        adf = loaded_app.A.adf
+        assert isinstance(adf, InteractiveAnnulus)
+        ri, ro = (v * loaded_app.D.annWidth for v in loaded_app.AnnRi.value())
+        assert np.allclose(sorted(adf.radius), [ri, ro])
+        assert np.allclose(adf.center, loaded_app.B0)
 
-    def test_inner_radius_matches_slider(self, app, qtbot):
-        _set_mode(app, qtbot, "AnnMod")
-        ri = app.AnnRi.value()
-        assert app.A.Annulus.r_inner == pytest.approx(ri, rel=0.05)
+    def test_image_is_annular_sum(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "AnnMod")
+        mask = np.asarray(loaded_app.Fig.DfrnMask.Image, bool)
+        expected = np.asarray(loaded_app.Data, float)[:, mask.ravel()].sum(axis=1).reshape(SCAN_Y, SCAN_X)
+        assert mask.any() and not mask.all()
+        assert np.allclose(loaded_app.Fig.Real.Image, expected, rtol=1e-5)
 
-    def test_outer_radius_matches_slider(self, app, qtbot):
-        _set_mode(app, qtbot, "AnnMod")
-        ro = app.AnnRo.value()
-        assert app.A.Annulus.r_outer == pytest.approx(ro, rel=0.05)
-
-    def test_move_inner_slider_updates_ui(self, app, qtbot):
-        _set_mode(app, qtbot, "AnnMod")
-        app.AnnRi.setValue(app.AnnRi.value() + 2)
-        qtbot.wait(50)
-        # Annulus inner radius should track
-        assert app.A.Annulus.r_inner == pytest.approx(app.AnnRi.value(), rel=0.05)
+    def test_radius_change_recomputes(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "AnnMod")
+        loaded_app.AnnRi.setValue((0, 3))
+        qapp.processEvents()
+        small = loaded_app.Fig.Real.Image.copy()
+        loaded_app.AnnRi.setValue((0, 8))
+        qapp.processEvents()
+        assert loaded_app.Fig.Real.Image.sum() > small.sum()
+        assert sorted(loaded_app.A.adf.radius)[1] == pytest.approx(8 * loaded_app.D.annWidth)
 
 
-@pytest.mark.skip(reason="Requires initialized display pipeline with real data")
 class TestCoMMode:
-    def test_com_images_computed(self, app, qtbot):
-        """After switching to CoMMod, CoM X and Y arrays must be non-None."""
-        _set_mode(app, qtbot, "CoMMod")
-        assert app.D.CoMX is not None
-        assert app.D.CoMY is not None
-        assert app.D.CoMX.shape == (8, 8)
+    def test_com_images(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "CoMMod")
+        for i in ("CoMX", "CoMY", "CoMMag", "CoMPh"):
+            im = loaded_app.Fig[i].Image
+            assert im is not None and im.shape == (SCAN_Y, SCAN_X) and np.isfinite(im).all(), i
 
-    def test_no_vector_field_in_ann_mode(self, app, qtbot):
-        """plotVectorField should not draw arrows when not in CoM/DPC mode."""
-        _set_mode(app, qtbot, "AnnMod")
-        # Quiver artists on Real axes should be absent
-        quivers = [c for c in app.Fig.Real.ax.get_children()
-                   if type(c).__name__ == "Quiver"]
-        assert len(quivers) == 0
+    def test_com_follows_disc(self, loaded_app, qapp):
+        """The disc moves 0.3 px per probe step in x and y; with an unrotated scan, so does the CoM."""
+        set_mode(loaded_app, qapp, "CoMMod")
+        cx, cy = loaded_app.Fig.CoMX.Image, loaded_app.Fig.CoMY.Image
+        assert np.diff(cx, axis=1).mean() == pytest.approx(0.3, abs=0.06)
+        assert np.diff(cy, axis=0).mean() == pytest.approx(0.3, abs=0.06)
+
+    def test_straight_from_align_mode(self, loaded_app, qapp):
+        """Align -> CoM with every window open: CoMPhMag used to have no image, so plotting raised
+        and left the Settings window disabled."""
+        set_mode(loaded_app, qapp, "AlignMod")
+        for i in loaded_app.Fig:
+            loaded_app.Fig[i].show()
+        set_mode(loaded_app, qapp, "CoMMod")
+        assert np.allclose(loaded_app.Fig.CoMPhMag.Image, loaded_app.Fig.CoMPh.Image)
+        assert loaded_app.ImageAx.CoMPhMag is not None, "phase-magnitude image not drawn"
+        assert loaded_app.SettingsWindow.isEnabled() and loaded_app.isEnabled()
+        set_mode(loaded_app, qapp, "AnnMod")
+
+    def test_no_vector_field_outside_com(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "AnnMod")
+        quivers = [c for c in loaded_app.Fig.Real.ax.get_children() if type(c).__name__ == "Quiver"]
+        assert not quivers
 
 
-@pytest.mark.skip(reason="Requires initialized display pipeline with real data")
 class TestDPCMode:
-    def test_segments_drawn(self, app, qtbot):
-        _set_mode(app, qtbot, "DPCMod")
-        # DPC mode draws wedge patches on the diffraction axes
-        from matplotlib.patches import Wedge
-        wedges = [c for c in app.Fig.Dfrn.ax.get_children()
-                  if isinstance(c, Wedge)]
-        assert len(wedges) == app.NSeg.value()
+    def test_segment_lines(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "DPCMod")
+        lines = loaded_app.A.SegDetrL
+        assert lines and all(isinstance(ln, Line2D) for ln in lines)
+        assert len(lines) == loaded_app.NSeg.value()
 
-    def test_nseg_change_redraws(self, app, qtbot):
-        _set_mode(app, qtbot, "DPCMod")
-        orig = app.NSeg.value()
-        app.NSeg.setValue(orig + 2 if orig + 2 <= app.NSeg.maximum() else orig - 2)
-        qtbot.wait(100)
-        from matplotlib.patches import Wedge
-        wedges = [c for c in app.Fig.Dfrn.ax.get_children()
-                  if isinstance(c, Wedge)]
-        assert len(wedges) == app.NSeg.value()
+    def test_nseg_change_redraws(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "DPCMod")
+        n = loaded_app.NSeg.value()
+        new = n + 2 if n + 2 <= loaded_app.NSeg.maximum() else n - 2
+        loaded_app.NSeg.setValue(new)
+        qapp.processEvents()
+        assert len(loaded_app.A.SegDetrL) == new
 
-    def test_det_rot_rotates_segments(self, app, qtbot):
-        _set_mode(app, qtbot, "DPCMod")
-        from matplotlib.patches import Wedge
-        before = [w.theta1 for w in app.Fig.Dfrn.ax.get_children()
-                  if isinstance(w, Wedge)]
-        app.DetRot.setValue(app.DetRot.value() + 15)
-        qtbot.wait(50)
-        after = [w.theta1 for w in app.Fig.Dfrn.ax.get_children()
-                 if isinstance(w, Wedge)]
-        assert before != after
+    def test_rotation_turns_segments(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "DPCMod")
+        before = [ln.get_xydata().copy() for ln in loaded_app.A.SegDetrL]
+        loaded_app.DetRot.setValue(loaded_app.DetRot.value() + 15)
+        qapp.processEvents()
+        after = [ln.get_xydata() for ln in loaded_app.A.SegDetrL]
+        assert not all(np.allclose(a, b) for a, b in zip(before, after))
 
 
-@pytest.mark.skip(reason="Requires initialized display pipeline with real data")
 class TestVirtualApertureMode:
-    def test_circle_appears(self, app, qtbot):
-        _set_mode(app, qtbot, "VrApMod")
-        from annotationsClasses.interactiveCircle import InteractiveCircle
-        assert isinstance(app.A.VrAp, InteractiveCircle)
+    def test_aperture_and_image(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "VrApMod")
+        loaded_app.VrApR.setValue(3)
+        qapp.processEvents()
+        ap = loaded_app.A.VrAp
+        assert isinstance(ap, InteractiveCircle)
+        mask = _disc_mask(ap.center, ap.radius[-1])
+        assert np.array_equal(np.asarray(loaded_app.Fig.DfrnMask.Image, bool), mask)
+        expected = _cube(loaded_app)[:, mask].sum(axis=1).reshape(SCAN_Y, SCAN_X)
+        assert np.allclose(loaded_app.Fig.Real.Image, expected, rtol=1e-5)
+
+
+class TestCustomMode:
+    def test_circle_detector(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "CustMod")
+        loaded_app.CDNewCircle.click()
+        qapp.processEvents()
+        cmask = list(loaded_app.A.Custom.values())[-1]
+        assert isinstance(cmask.handles[0], InteractiveCircle)
+        mask = np.asarray(loaded_app.Fig.DfrnMask.Image, float)
+        expected = np.asarray(loaded_app.Data, float) @ mask.ravel()
+        assert np.allclose(loaded_app.Fig.Real.Image, expected.reshape(SCAN_Y, SCAN_X), rtol=1e-5)
+
+    def test_annotations_follow_mode(self, loaded_app, qapp):
+        set_mode(loaded_app, qapp, "CustMod")
+        if not loaded_app.A.Custom:
+            loaded_app.CDNewCircle.click()
+            qapp.processEvents()
+        set_mode(loaded_app, qapp, "AnnMod")
+        assert all(not c.handles for c in loaded_app.A.Custom.values())
+        set_mode(loaded_app, qapp, "CustMod")
+        assert all(c.handles for c in loaded_app.A.Custom.values() if c.type == "Circle")
+        set_mode(loaded_app, qapp, "AnnMod")

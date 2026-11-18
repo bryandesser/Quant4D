@@ -36,7 +36,7 @@ from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
 from annotationsClasses.interactivePoint import InteractivePoint
 from multiprocessing.pool import ThreadPool
 # Deferred cross-module imports (safe: startup is itself only loaded lazily)
-from callbacks.plotting import displayCallbacks, updateImagesCallbacks  # noqa: E402
+from callbacks.plotting import displayCallbacks, sliderReleased, updateImagesCallbacks  # noqa: E402
 from callbacks.detector import detectorModeCallbacks, detrCoordCallbacks  # noqa: E402
 from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
 from callbacks.importCallbacks import importCallbacks  # noqa: E402
@@ -46,11 +46,15 @@ from callbacks.window_manager import (  # noqa: E402
 )
 from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
 from callbacks.alignment import moveTransBeam, transBeamCallbacks  # noqa: E402
-from callbacks.data_ops import mathCallbacks  # noqa: E402
 from callbacks.previewCallbacks import previewCallbacks  # noqa: E402
 from callbacks.virtualApertureCallbacks import virtualApertureCallbacks  # noqa: E402
-from callbacks.realSpaceROICallbacks import realSpaceROICallbacks  # noqa: E402
+from callbacks.customDetectorCallbacks import connectCustomDetector  # noqa: E402
+from callbacks.axis_direction import connectAxisDirection  # noqa: E402
+from callbacks.menus import connectMenus  # noqa: E402
+from callbacks.realSpaceROICallbacks import connectPatternCombine, realSpaceROICallbacks  # noqa: E402
 from callbacks.utils import breakpoint  # noqa: E402,A001
+from callbacks.signals import signals_blocked  # noqa: E402
+from callbacks.window_manager import enableWindows  # noqa: E402,F401  (moved; re-exported)
 
 
 def unlockScanDir(self):
@@ -96,6 +100,8 @@ def slotsSignals(self):
     self.ImportWindow.xEvent.connect(lambda: self.ShowImportWdw.setChecked(False)
                                      )  # ImportWindow.ImportCancelButton.click())
     self.ImportWindow.ImpFileSelect.clicked.connect(lambda: importSelectFile(self))
+    # a path typed or pasted into the field is read when editing finishes (Enter or focus change)
+    self.ImportWindow.ImpFilePath.editingFinished.connect(lambda: importSelectFile(self))
     self.ImportWindow.ImportDataButton.clicked.connect(lambda: importCallbacks(self))
     self.ImportWindow.ImpKeepP.clicked.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpGPU.currentIndexChanged.connect(lambda: importBoxInput(self))
@@ -121,45 +127,47 @@ def slotsSignals(self):
     self.ImportWindow.FrFoot.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.FrHead.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpSubImg.currentIndexChanged.connect(lambda: importFileType(self))
+    # file-type radio buttons: re-read the file's header/geometry for the chosen type
+    for button in (self.ImportWindow.EMPADButton, self.ImportWindow.MedipixButton, self.ImportWindow.MRCButton,
+                   self.ImportWindow.DM34Button, self.ImportWindow.HDF5Button, self.ImportWindow.CustomButton):
+        button.clicked.connect(lambda: importFileType(self))
 
     # save window slots/signals
     self.SaveWindow.SaveImgSelectAll.clicked.connect(
         lambda isChecked: self.SaveWindow.SaveImgList.selectAll() if isChecked else self.SaveWindow.SaveImgList.clearSelection())
+    from callbacks.save_export import connectSaveWindow  # noqa: E402
+    connectSaveWindow(self)
+    connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
+    connectMenus(self)            # menu-bar actions and help icons
+    connectPatternCombine(self)   # diffraction window: how a region's patterns are combined
+    from callbacks.view_zoom import connectZoom  # noqa: E402
+    connectZoom(self)             # wheel/keys zoom, Home, one view per space
+    from callbacks.plotting import connectHistogramReset  # noqa: E402
+    connectHistogramReset(self)   # double-click the histogram: default brightness/contrast/gamma
+    from callbacks.alignment import connectBeamPick  # noqa: E402
+    connectBeamPick(self)         # Alignment mode: double-click a disk to make it the transmitted beam
 
-    # menu action slots/signals
-    self.actionShow_Diffraction_Pattern.triggered.connect(
-        lambda: self.Fig.Dfrn.show(
-            self.actionShow_Diffraction_Pattern.isChecked()))
-    self.actionShow_Diffraction_Mask.triggered.connect(
-        lambda: self.Fig.DfrnMask.show(
-            self.actionShow_Diffraction_Mask.isChecked()))
-    self.actionShow_Real_Space_Image.triggered.connect(
-        lambda: self.Fig.Real.show(
-            self.actionShow_Real_Space_Image.isChecked()))
-    self.actionShow_Real_Space_Mask.triggered.connect(
-        lambda: self.Fig.RealMask.show(
-            self.actionShow_Real_Space_Mask.isChecked()))
-    self.actionShow_Center_of_Mass_Magnitude_CoM.triggered.connect(
-        lambda: self.Fig.CoMMag.show(self.actionShow_Center_of_Mass_Magnitude_CoM.isChecked()))
-    self.actionShow_Center_of_Mass_X.triggered.connect(
-        lambda: self.Fig.CoMX.show(
-            self.actionShow_Center_of_Mass_X.isChecked()))
-    self.actionShow_Center_of_Mass_Y.triggered.connect(
-        lambda: self.Fig.CoMY.show(
-            self.actionShow_Center_of_Mass_Y.isChecked()))
-    self.actionShow_Colorwheel.triggered.connect(
-        lambda: self.Fig.ColorWheel.show(
-            self.actionShow_Colorwheel.isChecked()))
-    self.actionShow_Differential_Center_of_Mass_dCoM.triggered.connect(
-        lambda: self.Fig.dCoM.show(self.actionShow_Differential_Center_of_Mass_dCoM.isChecked()))
-    self.actionShow_Integrated_Center_of_Mass_iCoM.triggered.connect(
-        lambda: self.Fig.iCoM.show(self.actionShow_Integrated_Center_of_Mass_iCoM.isChecked()))
-    self.actionShow_Phase_Magnitude.triggered.connect(
-        lambda: self.Fig.CoMPhMag.show(
-            self.actionShow_Phase_Magnitude.isChecked()))
-    self.actionShow_Phase_Vector_Image.triggered.connect(
-        lambda: self.Fig.CoMPh.show(
-            self.actionShow_Phase_Vector_Image.isChecked()))
+    # Tooltips also when the window is not the active one (Qt shows them only in the active window,
+    # yet hovering highlights buttons in any window, which made the missing tooltip look like a bug)
+    for window in [self, self.SettingsWindow, self.ImportWindow, self.SaveWindow] + \
+            [self.Fig[id] for id in self.G.ImgID if self.Fig[id] is not None]:
+        window.setAttribute(qtc.Qt.WidgetAttribute.WA_AlwaysShowToolTips, True)
+
+    # menu action slots/signals: show/hide an image window (QWidget.show takes no argument: passing
+    # the checked state raised a TypeError).  The action's tick follows the window (guiClass).
+    from callbacks.window_manager import setWindowShown  # noqa: E402
+    for action, id in ((self.actionShow_Diffraction_Pattern, "Dfrn"), (self.actionShow_Diffraction_Mask, "DfrnMask"),
+                       (self.actionShow_Real_Space_Image, "Real"), (self.actionShow_Real_Space_Mask, "RealMask"),
+                       (self.actionShow_Center_of_Mass_Magnitude_CoM, "CoMMag"),
+                       (self.actionShow_Center_of_Mass_X, "CoMX"), (self.actionShow_Center_of_Mass_Y, "CoMY"),
+                       (self.actionShow_Colorwheel, "ColorWheel"),
+                       (self.actionShow_Differential_Center_of_Mass_dCoM, "dCoM"),
+                       (self.actionShow_Integrated_Center_of_Mass_iCoM, "iCoM"),
+                       (self.actionShow_Phase_Magnitude, "CoMPhMag"), (self.actionShow_Phase_Vector_Image, "CoMPh")):
+        action.setCheckable(True)
+        self.Fig[id].menuAction = action
+        action.triggered.connect(lambda checked, _id=id: setWindowShown(self, _id, checked))
     self.actionShow_All_Windows.triggered.connect(lambda: showAllWindows(self))
     self.actionHide_All_Windows.triggered.connect(lambda: hideAllWindows(self))
     self.ShowSettingsWdw.triggered.connect(lambda: self.SettingsWindow.show())
@@ -189,9 +197,13 @@ def slotsSignals(self):
     self.SettingsWindow.ShowiCoMWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowImageWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
+    # the main window's show-window buttons had no accessible name, which names the window to show
+    for button, id, tip in ((self.ShowRealMaskWdw, "RealMask", "Show the real-space mask"),
+                            (self.ShowDfrnMaskWdw, "DfrnMask", "Show the diffraction mask")):
+        button.setAccessibleName(id)
+        button.setToolTip(tip)
     self.ShowRealMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.ShowDfrnMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
-    self.ShowColorWheelWdw.clicked.connect(lambda: showWindowCallbacks(self))
 
     # transmitted beam controls
     self.TBX.valueChanged.connect(lambda: moveTransBeam(self))
@@ -206,7 +218,6 @@ def slotsSignals(self):
     self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self))
 
     # Math formula (CustMod)
-    self.SettingsWindow.MathEval.clicked.connect(lambda: mathCallbacks(self))
 
     # preview tab on main UI
     self.PvBL.clicked.connect(lambda: previewCallbacks(self))
@@ -224,8 +235,8 @@ def slotsSignals(self):
 
     # displayCallbacks
     self.UpdateImages.triggered.connect(lambda: updateImagesCallbacks(self))
-    self.DispVecColor.triggered.connect(lambda: displayCallbacks(self))
-    self.DispVecField.currentIndexChanged.connect(lambda: displayCallbacks(self))
+    self.SettingsWindow.DispVecColor.clicked.connect(lambda: displayCallbacks(self))   # (triggered needs an action)
+    self.SettingsWindow.DispVecField.currentIndexChanged.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispCMap.currentIndexChanged.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispCMapInvert.clicked.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispImage.currentIndexChanged.connect(lambda: displayCallbacks(self))
@@ -239,6 +250,12 @@ def slotsSignals(self):
     self.SettingsWindow.DispContrastReset.triggered.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispBrightnessReset.triggered.connect(lambda: displayCallbacks(self))
     self.SettingsWindow.DispMaskOpa.valueChanged.connect(lambda: displayCallbacks(self))
+    for w in (self.SettingsWindow.DispMaskOpa, self.SettingsWindow.DispMaskOpa_NF):
+        w.setToolTip("Dims the parts of the selected image outside its mask (the detector or real-space ROI). "
+                     "No effect where the mask covers everything: Align mode, or the full real-space ROI.")
+    self.SettingsWindow.CalcPolicy.currentIndexChanged.connect(lambda *_: updateImagesCallbacks(self))
+    for slider in self.findChildren(qtw.QAbstractSlider):            # Reduced policy: update on release
+        slider.sliderReleased.connect(lambda: sliderReleased(self))
     self.SettingsWindow.HistLog.clicked.connect(lambda: displayCallbacks(self))
 
     # reset values, should not be necessary once connected to displayCallbacks #TODO
@@ -251,26 +268,46 @@ def slotsSignals(self):
     self.AnnRi_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.AnnRo_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.NSeg.valueChanged.connect(lambda: annularDetectorCallbacks(self))
+    self.NRung.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.DetRot_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.DetRot.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDirUnlock.clicked.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDirYFlip.clicked.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDir_NF.valueChanged.connect(lambda: annularDetectorCallbacks(self))
     self.ScanDir.valueChanged.connect(lambda: annularDetectorCallbacks(self))
+    self.AutoCurl.clicked.connect(lambda: annularDetectorCallbacks(self))
+    from callbacks.annularDetectorCallbacks import annStepChanged  # noqa: E402
+    from callbacks.annularDetectorCallbacks import connectBandpass  # noqa: E402
+    connectBandpass(self)                            # Settings > Windows: iCoM/dCoM bandpass filter
+    from callbacks.variables import connectVariables  # noqa: E402
+    connectVariables(self)                           # Settings > Info: Show all variables
+    self.AnnStep.setKeyboardTracking(False)          # a typed value counts once confirmed (Enter, focus out)
+    self.AnnStep.valueChanged.connect(lambda *_: annStepChanged(self))
 
     # virtual aperture connections
     self.VrApR.valueChanged.connect(lambda: virtualApertureCallbacks(self))
     self.VrApSymm.currentIndexChanged.connect(lambda: virtualApertureCallbacks(self))
+    # these two are toggles, but the .ui file does not mark them checkable
+    self.VrApInvert.setCheckable(True)
+    self.VrApMirror.setCheckable(True)
     self.VrApInvert.clicked.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirror.clicked.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirrRot.valueChanged.connect(lambda: virtualApertureCallbacks(self))
     self.VrApMirrRot_NF.valueChanged.connect(lambda: virtualApertureCallbacks(self))
+    self.VrApRotCW.clicked.connect(lambda: virtualApertureCallbacks(self))
+    for w in (self.VrApX, self.VrApY, self.VrApX_NF, self.VrApY_NF, self.VrApR_NF):
+        w.valueChanged.connect(lambda *_: virtualApertureCallbacks(self))
+    self.VrApReset.clicked.connect(lambda: virtualApertureCallbacks(self))
+    self.VrApRotCCW.clicked.connect(lambda: virtualApertureCallbacks(self))
 
     # Settings window, units choices
     self.SettingsWindow.DCSys.currentIndexChanged.connect(lambda: detrCoordCallbacks(self))
     self.SettingsWindow.DCPos.currentIndexChanged.connect(lambda: detrCoordCallbacks(self))
     self.SettingsWindow.DCUnit.currentIndexChanged.connect(lambda: detrCoordCallbacks(self))
     self.RealROIShape.currentIndexChanged.connect(lambda: realSpaceROICallbacks(self))
+    self.FrameX.valueChanged.connect(lambda: realSpaceROICallbacks(self))
+    self.FrameY.valueChanged.connect(lambda: realSpaceROICallbacks(self))
+    self.RealROIInvert.clicked.connect(lambda: realSpaceROICallbacks(self))
 
 
 def startupFcn(self):
@@ -287,14 +324,16 @@ def startupFcn(self):
 
         # Find GPU devices and turn on/off GPU support;
         # self.ImportWindow.ImgGPU.currentData() = None is always "GPU off"
-        if self.C.nGPU == 0:  # no GPU devices
-            self.ImportWindow.ImpGPU.addItem('No GPU found.', 0)
+        if self.C.nGPU == 0:  # no GPU devices (or no CUDA-enabled torch)
+            self.ImportWindow.ImpGPU.addItem('No GPU found.', None)   # None = CPU (it was device 0)
+            self.ImportWindow.ImpGPU.setToolTip("No CUDA GPU found. GPU acceleration needs PyTorch with CUDA "
+                                                "(pip install pyquant4d[gpu]).")
         else:  # 1 or more devices found
             maxmem = 0
             for i in np.arange(0, self.C.nGPU):
                 self.C.GPUmem.append(torch.cuda.get_device_properties(i).total_memory)
                 self.C.GPUname.append(torch.cuda.get_device_name(i))
-                self.ImportWindow.ImpGPU.addItem(self.C.GPUname[i], i)
+                self.ImportWindow.ImpGPU.addItem(self.C.GPUname[i], int(i))     # plain int for torch.device
                 # Select GPU with max memory
                 if self.C.GPUmem[i] > maxmem:
                     maxmem = self.C.GPUmem[i]
@@ -314,12 +353,14 @@ def startupFcn(self):
             self.C.MonitorPositions.append(qtw.QDesktopWidget().screenGeometry(i).getRect())
 
         # monitor size
-        self.C.monitorWidth = qtw.QApplication.desktop().screenGeometry().width()
-        self.C.monitorHeight = qtw.QApplication.desktop().screenGeometry().height()
+        desktop = qtw.QApplication.desktop()
+        assert desktop is not None, "checkMonitors needs a QApplication"
+        self.C.monitorWidth = desktop.screenGeometry().width()
+        self.C.monitorHeight = desktop.screenGeometry().height()
 
         # toolbar size + any horizontal or vertical offsets due to toolbar
         self.C.hOffset, self.C.vOffset, self.C.toolbarWidth, self.C.toolbarHeight = abs(np.array(
-            qtw.QApplication.desktop().screenGeometry().getRect()) - np.array(qtw.QApplication.desktop().availableGeometry().getRect()))
+            desktop.screenGeometry().getRect()) - np.array(desktop.availableGeometry().getRect()))
 
         # establish window decoration sizes with temporary image window
         tmp = ImageWindow("", "", "", "", "", [0, 0, 400, 400])
@@ -521,23 +562,32 @@ def startupFcn(self):
         self.G.CoM_btns = [
             obj for obj in self.SettingsWindow.findChildren(
                 qtw.QPushButton) if "CoM" in obj.objectName()]
-        self.G.CoM_btns.extend([self.ShowColorWheelWdw, self.SettingsWindow.ShowColorWheelWdw_2])
+        self.G.CoM_btns.extend([self.SettingsWindow.ShowColorWheelWdw_2])
 
         # Group all window `figure` `uifigure`
         self.G.AllFig = self.G.ImgFig.copy()
         self.G.AllFig.extend([self, self.SettingsWindow, self.ImportWindow, self.SaveWindow])
 
     def updateImageWindowSize(self, size, space):
-        match space:
-            case "Dfrn":
-                self.SettingsWindow.WdwHDfrn.setValue(self.SettingsWindow.WdwHDfrn.value() + size.height())
-                self.SettingsWindow.WdwWDfrn.setValue(self.SettingsWindow.WdwWDfrn.value() + size.width())
-            case "Real":
-                self.SettingsWindow.WdwHReal.setValue(self.SettingsWindow.WdwHReal.value() + size.height())
-                self.SettingsWindow.WdwWReal.setValue(self.SettingsWindow.WdwWReal.value() + size.width())
+        """Settings > Misc > window size: the image area of the window just resized, i.e. its size less
+        the toolbar/decoration (``mplDecor``, which the Set buttons add back).  This used to add each
+        resize's change to the fields, and the first change of a new window is its whole size
+        (Qt's old size is -1 x -1), so the fields filled up to about the monitor's size."""
+        boxes = {"Dfrn": (self.SettingsWindow.WdwWDfrn, self.SettingsWindow.WdwHDfrn),
+                 "Real": (self.SettingsWindow.WdwWReal, self.SettingsWindow.WdwHReal)}.get(space)
+        if boxes is None or size.width() <= 0 or size.height() <= 0:
+            return
+        with signals_blocked(*boxes):
+            boxes[0].setValue(max(1, size.width() - self.C.mplDecor.width()))
+            boxes[1].setValue(max(1, size.height() - self.C.mplDecor.height()))
 
     def updateDispImg(self, id):
-        self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData(id))
+        """Clicking an image window selects it for the display controls, unless the selection is locked."""
+        if self.SettingsWindow.DispLock.isChecked():
+            return
+        idx = self.SettingsWindow.DispImage.findData(id)
+        if idx != -1:
+            self.SettingsWindow.DispImage.setCurrentIndex(idx)
 
     def populateDropdowns(self):
         """ populates GUI dropdowns with itemText and itemData where necessary """
@@ -552,18 +602,16 @@ def startupFcn(self):
         self.SaveWindow.ExpByteOrder.addItem("Little Endian", 'l')
         self.SaveWindow.ExpByteOrder.addItem("Big Endian", 'b')
 
-        # export window, file format
-        self.SaveWindow.ExpFormat.Items = {'HDF5 (*.h5)', 'Raw binary (*.raw)'}
-        self.SaveWindow.ExpFormat.ItemsData = {'h5', 'raw'}
+        # export window, file format: populated in save_export.connectSaveWindow
 
         # main UI window, diffraction modes
-        diffType = ['PrvwMod', 'AlignMod', 'AnnMod', 'DPCMod', 'CoMMod', 'VrApMod', 'CustMod']
+        diffType = ['PrvwMod', 'AlignMod', 'AnnMod', 'CoMMod', 'DPCMod', 'VrApMod', 'CustMod']   # CoM before DPC, as MATLAB
         diffTypeText = [
             'Import Preview',
             'Alignment',
             'Annular/Round',
-            'Segmented (DPC)',
             'Center of Mass',
+            'Segmented (DPC)',
             'Virtual Aperture',
             'Custom Detectors']
         self.DetrMode.clear()
@@ -580,13 +628,11 @@ def startupFcn(self):
         # main UI window, vecotr overlay sampling options
         vectType = [0, 1, 2, 4, 8, 16]
         vectTypeText = ['None', '1:1', '1:2', '1:4', '1:8', '1:16']
-        self.DispVecField.clear()
+        self.SettingsWindow.DispVecField.clear()
         for vtt, vt in zip(vectTypeText, vectType):
-            self.DispVecField.addItem(vtt, vt)
+            self.SettingsWindow.DispVecField.addItem(vtt, vt)
 
-        # import window, GPU selection
-        self.ImportWindow.ImpGPU.clear()
-        self.ImportWindow.ImpGPU.addItem('GPU off', None)
+        # import window, GPU selection: filled by getGPU (clearing it here dropped every detected GPU)
 
         # import window, memory loading selection
         self.ImportWindow.ImpMemType.clear()
@@ -622,10 +668,7 @@ def startupFcn(self):
         self.SettingsWindow.DCUnit.addItem('mrad', 'mrad')
         self.SettingsWindow.DCUnit.addItem('Pixel', 'px')
 
-        # settings window, real space rotation options
-        self.SettingsWindow.RotReal.clear()
-        self.SettingsWindow.RotReal.Items = {'0°', '90°', '180°', '-90°'}
-        self.SettingsWindow.RotReal.ItemsData = [0, 90, 180, -90]
+        # settings window, view rotation options: callbacks.axis_direction.connectAxisDirection
 
         # settings window, calculation policy
         self.SettingsWindow.CalcPolicy.clear()
@@ -640,12 +683,7 @@ def startupFcn(self):
         for rtt, rt in zip(rotTypeText, rotType):
             self.VrApRotStep.addItem(rtt, rt)
 
-        # main UI window, custom aperture rotation options
-        rotType = [90, 60, 45, 30, 22.5, 10, 5, 2, 1, 0.5, 0.25]
-        rotTypeText = ['90°', '60°', '45°', '30°', '22.5°', '10°', '5°', '2°', '1°', '0.5°', '0.25°']
-        self.CDRotStep.clear()
-        for rtt, rt in zip(rotTypeText, rotType):
-            self.CDRotStep.addItem(rtt, rt)
+        # custom detector rotation steps and inter-mask modes: customDetectorCallbacks.connectCustomDetector
 
         # main UI window, virtual aperture symmetry options
         symmType = [1, 2, 3, 4, 6]
@@ -657,10 +695,6 @@ def startupFcn(self):
         # main UI window, custom intramask interactions
         self.CDIntraMask.clear()
         self.CDIntraMask.addItems(['Union', 'Intersection', 'Additive'])
-
-        # main UI window, custom intermask interactions
-        self.CDInterMask.clear()
-        self.CDInterMask.addItems(['Union', 'Intersection', 'Additive', 'Current-only'])
 
     # add class attributes to match those from original Matlab version app.*
     appStruct(self)
@@ -706,6 +740,19 @@ def startupFcn(self):
 
     # always keep "Import Preview" hidden from QComboBox
     self.DetrMode.view().setRowHidden(0, True)
+    from callbacks.virtualApertureCallbacks import syncVrApControls  # noqa: E402
+    syncVrApControls(self)        # mirror-angle controls off until the mirror is
+
+    # The app starts in Import Preview mode without a mode change, so apply its tab set here
+    # (the Math, Misc and Info tabs and the Export tab were all shown until a mode change)
+    from callbacks.window_manager import setPreviewTabs  # noqa: E402
+    setPreviewTabs(self, True)
+
+    # The app starts in Import Preview mode without a mode change, so the display selector would stay
+    # empty (no histogram/statistics for the preview): give it the Preview image, as the mode change does.
+    with signals_blocked(self.SettingsWindow.DispImage):
+        self.SettingsWindow.DispImage.clear()
+        self.SettingsWindow.DispImage.addItem("Preview", "Preview")
 
     # Import Data is the only option to start
     # turn off ALL actions
@@ -719,21 +766,17 @@ def startupFcn(self):
 
     # only allow user to import data
     self.ShowImportWdw.setEnabled(True)
-
-    resetQuant4DCallbacks
+    for action in (self.actionQuit, self.actionQuant4D_Manual, self.actionAbout_Quant4D):
+        action.setEnabled(True)      # always available
 
 
 def reinitializeUI(self):
-    # finalize progressBar
-    self.progressBar.setMaximum(100)
-    self.progressBar.setValue(100)
-    self.progressBar.setTextVisible(False)
-
-    self.progressBar.setEnabled(False)
+    # the import is done: no progress bar left at the bottom of the main window
+    from callbacks.window_manager import hideProgressBar  # noqa: E402
+    hideProgressBar(self)
 
     # make control panels visible again
     self.RealSpacePanel.setVisible(True)
-    self.progressBarPanel.setVisible(True)
     self.DfrnDetrTabGroup.setVisible(True)
     self.DetectorModeGroup.setVisible(True)
 
@@ -742,9 +785,8 @@ def reinitializeUI(self):
         action.setEnabled(True)
 
     # update annular QRangeSlider to match
-    self.AnnRi.blockSignals(True)
-    self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
-    self.AnnRi.blockSignals(False)
+    with signals_blocked(self.AnnRi):
+        self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
 
     # re-enable windows
     enableWindows(self, True)
@@ -754,31 +796,9 @@ def reinitializeUI(self):
 
 
 def resetQuant4DCallbacks(self):
+    from callbacks.import_io import unloadData  # noqa: E402
     unloadData(self, False)
     self.DetrMode.setCurrentIndex(self.DetrMode.findData("PrvwMod"))
-
-
-def enableWindows(self, sw=True):
-    """ Function to enable/disable windows/UI; disable is only for notification/progress bar/busy background etc """
-    assert isinstance(sw, bool)
-
-    prvw = self.DetrMode.currentData() == "PrvwMod"  # Preview mode or not
-    # Detector Mode UI, keep disabled in Import Preview Mode unless a dataset is loaded
-    self.DetrMode.setEnabled(sw and not prvw)  # (sw and (not prvw or self.D is not None))
-
-    # Real-space ROI controls, keep disabled in Import Preview Mode
-    self.RealSpacePanel.setEnabled(sw and not prvw)
-
-    # Other UIs can be enabled in Import Preview Mode
-    self.toolBar.setEnabled(sw)
-    self.DfrnDetrTabGroup.setEnabled(sw)
-    self.SettingsWindow.setEnabled(sw)
-    self.SaveWindow.setEnabled(sw)
-    self.ImportWindow.setEnabled(sw)
-
-    # Also reset all windows' mouse pointer when enabling UIs
-    if sw:
-        [ii.setCursor(qtc.Qt.ArrowCursor) for ii in self.G.AllFig]
 
 
 def getDecorSize(self):
