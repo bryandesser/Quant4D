@@ -108,10 +108,12 @@ def connectCustomDetector(self):
         layout.insertWidget(layout.indexOf(self.CDNewGrid) + 1, btn) if isinstance(layout, qtw.QBoxLayout) \
             else self.CDNewMaskHGrid.insertWidget(self.CDNewMaskHGrid.indexOf(self.CDNewGrid) + 1, btn)
         self.CDNewGridNoCenter = btn
+    if not hasattr(self, "CDDuplicate"):
+        _addDuplicateButton(self)
     tips = {"CDNewCircle": "New circular aperture", "CDNewGrid": "New grid of apertures",
             "CDNewBandpass": "New band-pass (ring)", "CDNewWedge": "New wedge", "CDNewPolygon": "Draw a polygon mask",
             "CDNewFromFile": "Mask from an image file", "CDNewMath": "Mask from a formula over other masks",
-            "CDDelMask": "Delete the selected mask", "CDMirror": "Mirror through the beam centre",
+            "CDDelMask": "Delete the selected mask", "CDDuplicate": "Duplicate the selected mask (new ID, same settings)", "CDMirror": "Mirror through the beam centre",
             "CDInvert": "Invert the mask", "CDColor": "Mask colour", "CDRotCCW": "Rotate anticlockwise",
             "CDRotCW": "Rotate clockwise", "CDFlipHorz": "Flip across the horizontal axis (y → -y)",
             "CDFlipVert": "Flip across the vertical axis (x → -x)", "CDTranspose": "Transpose (swap x and y)"}
@@ -119,7 +121,7 @@ def connectCustomDetector(self):
         getattr(self, name).setToolTip(tip)
 
     for name in ("CDNewCircle", "CDNewGrid", "CDNewGridNoCenter", "CDNewBandpass", "CDNewWedge", "CDNewPolygon",
-                 "CDNewFromFile", "CDNewMath", "CDDelMask", "CDColor", "CDRotCCW", "CDRotCW", "CDFlipHorz",
+                 "CDNewFromFile", "CDNewMath", "CDDelMask", "CDDuplicate", "CDColor", "CDRotCCW", "CDRotCW", "CDFlipHorz",
                  "CDFlipVert", "CDTranspose"):
         getattr(self, name).clicked.connect(cb)
     for name in ("CDMirror", "CDInvert"):
@@ -157,6 +159,35 @@ def connectCustomDetector(self):
     d.setRowCount(0)
     d.itemChanged.connect(cb)
     _updateDetailsUI(self)
+
+
+def _addDuplicateButton(self):
+    """A "duplicate mask" button beside Delete (not in the .ui file: a pyQuant4D addition)."""
+    btn = qtw.QToolButton(self.CDDelMask.parentWidget())
+    btn.setObjectName("CDDuplicate")
+    size = 24
+    pm = qtg.QPixmap(size, size)
+    pm.fill(qtc.Qt.GlobalColor.transparent)
+    p = qtg.QPainter(pm)
+    p.setRenderHint(qtg.QPainter.RenderHint.Antialiasing)
+    p.setPen(qtg.QPen(qtg.QColor(60, 60, 60), 1.6))
+    p.setBrush(qtg.QColor(235, 235, 235))
+    p.drawRoundedRect(qtc.QRectF(3, 3, 12, 12), 2, 2)          # two overlapping sheets: a copy
+    p.drawRoundedRect(qtc.QRectF(9, 9, 12, 12), 2, 2)
+    p.end()
+    btn.setIcon(qtg.QIcon(pm))
+    btn.setIconSize(self.CDDelMask.iconSize())
+    layout = self.CDDelMask.parentWidget().layout()
+    if isinstance(layout, qtw.QGridLayout):
+        pos = layout.getItemPosition(layout.indexOf(self.CDDelMask))
+        row, col = int(pos[0] or 0), int(pos[1] or 0)
+        if row > 0 and layout.itemAtPosition(row - 1, col) is None:
+            layout.addWidget(btn, row - 1, col)
+        else:
+            layout.addWidget(btn, row, col + 1)
+    elif layout is not None:
+        layout.addWidget(btn)
+    self.CDDuplicate = btn
 
 
 def resetCustomDetectors(self):
@@ -205,6 +236,8 @@ def customDetectorCallbacks(self, source=None):
         return
     elif sender is self.CDDelMask:
         _deleteMask(self, sel)
+    elif sender is self.CDDuplicate:
+        _duplicateMask(self, sel)
     elif sender in (self.CDMirror, self.CDInvert, self.CDIntraMask):
         sel.mirrored = self.CDMirror.isChecked()
         sel.inverted = self.CDInvert.isChecked()
@@ -321,6 +354,20 @@ def _drawPolygon(self, cmask):
     esc_cid = [ax.figure.canvas.mpl_connect("key_press_event", on_key)]
     # matplotlib's stub types onselect as (x, y); PolygonSelector actually passes the vertex list
     self._cdSelector = PolygonSelector(ax, done, props=dict(color=cmask.color, linewidth=1.5))  # pyright: ignore[reportArgumentType]
+
+
+def _duplicateMask(self, cmask):
+    """A copy of *cmask* under the next free ID: same type, geometry, colour and settings."""
+    if len(self.A.Custom) and list(self.A.Custom)[-1] == "ZZ":
+        _tell(self, "warn", "Mask ID can not go beyond 'ZZ'!", "Maximum Custom Detectors Reached")
+        return
+    new = CustomMask(_nextId(self), cmask.type, cmask.color)
+    for name in ("enabled", "shown", "weight", "mirrored", "inverted", "intra", "formula",
+                 "p1", "p2", "r1", "r2", "vertices", "file_mask"):
+        value = getattr(cmask, name)
+        setattr(new, name, value.copy() if isinstance(value, np.ndarray) else value)
+    new.label = new.id if cmask.label == cmask.id else cmask.label
+    _addMask(self, new)
 
 
 def _deleteMask(self, cmask):
@@ -474,7 +521,8 @@ def _updateDetailsUI(self):
     """Enable and fill the details panel for the selected mask."""
     sel = _selected(self)
     widgets = (self.CDMirror, self.CDInvert, self.CDColor, self.CDIntraMask, self.CDRotCW, self.CDRotCCW,
-               self.CDRotStep, self.CDFlipHorz, self.CDFlipVert, self.CDTranspose, self.CDDTable, self.CDDelMask)
+               self.CDRotStep, self.CDFlipHorz, self.CDFlipVert, self.CDTranspose, self.CDDTable, self.CDDelMask,
+               self.CDDuplicate)
     for w in widgets:
         w.setEnabled(sel is not None)
     _fillDetailsTable(self, sel)
@@ -685,7 +733,8 @@ def _setVisible(self, cmask):
             h.point.set_visible(visible)
     for art in cmask.artists:
         art.set_visible(visible)
-    self.Fig.Dfrn.canvas.draw_idle()
+    from callbacks.utils import refreshCanvas  # noqa: E402
+    refreshCanvas(self.Fig.Dfrn.canvas, *cmask.handles)
 
 
 def _draw(self, cmask):
@@ -716,7 +765,11 @@ def _draw(self, cmask):
         signal = getattr(h, "updateCircle", None) or getattr(h, "updatePoly", None) or h.positionChanged
         signal.connect(lambda *_, _c=cmask, _k=k: _onHandleMoved(self, _c, _k))
     cmask.handles = hs
+    for h in hs:
+        # the passive outline (mirrored copy, grid sites, wedge, contour) moves with the dragged handle
+        h.companions = lambda _c=cmask: list(_c.artists)
     _drawPassive(self, cmask)
+    _setVisible(self, cmask)
 
 
 def _drawPassive(self, cmask):
@@ -763,9 +816,11 @@ def _drawPassive(self, cmask):
         cmask.artists.append(cs)
     for art in cmask.artists:
         art.set_visible(cmask.enabled and cmask.shown)
-    ax.set_xlim(-0.5, nx - 0.5)
-    ax.set_ylim(ny - 0.5, -0.5)
-    self.Fig.Dfrn.canvas.draw_idle()
+    # (the axes limits used to be reset to the whole pattern here, undoing the user's zoom on every
+    # drag; the image axes no longer autoscale, so the contour cannot change them either)
+    ax.set_autoscale_on(False)
+    from callbacks.utils import refreshCanvas  # noqa: E402
+    refreshCanvas(self.Fig.Dfrn.canvas, *cmask.handles)
 
 
 def _tell(self, icon, msg, title):

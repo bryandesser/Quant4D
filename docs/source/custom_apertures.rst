@@ -70,7 +70,8 @@ Every mask has a row in the table, with these columns:
 - **👁** — show the mask's outline on the diffraction pattern.
 - **μ** — the mask's weight in the detector (``0`` leaves it out).
 
-Selecting a row selects that mask for the controls below the table.
+Selecting a row selects that mask for the controls below the table.  Unticking **✓** or **👁** hides
+the mask's annotations; hidden annotations do not react to the mouse.
 
 Editing the selected mask
 -------------------------
@@ -92,6 +93,8 @@ Editing the selected mask
   mirrored Circle): *Union*, *Intersection* (only where parts overlap) or
   *Additive* (overlaps count more than once).
 - **Colour** — change the mask's colour.
+- **Duplicate** the mask: a copy under the next free ID, with the same type,
+  geometry, colour, weight and settings.
 - **Delete** the mask.
 
 Rotation, flips and transposes are not available for Math masks; change their

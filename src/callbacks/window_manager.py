@@ -91,21 +91,38 @@ def on_ShowImportWdw_triggered(self):
         unHideOpenWindows(self)
 
 
+def showImageContent(self, id) -> None:
+    """A window that was hidden is not redrawn (only visible images are): draw it now that it is
+    shown.  CoM/DPC images not computed yet are computed first."""
+    from callbacks.plotting import plotImage  # noqa: E402
+    fig = self.Fig[id]
+    if fig.Image is None and fig.type == "CoM" and id != "ColorWheel" \
+            and self.DetrMode.currentData() in ("CoMMod", "DPCMod") and self.Data is not None:
+        self.Prev.CoM_P = None              # whatever was computed before, it is not there now
+        self.UpdateImages.trigger()         # computes every CoM/DPC image and draws the visible ones
+        return
+    if fig.Image is not None or id == "ColorWheel":
+        plotImage(self, id)
+
+
 def showWindowCallbacks(self):
     id = self.SettingsWindow.DispImage.currentData()
     match self.sender():
         case self.SettingsWindow.ShowImageWdw:  # Show selected image
             self.Fig[id].show()
             self.Fig[id].activateWindow()
+            showImageContent(self, id)
         case self.SettingsWindow.ShowMaskWdw:  # Show diffraction or Real `space` mask for the selected image
             id = self.Fig[id].space + "Mask"
             self.Fig[id].show()
             self.Fig[id].activateWindow()
+            showImageContent(self, id)
         case other:  # All other `self.Show***Wdw` buttons
             id = self.sender().accessibleName()
             if id in self.G.ImgID:
                 self.Fig[id].show()
                 self.Fig[id].activateWindow()
+                showImageContent(self, id)
                 # If `id` is one of the available images, select it
                 if (not self.SettingsWindow.DispLock.isChecked()) and (self.SettingsWindow.DispImage.currentData()
                                                                        != id) and (self.SettingsWindow.DispImage.findData(id) != -1):

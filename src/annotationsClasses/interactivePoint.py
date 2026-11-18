@@ -72,6 +72,8 @@ class InteractivePoint(qtc.QObject):
             return
         if InteractivePoint.lock is not None:
             return
+        if not self.point.get_visible():        # hidden (e.g. a disabled custom mask): not interactive
+            return
 
         # check that mouse press contains one of the InteractivePoints
         contains, attrd = self.point.contains(event)

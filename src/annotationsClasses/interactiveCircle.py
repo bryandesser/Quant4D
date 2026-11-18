@@ -125,6 +125,12 @@ class InteractiveCircle(qtc.QObject):
 
         return containsPoint, contains
 
+    @property
+    def shown(self) -> bool:
+        """A hidden annotation (circles not visible, e.g. a disabled custom mask) takes no mouse
+        input and keeps its handle hidden (the handle used to reappear on the next mouse move)."""
+        return bool(self.circ) and self.circ[0].get_visible()
+
     def disconnect(self):
         """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
         to every hover/click on the canvas (drawing artists no longer in a figure, emitting moves)."""
@@ -152,7 +158,7 @@ class InteractiveCircle(qtc.QObject):
 
     def pointVisibility(self):
         # in case self.interactions is changed programmatically, monitor point visibility
-        if (self.interactions in ["all", "resize"]) and (not self.point.get_visible()):
+        if (self.interactions in ["all", "resize"]) and (not self.point.get_visible()) and self.shown:
             self.point.set_visible(True)
         elif (self.interactions in ["none", "translate"]) and (self.point.get_visible()):
             self.point.set_visible(False)
@@ -172,8 +178,8 @@ class InteractiveCircle(qtc.QObject):
         # monitor point visibility
         self.pointVisibility()
 
-        # exit if no interactions allowed, press is not in the axes, or another circle is being interacted with
-        if self.interactions == "none":
+        # exit if no interactions allowed, hidden, press is not in the axes, or another circle is being interacted with
+        if self.interactions == "none" or not self.shown:
             return
         if event.inaxes != self.axis:
             return
@@ -235,8 +241,8 @@ class InteractiveCircle(qtc.QObject):
         # monitor point visibility
         self.pointVisibility()
 
-        # exit if no interactions allowed, press is not in the axes
-        if self.interactions == "none":
+        # exit if no interactions allowed (or hidden), press is not in the axes
+        if self.interactions == "none" or not self.shown:
             return
         if event.inaxes != self.axis:
             return

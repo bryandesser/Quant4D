@@ -196,3 +196,33 @@ def test_no_unit_unaware_ui_links():
     pairs = {frozenset(re.findall(r"<(?:sender|receiver)>([^<]*)<", c)) for c in re.findall(r"<connection>(.*?)</connection>", ui, re.S)}
     for w in ("VrApR", "VrApX", "VrApY"):
         assert frozenset((w, w + "_NF")) not in pairs, f"{w} (px) is linked raw to {w}_NF (display unit)"
+
+
+class TestAnnularSpinners:
+    """The radius spin boxes stepped a quarter pixel, which rounded back to the same ring (so the
+    arrows barely moved, then stuck), and their range left out the ring width."""
+
+    @pytest.mark.parametrize("unit", ["px", "mrad"])
+    def test_one_step_is_one_ring_over_the_whole_range(self, loaded_app, qapp, unit):
+        w = loaded_app
+        sw = w.SettingsWindow
+        original = sw.DCUnit.currentIndex()
+        sw.DCUnit.setCurrentIndex(sw.DCUnit.findData(unit))
+        set_mode(w, qapp, "AnnMod")
+        try:
+            w.AnnRi.setValue((1, 3))
+            qapp.processEvents()
+            ring = w.D.annWidth * w.DfPxR
+            assert w.AnnRo_NF.singleStep() == pytest.approx(ring)
+            assert w.AnnRo_NF.maximum() == pytest.approx(w.P.RMax * ring)
+            for expected in (4, 5, 6):
+                w.AnnRo_NF.stepBy(1)
+                qapp.processEvents()
+                assert w.AnnRi.value()[1] == expected, "a step up did not move the outer radius one ring"
+            assert w.AnnRo_NF.value() == pytest.approx(6 * ring)
+            w.AnnRi_NF.stepBy(1)
+            qapp.processEvents()
+            assert w.AnnRi.value()[0] == 2
+        finally:
+            sw.DCUnit.setCurrentIndex(original)
+            set_mode(w, qapp, "AnnMod")

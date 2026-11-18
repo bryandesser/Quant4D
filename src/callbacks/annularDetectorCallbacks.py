@@ -44,10 +44,17 @@ def annularDetectorCallbacks(self):
         with signals_blocked(self.AnnRi_NF, self.AnnRo_NF):
             self.AnnRi_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
             self.AnnRo_NF.setSuffix(" " + self.SettingsWindow.DCUnit.currentData())
-            self.AnnRi_NF.setRange(0, self.P.RMax * self.DfPxR)
-            self.AnnRo_NF.setRange(0, self.P.RMax * self.DfPxR)
-            self.AnnRi_NF.setSingleStep(0.25 * self.DfPxR)
-            self.AnnRo_NF.setSingleStep(0.25 * self.DfPxR)
+            # radii are whole rings (annWidth pixels each): the range is RMax rings and one step is one
+            # ring, in the display unit.  (The range left out annWidth and was overwritten in pixels
+            # on import, and a quarter-pixel step rounded back to the same ring, so the arrows
+            # barely moved and then stuck.)
+            ring = self.D.annWidth * self.DfPxR
+            for box in (self.AnnRi_NF, self.AnnRo_NF):
+                box.setRange(0, self.P.RMax * ring)
+                box.setSingleStep(ring)
+            ri, ro = self.AnnRi.value()             # and the values in the (possibly new) unit
+            self.AnnRi_NF.setValue(ri * ring)
+            self.AnnRo_NF.setValue(ro * ring)
 
     def enableAnnUI():
         """Enable/disable UI elements based on current detector mode."""
@@ -386,13 +393,12 @@ def annularDetectorCallbacks(self):
                 self.D.NFrY, self.D.NFrX, -1
             )
 
+            self.P.RMax = k.max()
+
             # Update UI slider limits
             with all_signals_blocked(self):
                 self.AnnRi.setMaximum(k.max())
-                self.AnnRi_NF.setMaximum(k.max() * self.D.annWidth)
-                self.AnnRo_NF.setMaximum(k.max() * self.D.annWidth)
-
-            self.P.RMax = k.max()
+            limitAnnUI()
 
     # ------------------------------------------------------------------
     # calcCoM — intensity-weighted centre-of-mass calculation (CoMMod)

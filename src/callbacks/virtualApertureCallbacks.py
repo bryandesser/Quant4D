@@ -183,7 +183,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 axis=ax,
                 center=xy,
                 radius=r,
-                color='w',
+                color='r',
                 interactions='all'
             )
             self.A.VrAp.connect()
@@ -196,7 +196,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
             cloned_ctr = _rotate_pt(xy, rot_ang, b0)
             cx = cloned_ctr[0] + r * np.cos(theta_circ)
             cy = cloned_ctr[1] + r * np.sin(theta_circ)
-            ln, = ax.plot(cx, cy, color='w', linewidth=1.0,
+            ln, = ax.plot(cx, cy, color='r', linewidth=1.0,
                           linestyle='--', zorder=5)
             ln._vrAp_clone = True  # mark for cleanup
 
@@ -208,7 +208,7 @@ def virtualApertureCallbacks(self):  # noqa: C901
                 mir_ctr = _mirror_pt(orig_ctr, mirr_ang, b0)
                 cx = mir_ctr[0] + r * np.cos(theta_circ)
                 cy = mir_ctr[1] + r * np.sin(theta_circ)
-                ln, = ax.plot(cx, cy, color='w', linewidth=1.0,
+                ln, = ax.plot(cx, cy, color='r', linewidth=1.0,
                               linestyle=':', zorder=5)
                 ln._vrAp_clone = True
 
@@ -225,10 +225,13 @@ def virtualApertureCallbacks(self):  # noqa: C901
 
             # Drag handle to rotate the mirror line (kept as is while it is being dragged)
             if self.A.VrApMirP is None:
-                mirr_tip_x = b0[0] + 0.6 * self.P.RMax * np.cos(rad_m)
-                mirr_tip_y = b0[1] + 0.6 * self.P.RMax * np.sin(rad_m)
+                # on the mirror line, well away from the centre (it was 0.6 * RMax, and RMax is 0
+                # until Annular mode has been used: the handle sat hidden on the beam centre)
+                reach = 0.4 * min(self.D.NPxX, self.D.NPxY)
+                mirr_tip_x = b0[0] + reach * np.cos(rad_m)
+                mirr_tip_y = b0[1] + reach * np.sin(rad_m)
                 pt_art = ax.scatter(mirr_tip_x, mirr_tip_y,
-                                    color='#AAAAAA', s=50, zorder=8)
+                                    color='r', edgecolors='w', s=60, zorder=8)
                 self.A.VrApMirP = InteractivePoint(pt_art)
                 self.A.VrApMirP.connect()
                 self.A.VrApMirP.positionChanged.connect(lambda: moveVrAp())

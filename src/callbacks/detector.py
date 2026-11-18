@@ -173,6 +173,9 @@ def detectorModeCallbacks(self):
         with signals_blocked(self.SettingsWindow.DispImage):
             self.SettingsWindow.DispImage.setCurrentIndex(self.SettingsWindow.DispImage.findData(locked_id))
 
+    from callbacks.plotting import updateVecFieldUI  # noqa: E402
+    updateVecFieldUI(self)          # vector fields only in CoM/DPC modes
+
     # hide custom mask maths tab
     self.SettingsWindow.SettingsTabGroup.setTabVisible(
         self.SettingsWindow.SettingsTabGroup.indexOf(

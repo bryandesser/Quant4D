@@ -205,6 +205,12 @@ def slotsSignals(self):
     self.SettingsWindow.ShowiCoMWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowImageWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
+    # the main window's show-window buttons had no accessible name, which names the window to show
+    for button, id, tip in ((self.ShowRealMaskWdw, "RealMask", "Show the real-space mask"),
+                            (self.ShowDfrnMaskWdw, "DfrnMask", "Show the diffraction mask"),
+                            (self.ShowColorWheelWdw, "ColorWheel", "Show the colour wheel")):
+        button.setAccessibleName(id)
+        button.setToolTip(tip)
     self.ShowRealMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.ShowDfrnMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.ShowColorWheelWdw.clicked.connect(lambda: showWindowCallbacks(self))

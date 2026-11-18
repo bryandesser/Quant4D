@@ -101,10 +101,7 @@ def displayCallbacks(self, source=None):
             self.DispVecColor.setStyleSheet("background-color:" + fig.vecColor.name())
 
             # Enable vector field UIs if: 1) in CoM/DPC mode AND 2) real-space image selected
-            enabledState = (self.DetrMode.currentData() in ["CoMMod", "DPCMod"]) and (fig.space == "Real")
-            self.DispVecField.setEnabled(enabledState)
-            self.DispVecFieldLabel.setEnabled(enabledState)
-            self.DispVecColor.setEnabled(enabledState)
+            updateVecFieldUI(self)
 
             # Disable brightness/contrast/colormap UIs if: (CoM/DPC) "Phase" and "ColorWheel for Phase" images
             enabledState = "Phase" not in fig.name  # enable components if NOT a Phase image
@@ -198,8 +195,14 @@ def plotImage(self, id):
         disp = np.clip(colorMix, 0, 1) ** fig.gamma
     if self.ImageAx[id] is None:
         self.ImageAx[id] = ax.imshow(disp)
+        fitAxesToImage(ax, disp.shape)
     else:
+        same_shape = np.shape(self.ImageAx[id].get_array())[:2] == disp.shape[:2]
         self.ImageAx[id].set_data(disp)
+        if not same_shape:
+            ny, nx = disp.shape[:2]
+            self.ImageAx[id].set_extent((-0.5, nx - 0.5, ny - 0.5, -0.5))
+            fitAxesToImage(ax, disp.shape)
     self.ImageAx[id].set_clim(0, 1)
 
     # Plot mask opacity on non-mask/non-preview image; maskOpa is in percent (i.e. 50 => 50%)
@@ -229,6 +232,16 @@ def plotImage(self, id):
     fig.canvas.draw_idle()       # not flushed: rapid changes (a slider drag) coalesce into one redraw
 
 
+def fitAxesToImage(ax, shape) -> None:
+    """Axes limits on the image's pixels, and no autoscaling afterwards: annotations added later
+    (contours, quivers, lines) used to rescale the axes, leaving a black margin around the image
+    or undoing the user's zoom."""
+    ny, nx = shape[:2]
+    ax.set_xlim(-0.5, nx - 0.5)
+    ax.set_ylim(ny - 0.5, -0.5)
+    ax.set_autoscale_on(False)
+
+
 def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange):
     """Function to update image's statistics"""
     fig = self.Fig[id]
@@ -236,7 +249,8 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
     im = np.ma.masked_invalid(fig.Image)
 
     # Update histogram skip if image unchanged
-    if isDiffToPrev(self, 'im', im):
+    image_changed = isDiffToPrev(self, 'im', im)
+    if image_changed:
         if im.mask.any():
             nanwarn = "Contains NaN/Inf"
         else:
@@ -255,6 +269,7 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
             self.A.histBox = None
         hax.cla()
         self.A.hist = self.A.histGamma = self.A.histNote = None
+        self.Prev.hist = None       # cla() took the box, gamma curve and note: redraw them below
 
         # Intensity histogram of the finite values, drawn as one filled step artist
         # (128 bar patches made every histogram redraw slow, e.g. while dragging gamma)
@@ -367,32 +382,48 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
             verticalalignment='top',
             bbox=props)  # , font="Courier")
 
-        # update histogram canvas
+        image_changed = True
+
+    # Repaint the histogram when anything on it changed.  This used to happen only when the display
+    # limits changed, so a new image with the same minimum and maximum (a diffraction pattern at
+    # another probe position, say) left the old histogram on screen.
+    if image_changed:
         self.SettingsWindow.HistAxes.figure.canvas.draw_idle()
 
 
 def plotVectorField(self, id):
-    """ Function to plot a vector field image over top of the DPC or CoM images (either magnitude, angle, or combination) """
+    """Vector field (the CoM/DPC deflection, sampled every *vec* scan pixels) over a real-space image,
+    in CoM/DPC modes only.  Replaces the previous arrows of that image."""
     fig = self.Fig[id]
-    # try: #TODO
-    #    self.A.vecField.remove()
-    #    self.A.vecField = None
-    # except:
-    #    pass
+    old = self.A.vectField.get(id)
+    if old is not None:
+        try:
+            old.remove()
+        except (ValueError, AttributeError, NotImplementedError):
+            pass
+        self.A.vectField[id] = None
 
-    # vector field sampling (0,1:1,1:2,1:4,1:8,1:16)
-    vec = fig.vecField
-
-    # if vector field sampling == 0, or not currently in CoM or DPC modes, return
-    if (not vec) or (self.DetrMode.currentData() not in ["CoMMod", "DPCMod"]):
+    vec = int(fig.vecField or 0)        # sampling: 0 (none), 1:1, 1:2, 1:4, ...
+    if (not vec) or fig.space != "Real" or (self.DetrMode.currentData() not in ["CoMMod", "DPCMod"]) \
+            or self.Fig.CoMX.Image is None or self.Fig.CoMY.Image is None:
         return
 
-    # Plot vector arrows over the selected image
     x, y = np.meshgrid(np.arange(0, self.D.NFrX, vec), np.arange(0, self.D.NFrY, vec))
     u = self.Fig.CoMX.Image[0::vec, 0::vec]
     v = self.Fig.CoMY.Image[0::vec, 0::vec]
-    self.A.vectField[id] = fig.ax.quiver(x, y, u, v, color=fig.vecColor, units='xy')
+    colour = fig.vecColor.name() if hasattr(fig.vecColor, "name") else fig.vecColor   # QColor -> '#rrggbb'
+    # angles='xy': the arrows point along (u, v) in the image's own coordinates (y down the scan)
+    self.A.vectField[id] = fig.ax.quiver(x, y, u, v, color=colour, angles='xy', units='xy', pivot='mid')
     fig.canvas.draw_idle()
+
+
+def updateVecFieldUI(self) -> None:
+    """The vector-field controls only apply to real-space images in CoM/DPC modes."""
+    id = self.SettingsWindow.DispImage.currentData()
+    fig = self.Fig[id] if id is not None else None
+    enabled = (self.DetrMode.currentData() in ["CoMMod", "DPCMod"]) and fig is not None and fig.space == "Real"
+    for w in (self.DispVecField, self.DispVecFieldLabel, self.DispVecColor):
+        w.setEnabled(enabled)
 
 
 def plotAllPatterns(self):

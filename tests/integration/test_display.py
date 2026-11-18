@@ -281,3 +281,58 @@ class TestDisplayKeepsOtherArtists:
         finally:
             sw.DispMaskOpa.setValue(0)
             qapp.processEvents()
+
+
+class TestHistogramFollowsTheImage:
+    """With the selection locked on the diffraction pattern, a new pattern with the same minimum
+    and maximum (another probe position) left the old histogram on screen: the histogram canvas
+    was only repainted when the display limits changed."""
+
+    def test_new_image_same_range_repaints_and_keeps_the_box(self, loaded_app, qapp, monkeypatch):
+        from callbacks.plotting import plotImage
+        w = loaded_app
+        set_mode(w, qapp, "AnnMod")
+        sw = w.SettingsWindow
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        qapp.processEvents()
+        saved = w.Fig.Dfrn.Image
+        rng = np.random.default_rng(0)
+        a = rng.random(saved.shape)
+        a.flat[0], a.flat[1] = 0.0, 1.0
+        b = rng.random(saved.shape) ** 4             # a very different distribution, same min and max
+        b.flat[0], b.flat[1] = 0.0, 1.0
+        canvas = sw.HistAxes.figure.canvas
+        draws = []
+        monkeypatch.setattr(canvas, "draw_idle", lambda *_a, **_k: draws.append(1))
+        try:
+            w.Fig.Dfrn.Image = a
+            plotImage(w, "Dfrn")
+            draws.clear()
+            w.Fig.Dfrn.Image = b
+            plotImage(w, "Dfrn")
+            assert draws, "histogram not repainted for a new image with the same range"
+            counts, _ = np.histogram(b, bins=128)
+            np.testing.assert_array_equal(w.A.hist.get_data().values, counts)
+            assert w.A.histBox is not None and w.A.histGamma is not None and w.A.histNote is not None, \
+                "the histogram box, gamma curve or note went missing"
+        finally:
+            w.Fig.Dfrn.Image = saved
+            plotImage(w, "Dfrn")
+
+    def test_locked_on_diffraction_follows_a_point_roi(self, loaded_app, qapp):
+        w = loaded_app
+        set_mode(w, qapp, "AnnMod")
+        sw = w.SettingsWindow
+        w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("point"))
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
+        sw.DispLock.click()
+        try:
+            for fx in (1, 4):
+                w.FrameX.setValue(fx)
+                qapp.processEvents()
+                counts, _ = np.histogram(np.ma.masked_invalid(w.Fig.Dfrn.Image).compressed(), bins=128)
+                np.testing.assert_array_equal(w.A.hist.get_data().values, counts)
+        finally:
+            sw.DispLock.click()
+            w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("full"))
+            qapp.processEvents()

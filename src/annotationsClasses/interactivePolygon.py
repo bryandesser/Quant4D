@@ -155,7 +155,7 @@ class InteractivePolygon(qtc.QObject):
             self.rightClick.emit(event)
             return
         if (event.inaxes != self.axis or InteractivePolygon.lock is not None
-                or event.xdata is None or event.ydata is None):
+                or event.xdata is None or event.ydata is None or not self.patch.get_visible()):
             return
         self._transform = self._hit(event)
         if self._transform is None:
@@ -173,7 +173,8 @@ class InteractivePolygon(qtc.QObject):
         if event.inaxes != self.axis:
             return
         if InteractivePolygon.lock is not self:                     # hover feedback
-            if event.xdata is None or event.ydata is None or InteractivePolygon.lock is not None:
+            if event.xdata is None or event.ydata is None or InteractivePolygon.lock is not None \
+                    or not self.patch.get_visible():
                 return
             self._set_cursor(self._hit(event))
             return

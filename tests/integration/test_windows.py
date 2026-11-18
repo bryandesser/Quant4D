@@ -90,3 +90,83 @@ def test_settings_go_left_when_the_right_is_off_screen(app, qapp, monkeypatch):
     app.move(1500, 100)
     placeBesideMain(app, app.SettingsWindow)
     assert app.SettingsWindow.frameGeometry().right() < app.frameGeometry().left()
+
+
+class TestShowWindowButtons:
+    @pytest.mark.parametrize("button, id", [("ShowRealMaskWdw", "RealMask"), ("ShowDfrnMaskWdw", "DfrnMask"),
+                                            ("ShowColorWheelWdw", "ColorWheel")])
+    def test_main_window_buttons_show_their_window(self, loaded_app, qapp, button, id):
+        w = loaded_app
+        set_mode(w, qapp, "CoMMod")                  # the colour wheel button is for CoM/DPC
+        try:
+            w.Fig[id].hide()
+            assert getattr(w, button).isEnabled()
+            getattr(w, button).click()
+            qapp.processEvents()
+            assert w.Fig[id].isVisible(), f"{button} did not show {id}"
+        finally:
+            set_mode(w, qapp, "AnnMod")
+
+
+class TestCoMWindowsWhenShown:
+    """CoM/DPC windows shown from Settings > Misc were empty until the detector changed (only
+    visible windows are drawn), and showed a black margin around the scan."""
+
+    @pytest.mark.parametrize("id", ["CoMX", "iCoM", "dCoM", "CoMPhMag"])
+    def test_drawn_and_fitted_when_shown(self, loaded_app, qapp, id):
+        w = loaded_app
+        for i in ("CoMX", "CoMY", "iCoM", "dCoM", "CoMMag", "CoMPh", "CoMPhMag"):
+            w.Fig[i].hide()
+        set_mode(w, qapp, "CoMMod")
+        try:
+            w.Fig[id].Image = None                   # as if never computed
+            w.ImageAx[id] = None
+            for art in list(w.Fig[id].ax.images):
+                art.remove()
+            getattr(w.SettingsWindow, f"Show{id}Wdw").click()
+            qapp.processEvents()
+            assert w.Fig[id].Image is not None, "not computed when asked for"
+            assert w.ImageAx[id] is not None and w.ImageAx[id] in w.Fig[id].ax.images, "not drawn"
+            ny, nx = w.Fig[id].Image.shape
+            assert w.Fig[id].ax.get_xlim() == pytest.approx((-0.5, nx - 0.5))
+            assert sorted(w.Fig[id].ax.get_ylim()) == pytest.approx([-0.5, ny - 0.5])
+        finally:
+            set_mode(w, qapp, "AnnMod")
+
+
+class TestVectorField:
+    def test_drawn_in_com_mode_with_a_qcolor(self, loaded_app, qapp):
+        from matplotlib.quiver import Quiver
+        w = loaded_app
+        sw = w.SettingsWindow
+        set_mode(w, qapp, "CoMMod")
+        try:
+            sw.DispImage.setCurrentIndex(sw.DispImage.findData("CoMMag"))
+            w.Fig.CoMMag.show()
+            qapp.processEvents()
+            assert w.DispVecField.isEnabled()
+            w.DispVecField.setCurrentIndex(1)            # 1:1
+            qapp.processEvents()
+            quivers = [c for c in w.Fig.CoMMag.ax.collections if isinstance(c, Quiver)]
+            assert len(quivers) == 1
+            w.DispVecField.setCurrentIndex(2)            # changing it replaces the arrows
+            qapp.processEvents()
+            assert len([c for c in w.Fig.CoMMag.ax.collections if isinstance(c, Quiver)]) == 1
+            w.DispVecField.setCurrentIndex(0)
+            qapp.processEvents()
+            assert not [c for c in w.Fig.CoMMag.ax.collections if isinstance(c, Quiver)]
+        finally:
+            w.DispVecField.setCurrentIndex(0)
+            set_mode(w, qapp, "AnnMod")
+
+    @pytest.mark.parametrize("mode", ["AlignMod", "AnnMod", "VrApMod", "CustMod"])
+    def test_disabled_outside_com_and_dpc(self, loaded_app, qapp, mode):
+        w = loaded_app
+        sw = w.SettingsWindow
+        set_mode(w, qapp, "CoMMod")
+        sw.DispImage.setCurrentIndex(sw.DispImage.findData("Real"))
+        qapp.processEvents()
+        assert w.DispVecField.isEnabled()
+        set_mode(w, qapp, mode)
+        assert not w.DispVecField.isEnabled()
+        set_mode(w, qapp, "AnnMod")

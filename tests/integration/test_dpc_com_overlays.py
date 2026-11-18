@@ -192,3 +192,33 @@ class TestAutoCurl:
     def test_disabled_outside_com_and_dpc(self, loaded_app, qapp):
         set_mode(loaded_app, qapp, "AnnMod")
         assert not loaded_app.AutoCurl.isEnabled()
+
+
+class TestVirtualApertureLook:
+    def test_red_with_a_mirror_handle_away_from_the_centre(self, loaded_app, qapp):
+        from matplotlib.colors import to_rgba
+        w = loaded_app
+        w.P.RMax = 0                                  # as before Annular mode was ever used
+        set_mode(w, qapp, "VrApMod")
+        try:
+            assert to_rgba(w.A.VrAp.circ[0].get_color()) == to_rgba("r")
+            if not w.VrApMirror.isChecked():
+                w.VrApMirror.click()
+                qapp.processEvents()
+            handle = w.A.VrApMirP
+            assert handle is not None and handle.point.get_visible()
+            pos = np.asarray(handle.position, float)
+            b0 = np.asarray(w.B0, float)
+            assert np.hypot(*(pos - b0)) > 2, "mirror handle hidden on the beam centre"
+            # dragging it turns the mirror line
+            fig = w.Fig.Dfrn
+            target = b0 + np.array([[0, -1], [1, 0]]) @ (pos - b0)
+            before = w.VrApMirrRot_NF.value()
+            p1 = _press_move(fig, pos, target)
+            _release(fig, p1)
+            qapp.processEvents()
+            assert w.VrApMirrRot_NF.value() != pytest.approx(before)
+        finally:
+            if w.VrApMirror.isChecked():
+                w.VrApMirror.click()
+            set_mode(w, qapp, "AnnMod")
