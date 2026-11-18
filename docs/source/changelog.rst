@@ -1,6 +1,66 @@
 Changelog
 =========
 
+0.2.0 (2026)
+------------
+
+Structural cleanup, full feature parity with the 2026 MATLAB release, and
+many fixes from interactive testing.
+
+Data and layout
+
+- Canonical ``(ry, rx, py, px)`` data layout; fixes transposed pixel grids in
+  CoM, DPC, annular integration and virtual apertures.
+- Slotted dataclass application state; 0-based UI coordinates.
+- Pure ``compute`` sub-package; ``allFunctions.py`` kept only as a deprecated
+  alias table.
+
+Import, export and saving
+
+- Offset-based reader with partial, binned and sampled import and lazy
+  loading; DM3/DM4 header reader; EMPAD v1/v2 detection.
+- Compressed, chunked and fewer-than-4-D HDF5 files read via h5py.
+- Byte-order swap and diffraction/real X-Y swap options, also for lazy data.
+- Image saving and dataset export (HDF5/raw, partial, binned).
+
+GPU
+
+- Dataset kept resident on the GPU with chunked upload and out-of-memory
+  recovery; falls back to the CPU when the dataset does not fit.
+- GPUs detected at startup are now usable from the Import window.
+- Faster max/std patterns, on the GPU when resident.
+
+Detector modes
+
+- Custom detector mode ported from ``Quant4D.mlapp`` (all mask types, mask
+  maths without ``eval``, Color Mix, duplicate and invert masks).
+- DPC weighted by segment centroid with the scan direction applied.
+- AutoCurl scan-direction estimate (**Auto** button).
+- Annular Integration Step (mrad) for ring width.
+- iCoM/dCoM Fourier bandpass filter.
+- Virtual-aperture position/radius fields, rotation, mirror and reset;
+  calculation policy (active/reduced/passive).
+- Diffraction Pattern dropdown (sum/mean/max/std/sqrt/ln/log10).
+- Double-click a disk to pick the transmitted beam.
+
+Display and interaction
+
+- Wheel/key zoom and drag-to-pan, with one linked view per space.
+- Image orientation (reverse X/Y, rotate view, axis and scan-direction
+  arrows) and per-space window size from Settings.
+- Rotatable rectangle and true ellipse ROIs, editable polygon vertices,
+  Shift to keep the aspect ratio while resizing.
+- Double-click the histogram to reset its range.
+- Settings window reorganised to match MATLAB: new Windows tab (show
+  windows, vector field, bandpass filter, window size/orientation), slimmer
+  Misc tab, Info tab with **Show all variables** and a Variables tab.
+- Window menu shows and hides image windows.
+
+Development
+
+- Integration test suite against a loaded dataset (650 tests).
+- pyright (basic) in CI; GPU CI job for the torch tests.
+
 0.1.0 (2026)
 ------------
 

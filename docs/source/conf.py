@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = "pyQuant4D"
 copyright = f"{datetime.today().year}, Bryan D Esser"
 author = "Bryan D Esser"
-release = "0.1.0"
+release = "0.2.0"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
