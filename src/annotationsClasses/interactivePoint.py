@@ -1,4 +1,5 @@
 from typing import Any
+from matplotlib.backend_bases import MouseButton, MouseEvent
 from matplotlib.backend_tools import Cursors
 from PyQt5 import QtCore as qtc
 import numpy as np
@@ -21,6 +22,7 @@ class InteractivePoint(qtc.QObject):
         previously mis-named ``redrawCircle`` signal.
     """
     positionChanged = qtc.pyqtSignal()
+    rightClick = qtc.pyqtSignal(MouseEvent)      # a right click on the point (for a context menu)
 
     lock = None  # only one can be animated at a time
 
@@ -79,6 +81,9 @@ class InteractivePoint(qtc.QObject):
         contains, attrd = self.point.contains(event)
 
         if not contains:
+            return
+        if event.button == MouseButton.RIGHT:   # a menu, not a drag
+            self.rightClick.emit(event)
             return
         # if the point is contained, save point index (i.e. adfInner or adfOuter)
         self.idx = attrd["ind"][0]

@@ -9,7 +9,8 @@ Unreleased
   finish.
 - Custom detectors: **Centre axis** button above Mirror (Circle, Grid,
   Bandpass, Wedge): show a + and drag the mask's axis off the beam centre;
-  press again to lock it.  Bandpass rings are now moved with it.
+  press again to lock it; right-click the + to reset it to the beam centre.
+  Bandpass rings are now moved with it.
 - Dragging a polygon mask no longer leaves its dotted outline behind.
 - Image windows first open beside the Settings window, at the top of the
   screen (diffraction column, then real space); the real-space image comes up

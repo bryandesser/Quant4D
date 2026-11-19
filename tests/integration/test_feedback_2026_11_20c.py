@@ -232,6 +232,32 @@ class TestCentreAxis:
         assert np.allclose(cmask.p1, np.asarray(cust.B0) + [2, -1])
         assert np.allclose(cmask.handles[0].center, cmask.p1)
 
+    @pytest.mark.parametrize("button", ["CDNewWedge", "CDNewBandpass", "CDNewCircle"])
+    def test_right_click_resets_to_the_beam(self, cust, qapp, monkeypatch, button):
+        from PyQt5 import QtWidgets as qtw
+        monkeypatch.setattr(qtw.QMenu, "popup", lambda *a, **k: None)
+        cmask = _new(cust, qapp, button)
+        before = (np.array(cmask.p1), None if cmask.p2 is None else np.array(cmask.p2))
+        cust.CDAxis.click()
+        qapp.processEvents()
+        start = np.array(cmask.p1) if button == "CDNewBandpass" else np.asarray(cust.B0, float)
+        _drag(cust.Fig.Dfrn, start, start + [3, -2])
+        canvas = cust.Fig.Dfrn.canvas
+        xy = cust.Fig.Dfrn.ax.transData.transform(start + [3, -2])
+        canvas.callbacks.process("button_press_event", MouseEvent("button_press_event", canvas, *xy, button=3))
+        menu = cust._axisMenu
+        reset = [a for a in menu.actions() if a.text() == "Reset to beam centre"][0]
+        assert reset.isEnabled()
+        reset.trigger()
+        qapp.processEvents()
+        assert np.allclose(cmask.p1, before[0])                        # back where it started
+        if before[1] is not None:
+            assert np.allclose(cmask.p2, before[1])
+        if button != "CDNewBandpass":
+            assert cmask.axis is None                                  # follows the beam again
+        assert cmask.axisFree and np.allclose(cmask.handles[-1].point.get_offsets()[0], cust.B0)
+        assert not axisMenuEnabled(cust, cmask)
+
     def test_not_for_polygons_and_selection_follows(self, cust, qapp):
         wedge = _new(cust, qapp, "CDNewWedge")
         cust.CDAxis.click()
@@ -241,3 +267,9 @@ class TestCentreAxis:
         assert cust.CDAxis.isChecked() == wedge.axisFree
         mask = _new(cust, qapp, "CDNewMath")
         assert not cust.CDAxis.isEnabled() and not mask.axisFree
+
+
+def axisMenuEnabled(app, cmask):
+    from callbacks.customDetectorCallbacks import axisMenu
+    menu = axisMenu(app, cmask)                 # (kept: its actions go with it)
+    return menu.actions()[0].isEnabled()

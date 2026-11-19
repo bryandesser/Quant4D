@@ -214,7 +214,8 @@ def _addAxisButton(self):
     btn.setIcon(qtg.QIcon(pm))
     btn.setIconSize(self.CDMirror.iconSize())
     btn.setToolTip("Free the centre axis: drag the + that appears to move the mask's centre (mirror centre, "
-                   "grid origin, band-pass centre, wedge apex) off the beam centre.  Untick to lock it there.")
+                   "grid origin, band-pass centre, wedge apex) off the beam centre; right-click the + to reset it "
+                   "to the beam centre.  Untick to lock it there.")
     for layout in self.CDMirror.parentWidget().findChildren(qtw.QBoxLayout):
         index = layout.indexOf(self.CDMirror)
         if index >= 0:
@@ -240,10 +241,13 @@ def _setAxisFree(self, cmask, free):
     _draw(self, cmask)
 
 
-def _onAxisMoved(self, cmask, handle):
-    """The axis point was dragged: grids and wedges move with it (keeping their shape), the band-pass
-    is centred on it, a circle keeps its place (only its mirror moves)."""
-    new = np.asarray(handle.point.get_offsets()[0], float)
+def _onAxisMoved(self, cmask, handle, new=None):
+    """The axis point was dragged (or reset to *new*): grids and wedges move with it (keeping their
+    shape), the band-pass is centred on it, a circle keeps its place (only its mirror moves)."""
+    if new is None:
+        new = np.asarray(handle.point.get_offsets()[0], float)
+    else:
+        handle.point.set_offsets([new])
     delta = new - _axis(self, cmask)
     if cmask.type == "Bandpass":
         cmask.p1 = new
@@ -266,6 +270,41 @@ def _onAxisMoved(self, cmask, handle):
     from callbacks.plotting import toUpdateImage  # noqa: E402
     if toUpdateImage(self):
         _plotCustom(self)
+
+
+def resetAxis(self, cmask):
+    """Back to the beam centre: the mask moves as if its axis were dragged there, and the axis
+    follows the beam again."""
+    axis = next((h for h in cmask.handles if getattr(h, "isAxis", False)), None)
+    b0 = np.asarray(self.B0, float)
+    if axis is not None:
+        _onAxisMoved(self, cmask, axis, new=b0)
+    else:                                   # locked: shift the geometry the same way, then redraw
+        delta = b0 - _axis(self, cmask)
+        if cmask.type == "Bandpass":
+            cmask.p1 = b0
+        elif cmask.type != "Circle":
+            for attr in ("p1", "p2"):
+                if getattr(cmask, attr) is not None:
+                    setattr(cmask, attr, np.asarray(getattr(cmask, attr), float) + delta)
+    if cmask.type != "Bandpass":
+        cmask.axis = None
+    _update(self, cmask)
+
+
+def axisMenu(self, cmask):
+    """The right-click menu of a custom mask's centre axis (the + shown by the CDAxis button)."""
+    menu = qtw.QMenu()
+    reset = menu.addAction("Reset to beam centre")
+    reset.setToolTip("Put the centre axis back on the transmitted beam (the mask moves with it)")
+    reset.setEnabled(not np.allclose(_axis(self, cmask), np.asarray(self.B0, float)))
+    reset.triggered.connect(lambda: resetAxis(self, cmask))
+    return menu
+
+
+def _showAxisMenu(self, cmask, event):
+    self._axisMenu = axisMenu(self, cmask)          # keep a reference while it is shown
+    self._axisMenu.popup(qtg.QCursor.pos())
 
 
 def _shiftCircle(h, delta):
@@ -852,8 +891,10 @@ def _draw(self, cmask):
         c = _axis(self, cmask)
         axis = InteractivePoint(ax.scatter([c[0]], [c[1]], marker="P", s=110, color=[color],
                                            edgecolors="k", linewidths=0.8, zorder=9))
+        axis.isAxis = True
         axis.connect()
         axis.positionChanged.connect(lambda *_, _c=cmask, _h=axis: _onAxisMoved(self, _c, _h))
+        axis.rightClick.connect(lambda ev, _c=cmask: _showAxisMenu(self, _c, ev))
         others = list(hs)
         axis.companions = lambda _c=cmask, _o=others: list(_c.artists) + [
             a for h in _o for a in ((getattr(h, "circ", None) or []) + [getattr(h, "point", None), getattr(h, "patch", None)])]

@@ -93,8 +93,9 @@ Editing the selected mask
   Bandpass and the apex of a Wedge.  Press the button to show it as a **+**
   and drag it off the beam centre; a Grid or Wedge moves with it (keeping its
   shape), a Bandpass is centred on it, a Circle stays where it is (only its
-  mirror moves).  Press the button again to hide the **+**: the axis stays
-  locked where it is.  Rotations and flips of such a mask turn about its axis.
+  mirror moves).  Right-click the **+** > **Reset to beam centre** to put it
+  back (the mask moves with it, and the axis follows the beam again).  Press
+  the button again to hide the **+**: the axis stays locked where it is.  Rotations and flips of such a mask turn about its axis.
 - **Mirror** (Circle and Wedge) through the centre axis.
 - **Invert** the mask (``max − mask``: swaps inside and outside of a binary
   mask, reverses grey levels).
