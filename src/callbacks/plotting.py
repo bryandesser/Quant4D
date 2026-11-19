@@ -549,7 +549,7 @@ def updateImagesCallbacks(self):
                 case "PrvwMod":
                     previewCallbacks(self)
                 case "AlignMod":
-                    transBeamCallbacks(self)
+                    transBeamCallbacks(self, self.UpdateImages)
                 case 'AnnMod' | 'CoMMod' | 'DPCMod':
                     annularDetectorCallbacks(self)
                 case "VrApMod":

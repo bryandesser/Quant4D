@@ -4,6 +4,10 @@ Changelog
 Unreleased
 ----------
 
+- Settings > Windows > Diffraction / Real-space: **Group into tabs** gathers
+  that space's image windows into one tabbed window (off by default).  Tabs
+  tear off by dragging out or double-clicking; closing a torn-off window
+  returns it to the group.  "Show scale bar" is now "Scale bar".
 - Export to py4DSTEM: a "py4DSTEM EMD (``*.h5``)" export format that
   ``py4DSTEM.read`` opens as a ``DataCube``, with the beam centre, detector
   pixel size (mrad) and convergence angle as its calibration and the images

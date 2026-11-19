@@ -142,8 +142,10 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    from callbacks.window_groups import connectWindowGroups  # noqa: E402
+    connectWindowGroups(self)     # Settings > Windows: Group into tabs (with tear-off)
     from callbacks.scale_bar import connectScaleBars  # noqa: E402
-    connectScaleBars(self)        # Settings > Windows: Show scale bar (diffraction / real space)
+    connectScaleBars(self)        # Settings > Windows: Scale bar (diffraction / real space)
     from callbacks.scan_step import connectScanStep  # noqa: E402
     connectScanStep(self)         # Scan Step: Import window (file) and Settings > Windows > Real-space (loaded data)
     from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402
@@ -232,8 +234,8 @@ def slotsSignals(self):
     self.TBX_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBY_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBR_NF.valueChanged.connect(lambda: moveTransBeam(self))
-    self.TBAutoAlign.clicked.connect(lambda: transBeamCallbacks(self))
-    self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self))
+    self.TBAutoAlign.clicked.connect(lambda: transBeamCallbacks(self, self.TBAutoAlign))
+    self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self, self.TBCrossAlign))
 
     # Math formula (CustMod)
 

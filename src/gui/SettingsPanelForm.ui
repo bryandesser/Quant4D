@@ -1086,16 +1086,26 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0" colspan="6">
+              <item row="3" column="0" colspan="3">
                <widget class="QCheckBox" name="ScaleBarDfrn">
                 <property name="toolTip">
                  <string>Scale bar on the diffraction windows: mrad once the transmitted beam is set (or a file calibrated it) and the detector coordinates are in mrad, else pixels</string>
                 </property>
                 <property name="text">
-                 <string>Show scale bar</string>
+                 <string>Scale bar</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="3">
+               <widget class="QCheckBox" name="GroupDfrn">
+                <property name="toolTip">
+                 <string>Collect the diffraction images into one window with a tab each (untick to float them again). Drag a tab out of the bar, or double-click it, to float that image on its own; closing it returns it to the tabs.</string>
+                </property>
+                <property name="text">
+                 <string>Group into tabs</string>
                 </property>
                </widget>
               </item>
@@ -1338,16 +1348,26 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0" colspan="6">
+              <item row="3" column="0" colspan="3">
                <widget class="QCheckBox" name="ScaleBarReal">
                 <property name="toolTip">
                  <string>Scale bar on the real-space windows, from the Scan Step below; pixels when the step is not set</string>
                 </property>
                 <property name="text">
-                 <string>Show scale bar</string>
+                 <string>Scale bar</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="3">
+               <widget class="QCheckBox" name="GroupReal">
+                <property name="toolTip">
+                 <string>Collect the real-space images into one window with a tab each (untick to float them again). Drag a tab out of the bar, or double-click it, to float that image on its own; closing it returns it to the tabs.</string>
+                </property>
+                <property name="text">
+                 <string>Group into tabs</string>
                 </property>
                </widget>
               </item>

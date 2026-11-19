@@ -12,7 +12,7 @@ coordinates, white with a black outline so it shows on any colour map.
 * Diffraction: mrad once the transmitted beam is set or a file calibrated it,
   and the detector coordinates are in mrad (Settings > Windows > Diffraction); pixels otherwise.
 
-Settings > Windows > Diffraction / Real-space: **Show scale bar** turns them on
+Settings > Windows > Diffraction / Real-space: **Scale bar** turns them on
 and off.
 """
 from __future__ import annotations
@@ -168,7 +168,7 @@ def refreshScaleBars(self, space: Optional[str] = None) -> None:
 
 
 def connectScaleBars(self) -> None:
-    """Connect the Show scale bar boxes and the calibration controls; called once from ``slotsSignals``."""
+    """Connect the Scale bar boxes and the calibration controls; called once from ``slotsSignals``."""
     sw = self.SettingsWindow
     sw.ScaleBarDfrn.toggled.connect(lambda *_: refreshScaleBars(self, "Dfrn"))
     sw.ScaleBarReal.toggled.connect(lambda *_: refreshScaleBars(self, "Real"))

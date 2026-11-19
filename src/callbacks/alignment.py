@@ -18,10 +18,13 @@ except ImportError:
     imfindcircles = None
 
 
-def transBeamCallbacks(self):
+def transBeamCallbacks(self, sender=None):
+    """Transmitted-beam step: *sender* says why (``DetrMode`` entering Align mode, ``UpdateImages``,
+    ``TBAutoAlign``, ``TBCrossAlign``; ``None`` just refreshes).  Passed explicitly, never read from
+    ``self.sender()``, because this is also called outside a Qt slot (see :func:`moveTransBeam`)."""
     from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
     from callbacks.window_manager import enableWindows  # noqa: E402
-    match self.sender():
+    match sender:
         case self.DetrMode:  # Entering mode
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
             if self.A.tb is None:

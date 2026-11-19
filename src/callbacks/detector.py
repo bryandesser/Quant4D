@@ -208,7 +208,7 @@ def detectorModeCallbacks(self):
                 self.Fig.Dfrn.canvas.flush_events()
 
             self.DfrnDetrTabGroup.setCurrentIndex(1)
-            transBeamCallbacks(self)
+            transBeamCallbacks(self, self.DetrMode)
 
         case "AnnMod":
             self.DfrnDetrTabGroup.setCurrentIndex(2)

@@ -127,6 +127,32 @@ class ImageWindow(qtw.QMainWindow):
     imageResize = qtc.pyqtSignal((qtc.QSize, str))
     activateFigure = qtc.pyqtSignal(str)
 
+    # callbacks.window_groups.GroupWindow holding this image when its space is grouped into tabs.
+    # show/hide/isVisible/activateWindow then ask the group (Python callers only: Qt's own calls,
+    # e.g. a tab widget hiding the pages not shown, go to QMainWindow directly).
+    group = None
+
+    def show(self):
+        if self.group is not None:
+            self.group.showMember(self)
+        else:
+            super().show()
+
+    def hide(self):
+        if self.group is not None:
+            self.group.hideMember(self)
+        else:
+            super().hide()
+
+    def isVisible(self) -> bool:
+        return self.group.isShown(self) if self.group is not None else super().isVisible()
+
+    def activateWindow(self):
+        if self.group is not None:
+            self.group.selectMember(self)
+        else:
+            super().activateWindow()
+
     def __init__(self, id, name, space, typ, cmap, pos):
         super().__init__
         qtw.QMainWindow.__init__(self)
@@ -210,11 +236,13 @@ class ImageWindow(qtw.QMainWindow):
             action.blockSignals(False)
 
     def showEvent(self, a0) -> None:
-        self._syncMenuAction(True)
+        if self.group is None:              # grouped: the group keeps the menu ticks (tab switches hide pages)
+            self._syncMenuAction(True)
         return super().showEvent(a0)
 
     def hideEvent(self, a0) -> None:
-        self._syncMenuAction(False)
+        if self.group is None:
+            self._syncMenuAction(False)
         return super().hideEvent(a0)
 
     # change closeEvent behavior to hide rather than close window
@@ -225,6 +253,8 @@ class ImageWindow(qtw.QMainWindow):
         return super().closeEvent(a0)
 
     def resizeEvent(self, a0: qtg.QResizeEvent) -> None:
+        if not self.isWindow():             # a tab of a grouped space: not a window size
+            return super().resizeEvent(a0)
         self.imageResize.emit(a0.size(), self.space)     # the new size (Settings > Windows > window size)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
         return super().resizeEvent(a0)
 

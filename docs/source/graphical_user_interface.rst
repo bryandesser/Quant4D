@@ -125,8 +125,8 @@ shrink below 600 px tall, so its controls are never squeezed):
   range so the default limits can be grabbed
 - **Windows** — buttons to show each image window and the vector-field overlay;
   the iCoM/dCoM bandpass filter; and per space, window size and orientation
-  (axis directions, reversal, rotation, size), **Show scale bar** and the
-  calibration:
+  (axis directions, reversal, rotation, size), **Scale bar**, **Group into
+  tabs** (see `Image windows`_) and the calibration:
 
   - **Diffraction**: **Scale**, the same value as the main window's mrad/px,
     shown in mrad/px or 1/Å/px (at the accelerating voltage) — changing either
@@ -165,6 +165,13 @@ zoom and restore-view.
   detector coordinates are in mrad (Settings > Windows > Diffraction); pixels
   otherwise.  Turn each on or off in Settings > Windows > Diffraction /
   Real-space.
+- **Group into tabs** (Settings > Windows > Diffraction / Real-space; off at
+  start): collects that space's open windows into one window with a tab each.
+  The Window menu, the Show buttons and mode changes add and remove tabs;
+  choosing a tab selects its image on the Display tab (unless locked).  Drag
+  a tab out of the bar, double-click it, or right-click > Float in its own
+  window to tear it off; closing a torn-off window returns it to the tabs.
+  Untick to float every window again where it was.
 - **Status bar**: the pixel under the cursor and its raw value (``x=12,
   y=8  1.23e+04``).  The diffraction window also has the **Pattern** dropdown
   there (sum, mean, max, std, …: how the patterns of the real-space ROI are
