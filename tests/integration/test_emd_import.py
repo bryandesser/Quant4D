@@ -86,14 +86,36 @@ def test_partial_binned_import_converts_the_calibration(app, qapp, emd_file):
 
 
 def test_angle_only_keeps_the_fitted_radius(app, qapp, tmp_path, synthetic_data):
-    path = _write(tmp_path / "angle.h5", synthetic_data, beam_xy=BEAM_XY, q_pixel_size=0.02,
-                  q_units="A^-1", probe_semiangle_mrad=SEMI)
-    iw = _open(app, qapp, path)
-    assert "not used" in iw.ImpFileMetaNotes.toPlainText()
+    path = _write(tmp_path / "angle.h5", synthetic_data, beam_xy=BEAM_XY, probe_semiangle_mrad=SEMI)
+    _open(app, qapp, path)
     _import(app, qapp, (SCAN_X * SCAN_Y, DET_X * DET_Y))
     x, y, r, alpha, mrad = _beam(app)
     assert (x, y) == pytest.approx(BEAM_XY) and alpha == pytest.approx(SEMI)
-    assert mrad == pytest.approx(SEMI / r, abs=0.01)          # scale from the (auto-aligned) radius
+    assert mrad == pytest.approx(SEMI / r, abs=1e-3)          # scale from the (auto-aligned) radius
+
+
+def test_inverse_angstrom_converted_at_the_voltage(app, qapp, tmp_path, synthetic_data):
+    """A py4DSTEM scale in 1/Å becomes mrad with the relativistic wavelength at the field's voltage."""
+    from callbacks.io.emd import electron_wavelength_A
+    k = 0.02                                                     # 1/Å per pixel
+    path = _write(tmp_path / "inv_a.h5", synthetic_data, beam_xy=BEAM_XY, q_pixel_size=k,
+                  q_units="A^-1", probe_semiangle_mrad=SEMI)
+    iw = _open(app, qapp, path)
+    iw.ImpAccVolt.setValue(300)
+    qapp.processEvents()
+    at300 = 1000 * k * electron_wavelength_A(300)
+    assert f"= {at300:.4g} mrad/px at 300 kV" in iw.ImpFileMetaNotes.toPlainText()
+    iw.ImpAccVolt.setValue(200)                                 # the notes follow the voltage
+    qapp.processEvents()
+    at200 = 1000 * k * electron_wavelength_A(200)
+    notes = iw.ImpFileMetaNotes.toPlainText()
+    assert f"= {at200:.4g} mrad/px at 200 kV" in notes and notes.count("py4DSTEM DataCube") == 1
+    _import(app, qapp, (SCAN_X * SCAN_Y, DET_X * DET_Y))
+    x, y, r, alpha, mrad = _beam(app)
+    assert app.D.kV == 200
+    # the scale is angle / radius, both shown to 0.01: within ~0.1 % of the file
+    assert mrad == pytest.approx(at200, rel=2e-3) and alpha == pytest.approx(SEMI)
+    assert r == pytest.approx(SEMI / at200, rel=1e-3)
 
 
 def test_plain_hdf5_is_unchanged(app, qapp, sample_hdf5_file):
@@ -159,3 +181,80 @@ def test_round_trip_through_export(loaded_app, qapp, tmp_path):
         loaded_app.TBY.setValue(saved[1])
         loaded_app.Alpha.setValue(saved[3])
         qapp.processEvents()
+
+
+def test_voltage_recorded_in_the_file_fills_the_field(app, qapp, tmp_path, synthetic_data):
+    from callbacks.io.emd import EmdCalibration, write_emd
+    from callbacks.io.export import full_region
+    path = tmp_path / "kv.h5"
+    write_emd(str(path), synthetic_data, (SCAN_X, SCAN_Y), (DET_X, DET_Y),
+              full_region((SCAN_X, SCAN_Y)), full_region((DET_X, DET_Y)),
+              EmdCalibration(beam_xy=BEAM_XY), metadata={"accelerating_voltage_kV": 120.0})
+    iw = _open(app, qapp, path)
+    assert iw.ImpAccVolt.value() == 120.0
+    assert "Accelerating voltage: 120 kV" in iw.ImpFileMetaNotes.toPlainText()
+
+
+def test_scan_step_follows_sampling_on_import_and_export(app, qapp, tmp_path, synthetic_data):
+    """0.5 nm steps, imported every 2nd position -> 1 nm; exported every 2nd of those -> 2 nm.
+    Cropping (start points) leaves the step alone."""
+    h5py = pytest.importorskip("h5py")
+    from callbacks.io.emd import read_emd_info
+    path = _write(tmp_path / "step.emd", synthetic_data, r_pixel_size=0.5, r_units="nm")
+    iw = _open(app, qapp, path)
+    assert "Scan step: 0.5 nm" in iw.ImpFileMetaNotes.toPlainText()
+    iw.ImpFrPart.setChecked(True)
+    iw.ImpFrPart.clicked.emit(True)
+    iw.IFrD.setValue(2)
+    iw.IFrX1.setValue(1)
+    qapp.processEvents()
+    fx, fy = iw.INFrX.value(), iw.INFrY.value()
+    _import(app, qapp, (fx * fy, DET_X * DET_Y))
+    assert (app.D.ScanStep, app.D.ScanUnits) == (1.0, "nm")
+
+    sw = app.SaveWindow
+    app.ShowSaveWdw.trigger()
+    sw.SaveDir.setText(str(tmp_path))
+    sw.SaveTabGroup.setCurrentWidget(sw.ExportTab)
+    sw.ExpFormat.setCurrentIndex(sw.ExpFormat.findData("emd"))
+    sw.ExpFilename.setText("step_out")
+    sw.ExpDimSuff.setChecked(False)
+    sw.ExpFrPart.setChecked(True)
+    sw.ExpFrPart.clicked.emit(True)
+    sw.EFrD.setValue(2)
+    qapp.processEvents()
+    assert "Scan step: 2 nm" in sw.ExpNotes.toPlainText()
+    sw.SaveExport.click()
+    qapp.processEvents()
+    cal = read_emd_info(str(tmp_path / "step_out.h5")).calibration
+    assert (cal.r_pixel_size, cal.r_units) == (2.0, "nm")
+    with h5py.File(tmp_path / "step_out.h5") as f:
+        meta = f["pyquant4d_root/metadatabundle/pyquant4d"]
+        assert meta["scan_step"][()] == 2.0 and meta["accelerating_voltage_kV"][()] == app.D.kV
+
+
+def test_plain_file_scan_step_in_source_positions(app, qapp, sample_hdf5_file):
+    iw = _open(app, qapp, sample_hdf5_file)
+    iw.ImpFrPart.setChecked(True)
+    iw.ImpFrPart.clicked.emit(True)
+    iw.IFrD.setValue(2)
+    qapp.processEvents()
+    fx, fy = iw.INFrX.value(), iw.INFrY.value()
+    _import(app, qapp, (fx * fy, DET_X * DET_Y))
+    assert (app.D.ScanStep, app.D.ScanUnits) == (2.0, "pixels")
+
+
+def test_typed_path_clears_the_dataset_list(app, qapp, sample_hdf5_file, emd_file):
+    iw = _open(app, qapp, emd_file)
+    iw.ImpSubImg.setCurrentIndex(iw.ImpSubImg.findText("/pyquant4d_root/datacube/ADF/data"))
+    qapp.processEvents()
+    iw.ImpFilePath.editingFinished.emit()             # same path again (focus change): choice kept
+    qapp.processEvents()
+    assert iw.ImpSubImg.currentText() == "/pyquant4d_root/datacube/ADF/data"
+    _open(app, qapp, sample_hdf5_file)                # a different file typed in: list starts again
+    items = [iw.ImpSubImg.itemText(i) for i in range(iw.ImpSubImg.count())]
+    assert items == ["/data"]
+
+
+def test_scale_field_has_four_decimals(app):
+    assert app.mradPx.decimals() == 4

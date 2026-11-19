@@ -50,7 +50,15 @@ class MainWindow(MW_Base, MW_Ui):
         # self.windowHandle().screenChanged.connect(lambda: self.C.__setattr__("dpi",self.screen().physicalDotsPerInch()))
         # self.windowHandle().screenChanged.connect(lambda: self.pointPickerRadius.emit(self.screen().physicalDotsPerInch()))
 
+    embedded = False      # opened by pyquant4d.show(): closing must not end the Python session
+
     def closeEvent(self, event):
+        if self.embedded:
+            for w in [self.ImportWindow, self.SettingsWindow, self.SaveWindow, *self.Fig.values()]:
+                if isinstance(w, qtw.QWidget):
+                    w.close()
+            event.accept()
+            return
         # In headless / CI mode (QT_QPA_PLATFORM=offscreen) do not show a
         # QMessageBox: on Windows it triggers a fatal access violation at the
         # C++ level before Python can handle it.  Also avoid sys.exit() which

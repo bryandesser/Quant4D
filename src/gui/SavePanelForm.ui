@@ -439,6 +439,16 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="0" colspan="4">
+             <widget class="QCheckBox" name="ExpNormMasks">
+              <property name="toolTip">
+               <string>py4DSTEM export: binned diffraction masks are summed like the data (raw); tick to divide by the bin area, giving the fraction of each binned pixel inside the mask (0 to 1)</string>
+              </property>
+              <property name="text">
+               <string>Normalise binned masks (0 to 1)</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>

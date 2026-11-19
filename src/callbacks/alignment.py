@@ -167,7 +167,8 @@ def applyCalibration(self, cal):
     the convergence semi-angle both known, the disk radius follows
     (semi-angle / scale); with the scale only, the semi-angle follows from the
     current (fitted) radius; with the semi-angle only, it is set and the
-    scale follows from the radius.
+    scale follows from the radius.  The scale is then semi-angle / radius,
+    both fields rounded to 0.01, so it matches the file to about 0.1 %.
     """
     has_q = cal.q_units == "mrad" and cal.q_pixel_size > 0
     semi = cal.probe_semiangle_mrad

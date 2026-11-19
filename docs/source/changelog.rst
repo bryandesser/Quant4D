@@ -13,6 +13,17 @@ Unreleased
 - Import from py4DSTEM: an EMD file's DataCube calibration (beam centre,
   mrad/px, convergence angle) sets the transmitted beam after import, allowing
   for partial import and binning; the import notes describe it.
+- Accelerating voltage field in the Import window; a py4DSTEM calibration in
+  Å⁻¹ is converted to mrad with the relativistic electron wavelength.
+- Scan step kept with the dataset (from py4DSTEM files), scaled by import and
+  export sampling, and written on export.
+- Binned diffraction masks in the py4DSTEM export: raw sums by default, or
+  normalised to 0..1.
+- File > Open with py4DSTEM Reader... (when py4DSTEM is installed) and
+  ``pyquant4d.show(datacube)`` from Python; ``pip install pyquant4d[py4dstem]``.
+- The diffraction scale (mrad/px) shows 4 decimals.
+- A path typed into the Import window starts the HDF5 dataset list again for a
+  new file; the dataset picked is kept otherwise (also across file-type changes).
 
 0.2.0 (2026)
 ------------

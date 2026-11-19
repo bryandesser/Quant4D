@@ -63,6 +63,15 @@ You can verify GPU availability from Python::
     print(torch.cuda.is_available())          # True if a CUDA GPU is found
     print(torch.cuda.get_device_name(0))      # e.g. "NVIDIA GeForce RTX 3080"
 
+py4DSTEM
+--------
+
+pyQuant4D reads and writes py4DSTEM's EMD files without py4DSTEM.  Install it
+for **File > Open with py4DSTEM Reader...** (legacy py4DSTEM files) and for
+round trips from Python::
+
+    pip install "pyquant4d[py4dstem]"
+
 Developer extras
 ----------------
 

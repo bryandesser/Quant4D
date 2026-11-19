@@ -120,7 +120,12 @@ def importFailed(self, msg):
     notifDLG(self, self, "error", f"Error during import:\n{msg}", "Import Failed")
 
 
-def prepareData(self):
+def prepareData(self, keep_beam=False):
+    """Reset the controls for the dataset just loaded (or swapped).
+
+    *keep_beam* keeps the transmitted-beam alignment (swapping real-space X/Y).
+    Never reads ``self.sender()``: this also runs outside a slot (``pyquant4d.show``).
+    """
     # self.T.progDLG = progDLG(self, 'Preparing data ...', "Data Preparation"); #TODO
 
     # block slots/signals whilst initializing UI components
@@ -172,7 +177,7 @@ def prepareData(self):
             self.Fig[id].canvas.draw_idle()
 
         # Transmitted Beam controls
-        if self.sender() is not self.SettingsWindow.SwapRealXY:  # Keep transmitted beam alignment if swapping Real-space X/Y
+        if not keep_beam:  # Keep transmitted beam alignment if swapping Real-space X/Y
             self.P.TransBeamInit = 0
             # set transmitted beam ranges and values for sliders and number fields
             self.TBR.setRange(0, max(self.D.NPx))

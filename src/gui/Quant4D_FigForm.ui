@@ -1250,7 +1250,7 @@
                 <string> mrad/px</string>
                </property>
                <property name="decimals">
-                <number>2</number>
+                <number>4</number>
                </property>
                <property name="maximum">
                 <double>1000.000000000000000</double>
@@ -3151,6 +3151,7 @@
     </property>
     <addaction name="ShowImportWdw"/>
     <addaction name="actionSwap_Dataset"/>
+    <addaction name="actionOpen_with_py4DSTEM"/>
     <addaction name="separator"/>
     <addaction name="ShowSaveWdw"/>
     <addaction name="AutoSaveImg"/>
@@ -3302,6 +3303,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+O</string>
+   </property>
+  </action>
+  <action name="actionOpen_with_py4DSTEM">
+   <property name="text">
+    <string>Open with py4DSTEM Reader...</string>
+   </property>
+   <property name="toolTip">
+    <string>Read a file with py4DSTEM (including legacy py4DSTEM files) and load its 4-D DataCube</string>
    </property>
   </action>
   <action name="actionQuit">

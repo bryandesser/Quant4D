@@ -181,3 +181,47 @@ def test_swapping_detector_xy_swaps_the_file_beam():
     d.swapDiff()
     assert d.Calib.beam_xy == (2.0, 1.0) and d.Calib.q_pixel_size == 0.5
     D().swapDiff()                                     # no calibration: nothing to swap
+
+
+# ---------------------------------------------------------------------------
+# Angle <-> spatial frequency, binned masks
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("kv, wavelength_pm", [(300, 1.9687), (200, 2.5079), (100, 3.7014), (80, 4.1757)])
+def test_relativistic_wavelength(kv, wavelength_pm):
+    from callbacks.io.emd import electron_wavelength_A, mrad_per_inverse_angstrom
+    assert electron_wavelength_A(kv) * 100 == pytest.approx(wavelength_pm, abs=1e-4)
+    assert mrad_per_inverse_angstrom(kv) == pytest.approx(10 * wavelength_pm, abs=1e-3)
+    with pytest.raises(ValueError):
+        electron_wavelength_A(0)
+
+
+def test_inverse_angstrom_units_and_conversion():
+    from callbacks.io.emd import is_inverse_angstrom, mrad_per_inverse_angstrom, usable_calibration
+    assert all(is_inverse_angstrom(u) for u in ("A^-1", "Å^-1", "1/A", " a^-1 "))
+    assert not any(is_inverse_angstrom(u) for u in ("mrad", "pixels", "nm"))
+    cal = EmdCalibration(q_pixel_size=0.02, q_units="A^-1", probe_semiangle_mrad=20.0)
+    out = usable_calibration(cal, kV=300)
+    assert out.q_units == "mrad" and out.q_pixel_size == pytest.approx(0.02 * mrad_per_inverse_angstrom(300))
+    assert usable_calibration(cal).q_units == "pixels"                   # no voltage: not converted
+
+
+@pytest.mark.parametrize("normalize, expected", [(False, 4.0), (True, 1.0)])
+def test_binned_masks_raw_or_normalised(tmp_path, normalize, expected):
+    pixels = Region((0, 0), (4, 3), 2)
+    mask, dfrn = np.ones((NPY, NPX)), np.ones((NPY, NPX))
+    path, _ = _write(tmp_path, pixels=pixels, normalize_masks=normalize,
+                     images={"M": EmdImage(mask, "dfrn", mask=True), "D": EmdImage(dfrn, "dfrn")})
+    with h5py.File(path) as f:
+        np.testing.assert_array_equal(f["pyquant4d_root/datacube/M/data"][()], np.full((3, 4), expected))
+        np.testing.assert_array_equal(f["pyquant4d_root/datacube/D/data"][()], np.full((3, 4), 4.0))  # not a mask
+
+
+def test_recorded_voltage_and_scan_step_read_back(tmp_path):
+    cal = EmdCalibration(r_pixel_size=0.5, r_units="nm")
+    path, _ = _write(tmp_path, calibration=cal, metadata={"accelerating_voltage_kV": 200.0})
+    info = read_emd_info(path)
+    assert info.accelerating_voltage_kV == 200.0
+    assert (info.calibration.r_pixel_size, info.calibration.r_units) == (0.5, "nm")
+    from callbacks.io.emd import describe_emd
+    text = describe_emd(info)
+    assert "Scan step: 0.5 nm" in text and "Accelerating voltage: 200 kV" in text

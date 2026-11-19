@@ -69,6 +69,9 @@ class D:
     """ Parameters of the current imported dataset; should be constants (except for data type conversion) """
     annWidth: float = 0.5           # annuli width for BF/ADF integration
     Calib: Any = None               # callbacks.io.emd.EmdCalibration of a py4DSTEM file (file pixels), or None
+    kV: float = 300.0               # accelerating voltage (Import window), for mrad <-> 1/Å
+    ScanStep: float = 1.0           # size of one imported scan step (source step x import sampling) ...
+    ScanUnits: str = 'pixels'       # ... in these units ('pixels' = scan positions of the source file)
     ByteOrder: str = 'l'
     ByteSize: int = 4
     DataType: str = 'single'

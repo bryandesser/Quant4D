@@ -39,7 +39,8 @@ from callbacks.io.export import (Region, _iter_blocks, _with_byteorder, exported
                                  exported_shape)
 
 __all__ = ["EmdCalibration", "EmdImage", "EmdInfo", "write_emd", "is_emd", "read_emd_info",
-           "usable_calibration", "calibration_for_region", "describe_emd"]
+           "usable_calibration", "calibration_for_region", "describe_emd",
+           "electron_wavelength_A", "mrad_per_inverse_angstrom", "is_inverse_angstrom"]
 
 ROOT = "pyquant4d_root"
 DATACUBE = "datacube"
@@ -79,6 +80,7 @@ class EmdImage:
     data: np.ndarray
     space: str = "real"
     python_class: str = ""      # default: VirtualImage (real) / DiffractionSlice (dfrn)
+    mask: bool = False          # a mask: binned raw (summed) or normalised to 0..1, see write_emd
 
 
 @dataclass
@@ -91,6 +93,7 @@ class EmdInfo:
     images: list[str] = field(default_factory=list)   # HDF5 paths of child arrays
     authoring_program: str = ""
     origin_spread_px: float = 0.0               # how far the origin maps vary over the scan (#descan)
+    accelerating_voltage_kV: Optional[float] = None   # from pyQuant4D's session record, if present
 
 
 # ---------------------------------------------------------------------------
@@ -148,12 +151,15 @@ def write_emd(path: str, data: np.ndarray, scan, detector, frames: Region, pixel
               calibration: Optional[EmdCalibration] = None,
               images: Optional[Mapping[str, EmdImage]] = None,
               metadata: Optional[Mapping[str, object]] = None,
-              byte_order: str = "l") -> tuple[int, int, int, int]:
+              byte_order: str = "l", normalize_masks: bool = False) -> tuple[int, int, int, int]:
     """Write the selection as a py4DSTEM DataCube in an EMD 1.0 file.
 
     Arguments as for :func:`callbacks.io.export.write_hdf5`; *calibration*
-    must already describe the exported (cropped/binned) pixels.  Returns the
-    shape written, ``(NFrY, NFrX, NPxY, NPxX)``.
+    must already describe the exported (cropped/binned) pixels.  Binned
+    diffraction images are summed like the data; with *normalize_masks*, those
+    marked ``mask`` are divided by the bin area instead (the fraction of each
+    binned pixel inside the mask, 0 to 1).  Returns the shape written,
+    ``(NFrY, NFrX, NPxY, NPxX)``.
     """
     import h5py
 
@@ -185,6 +191,8 @@ def write_emd(path: str, data: np.ndarray, scan, detector, frames: Region, pixel
         for name, img in (images or {}).items():
             if img.space == "dfrn":
                 arr, cls = _dfrn_part(img.data, pixels), img.python_class or "DiffractionSlice"
+                if img.mask and normalize_masks:
+                    arr = arr / np.float32(pixels.step ** 2)
                 dims = [("Qx", cal.q_units, cal.q_pixel_size), ("Qy", cal.q_units, cal.q_pixel_size)]
             else:
                 arr, cls = _real_part(img.data, frames), img.python_class or "VirtualImage"
@@ -291,8 +299,48 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
             return EmdInfo(dataset=data.name, shape=(s[0], s[1], s[2], s[3]), dtype=data.dtype,
                            calibration=cal, images=images,
                            authoring_program=_str(f.attrs.get("authoring_program", "")),
-                           origin_spread_px=spread)
+                           origin_spread_px=spread, accelerating_voltage_kV=_session_kV(root))
     return None
+
+
+def _session_kV(root) -> Optional[float]:
+    """The accelerating voltage pyQuant4D recorded with an export, if any."""
+    ds = root.get("metadatabundle/pyquant4d/accelerating_voltage_kV")
+    try:
+        kv = float(ds[()]) if ds is not None else None
+    except (TypeError, ValueError):
+        return None
+    return kv if kv is not None and kv > 0 else None
+
+
+# ---------------------------------------------------------------------------
+# Scattering angle <-> spatial frequency
+# ---------------------------------------------------------------------------
+HC_KEV_A = 12.398419843320026          # h c in keV Å
+MC2_KEV = 510.99895000                 # electron rest energy in keV
+_INVERSE_ANGSTROM = {"a^-1", "å^-1", "a-1", "å-1", "1/a", "1/å", "a^{-1}", "å^{-1}", "angstrom^-1", "inverse angstrom"}
+
+
+def electron_wavelength_A(kV: float) -> float:
+    """Relativistic electron wavelength in Å for an accelerating voltage in kV.
+
+    ``λ = h c / sqrt(E (E + 2 m c²))`` with E the kinetic energy (e.g. 300 kV:
+    0.019687 Å; 200 kV: 0.025079 Å).
+    """
+    e = float(kV)
+    if e <= 0:
+        raise ValueError(f"the accelerating voltage must be positive, not {kV}")
+    return HC_KEV_A / np.sqrt(e * (e + 2 * MC2_KEV))
+
+
+def mrad_per_inverse_angstrom(kV: float) -> float:
+    """Scattering angle per spatial frequency: θ = λ k (small angles, py4DSTEM's
+    convention: k in Å⁻¹ without 2π), so 1 Å⁻¹ is ``1000 λ`` mrad."""
+    return 1000.0 * electron_wavelength_A(kV)
+
+
+def is_inverse_angstrom(units: str) -> bool:
+    return units.strip().lower().replace(" ", "") in _INVERSE_ANGSTROM
 
 
 # ---------------------------------------------------------------------------
@@ -302,16 +350,19 @@ def _in_mrad(cal: EmdCalibration) -> bool:
     return cal.q_units.strip().lower() == "mrad" and cal.q_pixel_size > 0
 
 
-def usable_calibration(cal: EmdCalibration) -> Optional[EmdCalibration]:
+def usable_calibration(cal: EmdCalibration, kV: Optional[float] = None) -> Optional[EmdCalibration]:
     """The parts of *cal* pyQuant4D can use, or None if there are none.
 
-    pyQuant4D calibrates the detector in mrad from the convergence angle; a
-    pixel size in other units (py4DSTEM's ``A^-1``, or plain pixels) is
-    dropped, since converting needs the accelerating voltage.
+    pyQuant4D calibrates the detector in mrad.  A pixel size in Å⁻¹ (py4DSTEM's
+    ``A^-1``) is converted with the relativistic wavelength at *kV*; without a
+    voltage, or in other units (plain pixels), it is dropped.
     """
     semi = cal.probe_semiangle_mrad if cal.probe_semiangle_mrad and cal.probe_semiangle_mrad > 0 else None
     if _in_mrad(cal):
         out = replace(cal, q_units="mrad", probe_semiangle_mrad=semi)
+    elif kV and is_inverse_angstrom(cal.q_units) and cal.q_pixel_size > 0:
+        out = replace(cal, q_pixel_size=cal.q_pixel_size * mrad_per_inverse_angstrom(kV), q_units="mrad",
+                      probe_semiangle_mrad=semi)
     else:
         out = replace(cal, q_pixel_size=1.0, q_units="pixels", probe_semiangle_mrad=semi)
     if out.beam_xy is None and out.q_units != "mrad" and semi is None:
@@ -334,8 +385,9 @@ def calibration_for_region(cal: EmdCalibration, start_xy, binning: int) -> EmdCa
     return replace(cal, beam_xy=beam, q_pixel_size=q)
 
 
-def describe_emd(info: EmdInfo) -> str:
-    """Lines for the Import window's file notes about a py4DSTEM DataCube."""
+def describe_emd(info: EmdInfo, kV: Optional[float] = None) -> str:
+    """Lines for the Import window's file notes about a py4DSTEM DataCube (*kV*: the
+    accelerating voltage set in the Import window, for an Å⁻¹ calibration)."""
     cal = info.calibration
     lines = [f"py4DSTEM DataCube{f' (written by {info.authoring_program})' if info.authoring_program else ''}"]
     if cal.beam_xy is not None:
@@ -345,13 +397,20 @@ def describe_emd(info: EmdInfo) -> str:
         lines.append(line)
     if _in_mrad(cal):
         lines.append(f"Detector: {cal.q_pixel_size:g} mrad/px")
+    elif kV and is_inverse_angstrom(cal.q_units) and cal.q_pixel_size > 0:
+        lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px = "
+                     f"{cal.q_pixel_size * mrad_per_inverse_angstrom(kV):.4g} mrad/px at {kV:g} kV")
     elif cal.q_units.strip().lower() != "pixels":
         lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px, not used "
-                     "(pyQuant4D calibrates in mrad from the convergence angle)")
+                     "(pyQuant4D calibrates in mrad; set the accelerating voltage to convert Å⁻¹)")
+    if cal.r_units.strip().lower() != "pixels":
+        lines.append(f"Scan step: {cal.r_pixel_size:g} {cal.r_units}")
+    if info.accelerating_voltage_kV:
+        lines.append(f"Accelerating voltage: {info.accelerating_voltage_kV:g} kV")
     if cal.probe_semiangle_mrad:
         lines.append(f"Convergence semi-angle: {cal.probe_semiangle_mrad:g} mrad")
     if info.images:
         lines.append("Images: " + ", ".join(p.rsplit("/", 1)[-1] for p in info.images))
-    if usable_calibration(cal) is not None:
+    if usable_calibration(cal, kV) is not None:
         lines.append("The calibration is applied to the transmitted beam after import (Alignment mode).")
     return "\n".join(lines)

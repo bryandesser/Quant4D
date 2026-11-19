@@ -213,13 +213,14 @@ class TestAnnularSpinners:
             w.AnnRi.setValue((1, 3))
             qapp.processEvents()
             ring = w.D.annWidth * w.DfPxR
+            shown = 0.5 * 10 ** -w.AnnRo_NF.decimals()      # the spin box rounds to its decimals
             assert w.AnnRo_NF.singleStep() == pytest.approx(ring)
-            assert w.AnnRo_NF.maximum() == pytest.approx(w.P.NRings * ring)
+            assert w.AnnRo_NF.maximum() == pytest.approx(w.P.NRings * ring, abs=shown)
             for expected in (4, 5, 6):
                 w.AnnRo_NF.stepBy(1)
                 qapp.processEvents()
                 assert w.AnnRi.value()[1] == expected, "a step up did not move the outer radius one ring"
-            assert w.AnnRo_NF.value() == pytest.approx(6 * ring)
+            assert w.AnnRo_NF.value() == pytest.approx(6 * ring, abs=shown)
             w.AnnRi_NF.stepBy(1)
             qapp.processEvents()
             assert w.AnnRi.value()[0] == 2

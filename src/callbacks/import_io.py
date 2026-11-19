@@ -134,16 +134,19 @@ def gatherImportOptions(self, preview):
     if self.ImportWindow.HDF5Button.isChecked() and ("Physical Memory" in d.mem):
         d.h5ds = d.subImg
 
-    # py4DSTEM calibration, when the dataset imported is the file's DataCube
+    # Accelerating voltage (converts between mrad and 1/Å)
+    d.kV = float(self.ImportWindow.ImpAccVolt.value())
+
+    # py4DSTEM calibration, when the dataset imported is the file's DataCube; the scan step is the
+    # file's step times the import sampling (cropping leaves it unchanged)
     d.Calib = None
+    d.ScanStep, d.ScanUnits = float(d.FrD), "pixels"
     if self.ImportWindow.HDF5Button.isChecked():
-        from callbacks.io.emd import read_emd_info, usable_calibration  # noqa: E402
-        try:
-            info = read_emd_info(d.filePath)
-        except (OSError, KeyError, ValueError, TypeError):
-            info = None
+        info = _emdInfo(d.filePath)
         if info is not None and info.dataset == d.subImg:
-            d.Calib = usable_calibration(info.calibration)
+            from callbacks.io.emd import usable_calibration  # noqa: E402
+            d.Calib = usable_calibration(info.calibration, d.kV)
+            d.ScanStep, d.ScanUnits = info.calibration.r_pixel_size * d.FrD, info.calibration.r_units
 
     return d
 
@@ -190,6 +193,12 @@ def importSelectFile(self, path=None, source=None):
         self.ImportWindow.ImportDataButton.setFocus(True)
         self.ImportWindow.ImpFileSelect.setAutoDefault(False)
         self.ImportWindow.ImpFileSelect.setDefault(False)
+
+    elif source is self.ImportWindow.ImpFilePath:
+        # a typed or pasted path: a different file starts the HDF5 dataset list again
+        typed = self.ImportWindow.ImpFilePath.text()
+        new_file = typed != getattr(self, "fname", None)
+        self.fname = typed
 
     # get file directory, name, extension, and size. display in filesize field
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
@@ -249,6 +258,46 @@ def _chooseFile(self):
     return None
 
 
+_EMD_MARK = "\n\npy4DSTEM DataCube"
+
+
+def _emdInfo(path):
+    """``read_emd_info(path)``, or None if the file is not a readable EMD file."""
+    from callbacks.io.emd import read_emd_info  # noqa: E402
+    try:
+        return read_emd_info(path)
+    except (OSError, KeyError, ValueError, TypeError):
+        return None
+
+
+def _emdNotes(self, dataset: str, adopt_kV: bool = False) -> str:
+    """File notes about a py4DSTEM DataCube when *dataset* is it, else ''.
+
+    *adopt_kV* (a new file): a voltage recorded in the file fills the
+    Accelerating Voltage field first.
+    """
+    from callbacks.io.emd import describe_emd  # noqa: E402
+    info = _emdInfo(self.ImportWindow.ImpFilePath.text())
+    if info is None or info.dataset != dataset:
+        return ""
+    kv = self.ImportWindow.ImpAccVolt
+    if adopt_kV and info.accelerating_voltage_kV:
+        with signals_blocked(kv):
+            kv.setValue(info.accelerating_voltage_kV)
+    return _EMD_MARK[:2] + describe_emd(info, kv.value())
+
+
+def importVoltageChanged(self):
+    """The accelerating voltage changed: redo the py4DSTEM part of the file notes (Å⁻¹ conversion)."""
+    if self.blockAllSignals or not self.ImportWindow.HDF5Button.isChecked():
+        return
+    notes = self.ImportWindow.ImpFileMetaNotes.toPlainText()
+    if _EMD_MARK not in notes:
+        return
+    self.ImportWindow.ImpFileMetaNotes.setText(
+        notes.split(_EMD_MARK)[0] + _emdNotes(self, self.ImportWindow.ImpSubImg.currentText()))
+
+
 def _h5dataset(h5file, key: str) -> "h5py.Dataset":
     """The dataset at *key* (``returnKeys`` lists datasets only; committed datatypes are refused)."""
     obj = h5file[key]
@@ -260,8 +309,8 @@ def _h5dataset(h5file, key: str) -> "h5py.Dataset":
 def importFileType(self, source=None, new_file=False):
     """Read the file's header/geometry for the file type chosen in the Import window.
 
-    *source* is the widget that called (the HDF5 dataset dropdown keeps the
-    dataset picked in it); *new_file* clears the HDF5 dataset list.
+    *source* is the widget that called.  *new_file* lists the HDF5 datasets
+    again and selects the largest; otherwise the dataset picked is kept.
     """
     from callbacks.io.dm import prepDM  # noqa: E402
 
@@ -524,8 +573,10 @@ def importFileType(self, source=None, new_file=False):
                 # enable subimage dropdown
                 self.ImportWindow.ImpSubImg.setEnabled(True)
 
-                # Select sub-image with the 1st largest dimension; unless manually selected
-                if source is not self.ImportWindow.ImpSubImg:
+                # List the datasets and select the largest, for a new file (or a list that does not match
+                # it); otherwise keep the dataset picked (in the dropdown, or before a file-type change)
+                listed = [self.ImportWindow.ImpSubImg.itemText(i) for i in range(self.ImportWindow.ImpSubImg.count())]
+                if new_file or listed != keys:
                     # List all images' names in `self.ImportWindow.ImpSubImg`
                     with signals_blocked(self.ImportWindow.ImpSubImg):
                         pdim = [_h5dataset(self.T.h5, key).size for key in keys]
@@ -572,13 +623,7 @@ def importFileType(self, source=None, new_file=False):
                     *dims, bo, str(h5i.dtype), noteoffs)
 
                 # a py4DSTEM file: describe the DataCube's calibration when it is the dataset selected
-                from callbacks.io.emd import describe_emd, read_emd_info  # noqa: E402
-                try:
-                    info = read_emd_info(self.ImportWindow.ImpFilePath.text())
-                except (OSError, KeyError, ValueError, TypeError):
-                    info = None
-                if info is not None and info.dataset == h5i.name:
-                    notes += "\n\n" + describe_emd(info)
+                notes += _emdNotes(self, h5i.name, adopt_kV=new_file)
                 if len(h5i.shape) == 3:       # a stack of frames: guess the scan from the frame count
                     guessFramesFromDimZ(dims[1])
         else:

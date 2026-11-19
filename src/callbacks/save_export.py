@@ -47,6 +47,7 @@ def connectSaveWindow(self):
     sw.ExpPxPart.clicked.connect(cb)
     sw.ExpFrPart.clicked.connect(cb)
     sw.SaveImgList.itemSelectionChanged.connect(cb)     # the images an EMD export embeds
+    sw.ExpNormMasks.clicked.connect(cb)
     for name in ("EPxX1", "EPxY1", "ENPxX", "ENPxY", "EPxD", "EFrX1", "EFrY1", "ENFrX", "ENFrY", "EFrD"):
         getattr(sw, name).valueChanged.connect(cb)
 
@@ -280,6 +281,12 @@ def _updateExportNotes(self):
             if cal.beam_xy is not None else "none (transmitted beam not set)"))
         images, skipped = emdImages(self)
         lines.append("Images (selected on the Save Images tab): " + (", ".join(images) or "none"))
+        binned_masks = [i for i, im in images.items() if im.mask and im.space == "dfrn" and pixels.step > 1]
+        if binned_masks:
+            lines.append(f"Binned masks ({', '.join(binned_masks)}): " + (
+                "normalised, 0 to 1" if sw.ExpNormMasks.isChecked()
+                else f"raw sums, 0 to {pixels.step ** 2} (tick Normalise binned masks for 0 to 1)"))
+        lines.append(f"Scan step: {cal.r_pixel_size:g} {cal.r_units}")
         if skipped:
             lines.append("Not embedded (not computed yet, or not a scan or detector image): " + ", ".join(skipped))
     sw.ExpNotes.setPlainText("\n".join(lines))
@@ -303,6 +310,9 @@ def _metadata(self, frames: ex.Region, pixels: ex.Region) -> dict:
         "detector_start_xy": np.array(pixels.start),
         "detector_count_xy": np.array(pixels.count),
         "detector_binning": pixels.step,
+        "scan_step": float(self.D.ScanStep) * frames.step,       # one exported scan step
+        "scan_step_units": self.D.ScanUnits,
+        "accelerating_voltage_kV": float(self.D.kV),
         "import_notes": self.D.NoteImp,
         "file_notes": self.D.NoteFileMeta,
     }
@@ -322,11 +332,12 @@ def emdCalibration(self, frames: ex.Region, pixels: ex.Region) -> emd.EmdCalibra
     """py4DSTEM calibration of the exported pixels.
 
     Detector pixels are in mrad once the transmitted beam is set (binning
-    multiplies the pixel size); scan positions stay in pixels of the source
-    scan (sampling multiplies the step).
+    multiplies the pixel size).  The scan step is the dataset's (pixels of
+    the source scan unless a calibrated file set it), times the export
+    sampling; cropping changes neither.
     """
-    cal = emd.EmdCalibration(r_pixel_size=float(frames.step), r_units="pixels")
     meta = _metadata(self, frames, pixels)
+    cal = emd.EmdCalibration(r_pixel_size=float(meta["scan_step"]), r_units=str(meta["scan_step_units"]))
     if "beam_center_xy" in meta:
         bx, by = (float(v) for v in meta["beam_center_xy"])
         cal.beam_xy = (bx, by)
@@ -344,6 +355,7 @@ def emdImages(self) -> tuple[dict, list]:
     """
     sw = self.SaveWindow
     space = dict(zip(self.G.ImgID, self.G.ImgSpace))
+    kind = dict(zip(self.G.ImgID, self.G.ImgType))
     shapes = {"Real": (self.D.NFrY, self.D.NFrX), "Dfrn": (self.D.NPxY, self.D.NPxX)}
     images, skipped = {}, []
     for item in sw.SaveImgList.selectedItems():
@@ -353,7 +365,8 @@ def emdImages(self) -> tuple[dict, list]:
         if space.get(id) not in shapes or image is None or np.shape(image) != shapes[space[id]]:
             skipped.append(id)
             continue
-        images[id] = emd.EmdImage(np.asarray(image, dtype=np.float32), "dfrn" if space[id] == "Dfrn" else "real")
+        images[id] = emd.EmdImage(np.asarray(image, dtype=np.float32), "dfrn" if space[id] == "Dfrn" else "real",
+                                  mask=kind.get(id) == "Mask")
     return images, skipped
 
 
@@ -384,7 +397,8 @@ def exportDataset(self):
             elif fmt == "emd":
                 shape = emd.write_emd(path, self.Data, scan, detector, frames, pixels,
                                       emdCalibration(self, frames, pixels), emdImages(self)[0],
-                                      _metadata(self, frames, pixels), byte_order)
+                                      _metadata(self, frames, pixels), byte_order,
+                                      normalize_masks=sw.ExpNormMasks.isChecked())
             else:
                 shape = ex.write_hdf5(path, self.Data, scan, detector, frames, pixels, byte_order,
                                       _metadata(self, frames, pixels))

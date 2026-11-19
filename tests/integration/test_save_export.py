@@ -205,6 +205,24 @@ class TestExportEmd:
             assert "Real" in f["pyquant4d_root/datacube"]
             assert "RealMask" not in f["pyquant4d_root/datacube"]
 
+    @pytest.mark.parametrize("normalise, top", [(False, 4.0), (True, 1.0)])
+    def test_binned_mask_raw_by_default(self, annular, qapp, save_window, tmp_path, normalise, top):
+        h5py = pytest.importorskip("h5py")
+        save_window.ExpNormMasks.setChecked(normalise)
+        try:
+            path, notes = self._export(save_window, qapp, tmp_path, ["DfrnMask"], binning=2)
+        finally:
+            save_window.ExpNormMasks.setChecked(False)
+        assert ("normalised, 0 to 1" if normalise else "raw sums, 0 to 4") in notes
+        with h5py.File(path) as f:
+            mask = f["pyquant4d_root/datacube/DfrnMask/data"][()]
+        expected = annular.Fig.DfrnMask.Image.reshape(DET_Y // 2, 2, DET_X // 2, 2).sum(axis=(1, 3))
+        assert np.allclose(mask, expected / (4.0 if normalise else 1.0))
+        assert mask.max() == pytest.approx(top)
+
+    def test_normalise_off_by_default(self, annular, save_window):
+        assert not save_window.ExpNormMasks.isChecked()
+
     def test_py4dstem_reads_the_export(self, annular, qapp, save_window, tmp_path):
         py4DSTEM = pytest.importorskip("py4DSTEM")
         app = annular

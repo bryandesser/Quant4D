@@ -29,6 +29,8 @@ Opened via the Import button.  Lets you:
 - Choose a partial frame or pixel sub-range
 - Estimate memory requirements before loading
 - Enable GPU loading when a compatible device is present
+- Set the **Accelerating Voltage** (kV, default 300), used to convert a
+  detector calibration in Å⁻¹ to mrad
 
 **Drag and drop.**  Drop a dataset file on any pyQuant4D window (main,
 Import, Settings, Save/Export or an image window) to open it in the Import
@@ -47,16 +49,42 @@ the calibration sets the transmitted beam:
 - the beam centre is py4DSTEM's mean origin (``qx0_mean``, ``qy0_mean``;
   py4DSTEM's ``qx0`` is pyQuant4D's **y**).  If the origin varies over the
   scan the notes say by how much; pyQuant4D uses the mean;
-- a detector pixel size in mrad is used as the diffraction scale.  Sizes in
-  other units (py4DSTEM's Å⁻¹) are not used, since converting them needs the
-  accelerating voltage;
-- the convergence semi-angle sets the angle.
+- a detector pixel size in mrad is used as the diffraction scale.  A size in
+  Å⁻¹ (py4DSTEM's ``A^-1``) is converted at the **Accelerating Voltage**:
+  θ = λk (small angles; py4DSTEM's k has no 2π), with the relativistic
+  wavelength λ = hc / √(E(E + 2mc²)) (1.9687 pm at 300 kV, 2.5079 pm at
+  200 kV).  The notes show the converted value and follow the field; a file
+  exported by pyQuant4D fills the field with the voltage it recorded;
+- the convergence semi-angle sets the angle;
+- the scan step (py4DSTEM's ``R_pixel_size``) is kept with the dataset,
+  multiplied by the import sampling (cropping leaves it unchanged), and
+  written again on export.
 
 With the centre, the scale and the angle all given, the disk radius follows
 (angle / scale) and no auto-alignment is run.  Otherwise auto-alignment fits
 the disk first and the file's values are applied on top.  Partial import and
-binning are taken into account.  Picking another dataset of the file (an
-embedded image) imports it without the calibration.
+binning are taken into account.  The scale is angle / radius with both
+fields shown to 0.01, so it matches the file to about 0.1 %.  Picking another
+dataset of the file (an embedded image) imports it without the calibration.
+
+**Open with py4DSTEM Reader...** (File menu, shown only when py4DSTEM is
+installed) reads a file with ``py4DSTEM.read`` and loads its first 4-D
+DataCube with its calibration.  Use it for legacy py4DSTEM files (0.12 and
+earlier) and anything else py4DSTEM reads; EMD 1.0 files also open through
+the Import window without py4DSTEM.  The whole dataset is loaded (no partial
+import).
+
+**From Python.**  ``pyquant4d.show`` opens pyQuant4D with a py4DSTEM DataCube
+(or any 4-D array ``(ry, rx, py, px)``) already loaded, calibration
+included::
+
+    import py4DSTEM, pyquant4d
+    datacube = py4DSTEM.read("scan.h5")
+    win = pyquant4d.show(datacube)          # kV=200 to convert an Å⁻¹ calibration
+
+In a script ``show`` runs until pyQuant4D is closed; in a notebook run
+``%gui qt`` first and it returns at once (or pass ``block=False``).  Closing
+the window closes pyQuant4D's windows without ending the Python session.
 
 Settings window
 ---------------

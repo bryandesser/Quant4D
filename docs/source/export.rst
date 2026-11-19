@@ -59,7 +59,9 @@ calibration of the *exported* pixels:
   constant ``qx0``/``qy0`` maps over the scan), shifted and scaled for the
   exported region;
 - the convergence semi-angle as ``probe_semiangle``;
-- scan step ``R_pixel_size`` in pixels of the source scan (the sampling step).
+- scan step ``R_pixel_size``: the dataset's scan step (from a calibrated
+  py4DSTEM file, else one position of the source scan) × the import sampling
+  × the export sampling, in its units.  Cropping changes neither scale.
 
 Before the beam is set, the detector is left uncalibrated (pixels).
 
@@ -67,7 +69,14 @@ The images selected on the **Save Images** tab are stored with the dataset:
 real-space images as ``VirtualImage`` and diffraction images as
 ``DiffractionSlice``, cropped, sampled or binned like the dataset (binned
 diffraction images are summed).  Images not computed yet are skipped; the
-notes box lists what will be embedded.  In py4DSTEM::
+notes box lists what will be embedded.
+
+Binned diffraction **masks** are summed like the data by default (raw: a
+binned pixel holds 0 to *b*² for binning *b*, consistent with the summed
+intensities).  Tick **Normalise binned masks (0 to 1)** in the partial
+pattern group to divide by the bin area instead, giving the fraction of each
+binned pixel inside the mask.  Real-space masks are sampled, not binned, and
+stay as they are.  In py4DSTEM::
 
     import py4DSTEM
     datacube = py4DSTEM.read("export.h5")
@@ -81,4 +90,6 @@ notes box lists what will be embedded.  In py4DSTEM::
    coordinate pair swaps: py4DSTEM's ``qx0`` is pyQuant4D's beam **y**.
 
 The pyQuant4D session record is stored alongside, in the metadata bundle
-``pyquant4d``.  A progress indicator is shown during export.
+``pyquant4d`` (it includes the scan step and the accelerating voltage, also
+written to the plain HDF5 export's ``/metadata``).  A progress indicator is
+shown during export.

@@ -63,6 +63,8 @@ dependencies = [
 # GPU acceleration via PyTorch — install CUDA-enabled torch separately if needed.
 # See https://pytorch.org/get-started/locally/ for the right wheel for your CUDA version.
 gpu  = ["torch>=2.0"]
+# py4DSTEM reader (legacy files) and pyquant4d.show(datacube); EMD files need only h5py
+py4dstem = ["py4DSTEM>=0.14"]
 # Full developer extras
 dev  = [
     "torch>=2.0",

@@ -40,7 +40,7 @@ from callbacks.plotting import displayCallbacks, sliderReleased, updateImagesCal
 from callbacks.detector import detectorModeCallbacks, detrCoordCallbacks  # noqa: E402
 from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
 from callbacks.importCallbacks import importCallbacks  # noqa: E402
-from callbacks.import_io import importSelectFile, importBoxInput, importFileType  # noqa: E402
+from callbacks.import_io import importSelectFile, importBoxInput, importFileType, importVoltageChanged  # noqa: E402
 from callbacks.window_manager import (  # noqa: E402
     resizeWindowCallbacks, showAllWindows, hideAllWindows, showWindowCallbacks,
 )
@@ -130,6 +130,7 @@ def slotsSignals(self):
     self.ImportWindow.FrHead.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpSubImg.currentIndexChanged.connect(
         lambda: importFileType(self, self.ImportWindow.ImpSubImg))
+    self.ImportWindow.ImpAccVolt.valueChanged.connect(lambda *_: importVoltageChanged(self))
     # file-type radio buttons: re-read the file's header/geometry for the chosen type
     for button in (self.ImportWindow.EMPADButton, self.ImportWindow.MedipixButton, self.ImportWindow.MRCButton,
                    self.ImportWindow.DM34Button, self.ImportWindow.HDF5Button, self.ImportWindow.CustomButton):
@@ -141,6 +142,8 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402
+    connectPy4DSTEM(self)         # File > Open with py4DSTEM Reader... (only with py4DSTEM installed)
     from callbacks.file_drop import installFileDrop  # noqa: E402
     installFileDrop(self)         # drop a dataset file on any window to open it in the Import window
     connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
@@ -771,7 +774,7 @@ def startupFcn(self):
 
     # only allow user to import data
     self.ShowImportWdw.setEnabled(True)
-    for action in (self.actionQuit, self.actionQuant4D_Manual, self.actionAbout_Quant4D):
+    for action in (self.actionQuit, self.actionQuant4D_Manual, self.actionAbout_Quant4D, self.actionOpen_with_py4DSTEM):
         action.setEnabled(True)      # always available
 
 

@@ -171,6 +171,18 @@ callbacks.file_drop
 .. automodule:: callbacks.file_drop
    :members:
 
+callbacks.py4dstem_bridge
+-------------------------
+
+.. automodule:: callbacks.py4dstem_bridge
+   :members:
+
+pyquant4d
+---------
+
+.. automodule:: pyquant4d
+   :members: show
+
 callbacks.realSpaceROICallbacks
 --------------------------------
 

@@ -48,4 +48,4 @@ def importCallbacks(self):
                     self.T.Preview = gatherImportOptions(self, True)
 
         case self.SettingsWindow.SwapDfrnXY | self.SettingsWindow.SwapRealXY:  # Refresh axes settings etc when dimensions swapped
-            prepareData(self)
+            prepareData(self, keep_beam=self.sender() is self.SettingsWindow.SwapRealXY)
