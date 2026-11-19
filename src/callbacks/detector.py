@@ -238,9 +238,15 @@ def detectorModeCallbacks(self):
     enableWindows(self, True)
 
 
-def detrCoordCallbacks(self):
+_SENDER = object()
+
+
+def detrCoordCallbacks(self, source=_SENDER):
+    """Detector coordinate options changed, or the diffraction scale/beam moved (*source* None:
+    called from :func:`callbacks.alignment.moveTransBeam`, possibly outside a slot)."""
+    src = self.sender() if source is _SENDER else source
     # "Polar" and "Absolute" are mutually exclusive
-    match self.sender():
+    match src:
         case self.SettingsWindow.DCSys:
             if self.SettingsWindow.DCSys.currentText() == "Polar":
                 self.SettingsWindow.DCPos.setCurrentIndex(self.SettingsWindow.DCPos.findText("Relative"))
@@ -264,7 +270,7 @@ def detrCoordCallbacks(self):
     match self.DetrMode.currentData():
         case "AnnMod" | "DPCMod" | "CoMMod":
             from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
-            annularDetectorCallbacks(self)      # self.sender() is still the DC* combo box
+            annularDetectorCallbacks(self, source="units")      # radii shown in the (new) unit and scale
         case "VrApMod":
             from callbacks.virtualApertureCallbacks import syncVrApControls  # noqa: E402
             syncVrApControls(self)

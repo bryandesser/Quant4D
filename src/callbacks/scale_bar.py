@@ -7,10 +7,10 @@ about a fifth of the axes width, rounded down to 1, 2 or 5 x 10^n in a
 readable unit.  It sits in the bottom-right corner of the axes, in screen
 coordinates, white with a black outline so it shows on any colour map.
 
-* Real space: the scan step of the loaded data (Settings > Misc >
-  Real-space Calibration); pixels while it is not set.
+* Real space: the scan step of the loaded data (Settings > Windows >
+  Real-space); pixels while it is not set.
 * Diffraction: mrad once the transmitted beam is set or a file calibrated it,
-  and the detector coordinates are in mrad (Settings > Misc); pixels otherwise.
+  and the detector coordinates are in mrad (Settings > Windows > Diffraction); pixels otherwise.
 
 Settings > Windows > Diffraction / Real-space: **Show scale bar** turns them on
 and off.

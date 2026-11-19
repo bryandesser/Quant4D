@@ -11,7 +11,7 @@ from callbacks.appClass import *
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
-from callbacks.signals import all_signals_blocked  # noqa: E402
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 try:
     from callbacks.imfindcircles import imfindcircles
 except ImportError:
@@ -133,6 +133,8 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
         self.TBY_NF.setValue(b0[1])
         self.Alpha.setValue(a)
         self.mradPx.setValue(mrad_per_px)
+        with signals_blocked(self.SettingsWindow.DfScale):     # Settings > Windows > Diffraction
+            self.SettingsWindow.DfScale.setValue(float(self.mradPx.value()))
 
         # Annular integration step (MATLAB's AnnularStep): one pixel, but at most 250 rings out to the
         # farthest corner (finer makes the pre-computed annular images slow), shown in mrad
@@ -145,7 +147,7 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
             self.A.tb.radius = np.array([r])
             self.A.tb.redraw()
 
-    detrCoordCallbacks(self)
+    detrCoordCallbacks(self, source=None)    # mrad values follow the scale (not via self.sender(): see above)
     from callbacks.scale_bar import refreshScaleBars  # noqa: E402
     refreshScaleBars(self, "Dfrn")      # the scale (mrad/px) may have changed
 

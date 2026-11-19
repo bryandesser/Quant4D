@@ -179,6 +179,9 @@ class ImageWindow(qtw.QMainWindow):
 
         self.toolbar = NavigationToolbar(self.canvas, self)
         layout.addWidget(self.toolbar)
+        # the cursor position and intensity go to a status bar under the toolbar, so the toolbar keeps
+        # its width (the readout used to push the diffraction "Pattern" dropdown behind ">>")
+        self.statusBar().setSizeGripEnabled(False)
 
         # only use self.move() for dummy window test, it triggers a moveEvent
         # which draws the decoration so they can be measured
@@ -222,7 +225,7 @@ class ImageWindow(qtw.QMainWindow):
         return super().closeEvent(a0)
 
     def resizeEvent(self, a0: qtg.QResizeEvent) -> None:
-        self.imageResize.emit(a0.size(), self.space)     # the new size (Settings > Misc > window size)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
+        self.imageResize.emit(a0.size(), self.space)     # the new size (Settings > Windows > window size)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
         return super().resizeEvent(a0)
 
     def on_key_press(self, event):
@@ -261,8 +264,17 @@ class ImageWindow(qtw.QMainWindow):
 # event-based data picking has been modified:
 # data = a.get_cursor_data(event)
 class NavigationToolbar(NavigationToolbar2QT):
+    """Matplotlib's toolbar without its coordinate label: the readout goes to the window's status bar."""
+
     def __init__(self, canvas, frame, name=None):
-        NavigationToolbar2QT.__init__(self, canvas, frame)
+        NavigationToolbar2QT.__init__(self, canvas, frame, coordinates=False)
+        self._frame = frame
+
+    def set_message(self, s):
+        frame = getattr(self, "_frame", None)          # set after matplotlib's __init__
+        bar = frame.statusBar() if isinstance(frame, qtw.QMainWindow) else None
+        if bar is not None:
+            bar.showMessage("  ".join(part.strip() for part in str(s).splitlines() if part.strip()))
 
     @staticmethod
     def _mouse_event_to_message(event):
@@ -292,6 +304,8 @@ class NavigationToolbar(NavigationToolbar2QT):
                         if data is not None:
                             data_str = a.format_cursor_data(data).rstrip()
                             if data_str:
-                                s = s + '\n' + data_str
+                                # pixel indices and the raw value: short enough to share the status bar
+                                # with the diffraction "Pattern" dropdown
+                                s = f"x={x}, y={y}\n{data_str.strip('[]')}"
                 return s
         return ""

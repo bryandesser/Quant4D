@@ -4,7 +4,7 @@ Changelog
 Unreleased
 ----------
 
-- Export to py4DSTEM: a "py4DSTEM EMD (*.h5)" export format that
+- Export to py4DSTEM: a "py4DSTEM EMD (``*.h5``)" export format that
   ``py4DSTEM.read`` opens as a ``DataCube``, with the beam centre, detector
   pixel size (mrad) and convergence angle as its calibration and the images
   selected on the Save Images tab embedded.  Written with h5py alone.
@@ -21,6 +21,21 @@ Unreleased
   sampling, listed in the Info tab and written on export.
 - Info tab: the real-space size was shown as Y⨯X under an X⨯Y label.
 - Scan step read from DM3/DM4 calibrations (with the microscope voltage).
+- Settings > Windows: diffraction **Scale** (mrad/px, synced with the main
+  window; edits recalculate the angle and every value in mrad) and the
+  detector coordinate options on the Diffraction tab, the scan step on the
+  Real-space tab (both moved from Misc); the rotation icons are gone (the
+  dropdown sets the rotation).  Changing the scale now also updates the
+  annular radii shown in mrad.
+- Image windows: cursor position and raw value in a status bar; the
+  diffraction Pattern dropdown sits there too, no longer hidden behind ">>".
+- Histogram: the axis extends 5 % past the image range, the limits carry
+  round handles, and the cursor shows resize/move over them.
+- Display: the mask button resets the mask opacity to 0 % (like brightness,
+  contrast and gamma) instead of opening the mask window.
+- Drag and drop: console warning when running as Administrator on Windows
+  (Explorer cannot drop on elevated programs); ``PYQUANT4D_DEBUG_DROP=1``
+  logs drag events.
 - DM3/DM4 detector calibration sets the diffraction scale after import (mrad,
   rad, or 1/nm and Å⁻¹ converted at the accelerating voltage); the beam centre
   still comes from auto-alignment.

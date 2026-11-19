@@ -59,8 +59,8 @@ calibration of the *exported* pixels:
   constant ``qx0``/``qy0`` maps over the scan), shifted and scaled for the
   exported region;
 - the convergence semi-angle as ``probe_semiangle``;
-- scan step ``R_pixel_size``: the loaded data's scan step (Settings > Misc >
-  Real-space Calibration) × the export sampling, in its units; uncalibrated,
+- scan step ``R_pixel_size``: the loaded data's scan step (Settings > Windows >
+  Real-space) × the export sampling, in its units; uncalibrated,
   in positions of the source scan.  Cropping changes neither scale.
 
 Before the beam is set, the detector is left uncalibrated (pixels).

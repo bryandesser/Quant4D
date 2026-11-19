@@ -474,12 +474,12 @@ def connectPatternCombine(self) -> None:
     for mode in compute.COMBINE_MODES:
         combo.addItem(mode, mode)
     combo.setCurrentIndex(combo.findData(DEFAULT_COMBINE))
-    combo.setToolTip("Set how patterns are combined in real space. NOTE: max() and std() can be "
-                     "significantly slower when interacting with a real-space ROI!")
-    toolbar = self.Fig.Dfrn.toolbar
-    toolbar.addSeparator()
-    toolbar.addWidget(qtw.QLabel(" Pattern: "))
-    toolbar.addWidget(combo)
+    combo.setToolTip("Pattern: how the diffraction patterns of the real-space ROI are combined "
+                     "(sum, mean, max, std). NOTE: max() and std() can be significantly slower when "
+                     "interacting with a real-space ROI!")
+    # on the right of the diffraction window's status bar: always visible, whatever the window width
+    # and the cursor readout on its left (in the toolbar it went behind ">>")
+    self.Fig.Dfrn.statusBar().addPermanentWidget(combo)
     self.DfrnCombine = combo
     combo.currentIndexChanged.connect(lambda *_: realSpaceROICallbacks(self))
 

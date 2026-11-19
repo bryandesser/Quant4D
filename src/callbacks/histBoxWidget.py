@@ -11,6 +11,7 @@ Provides:
 """
 
 import numpy as np
+from matplotlib.backend_tools import Cursors
 from matplotlib.patches import Rectangle
 from matplotlib.widgets import AxesWidget
 
@@ -65,6 +66,9 @@ def histbox_to_sliders(lo: float, hi: float,
 # HistBox
 # ---------------------------------------------------------------------------
 
+EDGE_PX = 6          # an edge grab is at least this many screen pixels either side of the line
+
+
 class HistBox(AxesWidget):
     """Interactive shaded box on a histogram axes for brightness/contrast control.
 
@@ -73,6 +77,10 @@ class HistBox(AxesWidget):
       * drag the **right edge** to move ``hi``
       * drag the **body** to shift the whole window
 
+    Each edge carries a round handle at mid-height, and the cursor shows what a
+    drag will do: a horizontal resize arrow over an edge, a move cross over the
+    body.
+
     When a drag ends (mouse-button-release) ``on_change(lo, hi)`` is called.
 
     Parameters
@@ -80,7 +88,8 @@ class HistBox(AxesWidget):
     ax        : matplotlib Axes – the histogram axes
     lo, hi    : float – initial low / high display limits (data units)
     on_change : callable(lo, hi) – called when limits change; may be None
-    edge_tol  : float – fraction of axes width treated as an edge grab (default 0.03)
+    edge_tol  : float – fraction of axes width treated as an edge grab (default 0.03);
+                at least ``EDGE_PX`` screen pixels
     color     : str   – face colour of the shaded region
     alpha     : float – transparency of the shaded region
     """
@@ -121,6 +130,13 @@ class HistBox(AxesWidget):
             color="steelblue", linewidth=1.5, zorder=4
         )
 
+        # --- round handles at mid-height (axes fraction, so linear and log scales alike) ---
+        handle = dict(marker="o", markersize=8, markerfacecolor="white", markeredgecolor="steelblue",
+                      markeredgewidth=1.5, linestyle="none", zorder=5, transform=ax.get_xaxis_transform())
+        self._handle_lo, = ax.plot([self._lo], [0.5], **handle)
+        self._handle_hi, = ax.plot([self._hi], [0.5], **handle)
+        self._cursor = None      # the cursor last set (None: the canvas default)
+
         # drag state
         self._drag_mode = None   # 'lo', 'hi', 'body', or None
         self._drag_x0 = None   # data-x at mouse-press
@@ -155,10 +171,12 @@ class HistBox(AxesWidget):
             self._line_lo.remove()
         except Exception:
             pass
-        try:
-            self._line_hi.remove()
-        except Exception:
-            pass
+        for artist in (self._line_hi, self._handle_lo, self._handle_hi):
+            try:
+                artist.remove()
+            except Exception:
+                pass
+        self._set_cursor(None)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -173,12 +191,32 @@ class HistBox(AxesWidget):
         for line, x in ((self._line_lo, self._lo), (self._line_hi, self._hi)):
             line.set_xdata([x, x])
             line.set_ydata(ylim)
+        self._handle_lo.set_xdata([self._lo])
+        self._handle_hi.set_xdata([self._hi])
         self.ax.figure.canvas.draw_idle()
 
+    def _set_cursor(self, cursor) -> None:
+        """Show *cursor* (a matplotlib ``Cursors``) over the histogram, or the default for None."""
+        if cursor == self._cursor:
+            return
+        self._cursor = cursor
+        try:
+            self.ax.figure.canvas.set_cursor(cursor if cursor is not None else Cursors.POINTER)
+        except Exception:        # a canvas without cursor support (e.g. Agg in tests)
+            pass
+
+    def cursor_for(self, mode):
+        return {"lo": Cursors.RESIZE_HORIZONTAL, "hi": Cursors.RESIZE_HORIZONTAL,
+                "body": Cursors.MOVE}.get(mode)
+
     def _axes_x_tol(self) -> float:
-        """Edge-grab tolerance in data units."""
+        """Edge-grab tolerance in data units: a fraction of the axes, at least EDGE_PX screen pixels."""
         xl = self.ax.get_xlim()
-        return self._edge_tol * abs(xl[1] - xl[0])
+        tol = self._edge_tol * abs(xl[1] - xl[0])
+        width_px = self.ax.bbox.width
+        if width_px > 0:
+            tol = max(tol, EDGE_PX * abs(xl[1] - xl[0]) / width_px)
+        return tol
 
     def _classify_hit(self, xdata: float) -> str | None:
         """Return 'lo', 'hi', 'body', or None depending on where the click landed."""
@@ -207,7 +245,11 @@ class HistBox(AxesWidget):
         self._drag_hi0 = self._hi
 
     def _on_motion(self, event) -> None:
-        if self._drag_mode is None or event.inaxes is not self.ax:
+        if self._drag_mode is None:          # hovering: say what a drag here would do
+            mode = self._classify_hit(event.xdata) if event.inaxes is self.ax else None
+            self._set_cursor(self.cursor_for(mode))
+            return
+        if event.inaxes is not self.ax:
             return
         dx = event.xdata - self._drag_x0
         xl = self.ax.get_xlim()

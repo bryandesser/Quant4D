@@ -70,7 +70,7 @@
         <number>4</number>
        </property>
        <item row="8" column="0">
-        <widget class="QToolButton" name="ShowMaskWdw">
+        <widget class="QToolButton" name="DispMaskOpaReset">
          <property name="minimumSize">
           <size>
            <width>29</width>
@@ -82,6 +82,9 @@
            <width>29</width>
            <height>29</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Reset the mask opacity to 0 %</string>
          </property>
          <property name="text">
           <string>...</string>
@@ -940,18 +943,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="3">
-               <widget class="QToolButton" name="RotDfrnIcon">
-                <property name="text">
-                 <string>...</string>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>icons/right_rotate.png</normaloff>icons/right_rotate.png</iconset>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4" colspan="2">
+              <item row="0" column="3" colspan="3">
                <widget class="QComboBox" name="RotDfrn">
                 <item>
                  <property name="text">
@@ -1091,6 +1083,102 @@
                 </property>
                </widget>
               </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QLabel" name="DfScaleLabel">
+                <property name="text">
+                 <string>Scale</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>DfScale</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2" colspan="4">
+               <widget class="QDoubleSpinBox" name="DfScale">
+                <property name="toolTip">
+                 <string>Diffraction scale (the main window's mrad/px): changing it recalculates the convergence angle, detector coordinates in mrad, scale bars and export</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="suffix">
+                 <string> mrad/px</string>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0" colspan="6">
+               <widget class="QLabel" name="DetectorCoordinatePanel">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Detector Coordinate Options</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0" colspan="2">
+               <widget class="QComboBox" name="DCSys">
+                <item>
+                 <property name="text">
+                  <string>Polar</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Cartesian</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="6" column="2" colspan="2">
+               <widget class="QComboBox" name="DCPos">
+                <item>
+                 <property name="text">
+                  <string>Relative</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Absolute</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="6" column="4" colspan="2">
+               <widget class="QComboBox" name="DCUnit">
+                <item>
+                 <property name="text">
+                  <string>mrad</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>pixel</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="RealWindowTab">
@@ -1149,18 +1237,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="3">
-               <widget class="QToolButton" name="RotRealIcon">
-                <property name="text">
-                 <string>...</string>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>icons/right_rotate.png</normaloff>icons/right_rotate.png</iconset>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4" colspan="2">
+              <item row="0" column="3" colspan="3">
                <widget class="QComboBox" name="RotReal">
                 <item>
                  <property name="text">
@@ -1296,7 +1373,7 @@
               <item row="3" column="0" colspan="6">
                <widget class="QCheckBox" name="ScaleBarReal">
                 <property name="toolTip">
-                 <string>Scale bar on the real-space windows, from the scan step (Settings &gt; Misc); pixels when the step is not set</string>
+                 <string>Scale bar on the real-space windows, from the Scan Step below; pixels when the step is not set</string>
                 </property>
                 <property name="text">
                  <string>Show scale bar</string>
@@ -1305,6 +1382,47 @@
                  <bool>true</bool>
                 </property>
                </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QLabel" name="RsStepLabel">
+                <property name="text">
+                 <string>Scan Step</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>RsStep</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2" colspan="2">
+               <widget class="QDoubleSpinBox" name="RsStep">
+                <property name="toolTip">
+                 <string>Distance between neighbouring probe positions of the loaded data (the file's step times the import sampling); used for export</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="4" colspan="2">
+               <widget class="QComboBox" name="RsUnits"/>
               </item>
              </layout>
             </widget>
@@ -1355,20 +1473,6 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="3" colspan="3">
-        <widget class="QComboBox" name="DCPos">
-         <item>
-          <property name="text">
-           <string>Relative</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Absolute</string>
-          </property>
-         </item>
-        </widget>
-       </item>
        <item row="0" column="5" colspan="3">
         <widget class="QComboBox" name="CalcPolicy">
          <item>
@@ -1386,50 +1490,6 @@
            <string>Passive</string>
           </property>
          </item>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="3">
-        <widget class="QComboBox" name="DCSys">
-         <item>
-          <property name="text">
-           <string>Polar</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Cartesian</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="2" column="6" colspan="2">
-        <widget class="QComboBox" name="DCUnit">
-         <item>
-          <property name="text">
-           <string>mrad</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>pixel</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="8">
-        <widget class="QLabel" name="DetectorCoordinatePanel">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Detector Coordinate Options</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-         </property>
         </widget>
        </item>
        <item row="0" column="0">
@@ -1481,63 +1541,6 @@
         </widget>
        </item>
        <item row="6" column="0" colspan="8">
-        <widget class="QLabel" name="RealCalibPanel">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Real-space Calibration</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0" colspan="3">
-        <widget class="QLabel" name="RsStepLabel">
-         <property name="text">
-          <string>Scan Step</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-         <property name="buddy">
-          <cstring>RsStep</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="3" colspan="3">
-        <widget class="QDoubleSpinBox" name="RsStep">
-         <property name="toolTip">
-          <string>Distance between neighbouring probe positions of the loaded data (the file's step times the import sampling); used for export</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-         <property name="buttonSymbols">
-          <enum>QAbstractSpinBox::NoButtons</enum>
-         </property>
-         <property name="decimals">
-          <number>4</number>
-         </property>
-         <property name="minimum">
-          <double>0.000100000000000</double>
-         </property>
-         <property name="maximum">
-          <double>1000000.000000000000000</double>
-         </property>
-         <property name="value">
-          <double>1.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="6" colspan="2">
-        <widget class="QComboBox" name="RsUnits"/>
-       </item>
-       <item row="8" column="0" colspan="8">
         <spacer name="MiscTabSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

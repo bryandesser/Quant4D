@@ -145,7 +145,7 @@ def slotsSignals(self):
     from callbacks.scale_bar import connectScaleBars  # noqa: E402
     connectScaleBars(self)        # Settings > Windows: Show scale bar (diffraction / real space)
     from callbacks.scan_step import connectScanStep  # noqa: E402
-    connectScanStep(self)         # Scan Step: Import window (file) and Settings > Misc (loaded data)
+    connectScanStep(self)         # Scan Step: Import window (file) and Settings > Windows > Real-space (loaded data)
     from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402
     connectPy4DSTEM(self)         # File > Open with py4DSTEM Reader... (only with py4DSTEM installed)
     from callbacks.file_drop import installFileDrop  # noqa: E402
@@ -208,7 +208,9 @@ def slotsSignals(self):
     self.SettingsWindow.ShowdCoMWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowiCoMWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowImageWdw.clicked.connect(lambda: showWindowCallbacks(self))
-    self.SettingsWindow.ShowMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
+    # the mask button beside the opacity slider resets it, like brightness/contrast/gamma
+    # (the mask windows open from the Show buttons)
+    self.SettingsWindow.DispMaskOpaReset.clicked.connect(lambda: self.SettingsWindow.DispMaskOpa.setValue(0))
     # the main window's show-window buttons had no accessible name, which names the window to show
     for button, id, tip in ((self.ShowRealMaskWdw, "RealMask", "Show the real-space mask"),
                             (self.ShowDfrnMaskWdw, "DfrnMask", "Show the diffraction mask")):
@@ -223,6 +225,9 @@ def slotsSignals(self):
     self.TBR.valueChanged.connect(lambda: moveTransBeam(self))
     self.Alpha.valueChanged.connect(lambda: moveTransBeam(self))
     self.mradPx.valueChanged.connect(lambda: moveTransBeam(self))
+    # Settings > Windows > Diffraction: the same scale; edits go through mrad/px (recalculating the angle etc.)
+    self.SettingsWindow.DfScale.valueChanged.connect(
+        lambda v: None if self.blockAllSignals else self.mradPx.setValue(v))
     self.TBX_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBY_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBR_NF.valueChanged.connect(lambda: moveTransBeam(self))
@@ -581,7 +586,7 @@ def startupFcn(self):
         self.G.AllFig.extend([self, self.SettingsWindow, self.ImportWindow, self.SaveWindow])
 
     def updateImageWindowSize(self, size, space):
-        """Settings > Misc > window size: the image area of the window just resized, i.e. its size less
+        """Settings > Windows > window size: the image area of the window just resized, i.e. its size less
         the toolbar/decoration (``mplDecor``, which the Set buttons add back).  This used to add each
         resize's change to the fields, and the first change of a new window is its whole size
         (Qt's old size is -1 x -1), so the fields filled up to about the monitor's size."""

@@ -138,11 +138,6 @@ def showWindowCallbacks(self):
             self.Fig[id].show()
             self.Fig[id].activateWindow()
             showImageContent(self, id)
-        case self.SettingsWindow.ShowMaskWdw:  # Show diffraction or Real `space` mask for the selected image
-            id = self.Fig[id].space + "Mask"
-            self.Fig[id].show()
-            self.Fig[id].activateWindow()
-            showImageContent(self, id)
         case other:  # All other `self.Show***Wdw` buttons
             id = self.sender().accessibleName()
             if id in self.G.ImgID:

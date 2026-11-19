@@ -116,7 +116,7 @@ def displayCallbacks(self, source=None):
 
             # Disable mask opacity UIs if: ColorWheel/Mask/Preview images selected
             enabledState = (fig.space != "ColorWheel") and (fig.type not in ["Mask", "Preview"])
-            self.SettingsWindow.ShowMaskWdw.setEnabled(enabledState)
+            self.SettingsWindow.DispMaskOpaReset.setEnabled(enabledState)
             self.SettingsWindow.DispMaskOpa_NF.setEnabled(enabledState)
             self.SettingsWindow.DispMaskOpa.setEnabled(enabledState)
 
@@ -302,8 +302,11 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
         binCounts, binEdges = np.histogram(values, bins=128)
         self.A.hist = hax.stairs(binCounts, binEdges, fill=True, facecolor="C0", edgecolor="k", linewidth=0.5)
 
-        # Set histogram limits
-        self.SettingsWindow.HistAxes.axes.set_xlim(binEdges.min(), binEdges.max())
+        # Set histogram limits, with a margin so the edges of the default display window (the data
+        # range) sit inside the axes, where they can be grabbed
+        lo_edge, hi_edge = float(binEdges.min()), float(binEdges.max())
+        pad = 0.05 * (hi_edge - lo_edge) if hi_edge > lo_edge else 0.5
+        self.SettingsWindow.HistAxes.axes.set_xlim(lo_edge - pad, hi_edge + pad)
         self.SettingsWindow.HistAxes.axes.set_ylim(
             0.5, (1.1 * binCounts).max().clip(1))  # Make sure upper limit is at least 1
 

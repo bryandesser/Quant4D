@@ -180,8 +180,9 @@ class TestHoverReadout:
         x_px, y_px = fig.ax.transData.transform((nx - 1, ny - 1))
         event = MouseEvent("motion_notify_event", fig.canvas, x_px, y_px)
         msg = NavigationToolbar._mouse_event_to_message(event)
-        value = fig.ax.get_images()[0].format_cursor_data(im[ny - 1, nx - 1]).rstrip()
+        value = fig.ax.get_images()[0].format_cursor_data(im[ny - 1, nx - 1]).rstrip().strip("[]")
         assert msg.endswith(value), f"hover shows {msg!r}, expected the value {value}"
+        assert msg.startswith(f"x={nx - 1}, y={ny - 1}"), msg           # pixel indices, compact
 
 
 class TestOnScreen:

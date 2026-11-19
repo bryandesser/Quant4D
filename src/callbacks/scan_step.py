@@ -6,7 +6,7 @@ Two fields (Bryan's choice, option D):
   neighbouring probe positions), filled in from a calibrated py4DSTEM or
   pyQuant4D file, ``px`` (uncalibrated) otherwise.  Partial import multiplies
   it by the sampling step; cropping leaves it unchanged.
-* **Settings > Misc, Real-space Calibration** — the step of the *loaded* data
+* **Settings > Windows > Real-space, Scan Step** — the step of the *loaded* data
   (``D.ScanStep``/``D.ScanUnits``), editable after import.  Export multiplies
   it by the export sampling.
 
@@ -87,7 +87,7 @@ def describeScanStep(d) -> str:
 
 
 def showScanStep(self) -> None:
-    """Show the loaded data's step in Settings > Misc (after import)."""
+    """Show the loaded data's step in Settings > Windows > Real-space (after import)."""
     sw = self.SettingsWindow
     if self.D is None:
         return
@@ -98,7 +98,7 @@ def showScanStep(self) -> None:
 
 
 def scanStepChanged(self) -> None:
-    """The loaded data's step was edited in Settings > Misc."""
+    """The loaded data's step was edited in Settings > Windows > Real-space."""
     sw = self.SettingsWindow
     if self.D is None:
         return

@@ -37,7 +37,15 @@ def calcCoM(obj, mask, cx, cy):
     return compute.weighted_mean_position(obj.D.Data, mask, cx, cy, getattr(obj.D, "GPU", None))
 
 
-def annularDetectorCallbacks(self):
+_SENDER = object()
+
+
+def annularDetectorCallbacks(self, source=_SENDER):
+    """Annular/CoM/DPC detector callbacks, dispatched on *source* (default ``self.sender()``).
+
+    ``source="units"``: the coordinate unit or the diffraction scale changed; the radius fields
+    are shown again in the current unit (callable outside a slot).
+    """
 
     def limitAnnUI():
         """Update annular detector UI limits/labels when coordinate options change."""
@@ -578,8 +586,8 @@ def annularDetectorCallbacks(self):
     b0 = self.B0
     dmod = self.DetrMode.currentData()
 
-    match self.sender():
-        case self.SettingsWindow.DCSys | self.SettingsWindow.DCPos | self.SettingsWindow.DCUnit:
+    match self.sender() if source is _SENDER else source:
+        case "units" | self.SettingsWindow.DCSys | self.SettingsWindow.DCPos | self.SettingsWindow.DCUnit:
             limitAnnUI()
         case self.DetrMode:
             limitAnnUI()

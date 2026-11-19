@@ -57,6 +57,15 @@ open as HDF5, so a py4DSTEM file selects its 4-D ``DataCube``.  If several
 files are dropped, only the first is opened (the import notes say so).
 Folders are not accepted, and drops are ignored while an import is running.
 
+.. note::
+
+   On Windows, a program started as Administrator (for example from an
+   elevated Anaconda Prompt) cannot receive drops from Explorer: the cursor
+   shows a no-entry sign.  Start pyQuant4D from a normal prompt; it prints a
+   warning on the console when it runs elevated.  Set
+   ``PYQUANT4D_DEBUG_DROP=1`` before starting it to print every drag event it
+   sees.
+
 **py4DSTEM files.**  An EMD 1.0 file written by py4DSTEM (0.14 or later) or by
 pyQuant4D's py4DSTEM export opens as HDF5 with its 4-D ``DataCube`` selected,
 and the file notes list its calibration.  After import, in Alignment mode,
@@ -106,16 +115,28 @@ Settings window
 Contains tabs for display, windows, and miscellaneous options:
 
 - **Display** — image selection (and lock), colour map, histogram, brightness,
-  contrast, gamma and mask opacity
+  contrast, gamma and mask opacity.  Each slider's button resets it (the mask
+  button sets the opacity to 0 %; the mask windows open from the Show
+  buttons).  On the histogram, the shaded box is the display range: drag a
+  round handle (or its edge) to move one limit, drag inside the box to shift
+  both; the cursor shows which.  The axis extends a little past the image's
+  range so the default limits can be grabbed
 - **Windows** — buttons to show each image window and the vector-field overlay;
-  the iCoM/dCoM bandpass filter; window size and orientation (axis directions,
-  reversal, rotation, size) and **Show scale bar** for diffraction and real
-  space
-- **Misc** — calculation policy, detector coordinate options, byte-order and
-  X/Y swaps of the dataset, and **Real-space Calibration**: the scan step of
-  the loaded data (the file's step × the import sampling), editable after
-  import.  Export multiplies it by the export sampling; choosing ``px``
-  returns to uncalibrated
+  the iCoM/dCoM bandpass filter; and per space, window size and orientation
+  (axis directions, reversal, rotation, size), **Show scale bar** and the
+  calibration:
+
+  - **Diffraction**: **Scale** (mrad/px), the same value as the main window's
+    mrad/px — changing either recalculates the convergence angle, every
+    detector value shown in mrad, the scale bars and the export calibration;
+    and the **Detector Coordinate Options** (polar/Cartesian,
+    relative/absolute, mrad/pixels)
+  - **Real-space**: **Scan Step** of the loaded data (the file's step × the
+    import sampling), editable after import; export multiplies it by the
+    export sampling; choosing ``px`` returns to uncalibrated
+
+- **Misc** — calculation policy and the byte-order and X/Y swaps of the
+  dataset
 - **Info** — dataset information, including both scan steps (e.g.
   ``Scan Step: 0.5 nm (file 0.25 nm × sampling 2)``); **Show all variables**
   adds a **Variables** tab listing the dataset parameters and settings
@@ -136,11 +157,16 @@ zoom and restore-view.
 - **Scale bar**: bottom right, a round length (1, 2 or 5 × 10ⁿ) of about a
   fifth of the window, recomputed as you zoom, resize or rotate the view and
   in annotated PNGs at any DPI.  Real-space windows use the scan step
-  (Settings > Misc), relabelled in pm, nm, µm or mm as the length needs;
-  pixels while the step is not set.  Diffraction windows use mrad once the
-  transmitted beam is set (or a file calibrated it) and the detector
-  coordinates are in mrad (Settings > Misc); pixels otherwise.  Turn each on
-  or off in Settings > Windows > Diffraction / Real-space.
+  (Settings > Windows > Real-space), relabelled in pm, nm, µm or mm as the
+  length needs; pixels while the step is not set.  Diffraction windows use
+  mrad once the transmitted beam is set (or a file calibrated it) and the
+  detector coordinates are in mrad (Settings > Windows > Diffraction); pixels
+  otherwise.  Turn each on or off in Settings > Windows > Diffraction /
+  Real-space.
+- **Status bar**: the pixel under the cursor and its raw value (``x=12,
+  y=8  1.23e+04``).  The diffraction window also has the **Pattern** dropdown
+  there (sum, mean, max, std, …: how the patterns of the real-space ROI are
+  combined), so it stays visible at any window width.
 
 - **Pan**: drag the image (anywhere that is not an annotation) when zoomed in.
 - **Zoom**: the mouse wheel zooms about the cursor; ``+`` and ``-`` zoom about

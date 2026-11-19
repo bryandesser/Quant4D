@@ -77,8 +77,8 @@ Editing the selected mask
 -------------------------
 
 - **Details table** — the mask's points (centres, handles or vertices) and
-  radii, editable as numbers.  Coordinates follow the settings on the *Misc*
-  tab of the Settings window: polar or Cartesian, relative to the beam centre
+  radii, editable as numbers.  Coordinates follow the Detector Coordinate
+  Options in Settings > Windows > Diffraction: polar or Cartesian, relative to the beam centre
   or absolute, in mrad or pixels.
 - **Rotate** clockwise or anticlockwise by the chosen step (180° down to
   0.25°) about the beam centre, as displayed.  File masks rotate in steps of

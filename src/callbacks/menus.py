@@ -65,8 +65,6 @@ def connectMenus(self) -> None:
     sw.LiveUpdateImageIcon.setToolTip(POLICY_HELP)
     sw.LiveUpdateImageIcon.clicked.connect(
         lambda *_: qtw.QToolTip.showText(qtg.QCursor.pos(), POLICY_HELP, sw.LiveUpdateImageIcon))
-    sw.RotDfrnIcon.setToolTip("Rotate the diffraction-space view (clockwise)")
-    sw.RotRealIcon.setToolTip("Rotate the real-space view (clockwise)")
 
 
 def openSettingsTab(self, tab) -> None:
