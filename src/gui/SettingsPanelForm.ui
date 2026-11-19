@@ -1078,6 +1078,19 @@
                 </property>
                </widget>
               </item>
+              <item row="3" column="0" colspan="6">
+               <widget class="QCheckBox" name="ScaleBarDfrn">
+                <property name="toolTip">
+                 <string>Scale bar on the diffraction windows: mrad once the transmitted beam is set (or a file calibrated it) and the detector coordinates are in mrad, else pixels</string>
+                </property>
+                <property name="text">
+                 <string>Show scale bar</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="RealWindowTab">
@@ -1277,6 +1290,19 @@
                <widget class="QPushButton" name="WdwSetAllReal">
                 <property name="text">
                  <string>Set All Real</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="6">
+               <widget class="QCheckBox" name="ScaleBarReal">
+                <property name="toolTip">
+                 <string>Scale bar on the real-space windows, from the scan step (Settings &gt; Misc); pixels when the step is not set</string>
+                </property>
+                <property name="text">
+                 <string>Show scale bar</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>

@@ -223,6 +223,8 @@ def plotImage(self, id):
             self.ImageAx[id].set_extent((-0.5, nx - 0.5, ny - 0.5, -0.5))
             fitAxesToImage(ax, disp.shape)
     self.ImageAx[id].set_clim(0, 1)
+    from callbacks.scale_bar import ensureScaleBar  # noqa: E402
+    ensureScaleBar(self, id)        # bottom-right scale bar (re-added after ax.cla())
 
     # Plot mask opacity on non-mask/non-preview image; maskOpa is in percent (i.e. 50 => 50%)
     if fig.type not in ["Mask", "Preview"]:

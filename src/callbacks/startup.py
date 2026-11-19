@@ -142,6 +142,8 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    from callbacks.scale_bar import connectScaleBars  # noqa: E402
+    connectScaleBars(self)        # Settings > Windows: Show scale bar (diffraction / real space)
     from callbacks.scan_step import connectScanStep  # noqa: E402
     connectScanStep(self)         # Scan Step: Import window (file) and Settings > Misc (loaded data)
     from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402

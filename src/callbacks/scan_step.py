@@ -117,6 +117,8 @@ def scanStepChanged(self) -> None:
     sw.DataInfo.setPlainText(getImportInfo(self))
     from callbacks.save_export import refreshExportNotes  # noqa: E402
     refreshExportNotes(self)
+    from callbacks.scale_bar import refreshScaleBars  # noqa: E402
+    refreshScaleBars(self, "Real")
 
 
 def connectScanStep(self) -> None:

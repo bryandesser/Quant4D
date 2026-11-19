@@ -146,6 +146,8 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
             self.A.tb.redraw()
 
     detrCoordCallbacks(self)
+    from callbacks.scale_bar import refreshScaleBars  # noqa: E402
+    refreshScaleBars(self, "Dfrn")      # the scale (mrad/px) may have changed
 
 
 def fileCalibration(self):

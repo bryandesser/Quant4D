@@ -18,7 +18,9 @@ Format summary (both versions)
 
 Image data lives in ``ImageList/<n>/ImageData/Data``; its dimensions are
 ``ImageData/Dimensions`` (fastest first) and its element type
-``ImageData/DataType``.
+``ImageData/DataType``.  ``ImageData/Calibrations/Dimension/<i>`` holds each
+dimension's ``Scale``, ``Units`` and ``Origin``, and
+``ImageTags/Microscope Info/Voltage`` the accelerating voltage in volts.
 """
 from __future__ import annotations
 
@@ -54,6 +56,15 @@ class DMImage:
     data_type_code: int            # ImageData/DataType
     dims: tuple                    # fastest first, as stored in the file
     count: int                     # number of elements
+    calibrations: tuple = ()       # per dimension (scale, units, origin), same order as dims
+    voltage_V: Optional[float] = None   # ImageTags/Microscope Info/Voltage
+
+    def calibration(self, dim: int) -> Optional[tuple]:
+        """``(scale, units)`` of dimension *dim* if it is calibrated (units set, scale > 0), else None."""
+        if dim >= len(self.calibrations):
+            return None
+        scale, units, _ = self.calibrations[dim]
+        return (scale, units) if units and scale > 0 else None
 
     @property
     def nbytes(self) -> int:
@@ -149,6 +160,40 @@ class _Reader:
         raise ValueError(f"unsupported tag encoding {info}")
 
 
+def _text(value) -> str:
+    if isinstance(value, dict):
+        value = value.get("text") or ""
+    return (value if isinstance(value, str) else "").strip("\x00").strip()
+
+
+def _calibrations(data: dict) -> tuple:
+    cal = data.get("Calibrations")
+    dims = cal.get("Dimension") if isinstance(cal, dict) else None
+    if not isinstance(dims, dict):
+        return ()
+    out = []
+    for _, dim in sorted(dims.items(), key=lambda kv: int(kv[0]) if str(kv[0]).isdigit() else 0):
+        if not isinstance(dim, dict):
+            continue
+        try:
+            scale, origin = float(dim.get("Scale", 1.0)), float(dim.get("Origin", 0.0))
+        except (TypeError, ValueError):
+            scale, origin = 1.0, 0.0
+        out.append((scale, _text(dim.get("Units")), origin))
+    return tuple(out)
+
+
+def _voltage(entry: dict) -> Optional[float]:
+    tags = entry.get("ImageTags")
+    info = tags.get("Microscope Info") if isinstance(tags, dict) else None
+    value = info.get("Voltage") if isinstance(info, dict) else None
+    try:
+        volts = float(value)
+    except (TypeError, ValueError):
+        return None
+    return volts if volts > 0 else None
+
+
 def read_dm_header(path: str) -> DMFile:
     """Read the tag tree of a DM3/DM4 file and describe every image in it."""
     with open(path, "rb") as fh:
@@ -174,5 +219,6 @@ def read_dm_header(path: str) -> DMFile:
         if dtype is not None and arr["bytes"] != count * np.dtype(dtype).itemsize:
             dtype = None                                   # e.g. packed/RGB data: size does not match
         images.append(DMImage(name=name.strip("\x00"), offset=arr["offset"], dtype=dtype,
-                              data_type_code=code, dims=dims, count=count))
+                              data_type_code=code, dims=dims, count=count,
+                              calibrations=_calibrations(data), voltage_V=_voltage(entry)))
     return DMFile(version=version, little_endian=little, file_size=os.path.getsize(path), images=images)

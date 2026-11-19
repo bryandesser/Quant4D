@@ -11,11 +11,14 @@ from callbacks.signals import signals_blocked
 __all__ = ["prepDM"]
 
 
-def prepDM(self):
+def prepDM(self, source=None, adopt=False):
     """Fill the Import window from the header of the DM3/DM4 file in the path field.
 
     Lists every image in the file (selecting the largest unless the user picked
-    one), and sets its dimensions, data offset, data type and byte order.
+    one, *source* being the image dropdown), and sets its dimensions, data
+    offset, data type and byte order.  With *adopt* (a new file) the scan
+    step (calibration of dimensions 3/4) fills the Scan Step field and the
+    microscope voltage the Accelerating Voltage field.
 
     DM stores dimensions fastest first; a 4-D STEM dataset is
     ``(kx, ky, rx, ry)``, i.e. whole diffraction patterns one after another,
@@ -38,7 +41,7 @@ def prepDM(self):
 
     # list the images; pick the largest unless the user chose one
     iw.ImpSubImg.setEnabled(True)
-    if self.sender() is not iw.ImpSubImg or iw.ImpSubImg.count() != len(info.images):
+    if source is not iw.ImpSubImg or iw.ImpSubImg.count() != len(info.images):
         with signals_blocked(iw.ImpSubImg):
             iw.ImpSubImg.clear()
             iw.ImpSubImg.addItems([f"{im.name} {'x'.join(map(str, im.dims))}" for im in info.images])
@@ -64,5 +67,28 @@ def prepDM(self):
 
     order = "Little Endian" if info.little_endian else "Big Endian"
     dtype = image.dtype or f"unsupported (DM data type {image.data_type_code})"
-    return ("Dim: X = {}, Y = {}, Z = {}, W = {}\nDM{}, {}\nData type: {}\n"
-            "Selected image's offset is {} bytes.").format(*dims[:4], info.version, order, dtype, image.offset)
+    notes = ("Dim: X = {}, Y = {}, Z = {}, W = {}\nDM{}, {}\nData type: {}\n"
+             "Selected image's offset is {} bytes.").format(*dims[:4], info.version, order, dtype, image.offset)
+    return notes + _calibrationNotes(self, image, adopt)
+
+
+def _calibrationNotes(self, image, adopt: bool) -> str:
+    """Notes on the DM calibration; with *adopt*, fill the Scan Step and voltage fields from it."""
+    from callbacks.scan_step import setImportStep  # noqa: E402
+    lines = []
+    scan = image.calibration(2) if len(image.dims) >= 4 else None
+    if scan is not None:
+        other = image.calibration(3)
+        lines.append(f"Scan step: {scan[0]:.6g} {scan[1]}" + (
+            f" (Y: {other[0]:.6g} {other[1]}; X is used)" if other and other != scan else ""))
+        if adopt:
+            setImportStep(self, scan[0], scan[1])
+    detector = image.calibration(0)
+    if detector is not None and len(image.dims) >= 3:
+        lines.append(f"Detector: {detector[0]:.6g} {detector[1]}/px (not applied; the transmitted beam sets the scale)")
+    if image.voltage_V:
+        lines.append(f"Accelerating voltage: {image.voltage_V / 1000:g} kV")
+        if adopt:
+            with signals_blocked(self.ImportWindow.ImpAccVolt):
+                self.ImportWindow.ImpAccVolt.setValue(image.voltage_V / 1000)
+    return ("\n\nDM calibration\n" + "\n".join(lines)) if lines else ""

@@ -20,6 +20,10 @@ Unreleased
   in Settings > Misc (editable after import); scaled by import and export
   sampling, listed in the Info tab and written on export.
 - Info tab: the real-space size was shown as Y⨯X under an X⨯Y label.
+- Scan step read from DM3/DM4 calibrations (with the microscope voltage) and
+  MRC cells (z spacing).
+- Scale bars on the real-space and diffraction windows (scan step / mrad, or
+  pixels when uncalibrated), with Show scale bar toggles in Settings > Windows.
 - Binned diffraction masks in the py4DSTEM export: raw sums by default, or
   normalised to 0..1.
 - File > Open with py4DSTEM Reader... (when py4DSTEM is installed) and

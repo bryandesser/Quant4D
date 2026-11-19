@@ -32,9 +32,18 @@ Opened via the Import button.  Lets you:
 - Set the **Accelerating Voltage** (kV, default 300), used to convert a
   detector calibration in Å⁻¹ to mrad
 - Set the **Scan Step** of the file (pm, Å, nm or µm; ``px`` means
-  uncalibrated).  A calibrated py4DSTEM or pyQuant4D file fills it in; any
-  other new file starts at ``px``.  Partial import multiplies it by the
-  sampling step (cropping leaves it unchanged)
+  uncalibrated).  Partial import multiplies it by the sampling step (cropping
+  leaves it unchanged).  A new file fills it in when it carries a scan
+  calibration, and starts at ``px`` otherwise:
+
+  - **py4DSTEM / pyQuant4D EMD**: ``R_pixel_size``;
+  - **DM3/DM4**: the calibration of the 3rd dimension (the scan's X; a
+    different Y step is noted).  The microscope voltage also fills the
+    **Accelerating Voltage**; the detector calibration (e.g. mrad/px) is
+    listed in the notes but not applied;
+  - **MRC**: the z spacing of the cell (``zlen / mz``, Å), z running over the
+    probe positions.  The x/y spacing describes the detector axes and is
+    listed but not used; most writers leave ``zlen = 0`` (no scan step).
 
 **Drag and drop.**  Drop a dataset file on any pyQuant4D window (main,
 Import, Settings, Save/Export or an image window) to open it in the Import
@@ -97,7 +106,8 @@ Contains tabs for display, windows, and miscellaneous options:
   contrast, gamma and mask opacity
 - **Windows** — buttons to show each image window and the vector-field overlay;
   the iCoM/dCoM bandpass filter; window size and orientation (axis directions,
-  reversal, rotation, size) for diffraction and real space
+  reversal, rotation, size) and **Show scale bar** for diffraction and real
+  space
 - **Misc** — calculation policy, detector coordinate options, byte-order and
   X/Y swaps of the dataset, and **Real-space Calibration**: the scan step of
   the loaded data (the file's step × the import sampling), editable after
@@ -119,6 +129,15 @@ Image windows
 Each analysis mode opens a set of image windows (diffraction pattern,
 real-space image, CoM channels, etc.), each with a matplotlib toolbar for pan,
 zoom and restore-view.
+
+- **Scale bar**: bottom right, a round length (1, 2 or 5 × 10ⁿ) of about a
+  fifth of the window, recomputed as you zoom, resize or rotate the view and
+  in annotated PNGs at any DPI.  Real-space windows use the scan step
+  (Settings > Misc), relabelled in pm, nm, µm or mm as the length needs;
+  pixels while the step is not set.  Diffraction windows use mrad once the
+  transmitted beam is set (or a file calibrated it) and the detector
+  coordinates are in mrad (Settings > Misc); pixels otherwise.  Turn each on
+  or off in Settings > Windows > Diffraction / Real-space.
 
 - **Pan**: drag the image (anywhere that is not an annotation) when zoomed in.
 - **Zoom**: the mouse wheel zooms about the cursor; ``+`` and ``-`` zoom about

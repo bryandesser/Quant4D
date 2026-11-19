@@ -171,6 +171,24 @@ callbacks.file_drop
 .. automodule:: callbacks.file_drop
    :members:
 
+callbacks.scan_step
+-------------------
+
+.. automodule:: callbacks.scan_step
+   :members:
+
+callbacks.scale_bar
+-------------------
+
+.. automodule:: callbacks.scale_bar
+   :members:
+
+callbacks.io.mrc
+----------------
+
+.. automodule:: callbacks.io.mrc
+   :members:
+
 callbacks.py4dstem_bridge
 -------------------------
 
