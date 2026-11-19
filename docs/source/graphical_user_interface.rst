@@ -31,6 +31,10 @@ Opened via the Import button.  Lets you:
 - Enable GPU loading when a compatible device is present
 - Set the **Accelerating Voltage** (kV, default 300), used to convert a
   detector calibration in Å⁻¹ to mrad
+- Set the **Scan Step** of the file (pm, Å, nm or µm; ``px`` means
+  uncalibrated).  A calibrated py4DSTEM or pyQuant4D file fills it in; any
+  other new file starts at ``px``.  Partial import multiplies it by the
+  sampling step (cropping leaves it unchanged)
 
 **Drag and drop.**  Drop a dataset file on any pyQuant4D window (main,
 Import, Settings, Save/Export or an image window) to open it in the Import
@@ -56,9 +60,7 @@ the calibration sets the transmitted beam:
   200 kV).  The notes show the converted value and follow the field; a file
   exported by pyQuant4D fills the field with the voltage it recorded;
 - the convergence semi-angle sets the angle;
-- the scan step (py4DSTEM's ``R_pixel_size``) is kept with the dataset,
-  multiplied by the import sampling (cropping leaves it unchanged), and
-  written again on export.
+- the scan step (py4DSTEM's ``R_pixel_size``) fills the **Scan Step** field.
 
 With the centre, the scale and the angle all given, the disk radius follows
 (angle / scale) and no auto-alignment is run.  Otherwise auto-alignment fits
@@ -97,9 +99,13 @@ Contains tabs for display, windows, and miscellaneous options:
   the iCoM/dCoM bandpass filter; window size and orientation (axis directions,
   reversal, rotation, size) for diffraction and real space
 - **Misc** — calculation policy, detector coordinate options, byte-order and
-  X/Y swaps of the dataset
-- **Info** — dataset information; **Show all variables** adds a **Variables**
-  tab listing the dataset parameters and settings
+  X/Y swaps of the dataset, and **Real-space Calibration**: the scan step of
+  the loaded data (the file's step × the import sampling), editable after
+  import.  Export multiplies it by the export sampling; choosing ``px``
+  returns to uncalibrated
+- **Info** — dataset information, including both scan steps (e.g.
+  ``Scan Step: 0.5 nm (file 0.25 nm × sampling 2)``); **Show all variables**
+  adds a **Variables** tab listing the dataset parameters and settings
 - **Math** — formula for custom-detector Math masks (Custom Detectors mode)
 
 Save / Export window

@@ -142,6 +142,8 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    from callbacks.scan_step import connectScanStep  # noqa: E402
+    connectScanStep(self)         # Scan Step: Import window (file) and Settings > Misc (loaded data)
     from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402
     connectPy4DSTEM(self)         # File > Open with py4DSTEM Reader... (only with py4DSTEM installed)
     from callbacks.file_drop import installFileDrop  # noqa: E402

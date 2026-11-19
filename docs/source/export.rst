@@ -59,9 +59,9 @@ calibration of the *exported* pixels:
   constant ``qx0``/``qy0`` maps over the scan), shifted and scaled for the
   exported region;
 - the convergence semi-angle as ``probe_semiangle``;
-- scan step ``R_pixel_size``: the dataset's scan step (from a calibrated
-  py4DSTEM file, else one position of the source scan) × the import sampling
-  × the export sampling, in its units.  Cropping changes neither scale.
+- scan step ``R_pixel_size``: the loaded data's scan step (Settings > Misc >
+  Real-space Calibration) × the export sampling, in its units; uncalibrated,
+  in positions of the source scan.  Cropping changes neither scale.
 
 Before the beam is set, the detector is left uncalibrated (pixels).
 

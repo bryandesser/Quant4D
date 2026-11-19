@@ -203,6 +203,8 @@ def prepareData(self, keep_beam=False):
         # Export controls: whole dataset
         from callbacks.save_export import resetExportRanges  # noqa: E402
         resetExportRanges(self)
+        from callbacks.scan_step import showScanStep  # noqa: E402
+        showScanStep(self)                  # Settings > Misc: the loaded data's scan step
 
         # initiate image display parameters for all ImageWindows
         for id in self.G.ImgID:

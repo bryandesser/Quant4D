@@ -72,6 +72,7 @@ class D:
     kV: float = 300.0               # accelerating voltage (Import window), for mrad <-> 1/Å
     ScanStep: float = 1.0           # size of one imported scan step (source step x import sampling) ...
     ScanUnits: str = 'pixels'       # ... in these units ('pixels' = scan positions of the source file)
+    ScanStepFile: float = 1.0       # the file's scan step (Import window), in ScanUnits
     ByteOrder: str = 'l'
     ByteSize: int = 4
     DataType: str = 'single'

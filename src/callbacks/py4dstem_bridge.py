@@ -129,7 +129,9 @@ def loadDataCube(self, data, name: str = "py4DSTEM DataCube", calibration: Optio
     d.kV = float(kV if kV else self.ImportWindow.ImpAccVolt.value())
     if calibration is not None:
         d.Calib = usable_calibration(calibration, d.kV)
-        d.ScanStep, d.ScanUnits = float(calibration.r_pixel_size), calibration.r_units
+        from callbacks.scan_step import unitCode
+        d.ScanUnits = unitCode(calibration.r_units)
+        d.ScanStep = d.ScanStepFile = float(calibration.r_pixel_size) if d.ScanUnits != "pixels" else 1.0
     d.NoteImp = f"Loaded through py4DSTEM: {d.filePath}"
     self.D = d
     self.T.prev_D = d

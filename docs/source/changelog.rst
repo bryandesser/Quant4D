@@ -15,8 +15,11 @@ Unreleased
   for partial import and binning; the import notes describe it.
 - Accelerating voltage field in the Import window; a py4DSTEM calibration in
   Å⁻¹ is converted to mrad with the relativistic electron wavelength.
-- Scan step kept with the dataset (from py4DSTEM files), scaled by import and
-  export sampling, and written on export.
+- Real-space calibration: **Scan Step** of the file in the Import window
+  (filled in from calibrated py4DSTEM/pyQuant4D files) and of the loaded data
+  in Settings > Misc (editable after import); scaled by import and export
+  sampling, listed in the Info tab and written on export.
+- Info tab: the real-space size was shown as Y⨯X under an X⨯Y label.
 - Binned diffraction masks in the py4DSTEM export: raw sums by default, or
   normalised to 0..1.
 - File > Open with py4DSTEM Reader... (when py4DSTEM is installed) and

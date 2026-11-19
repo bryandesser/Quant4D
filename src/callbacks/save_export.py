@@ -20,7 +20,7 @@ from callbacks.signals import signals_blocked
 
 __all__ = ["saveExportCallbacks", "connectSaveWindow", "resetExportRanges",
            "saveImages", "exportDataset", "imageFilename", "exportRegions", "exportPath",
-           "emdCalibration", "emdImages"]
+           "emdCalibration", "emdImages", "refreshExportNotes"]
 
 _ANNULAR_MODES = ("AnnMod", "CoMMod", "DPCMod")
 _EXTENSION = {"h5": "h5", "raw": "raw", "emd": "h5"}     # export format -> file extension
@@ -85,6 +85,12 @@ def saveExportCallbacks(self):
     _updateSaveButton(self)
     if self.D is not None and self.Data is not None:
         _clampExportRanges(self)
+        _updateExportNotes(self)
+
+
+def refreshExportNotes(self):
+    """Redo the export summary (e.g. after the scan step was edited)."""
+    if self.D is not None and self.Data is not None:
         _updateExportNotes(self)
 
 

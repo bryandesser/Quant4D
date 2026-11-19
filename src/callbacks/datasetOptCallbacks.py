@@ -114,30 +114,3 @@ def swapByteOrder(self, update: bool = True) -> bool:
     if update:
         self.UpdateImages.trigger()
     return True
-
-
-def getImportInfo(self):
-    """ Function to update current data info """
-    d = self.D
-    d0 = self.T.prev_D
-    notes = "File: " + d.filePath
-    if d.subImg != '':
-        notes = notes + "\nSub-dataset: " + d.subImg
-
-    notes += "\n\n# Current Data Info #" +\
-        "\nByte Order: " + self.C.EndianTxt[d.ByteOrder] +\
-        "\nData Type: " + np.dtype(d.DataType).name +\
-        "\nByte Size: " + str(d.ByteSize) + " bytes" +\
-        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Diffraction", *d.NPx) +\
-        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", *d.NFr) +\
-        "\n\n# Data Structure in File #" +\
-        "\nData Offset: " + str(d0.Offset) + " bytes" +\
-        "\nFrame Header: " + str(d0.FrHead) + " bytes" +\
-        "\nFrame Footer: " + str(d0.FrFoot) + " bytes" +\
-        "\nByte Order: " + self.C.EndianTxt[d0.ByteOrder] +\
-        "\nData Type: " + np.dtype(d0.DataType).name +\
-        "\nByte Size: " + str(d0.ByteSize) + " bytes" +\
-        "\n\n# File Meta Info Notes #\n" + d0.NoteFileMeta + '\n' +\
-        "\n\n# Import Option Notes #\n" + d0.NoteImp + '\n'
-
-    return notes

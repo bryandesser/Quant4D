@@ -137,16 +137,18 @@ def gatherImportOptions(self, preview):
     # Accelerating voltage (converts between mrad and 1/Å)
     d.kV = float(self.ImportWindow.ImpAccVolt.value())
 
-    # py4DSTEM calibration, when the dataset imported is the file's DataCube; the scan step is the
-    # file's step times the import sampling (cropping leaves it unchanged)
+    # Scan step: the file's (Import window) times the import sampling; cropping leaves it unchanged
+    from callbacks.scan_step import importStep  # noqa: E402
+    d.ScanStepFile, d.ScanUnits = importStep(self)
+    d.ScanStep = d.ScanStepFile * d.FrD
+
+    # py4DSTEM calibration, when the dataset imported is the file's DataCube
     d.Calib = None
-    d.ScanStep, d.ScanUnits = float(d.FrD), "pixels"
     if self.ImportWindow.HDF5Button.isChecked():
         info = _emdInfo(d.filePath)
         if info is not None and info.dataset == d.subImg:
             from callbacks.io.emd import usable_calibration  # noqa: E402
             d.Calib = usable_calibration(info.calibration, d.kV)
-            d.ScanStep, d.ScanUnits = info.calibration.r_pixel_size * d.FrD, info.calibration.r_units
 
     return d
 
@@ -207,6 +209,9 @@ def importSelectFile(self, path=None, source=None):
         _, self.fileExt = os.path.splitext(self.ImportWindow.ImpFilePath.text())
         os.chdir(self.fileDir)
         self.T.FileSize = os.path.getsize(self.fileName)
+        if new_file:              # a new file starts uncalibrated; a calibrated file fills the step in
+            from callbacks.scan_step import setImportStep  # noqa: E402
+            setImportStep(self)
         self.ImportWindow.ImpActualFilesize.setText(
             "{} bytes, {:.2f} GiB".format(
                 self.T.FileSize, self.T.FileSize / 1024**3))
@@ -284,6 +289,9 @@ def _emdNotes(self, dataset: str, adopt_kV: bool = False) -> str:
     if adopt_kV and info.accelerating_voltage_kV:
         with signals_blocked(kv):
             kv.setValue(info.accelerating_voltage_kV)
+    if adopt_kV and info.calibration.r_units.strip().lower() not in ("", "pixels"):
+        from callbacks.scan_step import setImportStep  # noqa: E402
+        setImportStep(self, info.calibration.r_pixel_size, info.calibration.r_units)
     return _EMD_MARK[:2] + describe_emd(info, kv.value())
 
 
@@ -812,6 +820,7 @@ def importBoxInput(self, source=_SENDER):
 
 def getImportInfo(self):
     """ Function to update current data info """
+    from callbacks.scan_step import describeScanStep  # noqa: E402
     d = self.D
     d0 = self.T.prev_D
     notes = "File: " + d.filePath
@@ -823,7 +832,8 @@ def getImportInfo(self):
         "\nData Type: " + np.dtype(d.DataType).name +\
         "\nByte Size: " + str(d.ByteSize) + " bytes" +\
         "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Diffraction", *d.NPx) +\
-        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", *d.NFr) +\
+        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", d.NFrX, d.NFrY) +\
+        "\nScan Step: " + describeScanStep(d) +\
         "\n\n# Data Structure in File #" +\
         "\nData Offset: " + str(d0.Offset) + " bytes" +\
         "\nFrame Header: " + str(d0.FrHead) + " bytes" +\
