@@ -113,3 +113,71 @@ def test_py4dstem_reads_child_images(tmp_path):
     path, _ = _write(tmp_path, images={"ADF": EmdImage(adf)})
     dc = py4DSTEM.read(path)
     np.testing.assert_allclose(dc.tree("ADF").data, adf.astype(np.float32))
+
+
+# ---------------------------------------------------------------------------
+# Using a file's calibration (import)
+# ---------------------------------------------------------------------------
+def test_usable_calibration_keeps_mrad_drops_other_units():
+    from callbacks.io.emd import usable_calibration
+    mrad = usable_calibration(EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad"))
+    assert (mrad.q_pixel_size, mrad.q_units, mrad.beam_xy) == (0.5, "mrad", BEAM_XY)
+    inv_a = usable_calibration(EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.01, q_units="A^-1",
+                                              probe_semiangle_mrad=20.0))
+    assert (inv_a.q_pixel_size, inv_a.q_units, inv_a.probe_semiangle_mrad) == (1.0, "pixels", 20.0)
+    assert usable_calibration(EmdCalibration()) is None                        # nothing to use
+    assert usable_calibration(EmdCalibration(q_units="A^-1", q_pixel_size=0.01, probe_semiangle_mrad=0)) is None
+
+
+def test_calibration_for_region_crops_and_bins():
+    from callbacks.io.emd import calibration_for_region
+    cal = EmdCalibration(beam_xy=(10.0, 7.0), q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=20.0)
+    assert calibration_for_region(cal, (0, 0), 1) == cal
+    out = calibration_for_region(cal, (2, 1), 2)
+    assert out.beam_xy == pytest.approx(((10 - 2 + 0.5) / 2 - 0.5, (7 - 1 + 0.5) / 2 - 0.5))
+    assert out.q_pixel_size == 1.0 and out.probe_semiangle_mrad == 20.0
+    # binning a 2x2 block whose centre is the beam keeps the beam at that block's centre
+    assert calibration_for_region(EmdCalibration(beam_xy=(4.5, 4.5)), (0, 0), 2).beam_xy == (2.0, 2.0)
+
+
+def test_describe_emd(tmp_path):
+    from callbacks.io.emd import EmdInfo, describe_emd
+    cal = EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=21.4)
+    path, _ = _write(tmp_path, calibration=cal, images={"ADF": EmdImage(np.ones((NFY, NFX)))})
+    text = describe_emd(read_emd_info(path))
+    assert "Beam centre (x, y) = (2.00, 4.00)" in text and "0.5 mrad/px" in text
+    assert "21.4 mrad" in text and "Images: ADF" in text and "applied" in text
+    assert "moves" not in text                                                  # constant origin maps
+    other = describe_emd(EmdInfo("/d", (1, 1, 1, 1), np.dtype("f4"),
+                                 EmdCalibration(q_pixel_size=0.01, q_units="A^-1"), origin_spread_px=1.5))
+    assert "not used" in other and "applied" not in other
+
+
+@needs_py4dstem
+def test_reads_a_file_py4dstem_wrote(tmp_path):
+    """Our reader on py4DSTEM's own output: origin swapped back to (x, y), varying origin reported."""
+    _, full = _dataset()
+    dc = py4DSTEM.DataCube(full)
+    dc.calibration.set_Q_pixel_size(0.25)
+    dc.calibration.set_Q_pixel_units("mrad")
+    dc.calibration.set_probe_semiangle(18.0)
+    qx0 = np.full((NFY, NFX), 4.0)
+    qx0[0, 0] = 4.5                                     # the origin moves (descan)
+    dc.calibration.set_origin((qx0, np.full((NFY, NFX), 2.0)))
+    path = str(tmp_path / "p4d.h5")
+    py4DSTEM.save(path, dc, mode="o")
+    info = read_emd_info(path)
+    assert info is not None and info.shape == (NFY, NFX, NPY, NPX)
+    assert info.calibration.beam_xy == pytest.approx((2.0, float(qx0.mean())))   # (x, y) = (qy0, qx0)
+    assert info.calibration.q_pixel_size == 0.25 and info.calibration.q_units == "mrad"
+    assert info.calibration.probe_semiangle_mrad == pytest.approx(18.0)
+    assert info.origin_spread_px == pytest.approx(0.5)
+
+
+def test_swapping_detector_xy_swaps_the_file_beam():
+    """Settings > Misc 'swap diffraction X/Y' re-aligns from the file calibration: its beam must swap too."""
+    from callbacks.appClass import D
+    d = D(Calib=EmdCalibration(beam_xy=(1.0, 2.0), q_pixel_size=0.5, q_units="mrad"))
+    d.swapDiff()
+    assert d.Calib.beam_xy == (2.0, 1.0) and d.Calib.q_pixel_size == 0.5
+    D().swapDiff()                                     # no calibration: nothing to swap

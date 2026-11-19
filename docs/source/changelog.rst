@@ -10,6 +10,9 @@ Unreleased
   selected on the Save Images tab embedded.  Written with h5py alone.
 - Drag and drop: drop a dataset file on any window to open it in the Import
   window; ``.hdf5`` and ``.emd`` files are now recognised as HDF5.
+- Import from py4DSTEM: an EMD file's DataCube calibration (beam centre,
+  mrad/px, convergence angle) sets the transmitted beam after import, allowing
+  for partial import and binning; the import notes describe it.
 
 0.2.0 (2026)
 ------------

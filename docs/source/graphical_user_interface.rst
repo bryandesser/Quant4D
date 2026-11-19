@@ -39,6 +39,25 @@ open as HDF5, so a py4DSTEM file selects its 4-D ``DataCube``.  If several
 files are dropped, only the first is opened (the import notes say so).
 Folders are not accepted, and drops are ignored while an import is running.
 
+**py4DSTEM files.**  An EMD 1.0 file written by py4DSTEM (0.14 or later) or by
+pyQuant4D's py4DSTEM export opens as HDF5 with its 4-D ``DataCube`` selected,
+and the file notes list its calibration.  After import, in Alignment mode,
+the calibration sets the transmitted beam:
+
+- the beam centre is py4DSTEM's mean origin (``qx0_mean``, ``qy0_mean``;
+  py4DSTEM's ``qx0`` is pyQuant4D's **y**).  If the origin varies over the
+  scan the notes say by how much; pyQuant4D uses the mean;
+- a detector pixel size in mrad is used as the diffraction scale.  Sizes in
+  other units (py4DSTEM's Å⁻¹) are not used, since converting them needs the
+  accelerating voltage;
+- the convergence semi-angle sets the angle.
+
+With the centre, the scale and the angle all given, the disk radius follows
+(angle / scale) and no auto-alignment is run.  Otherwise auto-alignment fits
+the disk first and the file's values are applied on top.  Partial import and
+binning are taken into account.  Picking another dataset of the file (an
+embedded image) imports it without the calibration.
+
 Settings window
 ---------------
 

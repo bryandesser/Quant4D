@@ -42,9 +42,15 @@ def transBeamCallbacks(self):
             self.Fig.Dfrn.activateWindow()
 
             # If this is the initializing alignment, then do swap byte check and auto-align
+            # (a py4DSTEM file's calibration then sets the beam; with centre, scale and angle all
+            # given there is nothing to fit)
             if not self.P.TransBeamInit:
                 datasetOptCallbacks(self)  # checks for nans and asks if user wants to swap byteorder
-                autoAlign(self)
+                cal = fileCalibration(self)
+                if cal is None or not _completeCalibration(cal):
+                    autoAlign(self)
+                if cal is not None:
+                    applyCalibration(self, cal)
 
             enableWindows(self, True)  # Enable windows
 
@@ -140,6 +146,48 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
             self.A.tb.redraw()
 
     detrCoordCallbacks(self)
+
+
+def fileCalibration(self):
+    """The calibration of the imported py4DSTEM file in pixels of the imported pattern, or None."""
+    from callbacks.io.emd import calibration_for_region  # noqa: E402
+    if self.D is None or self.D.Calib is None:
+        return None
+    return calibration_for_region(self.D.Calib, (self.D.PxX1, self.D.PxY1), self.D.PxD)
+
+
+def _completeCalibration(cal) -> bool:
+    return cal.beam_xy is not None and cal.q_units == "mrad" and bool(cal.probe_semiangle_mrad)
+
+
+def applyCalibration(self, cal):
+    """Set the transmitted beam from a file's calibration (imported pixels).
+
+    The beam centre is taken as given.  With the detector scale (mrad/px) and
+    the convergence semi-angle both known, the disk radius follows
+    (semi-angle / scale); with the scale only, the semi-angle follows from the
+    current (fitted) radius; with the semi-angle only, it is set and the
+    scale follows from the radius.
+    """
+    has_q = cal.q_units == "mrad" and cal.q_pixel_size > 0
+    semi = cal.probe_semiangle_mrad
+    with all_signals_blocked(self):
+        if cal.beam_xy is not None:
+            nPx = dfrn_shape(self.D)       # (height, width)
+            x = float(np.clip(cal.beam_xy[0], 0, nPx[1] - 1))
+            y = float(np.clip(cal.beam_xy[1], 0, nPx[0] - 1))
+            for w, v in ((self.TBX, x), (self.TBX_NF, x), (self.TBY, y), (self.TBY_NF, y)):
+                w.setValue(v)
+        if has_q and semi:
+            r = float(semi) / float(cal.q_pixel_size)
+            self.TBR.setValue(r)
+            self.TBR_NF.setValue(r)
+            self.Alpha.setValue(float(semi))
+        elif has_q:
+            self.Alpha.setValue(float(cal.q_pixel_size) * float(self.TBR.value()))
+        elif semi:
+            self.Alpha.setValue(float(semi))
+    moveTransBeam(self, sender=None)
 
 
 def _beamCandidates(self, broad=False):

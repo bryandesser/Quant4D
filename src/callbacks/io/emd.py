@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Mapping, Optional
 
 import numpy as np
@@ -38,7 +38,8 @@ import numpy as np
 from callbacks.io.export import (Region, _iter_blocks, _with_byteorder, exported_dtype,
                                  exported_shape)
 
-__all__ = ["EmdCalibration", "EmdImage", "EmdInfo", "write_emd", "is_emd", "read_emd_info"]
+__all__ = ["EmdCalibration", "EmdImage", "EmdInfo", "write_emd", "is_emd", "read_emd_info",
+           "usable_calibration", "calibration_for_region", "describe_emd"]
 
 ROOT = "pyquant4d_root"
 DATACUBE = "datacube"
@@ -89,6 +90,7 @@ class EmdInfo:
     calibration: EmdCalibration
     images: list[str] = field(default_factory=list)   # HDF5 paths of child arrays
     authoring_program: str = ""
+    origin_spread_px: float = 0.0               # how far the origin maps vary over the scan (#descan)
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +264,7 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
             if cube is None:
                 continue
             cal = EmdCalibration()
+            spread = 0.0
             cg = root.get("metadatabundle/calibration")
             if isinstance(cg, h5py.Group):
                 def get(key, default=None):
@@ -271,8 +274,12 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
                 cal.r_pixel_size = float(get("R_pixel_size", 1.0))
                 cal.r_units = _str(get("R_pixel_units", b"pixels"))
                 qx0, qy0 = get("qx0_mean"), get("qy0_mean")
-                if qx0 is None and "qx0" in cg:            # maps but no means
-                    qx0, qy0 = float(np.nanmean(cg["qx0"][()])), float(np.nanmean(cg["qy0"][()]))
+                if "qx0" in cg and "qy0" in cg:
+                    maps = np.asarray(cg["qx0"][()], float), np.asarray(cg["qy0"][()], float)
+                    if all(m.size and np.isfinite(m).any() for m in maps):
+                        spread = max(float(np.nanmax(m) - np.nanmin(m)) for m in maps)
+                        if qx0 is None:                    # maps but no means
+                            qx0, qy0 = float(np.nanmean(maps[0])), float(np.nanmean(maps[1]))
                 if qx0 is not None and qy0 is not None:
                     cal.beam_xy = (float(qy0), float(qx0))   # back to (x, y)
                 semi = get("probe_semiangle")
@@ -283,5 +290,68 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
             s = data.shape
             return EmdInfo(dataset=data.name, shape=(s[0], s[1], s[2], s[3]), dtype=data.dtype,
                            calibration=cal, images=images,
-                           authoring_program=_str(f.attrs.get("authoring_program", "")))
+                           authoring_program=_str(f.attrs.get("authoring_program", "")),
+                           origin_spread_px=spread)
     return None
+
+
+# ---------------------------------------------------------------------------
+# Using a file's calibration in pyQuant4D
+# ---------------------------------------------------------------------------
+def _in_mrad(cal: EmdCalibration) -> bool:
+    return cal.q_units.strip().lower() == "mrad" and cal.q_pixel_size > 0
+
+
+def usable_calibration(cal: EmdCalibration) -> Optional[EmdCalibration]:
+    """The parts of *cal* pyQuant4D can use, or None if there are none.
+
+    pyQuant4D calibrates the detector in mrad from the convergence angle; a
+    pixel size in other units (py4DSTEM's ``A^-1``, or plain pixels) is
+    dropped, since converting needs the accelerating voltage.
+    """
+    semi = cal.probe_semiangle_mrad if cal.probe_semiangle_mrad and cal.probe_semiangle_mrad > 0 else None
+    if _in_mrad(cal):
+        out = replace(cal, q_units="mrad", probe_semiangle_mrad=semi)
+    else:
+        out = replace(cal, q_pixel_size=1.0, q_units="pixels", probe_semiangle_mrad=semi)
+    if out.beam_xy is None and out.q_units != "mrad" and semi is None:
+        return None
+    return out
+
+
+def calibration_for_region(cal: EmdCalibration, start_xy, binning: int) -> EmdCalibration:
+    """*cal*, in pixels of the file's detector, for a region starting at
+    *start_xy* (0-based (x, y)) and binned by *binning*.
+
+    Pixel i of the region covers file pixels ``start + i*b`` to
+    ``start + i*b + b - 1``, so a centre ``c`` becomes ``(c - start + 0.5)/b - 0.5``.
+    """
+    b = int(binning)
+    beam = None
+    if cal.beam_xy is not None:
+        beam = tuple((float(c) - float(s) + 0.5) / b - 0.5 for c, s in zip(cal.beam_xy, start_xy))
+    q = cal.q_pixel_size * b if cal.q_units != "pixels" else cal.q_pixel_size
+    return replace(cal, beam_xy=beam, q_pixel_size=q)
+
+
+def describe_emd(info: EmdInfo) -> str:
+    """Lines for the Import window's file notes about a py4DSTEM DataCube."""
+    cal = info.calibration
+    lines = [f"py4DSTEM DataCube{f' (written by {info.authoring_program})' if info.authoring_program else ''}"]
+    if cal.beam_xy is not None:
+        line = f"Beam centre (x, y) = ({cal.beam_xy[0]:.2f}, {cal.beam_xy[1]:.2f}) px"
+        if info.origin_spread_px > 0.01:
+            line += f"; the origin moves by up to {info.origin_spread_px:.2f} px over the scan (the mean is used)"
+        lines.append(line)
+    if _in_mrad(cal):
+        lines.append(f"Detector: {cal.q_pixel_size:g} mrad/px")
+    elif cal.q_units.strip().lower() != "pixels":
+        lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px, not used "
+                     "(pyQuant4D calibrates in mrad from the convergence angle)")
+    if cal.probe_semiangle_mrad:
+        lines.append(f"Convergence semi-angle: {cal.probe_semiangle_mrad:g} mrad")
+    if info.images:
+        lines.append("Images: " + ", ".join(p.rsplit("/", 1)[-1] for p in info.images))
+    if usable_calibration(cal) is not None:
+        lines.append("The calibration is applied to the transmitted beam after import (Alignment mode).")
+    return "\n".join(lines)

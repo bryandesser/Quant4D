@@ -134,6 +134,17 @@ def gatherImportOptions(self, preview):
     if self.ImportWindow.HDF5Button.isChecked() and ("Physical Memory" in d.mem):
         d.h5ds = d.subImg
 
+    # py4DSTEM calibration, when the dataset imported is the file's DataCube
+    d.Calib = None
+    if self.ImportWindow.HDF5Button.isChecked():
+        from callbacks.io.emd import read_emd_info, usable_calibration  # noqa: E402
+        try:
+            info = read_emd_info(d.filePath)
+        except (OSError, KeyError, ValueError, TypeError):
+            info = None
+        if info is not None and info.dataset == d.subImg:
+            d.Calib = usable_calibration(info.calibration)
+
     return d
 
 
@@ -559,6 +570,15 @@ def importFileType(self, source=None, new_file=False):
 
                 notes = "Dim: X = {:d}, Y = {:d}, Z = {:d}, W = {:d}\n{:s}, {:s}\n{:s}".format(
                     *dims, bo, str(h5i.dtype), noteoffs)
+
+                # a py4DSTEM file: describe the DataCube's calibration when it is the dataset selected
+                from callbacks.io.emd import describe_emd, read_emd_info  # noqa: E402
+                try:
+                    info = read_emd_info(self.ImportWindow.ImpFilePath.text())
+                except (OSError, KeyError, ValueError, TypeError):
+                    info = None
+                if info is not None and info.dataset == h5i.name:
+                    notes += "\n\n" + describe_emd(info)
                 if len(h5i.shape) == 3:       # a stack of frames: guess the scan from the frame count
                     guessFramesFromDimZ(dims[1])
         else:

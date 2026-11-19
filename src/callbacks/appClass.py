@@ -68,6 +68,7 @@ def _unit_pair() -> np.ndarray:
 class D:
     """ Parameters of the current imported dataset; should be constants (except for data type conversion) """
     annWidth: float = 0.5           # annuli width for BF/ADF integration
+    Calib: Any = None               # callbacks.io.emd.EmdCalibration of a py4DSTEM file (file pixels), or None
     ByteOrder: str = 'l'
     ByteSize: int = 4
     DataType: str = 'single'
@@ -114,6 +115,9 @@ class D:
         self.NPxX, self.NPxY = self.NPxY, self.NPxX
         self.PxX1, self.PxY1 = self.PxY1, self.PxX1
         self.NPx = np.flip(self.NPx)
+        if self.Calib is not None and self.Calib.beam_xy is not None:
+            from dataclasses import replace
+            self.Calib = replace(self.Calib, beam_xy=tuple(reversed(self.Calib.beam_xy)))
 
     def swapReal(self):
         # Swap real X/Y dimensions
