@@ -39,8 +39,13 @@ Opened via the Import button.  Lets you:
   - **py4DSTEM / pyQuant4D EMD**: ``R_pixel_size``;
   - **DM3/DM4**: the calibration of the 3rd dimension (the scan's X; a
     different Y step is noted).  The microscope voltage also fills the
-    **Accelerating Voltage**; the detector calibration (e.g. mrad/px) is
-    listed in the notes but not applied;
+    **Accelerating Voltage**, and the detector calibration (1st dimension) sets
+    the diffraction scale after import: mrad (or rad) directly, ``1/nm`` and
+    Å⁻¹ converted at the Accelerating Voltage, scaled by binning.  The DM
+    origin is not used: auto-alignment finds the beam centre and disk radius,
+    and the convergence angle follows as scale × radius.  With angles shown to
+    0.01 mrad the scale matches the file to about 0.1 % for angles of 5 mrad
+    and more;
   - **MRC**: the z spacing of the cell (``zlen / mz``, Å), z running over the
     probe positions.  The x/y spacing describes the detector axes and is
     listed but not used; most writers leave ``zlen = 0`` (no scan step).

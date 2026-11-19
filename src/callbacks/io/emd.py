@@ -40,7 +40,7 @@ from callbacks.io.export import (Region, _iter_blocks, _with_byteorder, exported
 
 __all__ = ["EmdCalibration", "EmdImage", "EmdInfo", "write_emd", "is_emd", "read_emd_info",
            "usable_calibration", "calibration_for_region", "describe_emd",
-           "electron_wavelength_A", "mrad_per_inverse_angstrom", "is_inverse_angstrom"]
+           "electron_wavelength_A", "mrad_per_inverse_angstrom", "is_inverse_angstrom", "mrad_per_unit"]
 
 ROOT = "pyquant4d_root"
 DATACUBE = "datacube"
@@ -343,6 +343,22 @@ def is_inverse_angstrom(units: str) -> bool:
     return units.strip().lower().replace(" ", "") in _INVERSE_ANGSTROM
 
 
+# detector units pyQuant4D converts to mrad: angles directly, spatial frequencies (no 2π) at a voltage
+_ANGLES_MRAD = {"mrad": 1.0, "rad": 1000.0, "urad": 1e-3, "µrad": 1e-3, "μrad": 1e-3}
+_PER_ANGSTROM = {"1/nm": 0.1, "nm^-1": 0.1, "nm-1": 0.1, "nm^{-1}": 0.1, "1/pm": 100.0, "pm^-1": 100.0}
+
+
+def mrad_per_unit(units: str, kV: Optional[float] = None) -> Optional[float]:
+    """mrad per detector unit (mrad, rad, µrad; Å⁻¹ or nm⁻¹ at *kV*), or None if it cannot be converted."""
+    u = units.strip().lower().replace(" ", "")
+    if u in _ANGLES_MRAD:
+        return _ANGLES_MRAD[u]
+    per_a = 1.0 if u in _INVERSE_ANGSTROM else _PER_ANGSTROM.get(u)
+    if per_a is None or not kV or kV <= 0:
+        return None
+    return per_a * mrad_per_inverse_angstrom(kV)
+
+
 # ---------------------------------------------------------------------------
 # Using a file's calibration in pyQuant4D
 # ---------------------------------------------------------------------------
@@ -353,16 +369,15 @@ def _in_mrad(cal: EmdCalibration) -> bool:
 def usable_calibration(cal: EmdCalibration, kV: Optional[float] = None) -> Optional[EmdCalibration]:
     """The parts of *cal* pyQuant4D can use, or None if there are none.
 
-    pyQuant4D calibrates the detector in mrad.  A pixel size in Å⁻¹ (py4DSTEM's
-    ``A^-1``) is converted with the relativistic wavelength at *kV*; without a
+    pyQuant4D calibrates the detector in mrad.  Other angles (rad, µrad) are
+    rescaled; a pixel size in Å⁻¹ (py4DSTEM's ``A^-1``) or nm⁻¹ (DM's
+    ``1/nm``) is converted with the relativistic wavelength at *kV*; without a
     voltage, or in other units (plain pixels), it is dropped.
     """
     semi = cal.probe_semiangle_mrad if cal.probe_semiangle_mrad and cal.probe_semiangle_mrad > 0 else None
-    if _in_mrad(cal):
-        out = replace(cal, q_units="mrad", probe_semiangle_mrad=semi)
-    elif kV and is_inverse_angstrom(cal.q_units) and cal.q_pixel_size > 0:
-        out = replace(cal, q_pixel_size=cal.q_pixel_size * mrad_per_inverse_angstrom(kV), q_units="mrad",
-                      probe_semiangle_mrad=semi)
+    factor = mrad_per_unit(cal.q_units, kV) if cal.q_pixel_size > 0 else None
+    if factor is not None:
+        out = replace(cal, q_pixel_size=cal.q_pixel_size * factor, q_units="mrad", probe_semiangle_mrad=semi)
     else:
         out = replace(cal, q_pixel_size=1.0, q_units="pixels", probe_semiangle_mrad=semi)
     if out.beam_xy is None and out.q_units != "mrad" and semi is None:
@@ -397,9 +412,11 @@ def describe_emd(info: EmdInfo, kV: Optional[float] = None) -> str:
         lines.append(line)
     if _in_mrad(cal):
         lines.append(f"Detector: {cal.q_pixel_size:g} mrad/px")
-    elif kV and is_inverse_angstrom(cal.q_units) and cal.q_pixel_size > 0:
+    elif cal.q_pixel_size > 0 and mrad_per_unit(cal.q_units, kV) is not None:
+        factor = mrad_per_unit(cal.q_units, kV)
+        at = f" at {kV:g} kV" if cal.q_units.strip().lower().replace(" ", "") not in _ANGLES_MRAD else ""
         lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px = "
-                     f"{cal.q_pixel_size * mrad_per_inverse_angstrom(kV):.4g} mrad/px at {kV:g} kV")
+                     f"{cal.q_pixel_size * factor:.4g} mrad/px{at}")
     elif cal.q_units.strip().lower() != "pixels":
         lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px, not used "
                      "(pyQuant4D calibrates in mrad; set the accelerating voltage to convert Å⁻¹)")

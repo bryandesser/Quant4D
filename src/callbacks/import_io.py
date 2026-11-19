@@ -142,8 +142,14 @@ def gatherImportOptions(self, preview):
     d.ScanStepFile, d.ScanUnits = importStep(self)
     d.ScanStep = d.ScanStepFile * d.FrD
 
-    # py4DSTEM calibration, when the dataset imported is the file's DataCube
+    # py4DSTEM calibration, when the dataset imported is the file's DataCube; a DM file's detector scale
+    # (not its origin: the beam centre comes from auto-alignment)
     d.Calib = None
+    if self.ImportWindow.DM34Button.isChecked() and getattr(self.T.dm, "images", None):
+        from callbacks.io.dm import dmCalibration  # noqa: E402
+        images = self.T.dm.images
+        image = images[min(max(0, self.ImportWindow.ImpSubImg.currentIndex()), len(images) - 1)]
+        d.Calib = dmCalibration(self, image, d.kV)
     if self.ImportWindow.HDF5Button.isChecked():
         info = _emdInfo(d.filePath)
         if info is not None and info.dataset == d.subImg:

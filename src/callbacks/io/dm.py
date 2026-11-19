@@ -83,12 +83,40 @@ def _calibrationNotes(self, image, adopt: bool) -> str:
             f" (Y: {other[0]:.6g} {other[1]}; X is used)" if other and other != scan else ""))
         if adopt:
             setImportStep(self, scan[0], scan[1])
-    detector = image.calibration(0)
-    if detector is not None and len(image.dims) >= 3:
-        lines.append(f"Detector: {detector[0]:.6g} {detector[1]}/px (not applied; the transmitted beam sets the scale)")
     if image.voltage_V:
         lines.append(f"Accelerating voltage: {image.voltage_V / 1000:g} kV")
         if adopt:
             with signals_blocked(self.ImportWindow.ImpAccVolt):
                 self.ImportWindow.ImpAccVolt.setValue(image.voltage_V / 1000)
+    detector = detectorCalibration(image)
+    if detector is not None:
+        from callbacks.io.emd import mrad_per_unit  # noqa: E402
+        scale, units = detector
+        other = image.calibration(1)
+        line = f"Detector: {scale:.6g} {units}/px"
+        if other and (abs(other[0] - scale) > 1e-6 * scale or other[1] != units):
+            line += f" (Y: {other[0]:.6g} {other[1]}; X is used)"
+        if mrad_per_unit(units, self.ImportWindow.ImpAccVolt.value()) is not None:
+            line += ("\nApplied as the diffraction scale after import (Alignment mode); the beam centre "
+                     "comes from auto-alignment, not from the DM origin")
+            if mrad_per_unit(units) is None:
+                line += " (converted to mrad at the Accelerating Voltage)"
+        else:
+            line += " (not used: pyQuant4D calibrates in mrad)"
+        lines.append(line)
     return ("\n\nDM calibration\n" + "\n".join(lines)) if lines else ""
+
+
+def detectorCalibration(image):
+    """``(scale, units)`` of the detector (DM dimension 1, x) of a 3-D or 4-D image, or None."""
+    return image.calibration(0) if len(image.dims) >= 3 else None
+
+
+def dmCalibration(self, image, kV):
+    """The DM detector calibration as an EmdCalibration in mrad (no beam centre), or None."""
+    from callbacks.io.emd import EmdCalibration, usable_calibration  # noqa: E402
+    detector = detectorCalibration(image)
+    if detector is None:
+        return None
+    cal = usable_calibration(EmdCalibration(q_pixel_size=float(detector[0]), q_units=detector[1]), kV)
+    return cal if cal is not None and cal.q_units == "mrad" else None

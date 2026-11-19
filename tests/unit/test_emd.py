@@ -225,3 +225,14 @@ def test_recorded_voltage_and_scan_step_read_back(tmp_path):
     from callbacks.io.emd import describe_emd
     text = describe_emd(info)
     assert "Scan step: 0.5 nm" in text and "Accelerating voltage: 200 kV" in text
+
+
+@pytest.mark.parametrize("units, kv, expected", [
+    ("mrad", None, 1.0), ("rad", None, 1000.0), ("µrad", None, 1e-3),
+    ("A^-1", 300, 19.687), ("1/nm", 300, 1.9687), ("nm^-1", 200, 2.5079),
+    ("1/nm", None, None), ("A^-1", 0, None), ("pixels", 300, None), ("nm", 300, None),
+])
+def test_mrad_per_unit(units, kv, expected):
+    from callbacks.io.emd import mrad_per_unit
+    got = mrad_per_unit(units, kv)
+    assert got == (None if expected is None else pytest.approx(expected, rel=1e-4))

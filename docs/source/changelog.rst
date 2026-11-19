@@ -22,6 +22,9 @@ Unreleased
 - Info tab: the real-space size was shown as Y⨯X under an X⨯Y label.
 - Scan step read from DM3/DM4 calibrations (with the microscope voltage) and
   MRC cells (z spacing).
+- DM3/DM4 detector calibration sets the diffraction scale after import (mrad,
+  rad, or 1/nm and Å⁻¹ converted at the accelerating voltage); the beam centre
+  still comes from auto-alignment.
 - Scale bars on the real-space and diffraction windows (scan step / mrad, or
   pixels when uncalibrated), with Show scale bar toggles in Settings > Windows.
 - Binned diffraction masks in the py4DSTEM export: raw sums by default, or

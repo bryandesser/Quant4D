@@ -147,7 +147,8 @@ def test_dm_calibration_fills_scan_step_and_voltage(app, qapp, tmp_path, synthet
     assert iw.ImpScanStep.value() == pytest.approx(0.023) and iw.ImpScanUnits.currentText() == "nm"
     assert iw.ImpAccVolt.value() == 200.0
     notes = iw.ImpFileMetaNotes.toPlainText()
-    assert "Scan step: 0.023 nm" in notes and "0.57 mrad/px (not applied" in notes
+    assert "Scan step: 0.023 nm" in notes and "Detector: 0.57 mrad/px" in notes
+    assert "Applied as the diffraction scale" in notes and "not from the DM origin" in notes
     assert "Accelerating voltage: 200 kV" in notes
     iw.ImportDataButton.click()
     from conftest import wait_until
