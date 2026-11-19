@@ -46,9 +46,7 @@ Opened via the Import button.  Lets you:
     and the convergence angle follows as scale × radius.  With angles shown to
     0.01 mrad the scale matches the file to about 0.1 % for angles of 5 mrad
     and more;
-  - **MRC**: the z spacing of the cell (``zlen / mz``, Å), z running over the
-    probe positions.  The x/y spacing describes the detector axes and is
-    listed but not used; most writers leave ``zlen = 0`` (no scan step).
+  - **MRC** files carry no scan step and stay uncalibrated (``px``).
 
 **Drag and drop.**  Drop a dataset file on any pyQuant4D window (main,
 Import, Settings, Save/Export or an image window) to open it in the Import

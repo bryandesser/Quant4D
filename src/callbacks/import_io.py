@@ -269,30 +269,6 @@ def _chooseFile(self):
     return None
 
 
-def _mrcCalibrationNotes(self, adopt: bool = False) -> str:
-    """Notes on an MRC file's cell; with *adopt* (a new file) its z spacing fills the Scan Step field."""
-    from callbacks.io.mrc import read_mrc_cell  # noqa: E402
-    try:
-        cell = read_mrc_cell(self.ImportWindow.ImpFilePath.text())
-    except OSError:
-        return ""
-    if cell is None:
-        return ""
-    lines = []
-    step = cell.scan_step_A
-    if step is not None:
-        lines.append(f"Scan step (z spacing): {step:.6g} Å")
-        if adopt:
-            from callbacks.scan_step import setImportStep  # noqa: E402
-            setImportStep(self, step, "A")
-    else:
-        lines.append("No z spacing in the cell, so no scan step")
-    xy = cell.spacing_A(0)
-    if xy is not None:
-        lines.append(f"x/y spacing {xy:.6g} Å/px (detector axes; not used)")
-    return "\n\nMRC cell\n" + "\n".join(lines)
-
-
 _EMD_MARK = "\n\npy4DSTEM DataCube"
 
 
@@ -593,7 +569,6 @@ def importFileType(self, source=None, new_file=False):
                 notes = 'Dim: X = ' + str(dim[0]) + ', Y = ' + str(dim[1]) + ', Z = ' + str(dim[2]) + \
                     '\n' + tnote + ', ' + bo + '\n** MRC data start after a {}-byte header'.format(
                         self.ImportWindow.DataOffset.value())
-                notes += _mrcCalibrationNotes(self, adopt=new_file)
             else:
                 notes = 'Unrecognizable as MRC.\n\n"MAP " word missed.'
                 err = -1

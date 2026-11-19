@@ -59,30 +59,6 @@ def test_dm_uncalibrated_dimension_is_none():
     assert im.calibration(2) is None and im.calibration(7) is None
 
 
-def test_mrc_cell(tmp_path):
-    from callbacks.io.mrc import read_mrc_cell
-
-    def header(zlen, order="<"):
-        h = bytearray(1024)
-        h[0:40] = np.array([8, 8, 12, 2, 0, 0, 0, 8, 8, 12], order + "i4").tobytes()
-        h[40:52] = np.array([4.0, 4.0, zlen], order + "f4").tobytes()
-        h[208:212] = b"MAP "
-        h[212:214] = b"\x44\x44" if order == "<" else b"\x11\x11"
-        return bytes(h)
-
-    for order in "<>":
-        p = tmp_path / f"z{order == '<'}.mrc"
-        p.write_bytes(header(6.0, order))
-        cell = read_mrc_cell(str(p))
-        assert cell.n == (8, 8, 12) and cell.scan_step_A == pytest.approx(0.5) and cell.spacing_A(0) == 0.5
-    p = tmp_path / "noz.mrc"
-    p.write_bytes(header(0.0))
-    assert read_mrc_cell(str(p)).scan_step_A is None
-    other = tmp_path / "x.mrc"
-    other.write_bytes(b"\x00" * 1024)
-    assert read_mrc_cell(str(other)) is None
-
-
 def test_dm_header_rejects_other_files(tmp_path):
     p = tmp_path / "x.dm4"
     p.write_bytes(struct.pack(">I", 7) + b"\x00" * 64)

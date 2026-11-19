@@ -112,28 +112,17 @@ def _open(win, qapp, path):
     return iw
 
 
-def _mrc(path, synthetic_data, zlen):
+def test_mrc_stays_uncalibrated(app, qapp, tmp_path, synthetic_data):
+    """MRC headers carry no scan step: the field stays in pixels (Bryan, 2026-11-20)."""
     h = bytearray(1024)
     h[0:40] = np.array([DET_X, DET_Y, SCAN_X * SCAN_Y, 2, 0, 0, 0, DET_X, DET_Y, SCAN_X * SCAN_Y], "<i4").tobytes()
-    h[40:52] = np.array([DET_X * 1.0, DET_Y * 1.0, zlen], "<f4").tobytes()
+    h[40:52] = np.array([DET_X * 1.0, DET_Y * 1.0, 3.0 * SCAN_X * SCAN_Y], "<f4").tobytes()   # even with a z cell
     h[208:212] = b"MAP "
     h[212:214] = b"\x44\x44"
+    path = tmp_path / "x.mrc"
     path.write_bytes(bytes(h) + synthetic_data.astype("<f4").tobytes())
-    return path
-
-
-def test_mrc_z_spacing_fills_the_scan_step(app, qapp, tmp_path, synthetic_data):
-    iw = _open(app, qapp, _mrc(tmp_path / "z.mrc", synthetic_data, 0.25 * SCAN_X * SCAN_Y))
-    assert iw.MRCButton.isChecked()
-    assert (iw.ImpScanStep.value(), iw.ImpScanUnits.currentText()) == (0.25, "Å")
-    notes = iw.ImpFileMetaNotes.toPlainText()
-    assert "Scan step (z spacing): 0.25 Å" in notes and "x/y spacing 1 Å/px (detector axes; not used)" in notes
-
-
-def test_mrc_without_z_spacing_stays_in_pixels(app, qapp, tmp_path, synthetic_data):
-    iw = _open(app, qapp, _mrc(tmp_path / "noz.mrc", synthetic_data, 0.0))
-    assert iw.ImpScanUnits.currentData() == "pixels"
-    assert "no scan step" in iw.ImpFileMetaNotes.toPlainText()
+    iw = _open(app, qapp, path)
+    assert iw.MRCButton.isChecked() and iw.ImpScanUnits.currentData() == "pixels"
 
 
 def test_dm_calibration_fills_scan_step_and_voltage(app, qapp, tmp_path, synthetic_data):
