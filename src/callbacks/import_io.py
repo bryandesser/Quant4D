@@ -137,40 +137,35 @@ def gatherImportOptions(self, preview):
     return d
 
 
-def importSelectFile(self):
+def importSelectFile(self, path=None, source=None):
+    """Read the file in the Import window's path field and set the file type from it.
+
+    *path* (a file dropped on a window) or the file dialog (*source* is the
+    Select button) puts a new file in the field first.  *source* is the widget
+    that called; never ``self.sender()``, which is not valid outside a slot
+    (a drop arrives from an event filter; cf. the Linux segfault fixed in 664d923).
+    """
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
         return
 
+    new_file = False
     # if the user pushes the "Select" button in the Import window, open file dialog, filter for known filetypes
-    if self.sender() is self.ImportWindow.ImpFileSelect:
-        fDialog = qtw.QFileDialog(self)
-        fDialog.setWindowTitle("Select 4DSTEM Dataset")
-        fDialog.setNameFilter("(*.raw *.mib *.mrc *.dm3 *.dm4 *.npy *.h5 *.hdf5);;(*.*)")
-        fDialog.setDirectory(qtc.QDir.currentPath())
-        fileName = None
-        if fDialog.exec_() == qtw.QDialog.Accepted:
-            fileName, = fDialog.selectedFiles()
-        else:  # user selected cancel
-            self.ImportWindow.activateWindow()
-            self.ImportWindow.ImportDataButton.setDefault(False)
-            self.ImportWindow.ImportDataButton.setAutoDefault(False)
-            self.ImportWindow.ImpFileSelect.setFocus(True)
-            self.ImportWindow.ImpFileSelect.setAutoDefault(True)
-            self.ImportWindow.ImpFileSelect.setDefault(True)
-            return
+    if path is not None or source is self.ImportWindow.ImpFileSelect:
+        new_file = True
+        if path is not None:
+            fileName = str(path)
+        else:
+            fileName = _chooseFile(self)
+            if fileName is None:  # user selected cancel
+                return
 
         # reflect user selection in path field box
-        if fileName is not None:
-            self.fname = fileName
-            self.ImportWindow.ImpFilePath.setText(self.fname)
-            # enable rest of wigets in window
-            for widget in self.ImportWindow.children():
-                widget.setEnabled(True)
-        else:
-            # keep wigets disabled
-            for widget in self.ImportWindow.children():
-                widget.setEnabled(False)
+        self.fname = fileName
+        self.ImportWindow.ImpFilePath.setText(self.fname)
+        # enable rest of wigets in window
+        for widget in self.ImportWindow.children():
+            widget.setEnabled(True)
 
         # switch to directory containing dataset for future saving
         os.chdir(qtc.QDir.currentPath())
@@ -210,7 +205,7 @@ def importSelectFile(self):
                 self.ImportWindow.MRCButton.setChecked(True)
             case ".dm3" | ".dm4":
                 self.ImportWindow.DM34Button.setChecked(True)
-            case ".h5":
+            case ".h5" | ".hdf5" | ".emd":
                 self.ImportWindow.HDF5Button.setChecked(True)
             case other:
                 self.ImportWindow.CustomButton.setChecked(True)
@@ -222,7 +217,25 @@ def importSelectFile(self):
         self.PreviewTab.setVisible(False)
         self.PreviewTab.setEnabled(False)
 
-    importFileType(self)
+    importFileType(self, source, new_file=new_file)
+
+
+def _chooseFile(self):
+    """The file picked in the "Select 4DSTEM Dataset" dialog, or None if cancelled."""
+    fDialog = qtw.QFileDialog(self)
+    fDialog.setWindowTitle("Select 4DSTEM Dataset")
+    fDialog.setNameFilter("(*.raw *.mib *.mrc *.dm3 *.dm4 *.npy *.h5 *.hdf5 *.emd);;(*.*)")
+    fDialog.setDirectory(qtc.QDir.currentPath())
+    if fDialog.exec_() == qtw.QDialog.Accepted:
+        fileName, = fDialog.selectedFiles()
+        return fileName
+    self.ImportWindow.activateWindow()
+    self.ImportWindow.ImportDataButton.setDefault(False)
+    self.ImportWindow.ImportDataButton.setAutoDefault(False)
+    self.ImportWindow.ImpFileSelect.setFocus(True)
+    self.ImportWindow.ImpFileSelect.setAutoDefault(True)
+    self.ImportWindow.ImpFileSelect.setDefault(True)
+    return None
 
 
 def _h5dataset(h5file, key: str) -> "h5py.Dataset":
@@ -233,7 +246,12 @@ def _h5dataset(h5file, key: str) -> "h5py.Dataset":
     return obj
 
 
-def importFileType(self):
+def importFileType(self, source=None, new_file=False):
+    """Read the file's header/geometry for the file type chosen in the Import window.
+
+    *source* is the widget that called (the HDF5 dataset dropdown keeps the
+    dataset picked in it); *new_file* clears the HDF5 dataset list.
+    """
     from callbacks.io.dm import prepDM  # noqa: E402
 
     def guessFramesFromSize():
@@ -347,7 +365,7 @@ def importFileType(self):
         self.ImportWindow.ImpDataType.setCurrentIndex(0)
 
         # start with h5 directory combobox cleared and disabled
-        if self.sender() == self.ImportWindow.ImpFileSelect:
+        if new_file:
             self.ImportWindow.ImpSubImg.clear()
             self.ImportWindow.ImpSubImg.setEnabled(False)
 
@@ -496,7 +514,7 @@ def importFileType(self):
                 self.ImportWindow.ImpSubImg.setEnabled(True)
 
                 # Select sub-image with the 1st largest dimension; unless manually selected
-                if self.sender() is not self.ImportWindow.ImpSubImg:
+                if source is not self.ImportWindow.ImpSubImg:
                     # List all images' names in `self.ImportWindow.ImpSubImg`
                     with signals_blocked(self.ImportWindow.ImpSubImg):
                         pdim = [_h5dataset(self.T.h5, key).size for key in keys]
@@ -569,10 +587,18 @@ def importFileType(self):
     # self.Fig.Dfrn.Image = np.zeros(self.D.NPx)
     # self.Fig.Dfrn.Real = np.zeros(self.D.NFr)
 
-    importBoxInput(self)
+    importBoxInput(self, None)
 
 
-def importBoxInput(self):
+_SENDER = object()
+
+
+def importBoxInput(self, source=_SENDER):
+    """Check the import ranges and memory against the file.
+
+    *source* is the range widget that changed; by default ``self.sender()``
+    (valid only when this runs as a slot: callers outside a slot pass it).
+    """
 
     def checkMem(nPx, nFr, byte_size):
         # Display estimated size in green if matches actual size, brown if smaller, red if larger
@@ -639,17 +665,19 @@ def importBoxInput(self):
 
     self.ImportWindow.ImpEstFilesize.clear()       # clear estimated file size
     notes = None                                   # initialize notes in case file is not on path
-    dfrn_src = real_src = self.sender()            # capture UI component that triggered this callback
+    if source is _SENDER:
+        source = self.sender()                     # capture UI component that triggered this callback
+    dfrn_src = real_src = source
 
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
 
         # Update Diffraction and Real-space import ranges; use default source if
         # self.sender() is not a range UI component
-        if (not hasattr(self.sender(), 'accessibleDescription')) or (
-                "Dfrn" not in self.sender().accessibleDescription()):
+        if (not hasattr(source, 'accessibleDescription')) or (
+                "Dfrn" not in source.accessibleDescription()):
             dfrn_src = self.ImportWindow.IPxD
-        if (not hasattr(self.sender(), 'accessibleDescription')) or (
-                "Real" not in self.sender().accessibleDescription()):
+        if (not hasattr(source, 'accessibleDescription')) or (
+                "Real" not in source.accessibleDescription()):
             real_src = self.ImportWindow.IFrD
 
         dnote, _, _, nPx, _ = rangeImportExport(self, dfrn_src)

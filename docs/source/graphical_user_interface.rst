@@ -23,11 +23,21 @@ Import window
 
 Opened via the Import button.  Lets you:
 
-- Browse for a dataset file (DM4, DM3, raw binary, HDF5, MRC, Medipix)
+- Browse for a dataset file (DM4, DM3, raw binary, HDF5, MRC, Medipix), or
+  drop one onto any pyQuant4D window (see below)
 - Set real-space and diffraction-pattern dimensions
 - Choose a partial frame or pixel sub-range
 - Estimate memory requirements before loading
 - Enable GPU loading when a compatible device is present
+
+**Drag and drop.**  Drop a dataset file on any pyQuant4D window (main,
+Import, Settings, Save/Export or an image window) to open it in the Import
+window, exactly as if it had been picked with **Select**: the file type is
+chosen from the extension and the dimensions are read from the file.  Nothing
+is loaded until you press **Import Data**.  ``.h5``, ``.hdf5`` and ``.emd``
+open as HDF5, so a py4DSTEM file selects its 4-D ``DataCube``.  If several
+files are dropped, only the first is opened (the import notes say so).
+Folders are not accepted, and drops are ignored while an import is running.
 
 Settings window
 ---------------

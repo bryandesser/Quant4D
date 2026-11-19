@@ -99,9 +99,11 @@ def slotsSignals(self):
     self.ImportWindow.ImportCancelButton.clicked.connect(lambda: importCallbacks(self))
     self.ImportWindow.xEvent.connect(lambda: self.ShowImportWdw.setChecked(False)
                                      )  # ImportWindow.ImportCancelButton.click())
-    self.ImportWindow.ImpFileSelect.clicked.connect(lambda: importSelectFile(self))
+    self.ImportWindow.ImpFileSelect.clicked.connect(
+        lambda: importSelectFile(self, source=self.ImportWindow.ImpFileSelect))
     # a path typed or pasted into the field is read when editing finishes (Enter or focus change)
-    self.ImportWindow.ImpFilePath.editingFinished.connect(lambda: importSelectFile(self))
+    self.ImportWindow.ImpFilePath.editingFinished.connect(
+        lambda: importSelectFile(self, source=self.ImportWindow.ImpFilePath))
     self.ImportWindow.ImportDataButton.clicked.connect(lambda: importCallbacks(self))
     self.ImportWindow.ImpKeepP.clicked.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpGPU.currentIndexChanged.connect(lambda: importBoxInput(self))
@@ -126,7 +128,8 @@ def slotsSignals(self):
     self.ImportWindow.DataOffset.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.FrFoot.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.FrHead.valueChanged.connect(lambda: importBoxInput(self))
-    self.ImportWindow.ImpSubImg.currentIndexChanged.connect(lambda: importFileType(self))
+    self.ImportWindow.ImpSubImg.currentIndexChanged.connect(
+        lambda: importFileType(self, self.ImportWindow.ImpSubImg))
     # file-type radio buttons: re-read the file's header/geometry for the chosen type
     for button in (self.ImportWindow.EMPADButton, self.ImportWindow.MedipixButton, self.ImportWindow.MRCButton,
                    self.ImportWindow.DM34Button, self.ImportWindow.HDF5Button, self.ImportWindow.CustomButton):
@@ -138,6 +141,8 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    from callbacks.file_drop import installFileDrop  # noqa: E402
+    installFileDrop(self)         # drop a dataset file on any window to open it in the Import window
     connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
     connectMenus(self)            # menu-bar actions and help icons
     connectPatternCombine(self)   # diffraction window: how a region's patterns are combined

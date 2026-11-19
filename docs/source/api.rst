@@ -165,6 +165,12 @@ callbacks.importCallbacks
    :undoc-members:
    :show-inheritance:
 
+callbacks.file_drop
+-------------------
+
+.. automodule:: callbacks.file_drop
+   :members:
+
 callbacks.realSpaceROICallbacks
 --------------------------------
 

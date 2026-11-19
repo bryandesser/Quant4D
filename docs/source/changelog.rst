@@ -8,6 +8,8 @@ Unreleased
   ``py4DSTEM.read`` opens as a ``DataCube``, with the beam centre, detector
   pixel size (mrad) and convergence angle as its calibration and the images
   selected on the Save Images tab embedded.  Written with h5py alone.
+- Drag and drop: drop a dataset file on any window to open it in the Import
+  window; ``.hdf5`` and ``.emd`` files are now recognised as HDF5.
 
 0.2.0 (2026)
 ------------
