@@ -349,6 +349,7 @@ def emdCalibration(self, frames: ex.Region, pixels: ex.Region) -> emd.EmdCalibra
         cal.beam_xy = (bx, by)
         cal.q_pixel_size, cal.q_units = float(meta["mrad_per_px"]), "mrad"
         cal.probe_semiangle_mrad = float(meta["convergence_semiangle_mrad"])
+        cal.probe_radius_px = float(meta["beam_radius_px"])
     return cal
 
 

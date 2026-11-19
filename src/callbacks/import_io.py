@@ -924,6 +924,7 @@ def unloadData(self, keep_p=False):
     from callbacks.window_manager import enableWindows  # deferred to break circular import
     enableWindows(self, False)  # Disable windows for the data unload process
     self.setWindowTitle('Quant4D')
+    self._sharedData = False    # the next dataset says whether it shares a caller's array
     # Whether to swap dataset only, without changing any existing parameters
     if not keep_p:
         # clear all axes

@@ -32,7 +32,8 @@ def _py4dstem_cube(synthetic_data):
     c.set_Q_pixel_units("mrad")
     c.set_R_pixel_size(2.5)
     c.set_R_pixel_units("A")
-    c.set_probe_semiangle(4.0)
+    c.set_probe_semiangle(8.0)                       # the disk radius, pixels (get_probe_size)
+    c.set_convergence_semiangle_mrad(4.0)
     c.set_origin((np.full((SCAN_Y, SCAN_X), 7.0), np.full((SCAN_Y, SCAN_X), 10.0)))   # (qx0, qy0) = (row, col)
     return dc
 
@@ -84,6 +85,7 @@ class TestPy4DSTEM:
         cal = calibrationFromPy4DSTEM(_py4dstem_cube(synthetic_data))
         assert cal.beam_xy == (10.0, 7.0)
         assert (cal.q_pixel_size, cal.q_units, cal.probe_semiangle_mrad) == (0.5, "mrad", 4.0)
+        assert cal.probe_radius_px == 8.0
         assert (cal.r_pixel_size, cal.r_units) == (2.5, "A")
 
     def test_uncalibrated_cube(self, synthetic_data):

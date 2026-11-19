@@ -59,7 +59,10 @@ class EmdCalibration:
         constant maps once pyQuant4D measures them.
     q_pixel_size, q_units : detector pixel size, e.g. (0.25, "mrad").
     r_pixel_size, r_units : scan step, e.g. (1.0, "pixels").
-    probe_semiangle_mrad : convergence semi-angle, or None.
+    probe_semiangle_mrad : convergence semi-angle in mrad (py4DSTEM's
+        ``convergence_semiangle_mrad``), or None.
+    probe_radius_px : radius of the transmitted disk in detector pixels
+        (py4DSTEM's ``probe_semiangle``, as ``get_probe_size`` measures it), or None.
     """
     beam_xy: Optional[tuple[float, float]] = None
     q_pixel_size: float = 1.0
@@ -67,6 +70,7 @@ class EmdCalibration:
     r_pixel_size: float = 1.0
     r_units: str = "pixels"
     probe_semiangle_mrad: Optional[float] = None
+    probe_radius_px: Optional[float] = None
 
 
 @dataclass
@@ -223,8 +227,14 @@ def write_emd(path: str, data: np.ndarray, scan, detector, frames: Region, pixel
             _put(cg, "qy0", np.full(rshape, bx), "array")
             _put(cg, "qx0_shift", np.zeros(rshape), "array")
             _put(cg, "qy0_shift", np.zeros(rshape), "array")
+        # py4DSTEM: probe_semiangle is the disk radius in pixels, the angle is convergence_semiangle_mrad
         if cal.probe_semiangle_mrad is not None:
-            _put(cg, "probe_semiangle", float(cal.probe_semiangle_mrad), "number")
+            _put(cg, "convergence_semiangle_mrad", float(cal.probe_semiangle_mrad), "number")
+        radius = cal.probe_radius_px
+        if radius is None and cal.probe_semiangle_mrad and cal.q_units == "mrad" and cal.q_pixel_size > 0:
+            radius = cal.probe_semiangle_mrad / cal.q_pixel_size
+        if radius is not None:
+            _put(cg, "probe_semiangle", float(radius), "number")
 
         # pyQuant4D's own record of the session
         if metadata:
@@ -290,8 +300,9 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
                             qx0, qy0 = float(np.nanmean(maps[0])), float(np.nanmean(maps[1]))
                 if qx0 is not None and qy0 is not None:
                     cal.beam_xy = (float(qy0), float(qx0))   # back to (x, y)
-                semi = get("probe_semiangle")
+                semi, radius = get("convergence_semiangle_mrad"), get("probe_semiangle")
                 cal.probe_semiangle_mrad = None if semi is None else float(semi)
+                cal.probe_radius_px = None if radius is None else float(radius)   # pixels in py4DSTEM
             images = [g.name for g in cube.values() if isinstance(g, h5py.Group)
                       and g.attrs.get("emd_group_type") == "array"]
             data = cube["data"]
@@ -377,10 +388,13 @@ def usable_calibration(cal: EmdCalibration, kV: Optional[float] = None) -> Optio
     semi = cal.probe_semiangle_mrad if cal.probe_semiangle_mrad and cal.probe_semiangle_mrad > 0 else None
     factor = mrad_per_unit(cal.q_units, kV) if cal.q_pixel_size > 0 else None
     if factor is not None:
-        out = replace(cal, q_pixel_size=cal.q_pixel_size * factor, q_units="mrad", probe_semiangle_mrad=semi)
+        q = cal.q_pixel_size * factor
+        if semi is None and cal.probe_radius_px and cal.probe_radius_px > 0:
+            semi = cal.probe_radius_px * q          # the disk radius at the detector scale
+        out = replace(cal, q_pixel_size=q, q_units="mrad", probe_semiangle_mrad=semi)
     else:
         out = replace(cal, q_pixel_size=1.0, q_units="pixels", probe_semiangle_mrad=semi)
-    if out.beam_xy is None and out.q_units != "mrad" and semi is None:
+    if out.beam_xy is None and out.q_units != "mrad" and semi is None and not out.probe_radius_px:
         return None
     return out
 
@@ -397,7 +411,8 @@ def calibration_for_region(cal: EmdCalibration, start_xy, binning: int) -> EmdCa
     if cal.beam_xy is not None:
         beam = tuple((float(c) - float(s) + 0.5) / b - 0.5 for c, s in zip(cal.beam_xy, start_xy))
     q = cal.q_pixel_size * b if cal.q_units != "pixels" else cal.q_pixel_size
-    return replace(cal, beam_xy=beam, q_pixel_size=q)
+    radius = None if cal.probe_radius_px is None else cal.probe_radius_px / b
+    return replace(cal, beam_xy=beam, q_pixel_size=q, probe_radius_px=radius)
 
 
 def describe_emd(info: EmdInfo, kV: Optional[float] = None) -> str:
@@ -426,6 +441,8 @@ def describe_emd(info: EmdInfo, kV: Optional[float] = None) -> str:
         lines.append(f"Accelerating voltage: {info.accelerating_voltage_kV:g} kV")
     if cal.probe_semiangle_mrad:
         lines.append(f"Convergence semi-angle: {cal.probe_semiangle_mrad:g} mrad")
+    if cal.probe_radius_px:
+        lines.append(f"Transmitted disk radius: {cal.probe_radius_px:.2f} px")
     if info.images:
         lines.append("Images: " + ", ".join(p.rsplit("/", 1)[-1] for p in info.images))
     if usable_calibration(cal, kV) is not None:

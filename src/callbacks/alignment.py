@@ -258,6 +258,12 @@ def applyCalibration(self, cal):
             self.Alpha.setValue(float(cal.q_pixel_size) * float(self.TBR.value()))
         elif semi:
             self.Alpha.setValue(float(semi))
+        if not (has_q and semi) and cal.probe_radius_px:      # the measured disk radius (pixels)
+            r = float(cal.probe_radius_px)
+            self.TBR.setValue(r)
+            self.TBR_NF.setValue(r)
+            if has_q:
+                self.Alpha.setValue(float(cal.q_pixel_size) * r)
     moveTransBeam(self, sender=None)
 
 

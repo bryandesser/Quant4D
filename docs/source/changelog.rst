@@ -4,6 +4,16 @@ Changelog
 Unreleased
 ----------
 
+- Notebook round trip: the window ``pyquant4d.show`` returns has
+  ``calibration()``, ``apply_calibration(datacube)``, ``image(id)``,
+  ``images()`` and ``mask(id)``, in py4DSTEM's conventions (new page "From
+  Python and notebooks").
+- ``pyquant4d.show(..., copy=True)``: pyQuant4D works on a copy by default;
+  with ``copy=False`` it shares the DataCube's array and copies it before Set
+  NaNs to 0 or Swap Byte Order (which used to change the caller's DataCube).
+- py4DSTEM calibration: the convergence semi-angle is read and written as
+  ``convergence_semiangle_mrad``, and ``probe_semiangle`` as the transmitted
+  disk's radius in pixels (py4DSTEM's meaning; it was treated as mrad).
 - Cross alignment (X): two lines with draggable end points (MATLAB's), for
   Kikuchi lines; the beam centre follows their crossing.  Click X again to
   finish.

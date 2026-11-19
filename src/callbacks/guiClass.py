@@ -52,6 +52,32 @@ class MainWindow(MW_Base, MW_Ui):
 
     embedded = False      # opened by pyquant4d.show(): closing must not end the Python session
 
+    # Results for Python / notebooks, in py4DSTEM's conventions (callbacks.results)
+    def calibration(self) -> dict:
+        """The loaded dataset's calibration in py4DSTEM's names: see :func:`callbacks.results.calibration`."""
+        from callbacks.results import calibration
+        return calibration(self)
+
+    def apply_calibration(self, datacube, *, scan_step: bool = True) -> dict:
+        """Write the calibration into a py4DSTEM DataCube: see :func:`callbacks.results.apply_calibration`."""
+        from callbacks.results import apply_calibration
+        return apply_calibration(self, datacube, scan_step=scan_step)
+
+    def image(self, key: str = "Real"):
+        """A copy of an image, (Rx, Ry) or (Qx, Qy): see :func:`callbacks.results.image`."""
+        from callbacks.results import image
+        return image(self, key)
+
+    def images(self) -> dict:
+        """The images computed so far, ``{id: name}``."""
+        from callbacks.results import images
+        return images(self)
+
+    def mask(self, key=None):
+        """A copy of the current detector, the ROI or a custom detector: see :func:`callbacks.results.mask`."""
+        from callbacks.results import mask
+        return mask(self, key)
+
     def closeEvent(self, event):
         if self.embedded:
             for w in [self.ImportWindow, self.SettingsWindow, self.SaveWindow, *self.Fig.values()]:

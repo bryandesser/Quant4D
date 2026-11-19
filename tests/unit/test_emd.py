@@ -94,7 +94,9 @@ def test_py4dstem_reads_datacube_and_calibration(tmp_path):
     # py4DSTEM's (qx0, qy0) is (row, column) = pyQuant4D (y, x)
     assert c.get_origin_mean() == (BEAM_XY[1], BEAM_XY[0])
     assert c.get_qx0().shape == (NFY, NFX)
-    assert c.get_probe_semiangle() == pytest.approx(21.4)
+    # py4DSTEM: the angle is convergence_semiangle_mrad; probe_semiangle is the disk radius in pixels
+    assert c.get_convergence_semiangle_mrad() == pytest.approx(21.4)
+    assert c.get_probe_semiangle() == pytest.approx(21.4 / 0.5)
 
 
 @needs_py4dstem
@@ -160,7 +162,7 @@ def test_reads_a_file_py4dstem_wrote(tmp_path):
     dc = py4DSTEM.DataCube(full)
     dc.calibration.set_Q_pixel_size(0.25)
     dc.calibration.set_Q_pixel_units("mrad")
-    dc.calibration.set_probe_semiangle(18.0)
+    dc.calibration.set_probe_semiangle(18.0)            # pixels (what get_probe_size stores)
     qx0 = np.full((NFY, NFX), 4.0)
     qx0[0, 0] = 4.5                                     # the origin moves (descan)
     dc.calibration.set_origin((qx0, np.full((NFY, NFX), 2.0)))
@@ -170,7 +172,9 @@ def test_reads_a_file_py4dstem_wrote(tmp_path):
     assert info is not None and info.shape == (NFY, NFX, NPY, NPX)
     assert info.calibration.beam_xy == pytest.approx((2.0, float(qx0.mean())))   # (x, y) = (qy0, qx0)
     assert info.calibration.q_pixel_size == 0.25 and info.calibration.q_units == "mrad"
-    assert info.calibration.probe_semiangle_mrad == pytest.approx(18.0)
+    assert info.calibration.probe_radius_px == pytest.approx(18.0) and info.calibration.probe_semiangle_mrad is None
+    from callbacks.io.emd import usable_calibration
+    assert usable_calibration(info.calibration).probe_semiangle_mrad == pytest.approx(18.0 * 0.25)
     assert info.origin_spread_px == pytest.approx(0.5)
 
 

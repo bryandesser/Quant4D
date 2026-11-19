@@ -23,8 +23,16 @@ import numpy as np
 
 from callbacks.io.emd import EmdCalibration
 
-__all__ = ["py4dstem_available", "calibrationFromPy4DSTEM", "findDataCube", "loadDataCube",
+__all__ = ["ownData", "py4dstem_available", "calibrationFromPy4DSTEM", "findDataCube", "loadDataCube",
            "openWithPy4DSTEM", "connectPy4DSTEM"]
+
+
+def ownData(self) -> None:
+    """Before changing the dataset in place: copy it if it is the caller's array
+    (``pyquant4d.show(..., copy=False)``), so their DataCube is left as it was."""
+    if getattr(self, "_sharedData", False) and self.Data is not None:
+        self.Data = np.array(self.Data, copy=True)
+        self._sharedData = False
 
 
 def py4dstem_available() -> bool:
@@ -55,9 +63,13 @@ def calibrationFromPy4DSTEM(datacube) -> Optional[EmdCalibration]:
     if origin is not None and len(origin) == 2 and None not in origin and np.all(np.isfinite(origin)):
         qx0, qy0 = (float(v) for v in origin)
         cal.beam_xy = (qy0, qx0)                 # py4DSTEM Qx = rows = pyQuant4D y
-    semi = _get(c.get_probe_semiangle)
+    # py4DSTEM's probe_semiangle is the disk radius in pixels (get_probe_size); the angle is
+    # convergence_semiangle_mrad
+    semi, radius = _get(c.get_convergence_semiangle_mrad), _get(c.get_probe_semiangle)
     if semi:
         cal.probe_semiangle_mrad = float(semi)
+    if radius:
+        cal.probe_radius_px = float(radius)
     return cal
 
 
@@ -83,12 +95,17 @@ def findDataCube(obj):
 
 
 def loadDataCube(self, data, name: str = "py4DSTEM DataCube", calibration: Optional[EmdCalibration] = None,
-                 kV: Optional[float] = None, source_path: str = "") -> None:
+                 kV: Optional[float] = None, source_path: str = "", copy: bool = True) -> None:
     """Load an in-memory 4-D dataset ``(ry, rx, py, px)`` as if it had been imported.
 
     *data* is a ``py4DSTEM.DataCube`` (its calibration is used unless
     *calibration* is given) or an array.  *kV* converts an Å⁻¹ calibration
     (default: the Import window's accelerating voltage).
+
+    *copy*: pyQuant4D works on its own copy (the caller's array is never
+    changed).  ``copy=False`` uses the array itself when it can (no extra
+    memory); the two options that change the dataset in place (Set NaNs to 0,
+    Swap Byte Order) then copy it first (:func:`ownData`).
     """
     from callbacks.appClass import D
     from callbacks.import_io import unloadData
@@ -143,7 +160,9 @@ def loadDataCube(self, data, name: str = "py4DSTEM DataCube", calibration: Optio
     self.SaveWindow.SaveDir.setText(d.fileDir.rstrip(os.sep) or os.getcwd())
     self.SaveWindow.SaveImgPrefix.setText(stem + "_")
 
-    self.Data = np.ascontiguousarray(arr.reshape(ny * nx, py * px))
+    flat = arr.reshape(ny * nx, py * px)
+    self.Data = np.array(flat, order="C", copy=True) if copy else np.ascontiguousarray(flat)
+    self._sharedData = (not copy) and np.shares_memory(self.Data, arr)
     self.workerThread = None
     finishImport(self)
 
@@ -176,7 +195,8 @@ def openWithPy4DSTEM(self, path: Optional[str] = None) -> bool:
     if cube is None:
         notifDLG(self, self, "warn", f"No 4-D DataCube found in\n{path}", "py4DSTEM Reader")
         return False
-    loadDataCube(self, cube, source_path=path)
+    loadDataCube(self, cube, source_path=path, copy=False)
+    self._sharedData = False          # read here: nobody else holds that array
     return True
 
 

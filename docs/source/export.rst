@@ -58,7 +58,9 @@ calibration of the *exported* pixels:
 - the beam centre as py4DSTEM's origin (``qx0_mean``/``qy0_mean`` and
   constant ``qx0``/``qy0`` maps over the scan), shifted and scaled for the
   exported region;
-- the convergence semi-angle as ``probe_semiangle``;
+- the convergence semi-angle as ``convergence_semiangle_mrad``, and the
+  transmitted disk's radius in exported pixels as ``probe_semiangle`` (what
+  py4DSTEM's ``get_probe_size`` stores there);
 - scan step ``R_pixel_size``: the loaded data's scan step (Settings > Windows >
   Real-space) × the export sampling, in its units; uncalibrated,
   in positions of the source scan.  Cropping changes neither scale.

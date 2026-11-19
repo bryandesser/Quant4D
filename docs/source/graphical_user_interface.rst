@@ -108,6 +108,8 @@ included::
 In a script ``show`` runs until pyQuant4D is closed; in a notebook run
 ``%gui qt`` first and it returns at once (or pass ``block=False``).  Closing
 the window closes pyQuant4D's windows without ending the Python session.
+Results (calibration, images, detectors) can be read back into the notebook:
+see :ref:`notebook`.
 
 Settings window
 ---------------
