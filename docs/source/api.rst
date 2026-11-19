@@ -60,6 +60,9 @@ Saving and exporting
 .. automodule:: callbacks.io.export
    :members:
 
+.. automodule:: callbacks.io.emd
+   :members:
+
 .. automodule:: callbacks.save_export
    :members:
 

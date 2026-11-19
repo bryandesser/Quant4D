@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+- Export to py4DSTEM: a "py4DSTEM EMD (*.h5)" export format that
+  ``py4DSTEM.read`` opens as a ``DataCube``, with the beam centre, detector
+  pixel size (mrad) and convergence angle as its calibration and the images
+  selected on the Save Images tab embedded.  Written with h5py alone.
+
 0.2.0 (2026)
 ------------
 

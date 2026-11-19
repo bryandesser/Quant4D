@@ -2,7 +2,8 @@
 
 Every widget of the Save window is connected to :func:`saveExportCallbacks`,
 which dispatches on the sender.  The file writing itself lives in
-:mod:`callbacks.io.export`.
+:mod:`callbacks.io.export` (raw, HDF5) and :mod:`callbacks.io.emd`
+(py4DSTEM-compatible EMD).
 
 Export regions use 0-based ``(x, y)`` start points, like the rest of the UI.
 """
@@ -13,13 +14,16 @@ import os
 import numpy as np
 from PyQt5 import QtWidgets as qtw
 
+from callbacks.io import emd
 from callbacks.io import export as ex
 from callbacks.signals import signals_blocked
 
 __all__ = ["saveExportCallbacks", "connectSaveWindow", "resetExportRanges",
-           "saveImages", "exportDataset", "imageFilename", "exportRegions", "exportPath"]
+           "saveImages", "exportDataset", "imageFilename", "exportRegions", "exportPath",
+           "emdCalibration", "emdImages"]
 
 _ANNULAR_MODES = ("AnnMod", "CoMMod", "DPCMod")
+_EXTENSION = {"h5": "h5", "raw": "raw", "emd": "h5"}     # export format -> file extension
 
 
 # ---------------------------------------------------------------------------
@@ -42,6 +46,7 @@ def connectSaveWindow(self):
     sw.ExpDimSuff.clicked.connect(cb)
     sw.ExpPxPart.clicked.connect(cb)
     sw.ExpFrPart.clicked.connect(cb)
+    sw.SaveImgList.itemSelectionChanged.connect(cb)     # the images an EMD export embeds
     for name in ("EPxX1", "EPxY1", "ENPxX", "ENPxY", "EPxD", "EFrX1", "EFrY1", "ENFrX", "ENFrY", "EFrD"):
         getattr(sw, name).valueChanged.connect(cb)
 
@@ -50,6 +55,7 @@ def connectSaveWindow(self):
         sw.ExpFormat.clear()
         sw.ExpFormat.addItem("HDF5 (*.h5)", "h5")
         sw.ExpFormat.addItem("Raw binary (*.raw)", "raw")
+        sw.ExpFormat.addItem("py4DSTEM EMD (*.h5)", "emd")
     sw.EPxD.setEnabled(True)     # binning is supported
     _updateSaveButton(self)
 
@@ -236,7 +242,7 @@ def exportPath(self, frames: ex.Region, pixels: ex.Region) -> str:
     stem = os.path.splitext(stem)[0] if os.path.splitext(stem)[1].lower() in (".h5", ".hdf5", ".raw") else stem
     if sw.ExpDimSuff.isChecked():
         stem += ex.dims_suffix(frames, pixels)
-    return os.path.join(sw.SaveDir.text(), f"{stem}.{fmt}")
+    return os.path.join(sw.SaveDir.text(), f"{stem}.{_EXTENSION.get(fmt, fmt)}")
 
 
 def _updateExportNotes(self):
@@ -266,6 +272,16 @@ def _updateExportNotes(self):
     ]
     if dtype != self.Data.dtype:
         lines.append(f"Integer data widened from {self.Data.dtype} so binned sums cannot overflow.")
+    if sw.ExpFormat.currentData() == "emd":
+        cal = emdCalibration(self, frames, pixels)
+        lines.append("py4DSTEM calibration: " + (
+            f"beam (x, y) = ({cal.beam_xy[0]:.2f}, {cal.beam_xy[1]:.2f}) px, "
+            f"{cal.q_pixel_size:g} {cal.q_units}/px, semi-angle {cal.probe_semiangle_mrad:g} mrad"
+            if cal.beam_xy is not None else "none (transmitted beam not set)"))
+        images, skipped = emdImages(self)
+        lines.append("Images (selected on the Save Images tab): " + (", ".join(images) or "none"))
+        if skipped:
+            lines.append("Not embedded (not computed yet, or not a scan or detector image): " + ", ".join(skipped))
     sw.ExpNotes.setPlainText("\n".join(lines))
 
 
@@ -302,8 +318,47 @@ def _metadata(self, frames: ex.Region, pixels: ex.Region) -> dict:
     return meta
 
 
+def emdCalibration(self, frames: ex.Region, pixels: ex.Region) -> emd.EmdCalibration:
+    """py4DSTEM calibration of the exported pixels.
+
+    Detector pixels are in mrad once the transmitted beam is set (binning
+    multiplies the pixel size); scan positions stay in pixels of the source
+    scan (sampling multiplies the step).
+    """
+    cal = emd.EmdCalibration(r_pixel_size=float(frames.step), r_units="pixels")
+    meta = _metadata(self, frames, pixels)
+    if "beam_center_xy" in meta:
+        bx, by = (float(v) for v in meta["beam_center_xy"])
+        cal.beam_xy = (bx, by)
+        cal.q_pixel_size, cal.q_units = float(meta["mrad_per_px"]), "mrad"
+        cal.probe_semiangle_mrad = float(meta["convergence_semiangle_mrad"])
+    return cal
+
+
+def emdImages(self) -> tuple[dict, list]:
+    """The images selected on the Save Images tab, as children of an EMD DataCube.
+
+    Returns ``({id: EmdImage}, skipped)``: real-space images must have the
+    scan's shape and diffraction images the detector's; images not computed
+    yet, colour images and the preview are skipped.
+    """
+    sw = self.SaveWindow
+    space = dict(zip(self.G.ImgID, self.G.ImgSpace))
+    shapes = {"Real": (self.D.NFrY, self.D.NFrX), "Dfrn": (self.D.NPxY, self.D.NPxX)}
+    images, skipped = {}, []
+    for item in sw.SaveImgList.selectedItems():
+        id = item.text()
+        fig = self.Fig[id]
+        image = None if fig is None else fig.Image
+        if space.get(id) not in shapes or image is None or np.shape(image) != shapes[space[id]]:
+            skipped.append(id)
+            continue
+        images[id] = emd.EmdImage(np.asarray(image, dtype=np.float32), "dfrn" if space[id] == "Dfrn" else "real")
+    return images, skipped
+
+
 def exportDataset(self):
-    """Write the dataset (or the selected part of it) to HDF5 or raw binary."""
+    """Write the dataset (or the selected part of it) to HDF5, raw binary or py4DSTEM EMD."""
     sw = self.SaveWindow
     if self.D is None or self.Data is None:
         return _tell(self, "warn", "No dataset is loaded.", "Nothing to Export")
@@ -323,8 +378,13 @@ def exportDataset(self):
     from callbacks.window_manager import busyIndicator  # noqa: E402
     try:
         with busyIndicator(self):
-            if (sw.ExpFormat.currentData() or "h5") == "raw":
+            fmt = sw.ExpFormat.currentData() or "h5"
+            if fmt == "raw":
                 shape = ex.write_raw(path, self.Data, scan, detector, frames, pixels, byte_order)
+            elif fmt == "emd":
+                shape = emd.write_emd(path, self.Data, scan, detector, frames, pixels,
+                                      emdCalibration(self, frames, pixels), emdImages(self)[0],
+                                      _metadata(self, frames, pixels), byte_order)
             else:
                 shape = ex.write_hdf5(path, self.Data, scan, detector, frames, pixels, byte_order,
                                       _metadata(self, frames, pixels))
