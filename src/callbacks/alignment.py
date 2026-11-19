@@ -66,10 +66,10 @@ def transBeamCallbacks(self, sender=None):
             autoAlign(self)
 
         case self.TBCrossAlign:  # Align transmitted beam via two crossed lines
-            crossAlign(self)
+            crossAlign(self, self.TBCrossAlign.isChecked())
 
-    # Update dependent variables
-    moveTransBeam(self)
+    # Update dependent variables (not via self.sender(): this also runs outside a slot)
+    moveTransBeam(self, sender=None)
 
 
 _FROM_SIGNAL = object()
@@ -109,7 +109,7 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
         case self.mradPx:
             mrad_per_px = src.value()
             a = mrad_per_px * r  # Manually set the diffraction scale
-        case self.A.tb:   # dragged: the annotation holds an array of radii (one here) and its own centre array
+        case self.A.tb if src is not None:   # dragged (the annotation holds its radii and centre); None is no sender
             b0 = np.array(self.A.tb.center, dtype=float)
             r = float(np.ravel(self.A.tb.radius)[-1])
 
@@ -154,7 +154,7 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
     refreshScaleBars(self, "Dfrn")      # the scale (mrad/px) may have changed
 
 
-DF_SCALE_UNITS = (("mrad/px", "mrad"), ("1/Å/px", "invA"))
+DF_SCALE_UNITS = (("mrad/px", "mrad"), ("1/Å/px", "invA"), ("px", "px"))   # px: uncalibrated (detector values in pixels)
 
 
 def _invA_per_mrad(self) -> "float | None":
@@ -164,12 +164,34 @@ def _invA_per_mrad(self) -> "float | None":
 
 
 def showDfScale(self) -> None:
-    """Settings > Windows > Diffraction > Scale: the main window's mrad/px, in the unit chosen."""
+    """Settings > Windows > Diffraction > Scale: the main window's mrad/px, in the unit chosen
+    (``px``: 1, not editable, like an uncalibrated real-space scan step)."""
     sw = self.SettingsWindow
-    f = _invA_per_mrad(self) if sw.DfScaleUnits.currentData() == "invA" else 1.0
+    unit = sw.DfScaleUnits.currentData()
+    f = _invA_per_mrad(self) if unit == "invA" else 1.0
     with signals_blocked(sw.DfScale):
         sw.DfScale.setDecimals(4 if f == 1.0 else 6)
-        sw.DfScale.setValue(float(self.mradPx.value()) * (f or 1.0))
+        sw.DfScale.setValue(1.0 if unit == "px" else float(self.mradPx.value()) * (f or 1.0))
+    sw.DfScale.setEnabled(unit != "px")
+
+
+def dfScaleUnitChanged(self) -> None:
+    """The Scale unit sets the unit of every detector value: pixels for ``px``, mrad otherwise."""
+    sw = self.SettingsWindow
+    showDfScale(self)
+    want = "px" if sw.DfScaleUnits.currentData() == "px" else "mrad"
+    if sw.DCUnit.currentData() != want:
+        sw.DCUnit.setCurrentIndex(sw.DCUnit.findData(want))     # its slots recalculate the detectors
+
+
+def dcUnitChanged(self) -> None:
+    """Detector units set elsewhere (a reset, a script): the Scale unit follows."""
+    sw = self.SettingsWindow
+    unit, shown = sw.DCUnit.currentData(), sw.DfScaleUnits.currentData()
+    if (unit == "px") != (shown == "px"):
+        with signals_blocked(sw.DfScaleUnits):
+            sw.DfScaleUnits.setCurrentIndex(sw.DfScaleUnits.findData("px" if unit == "px" else "mrad"))
+        showDfScale(self)
 
 
 def dfScaleEdited(self) -> None:
@@ -178,7 +200,7 @@ def dfScaleEdited(self) -> None:
         return
     sw = self.SettingsWindow
     f = _invA_per_mrad(self) if sw.DfScaleUnits.currentData() == "invA" else 1.0
-    if f:
+    if f and sw.DfScaleUnits.currentData() != "px":
         self.mradPx.setValue(sw.DfScale.value() / f)
 
 
@@ -191,7 +213,9 @@ def connectDfScale(self) -> None:
             sw.DfScaleUnits.addItem(text, unit)
     sw.DfScale.setMaximum(1e6)
     sw.DfScale.valueChanged.connect(lambda *_: dfScaleEdited(self))
-    sw.DfScaleUnits.currentIndexChanged.connect(lambda *_: showDfScale(self))
+    sw.DfScaleUnits.currentIndexChanged.connect(lambda *_: dfScaleUnitChanged(self))
+    sw.DCUnit.currentIndexChanged.connect(lambda *_: dcUnitChanged(self))
+    dcUnitChanged(self)
 
 
 def fileCalibration(self):
@@ -341,77 +365,50 @@ def connectBeamPick(self) -> None:
                                 "double-click the right one on the diffraction pattern.")
 
 
-def crossAlign(self):
-    """
-    Manual beam-centre alignment via an interactive cross-hair cursor.
+def crossAlign(self, on=None):
+    """Beam centre at the crossing of two lines (MATLAB's ``cross_align``): the X button shows two
+    lines on the diffraction pattern, each with two draggable end points (drag the line to move it),
+    for the user to lay along two Kikuchi lines; the beam centre follows their intersection while
+    they are dragged.  Click X again (or leave Alignment mode) to finish.
 
-    Draws two draggable lines (H + V) on the diffraction window that
-    follow the mouse.  A single left-click fixes the intersection as the
-    new B0 (TBX, TBY) and removes the cursor.
-
-    A second call to crossAlign (e.g. user presses the button again)
-    while a cursor is already active will remove it without updating B0.
-    """
-    canvas = self.Fig.Dfrn.canvas
-    ax = self.Fig.Dfrn.ax
-
-    # ── toggle off if already active ────────────────────────────────────
-    if hasattr(self, '_crossAlignState') and self._crossAlignState is not None:
-        _state = self._crossAlignState
-        for cid in _state['cids']:
-            canvas.mpl_disconnect(cid)
-        for line in _state['lines']:
-            try:
+    *on*: True / False to start / finish; None toggles."""
+    from annotationsClasses.interactiveLine import InteractiveLine, intersection  # noqa: E402
+    state = getattr(self, "_crossAlignState", None)
+    if on is None:
+        on = state is None
+    if not on:
+        if state is not None:
+            for line in state["lines"]:
                 line.remove()
-            except Exception:
-                pass
-        canvas.draw_idle()
-        self._crossAlignState = None
+            self._crossAlignState = None
+        with signals_blocked(self.TBCrossAlign):
+            self.TBCrossAlign.setChecked(False)
+        return
+    if state is not None or self.Data is None:
         return
 
-    # ── create crosshair lines ───────────────────────────────────────────
-    xl = ax.get_xlim()
-    yl = ax.get_ylim()
-    b0 = self.B0
+    # two lines crossing at the current beam centre, at ±45°, half the pattern long
+    ax = self.Fig.Dfrn.ax
+    b0 = np.asarray(self.B0, float)
+    h = np.array([self.D.NPxX, self.D.NPxY], float) / 4
+    lines = [InteractiveLine(ax, [b0 - h, b0 + h], color="r"),
+             InteractiveLine(ax, [b0 + h * [-1, 1], b0 + h * [1, -1]], color="r")]
 
-    h_line = ax.axhline(b0[1], color='yellow', linewidth=1,
-                        linestyle='--', alpha=0.8, zorder=10)
-    v_line = ax.axvline(b0[0], color='yellow', linewidth=1,
-                        linestyle='--', alpha=0.8, zorder=10)
-    canvas.draw_idle()
-
-    def _on_move(event):
-        if event.inaxes is not ax or event.xdata is None:
+    def moved():
+        p = intersection(lines[0].ends, lines[1].ends)
+        if p is None:                                   # parallel: no crossing
             return
-        h_line.set_ydata([event.ydata, event.ydata])
-        v_line.set_xdata([event.xdata, event.xdata])
-        canvas.draw_idle()
-
-    def _on_click(event):
-        if event.inaxes is not ax or event.xdata is None:
-            return
-        if event.button != 1:   # left-click only
-            return
-
-        new_x = float(np.clip(event.xdata, 0, self.D.NPxX - 1))
-        new_y = float(np.clip(event.ydata, 0, self.D.NPxY - 1))
-
+        p = p.clip(0, np.array([self.D.NPxX, self.D.NPxY]) - 1)
         with all_signals_blocked(self):
-            self.TBX.setValue(new_x)
-            self.TBX_NF.setValue(new_x)
-            self.TBY.setValue(new_y)
-            self.TBY_NF.setValue(new_y)
-
-        # Tear down the crosshair
-        crossAlign(self)   # second call → removes state
+            for box, v in ((self.TBX, p[0]), (self.TBX_NF, p[0]), (self.TBY, p[1]), (self.TBY_NF, p[1])):
+                box.setValue(float(v))
         moveTransBeam(self, sender=None)
 
-    cids = [
-        canvas.mpl_connect('motion_notify_event', _on_move),
-        canvas.mpl_connect('button_press_event', _on_click),
-    ]
-
-    self._crossAlignState = {
-        'cids': cids,
-        'lines': [h_line, v_line],
-    }
+    for line in lines:
+        line.connect()
+        line.updateLine.connect(moved)
+    self._crossAlignState = {"lines": lines}
+    with signals_blocked(self.TBCrossAlign):
+        self.TBCrossAlign.setChecked(True)
+    self.Fig.Dfrn.show()
+    self.Fig.Dfrn.activateWindow()

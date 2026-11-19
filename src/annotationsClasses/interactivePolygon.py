@@ -67,6 +67,7 @@ class InteractivePolygon(qtc.QObject):
         self.handles = axis.scatter(self.vertices[:, 0], self.vertices[:, 1], color=[color], s=30,
                                     zorder=5, animated=False)
         self.background = None  # taken when a drag starts
+        self.companions: Any = None  # callable → artists that move with the polygon (drawn while dragged)
         self.canvas.draw_idle()
 
     # ------------------------------------------------------------------ geometry
@@ -97,8 +98,15 @@ class InteractivePolygon(qtc.QObject):
         self.patch.set_xy(self.vertices)
         self.handles.set_offsets(self.vertices)
 
+    def _companionArtists(self):
+        try:
+            return [a for a in (self.companions() if self.companions is not None else []) if a is not None]
+        except (AttributeError, TypeError):
+            return []
+
     def _artists(self):
-        return [self.patch] + ([self.handles] if self.handles.get_visible() else [])
+        own = [self.patch] + ([self.handles] if self.handles.get_visible() else [])
+        return [a for a in self._companionArtists() if a.get_visible() and a.axes is self.axis] + own
 
     # ------------------------------------------------------------------ public API
     def connect(self):
@@ -163,7 +171,9 @@ class InteractivePolygon(qtc.QObject):
         self._press = (self.vertices.copy(), self.rotation, event.xdata, event.ydata)
         InteractivePolygon.lock = self
         self._set_cursor(self._transform)
-        for a in self._artists():
+        # the companions (mask outline) are left out of the background too, or their old position
+        # would stay painted there until the release
+        for a in self._artists() + self._companionArtists():
             a.set_animated(True)
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.axis.bbox)
@@ -204,5 +214,7 @@ class InteractivePolygon(qtc.QObject):
         InteractivePolygon.lock = None
         self.patch.set_animated(False)
         self.handles.set_animated(False)
+        for a in self._companionArtists():
+            a.set_animated(False)
         self.canvas.draw()
         self.updatePoly.emit()     # final update after the drag (Reduced calculation policy)

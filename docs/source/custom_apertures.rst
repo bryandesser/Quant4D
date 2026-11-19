@@ -26,10 +26,10 @@ Each button on the tab adds a new mask.  Masks are named ``A``, ``B``, … ``Z``
    * - **Circle**
      - A circular aperture, created on top of the transmitted beam.  Drag inside
        it to move it and drag its handle to change the radius.  **Mirror** adds
-       a copy reflected through the beam centre (shown dashed).
+       a copy reflected through the centre axis (shown dashed).
    * - **Grid**
      - A lattice of equal apertures.  Two draggable basis apertures set the
-       lattice vectors from the beam centre; apertures are placed at every
+       lattice vectors from the centre axis; apertures are placed at every
        lattice site over the pattern.  Dragging a basis aperture's handle sets
        the radius of all of them.
    * - **Grid (×)**
@@ -37,10 +37,10 @@ Each button on the tab adds a new mask.  Masks are named ``A``, ``B``, … ``Z``
        site (only sites where exactly one lattice index is odd), e.g. for
        superlattice reflections.
    * - **Bandpass**
-     - A ring between two radii about a centre.  Drag the two handles to set
-       the inner and outer radius, or drag inside to move it.
+     - A ring between two radii about the centre axis.  Drag the two handles
+       to set the inner and outer radius; move it with **Centre axis**.
    * - **Wedge**
-     - A sector from the beam centre to the edges of the pattern, between the
+     - A sector from the centre axis to the edges of the pattern, between the
        directions of two draggable handles (the opening is always below 180°).
        Mirrored by default, which adds the opposite sector.
    * - **Polygon**
@@ -78,15 +78,24 @@ Editing the selected mask
 
 - **Details table** — the mask's points (centres, handles or vertices) and
   radii, editable as numbers.  Coordinates follow the Detector Coordinate
-  Options in Settings > Windows > Diffraction: polar or Cartesian, relative to the beam centre
-  or absolute, in mrad or pixels.
+  Options in Settings > Misc (polar or Cartesian, relative to the beam centre
+  or absolute), in mrad or pixels as Settings > Windows > Diffraction > Scale
+  says.
 - **Rotate** clockwise or anticlockwise by the chosen step (180° down to
   0.25°) about the beam centre, as displayed.  File masks rotate in steps of
   90° (180° unless the pattern is square) and can only be transposed when the
   pattern is square.
 - **Flip** across the horizontal or vertical axis through the beam centre, or
   **transpose** (swap x and y).
-- **Mirror** (Circle and Wedge) through the beam centre.
+- **Centre axis** (the crosshair button above Mirror; Circle, Grid, Bandpass
+  and Wedge) — every such mask has a centre axis, the beam centre to begin
+  with: the mirror centre of a Circle, the origin of a Grid, the centre of a
+  Bandpass and the apex of a Wedge.  Press the button to show it as a **+**
+  and drag it off the beam centre; a Grid or Wedge moves with it (keeping its
+  shape), a Bandpass is centred on it, a Circle stays where it is (only its
+  mirror moves).  Press the button again to hide the **+**: the axis stays
+  locked where it is.  Rotations and flips of such a mask turn about its axis.
+- **Mirror** (Circle and Wedge) through the centre axis.
 - **Invert** the mask (``max − mask``: swaps inside and outside of a binary
   mask, reverses grey levels).
 - **Intra-mask mode** — how the parts of one mask combine (Grid, and a

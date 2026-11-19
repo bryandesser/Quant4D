@@ -25,6 +25,12 @@ chooses the wrong disk, **double-click the right disk** on the diffraction
 pattern: the beam is refitted to the detected circle nearest the click (or, if
 no circle is detected there, centred on the click with the current radius).
 
+**X** (cross alignment) puts the beam centre where two lines cross: two red
+lines appear, crossing at the current beam centre.  Drag each line's end points
+onto a Kikuchi line (drag a line elsewhere to move it whole); the beam centre
+follows the intersection as you drag.  Click **X** again, or leave Alignment
+mode, to remove the lines.  Pan and zoom still work while they are shown.
+
 .. note::
    Full alignment walkthrough with screenshots will be added in a future
    documentation update.

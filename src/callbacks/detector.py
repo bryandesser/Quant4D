@@ -47,6 +47,10 @@ def clearDetectors(self):
         if getattr(ln, '_vrAp_clone', False):
             ln.remove()
 
+    # Cross alignment lines (Alignment mode only)
+    from callbacks.alignment import crossAlign  # noqa: E402
+    crossAlign(self, False)
+
     # Custom detectors: remove their annotations; they are redrawn on returning to CustMod
     from callbacks.customDetectorCallbacks import _removeArtists  # noqa: E402
     for cmask in self.A.Custom.values():
@@ -227,7 +231,10 @@ def detectorModeCallbacks(self):
             for id in COM_WINDOWS:
                 self.Fig[id].show()
                 showImageContent(self, id)
-            self.Fig.CoMPhMag.activateWindow()
+            # the real-space image comes up last, on top of the other real-space windows
+            self.Fig.Real.show()
+            self.Fig.Real.raise_()
+            self.Fig.Real.activateWindow()
             self.SettingsWindow.SettingsTabGroup.setCurrentWidget(self.SettingsWindow.WindowsTab)
         case "VrApMod":  # 'Virtual Aperture'
             self.DfrnDetrTabGroup.setCurrentIndex(3)

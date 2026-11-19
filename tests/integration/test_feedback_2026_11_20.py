@@ -28,8 +28,9 @@ class TestCalibrationsInWindowsTab:
         for name in ("RsStep", "RsUnits", "ScaleBarReal"):
             assert sw.RealWindowTab.isAncestorOf(getattr(sw, name)), name
         # detector coordinate options back in Misc (Bryan, 2026-11-20: the two tabs look alike)
-        for name in ("DCSys", "DCPos", "DCUnit"):
+        for name in ("DCSys", "DCPos"):
             assert sw.MiscTab.isAncestorOf(getattr(sw, name)), name
+        assert not sw.DCUnit.isVisible()            # the units come from the Scale dropdown (2026-11-20c)
         assert not sw.MiscTab.isAncestorOf(sw.RsStep)
 
     def test_rotation_icons_gone(self, app):

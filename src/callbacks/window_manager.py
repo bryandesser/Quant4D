@@ -25,6 +25,36 @@ def placeBesideMain(self, window) -> None:
     window.move(x, main.top())
 
 
+def placeImageWindows(self) -> None:
+    """First layout of the image windows, beside the Settings window and at the top of its screen:
+    the diffraction-space windows stacked in one column, the real-space windows in the next (at
+    their default size; on a screen too narrow for both columns the real-space one overlaps the
+    diffraction one rather than leave the screen).  Done once (on the first import); after that the
+    windows stay where the user puts them."""
+    if getattr(self, "_imageWindowsPlaced", False):
+        return
+    self._imageWindowsPlaced = True
+    sw = self.SettingsWindow
+    screen = sw.screen() or self.screen()
+    if screen is None:
+        return
+    avail = screen.availableGeometry()
+    pad = int(self.C.decorPad or 0)
+    title = int(self.C.titleHeight or 0)
+    frame_w = self.Fig.Dfrn.width() + 2 * pad
+    x0 = sw.frameGeometry().right() + 1
+    if x0 + frame_w > avail.right() + 1:          # Settings at the right edge: start from the left
+        x0 = avail.left()
+    x_real = max(x0, min(x0 + frame_w, avail.right() + 1 - frame_w))
+    for id in self.G.ImgID:
+        fig = self.Fig[id]
+        if fig.space not in ("Dfrn", "Real") or getattr(fig, "group", None) is not None:
+            continue
+        x = x_real if fig.space == "Real" else x0
+        # the client area, inside the frame: title bar at the top of the screen
+        fig.setGeometry(qtc.QRect(int(x + pad), int(avail.top() + title), fig.width(), fig.height()))
+
+
 @contextmanager
 def busyIndicator(self):
     """Show the progress bar at the bottom of the main window as "busy" for the duration, then hide it."""

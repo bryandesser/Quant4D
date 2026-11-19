@@ -148,6 +148,8 @@ def slotsSignals(self):
     connectScaleBars(self)        # Settings > Windows: Scale bar (diffraction / real space)
     from callbacks.scan_step import connectScanStep  # noqa: E402
     connectScanStep(self)         # Scan Step: Import window (file) and Settings > Windows > Real-space (loaded data)
+    from callbacks.window_groups import matchWindowTabs  # noqa: E402
+    matchWindowTabs(self)         # Settings > Windows: identical Diffraction / Real-space columns (after the dropdowns fill)
     from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402
     connectPy4DSTEM(self)         # File > Open with py4DSTEM Reader... (only with py4DSTEM installed)
     from callbacks.file_drop import installFileDrop  # noqa: E402
@@ -235,6 +237,9 @@ def slotsSignals(self):
     self.TBY_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBR_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBAutoAlign.clicked.connect(lambda: transBeamCallbacks(self, self.TBAutoAlign))
+    self.TBCrossAlign.setCheckable(True)        # on while the two alignment lines are shown
+    self.TBCrossAlign.setToolTip("Beam centre at the crossing of two lines: drag their end points onto two "
+                                 "Kikuchi lines (drag a line to move it).  Click again to finish.")
     self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self, self.TBCrossAlign))
 
     # Math formula (CustMod)
@@ -683,7 +688,13 @@ def startupFcn(self):
         self.SettingsWindow.DCPos.clear()
         self.SettingsWindow.DCPos.addItems(['Relative', 'Absolute'])
 
-        # settings window, diffraction space units
+        # diffraction-space units of the detector coordinates: set from Settings > Windows > Diffraction
+        # > Scale (mrad/px or 1/Å/px → mrad, px → pixels), so no longer shown; kept as a hidden combo
+        # because everything that shows a detector value reads its unit from it
+        if not hasattr(self.SettingsWindow, "DCUnit"):
+            self.SettingsWindow.DCUnit = qtw.QComboBox(self.SettingsWindow)
+            self.SettingsWindow.DCUnit.setObjectName("DCUnit")
+            self.SettingsWindow.DCUnit.hide()
         self.SettingsWindow.DCUnit.clear()
         self.SettingsWindow.DCUnit.addItem('mrad', 'mrad')
         self.SettingsWindow.DCUnit.addItem('Pixel', 'px')

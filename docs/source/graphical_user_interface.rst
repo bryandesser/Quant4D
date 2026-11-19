@@ -131,14 +131,16 @@ shrink below 600 px tall, so its controls are never squeezed):
   - **Diffraction**: **Scale**, the same value as the main window's mrad/px,
     shown in mrad/px or 1/Å/px (at the accelerating voltage) — changing either
     recalculates the convergence angle, every detector value shown in mrad, the
-    scale bars and the export calibration
+    scale bars and the export calibration.  ``px`` shows every detector value
+    (radii, angles, custom-mask coordinates) and the scale bar in pixels; the
+    calibration is kept for when you switch back
   - **Real-space**: **Scan Step** of the loaded data (the file's step × the
     import sampling), editable after import; export multiplies it by the
     export sampling; choosing ``px`` returns to uncalibrated
 
 - **Misc** — calculation policy, the **Detector Coordinate Options**
-  (polar/Cartesian, relative/absolute, mrad/pixels) and the byte-order and X/Y
-  swaps of the dataset
+  (polar/Cartesian, relative/absolute; the units are the Diffraction Scale's)
+  and the byte-order and X/Y swaps of the dataset
 - **Info** — dataset information, including both scan steps (e.g.
   ``Scan Step: 0.5 nm (file 0.25 nm × sampling 2)``); **Show all variables**
   adds a **Variables** tab listing the dataset parameters and settings
@@ -154,7 +156,11 @@ Image windows
 
 Each analysis mode opens a set of image windows (diffraction pattern,
 real-space image, CoM channels, etc.), each with a matplotlib toolbar for pan,
-zoom and restore-view.
+zoom and restore-view.  After the first import they open at the top of the
+screen, right of the Settings window: the diffraction-space windows stacked in
+one column, the real-space windows in the next (overlapping it on a narrow
+screen).  Later imports leave them where you put them.  Entering CoM/DPC brings
+the real-space image up last, on top of the other real-space windows.
 
 - **Scale bar**: bottom right, a round length (1, 2 or 5 × 10ⁿ) of about a
   fifth of the window, recomputed as you zoom, resize or rotate the view and

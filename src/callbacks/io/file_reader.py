@@ -234,6 +234,8 @@ def prepareData(self, keep_beam=False):
     from callbacks.window_manager import placeBesideMain  # noqa: E402
     placeBesideMain(self, self.SettingsWindow)
     self.SettingsWindow.show()
+    from callbacks.window_manager import placeImageWindows  # noqa: E402
+    placeImageWindows(self)         # first import: image windows beside Settings, at the top
 
     # Enter alignment mode.  The mode callbacks dispatch on self.sender(), so
     # emit the combo's own signal rather than calling them directly (the index

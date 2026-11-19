@@ -185,6 +185,9 @@ class InteractiveCircle(qtc.QObject):
             return
         if InteractiveCircle.lock is not None:
             return
+        from annotationsClasses.interactivePoint import InteractivePoint    # a point on top took the press
+        if InteractivePoint.lock is not None:                               # (e.g. a custom mask's axis)
+            return
 
         # update center and radii (get_xydata, not the cached _xy: that is only refreshed when the
         # line is drawn, so right after a programmatic move it still held the old circle and the

@@ -4,6 +4,20 @@ Changelog
 Unreleased
 ----------
 
+- Cross alignment (X): two lines with draggable end points (MATLAB's), for
+  Kikuchi lines; the beam centre follows their crossing.  Click X again to
+  finish.
+- Custom detectors: **Centre axis** button above Mirror (Circle, Grid,
+  Bandpass, Wedge): show a + and drag the mask's axis off the beam centre;
+  press again to lock it.  Bandpass rings are now moved with it.
+- Dragging a polygon mask no longer leaves its dotted outline behind.
+- Image windows first open beside the Settings window, at the top of the
+  screen (diffraction column, then real space); the real-space image comes up
+  last in CoM/DPC.
+- Diffraction Scale gains ``px`` (detector values in pixels); the mrad/pixel
+  choice left the Detector Coordinate Options.
+- Settings > Windows: the Diffraction and Real-space tabs lay out identically.
+- Fix: a transmitted-beam refresh with no beam annotation yet raised an error.
 - Settings > Windows > Diffraction / Real-space: **Group into tabs** gathers
   that space's image windows into one tabbed window (off by default).  Tabs
   tear off by dragging out or double-clicking; closing a torn-off window

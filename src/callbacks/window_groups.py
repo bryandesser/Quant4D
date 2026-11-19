@@ -280,6 +280,50 @@ def setGrouped(self, space: str, on: bool) -> None:
         group.deleteLater()
 
 
+def matchWindowTabs(self) -> None:
+    """Settings > Windows > Diffraction and Real-space: the same layout on both tabs, so nothing
+    shifts when switching between them.  The texts differ ("Set All Diffraction" / "Set All Real",
+    the unit lists), and the grids sized their columns from each widget's size hint; now the widgets
+    in the same cell get the same minimum width and their hints are ignored, so the columns come
+    from those minimums and the equal column stretch alone."""
+    from PyQt5.QtWidgets import QLayout, QSizePolicy
+    sw = self.SettingsWindow
+    # the Scale / Scan Step boxes take any value up to 1e6: their hint asked for more width than
+    # the window has
+    for box in (sw.DfScale, sw.RsStep):
+        box.setMinimumWidth(70)
+
+    def cells(grid):
+        out = {}
+        for i in range(grid.count()):
+            item = grid.itemAt(i)
+            out[grid.getItemPosition(i)] = item.widget() if item.widget() is not None else item.layout()
+        return out
+
+    def match(a, b):
+        if isinstance(a, QLayout):                      # a nested layout (the W / H fields): pair by index
+            for i in range(min(a.count(), b.count())):
+                wa, wb = a.itemAt(i).widget(), b.itemAt(i).widget()
+                if wa is not None and wb is not None:
+                    match(wa, wb)
+            return
+        if a.sizePolicy().horizontalPolicy() == QSizePolicy.Fixed:     # the axis buttons: already alike
+            return
+        width = max(a.minimumWidth() or a.minimumSizeHint().width(),
+                    b.minimumWidth() or b.minimumSizeHint().width())
+        for w in (a, b):
+            w.setMinimumWidth(width)
+            policy = w.sizePolicy()
+            policy.setHorizontalPolicy(QSizePolicy.Ignored)
+            w.setSizePolicy(policy)
+
+    real = cells(sw.RealWindowGrid)
+    for cell, a in cells(sw.DfrnWindowGrid).items():
+        b = real.get(cell)
+        if b is not None:
+            match(a, b)
+
+
 def connectWindowGroups(self) -> None:
     """The Group into tabs boxes; called once from ``slotsSignals``."""
     sw = self.SettingsWindow

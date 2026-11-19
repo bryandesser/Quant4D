@@ -141,17 +141,19 @@ def handleKey(self, id, event) -> bool:
 
 
 def _annotationBusy(self) -> bool:
-    """An annotation is being dragged, or a click tool (polygon drawing, cross-hair) is active."""
+    """An annotation is being dragged, or a click tool (polygon drawing) is active.  (The cross-align
+    lines only take presses on themselves: their lock says when one is dragged.)"""
     from annotationsClasses.interactiveCircle import InteractiveCircle
     from annotationsClasses.interactiveEllipse import InteractiveEllipse
+    from annotationsClasses.interactiveLine import InteractiveLine
     from annotationsClasses.interactivePoint import InteractivePoint
     from annotationsClasses.interactivePolygon import InteractivePolygon
     from annotationsClasses.interactiveRectangle import InteractiveRectangle
-    if any(cls.lock is not None for cls in (InteractiveCircle, InteractiveEllipse, InteractivePoint,
+    if any(cls.lock is not None for cls in (InteractiveCircle, InteractiveEllipse, InteractiveLine, InteractivePoint,
                                             InteractivePolygon, InteractiveRectangle)):
         return True
     return any(getattr(obj, name, None) is not None
-               for obj, name in ((self.A, "_tmp_selector"), (self, "_cdSelector"), (self, "_crossAlignState")))
+               for obj, name in ((self.A, "_tmp_selector"), (self, "_cdSelector")))
 
 
 def _onPanPress(self, id, event) -> None:
