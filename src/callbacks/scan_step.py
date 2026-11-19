@@ -119,6 +119,8 @@ def scanStepChanged(self) -> None:
     refreshExportNotes(self)
     from callbacks.scale_bar import refreshScaleBars  # noqa: E402
     refreshScaleBars(self, "Real")
+    from callbacks.annularDetectorCallbacks import showBandpass  # noqa: E402
+    showBandpass(self)                  # 1/Å and mrad of the bandpass filter follow the step
 
 
 def connectScanStep(self) -> None:

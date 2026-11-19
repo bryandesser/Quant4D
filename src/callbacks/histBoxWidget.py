@@ -79,7 +79,9 @@ class HistBox(AxesWidget):
 
     Each edge carries a round handle at mid-height, and the cursor shows what a
     drag will do: a horizontal resize arrow over an edge, a move cross over the
-    body.
+    body.  A third handle sits on the gamma curve at the middle of the window
+    (where the curve is at 0.5^gamma of the height): dragging it up or down sets
+    gamma through ``on_gamma(gamma)`` (vertical resize cursor).
 
     When a drag ends (mouse-button-release) ``on_change(lo, hi)`` is called.
 
@@ -96,6 +98,7 @@ class HistBox(AxesWidget):
 
     def __init__(self, ax, lo: float, hi: float,
                  on_change=None,
+                 on_gamma=None,
                  edge_tol: float = 0.03,
                  color: str = "steelblue",
                  alpha: float = 0.25):
@@ -104,6 +107,10 @@ class HistBox(AxesWidget):
         self._lo = float(lo)
         self._hi = float(hi)
         self._on_change = on_change
+        self._on_gamma = on_gamma
+        self._gamma = 1.0
+        self._gamma_y = None            # (y0, y1) data limits the gamma curve spans; None: no curve yet
+        self.gamma_range = (0.01, 10.0)
         self._edge_tol = edge_tol
 
         # --- shaded rectangle ---
@@ -135,6 +142,9 @@ class HistBox(AxesWidget):
                       markeredgewidth=1.5, linestyle="none", zorder=5, transform=ax.get_xaxis_transform())
         self._handle_lo, = ax.plot([self._lo], [0.5], **handle)
         self._handle_hi, = ax.plot([self._hi], [0.5], **handle)
+        # --- gamma handle, on the curve (data coordinates); hidden until set_gamma places it ---
+        self._handle_gamma, = ax.plot([], [], marker="o", markersize=8, markerfacecolor="gold",
+                                      markeredgecolor="k", markeredgewidth=1.2, linestyle="none", zorder=6)
         self._cursor = None      # the cursor last set (None: the canvas default)
 
         # drag state
@@ -171,7 +181,7 @@ class HistBox(AxesWidget):
             self._line_lo.remove()
         except Exception:
             pass
-        for artist in (self._line_hi, self._handle_lo, self._handle_hi):
+        for artist in (self._line_hi, self._handle_lo, self._handle_hi, self._handle_gamma):
             try:
                 artist.remove()
             except Exception:
@@ -193,7 +203,38 @@ class HistBox(AxesWidget):
             line.set_ydata(ylim)
         self._handle_lo.set_xdata([self._lo])
         self._handle_hi.set_xdata([self._hi])
+        self._place_gamma()
         self.ax.figure.canvas.draw_idle()
+
+    # ------------------------------------------------------------------ gamma
+    def set_gamma(self, gamma: float, y0: float, y1: float) -> None:
+        """Place the gamma handle for *gamma* on a curve spanning data heights *y0* .. *y1*."""
+        self._gamma = float(gamma)
+        self._gamma_y = (float(y0), float(y1))
+        self._place_gamma()
+        self.ax.figure.canvas.draw_idle()
+
+    def _gamma_xy(self):
+        if self._gamma_y is None:
+            return None
+        y0, y1 = self._gamma_y
+        return (self._lo + self._hi) / 2.0, y0 + 0.5 ** self._gamma * (y1 - y0)
+
+    def _place_gamma(self) -> None:
+        xy = self._gamma_xy()
+        self._handle_gamma.set_data(([xy[0]], [xy[1]]) if xy else ([], []))
+
+    def _gamma_hit(self, event) -> bool:
+        xy = self._gamma_xy()
+        if xy is None or event.x is None or event.y is None:
+            return False
+        hx, hy = self.ax.transData.transform(xy)
+        return abs(event.x - hx) <= 2 * EDGE_PX and abs(event.y - hy) <= 2 * EDGE_PX
+
+    def _gamma_from(self, ydata: float) -> float:
+        y0, y1 = self._gamma_y
+        frac = float(np.clip((ydata - y0) / (y1 - y0), 1e-6, 1 - 1e-6)) if y1 != y0 else 0.5
+        return float(np.clip(np.log(frac) / np.log(0.5), *self.gamma_range))
 
     def _set_cursor(self, cursor) -> None:
         """Show *cursor* (a matplotlib ``Cursors``) over the histogram, or the default for None."""
@@ -207,7 +248,7 @@ class HistBox(AxesWidget):
 
     def cursor_for(self, mode):
         return {"lo": Cursors.RESIZE_HORIZONTAL, "hi": Cursors.RESIZE_HORIZONTAL,
-                "body": Cursors.MOVE}.get(mode)
+                "body": Cursors.MOVE, "gamma": Cursors.RESIZE_VERTICAL}.get(mode)
 
     def _axes_x_tol(self) -> float:
         """Edge-grab tolerance in data units: a fraction of the axes, at least EDGE_PX screen pixels."""
@@ -236,7 +277,7 @@ class HistBox(AxesWidget):
     def _on_press(self, event) -> None:
         if event.inaxes is not self.ax or event.button != 1:
             return
-        mode = self._classify_hit(event.xdata)
+        mode = "gamma" if self._gamma_hit(event) else self._classify_hit(event.xdata)
         if mode is None:
             return
         self._drag_mode = mode
@@ -246,10 +287,20 @@ class HistBox(AxesWidget):
 
     def _on_motion(self, event) -> None:
         if self._drag_mode is None:          # hovering: say what a drag here would do
-            mode = self._classify_hit(event.xdata) if event.inaxes is self.ax else None
+            mode = None
+            if event.inaxes is self.ax:
+                mode = "gamma" if self._gamma_hit(event) else self._classify_hit(event.xdata)
             self._set_cursor(self.cursor_for(mode))
             return
         if event.inaxes is not self.ax:
+            return
+        if self._drag_mode == "gamma":
+            if event.ydata is not None and self._gamma_y is not None:
+                self._gamma = self._gamma_from(event.ydata)
+                self._place_gamma()
+                self.ax.figure.canvas.draw_idle()
+                if callable(self._on_gamma):
+                    self._on_gamma(self._gamma)          # live, like the gamma slider
             return
         dx = event.xdata - self._drag_x0
         xl = self.ax.get_xlim()
@@ -273,6 +324,6 @@ class HistBox(AxesWidget):
     def _on_release(self, event) -> None:
         if self._drag_mode is None or event.button != 1:
             return
-        self._drag_mode = None
-        if callable(self._on_change):
+        mode, self._drag_mode = self._drag_mode, None
+        if mode != "gamma" and callable(self._on_change):
             self._on_change(self._lo, self._hi)

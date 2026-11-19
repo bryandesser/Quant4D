@@ -49,6 +49,7 @@ class InteractiveEllipse(qtc.QObject):
         self.rotation = float(rotation)
         self.color = color
         self.interactions = interactions
+        self.keep_aspect = False      # resize keeps the axis ratio, as with Shift (right-click menu)
         self._press = None          # (center0, semiaxes0, rotation0, x0, y0) while dragging
         self._transform = None      # 'translate' | 'axis_0' | 'axis_1'
 
@@ -124,6 +125,13 @@ class InteractiveEllipse(qtc.QObject):
     def updateBackground(self):
         self.canvas.draw_idle()
 
+    def equalise(self) -> None:
+        """Make the ellipse a circle (both semi-axes the larger one) and tell listeners."""
+        self.semiaxes = np.full(2, float(np.max(self.semiaxes)))
+        self._update_artists()
+        self.canvas.draw_idle()
+        self.updateEllipse.emit()
+
     @property
     def dragging(self) -> bool:
         return self._press is not None
@@ -177,7 +185,7 @@ class InteractiveEllipse(qtc.QObject):
             v = p - center0
             self.semiaxes = semiaxes0.copy()
             self.semiaxes[k] = max(float(np.hypot(*v)), _MIN_SEMIAXIS)
-            if shift_held(event):               # Shift: keep the aspect ratio (both semi-axes scale)
+            if shift_held(event) or self.keep_aspect:   # keep the aspect ratio (both semi-axes scale)
                 self.semiaxes[1 - k] = max(semiaxes0[1 - k] * self.semiaxes[k] / semiaxes0[k], _MIN_SEMIAXIS)
             # handle k points along the ellipse's own x (k=0) or y (k=1) axis
             self.rotation = float(np.degrees(np.arctan2(v[1], v[0]))) - 90.0 * k

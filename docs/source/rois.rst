@@ -25,6 +25,11 @@ ROI types
   to rotate it about its centre
 - **File** — load a boolean mask from a file
 
+Right-click a rectangle or ellipse ROI for **Fix aspect ratio** (resizing keeps
+its current width:height, as holding ``Shift`` does) and **Fix square** /
+**Fix circle** (the sides become equal and stay so).  Both apply to the ROI on
+every real-space window; untick to resize freely again.
+
 The mask can be **inverted** using the Invert ROI button, selecting all frames
 *outside* the drawn region instead.
 

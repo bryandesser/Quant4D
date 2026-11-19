@@ -1,5 +1,5 @@
 from callbacks.appClass import D
-from callbacks.import_io import gatherImportOptions, importData, unloadData
+from callbacks.import_io import gatherImportOptions, importBoxInput, importData, unloadData
 from callbacks.io.file_reader import prepareData
 from callbacks.menus import showPreviewDisplayControls
 from callbacks.utils import notifDLG
@@ -10,6 +10,14 @@ def importCallbacks(self):
     match self.sender():
         case self.ShowImportWdw:
             self.ImportWindow.show()
+            # Swap Dataset is possible only with a dataset loaded and a file of its size: check now
+            # (it was only checked once a file was picked, so the box could stay ticked and disabled)
+            iw = self.ImportWindow
+            if self.D is None or self.Data is None:
+                iw.ImpKeepP.setChecked(False)
+                iw.ImpKeepP.setEnabled(False)
+            elif os.path.isfile(iw.ImpFilePath.text()):
+                importBoxInput(self, None)
             # Enter Import Preview Mode
             if self.DetrMode.currentData() != "PrvwMod":
                 self.DetrMode.setCurrentIndex(self.DetrMode.findData("PrvwMod"))
@@ -18,6 +26,7 @@ def importCallbacks(self):
 
         case self.ImportWindow.ImportCancelButton:  # Hide window when closing
             self.ImportWindow.hide()
+            self.ImportWindow.ImpKeepP.setChecked(False)      # a cancelled swap is not remembered
             # return to previous detector mode from Import Preview Mode
             if (self.DetrMode.currentData() == "PrvwMod") and (self.P.DetrMode != ""):
                 self.DetrMode.setCurrentIndex(self.DetrMode.findData(self.P.DetrMode))

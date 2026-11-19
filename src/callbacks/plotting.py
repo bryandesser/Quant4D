@@ -360,8 +360,19 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
                 finally:
                     self.A._histDrag = False
 
+            def _on_gamma(gamma):
+                """The gamma handle was dragged: set gamma as the slider does."""
+                sw = self.SettingsWindow
+                self.A._histDrag = True
+                try:
+                    sw.DispGamma_NF.setValue(gamma)        # its slot updates the slider and the image
+                finally:
+                    self.A._histDrag = False
+
             self.A.histBox = HistBox(hist_ax, limitLow, limitHigh,
-                                     on_change=_on_histbox_change)
+                                     on_change=_on_histbox_change, on_gamma=_on_gamma)
+            gmin = max(self.SettingsWindow.DispGamma_NF.minimum(), 1e-3)
+            self.A.histBox.gamma_range = (gmin, self.SettingsWindow.DispGamma_NF.maximum())
 
         # Reposition the box unless it is being dragged (avoid a loop); a flag, because this also
         # runs from matplotlib events, where self.sender() can be a deleted object
@@ -391,6 +402,7 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
         ramp = (x - limitLow) / span if span > 0 else np.zeros_like(x)   # a flat image has no ramp
         y0, y1 = self.SettingsWindow.HistAxes.axes.get_ylim()
         self.A.histGamma, = self.SettingsWindow.HistAxes.axes.plot(x, ramp**fig.gamma * (y1 - y0) + y0, color='k')
+        self.A.histBox.set_gamma(fig.gamma, y0, y1)        # its handle sits on the curve
 
         # Print display limits on the histogram
         textstr = "High:{:< 9.2e}\nLow:{:< 9.2e}".format(limitHigh, limitLow)

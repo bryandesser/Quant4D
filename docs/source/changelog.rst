@@ -36,6 +36,25 @@ Unreleased
 - Drag and drop: console warning when running as Administrator on Windows
   (Explorer cannot drop on elevated programs); ``PYQUANT4D_DEBUG_DROP=1``
   logs drag events.
+- Window menu: the Center of Mass items only in CoM/DPC mode.  Keyboard
+  shortcuts work from every pyQuant4D window (Ctrl+1 then Ctrl+2 from the
+  diffraction window).
+- Swap Dataset: the box can be ticked and unticked (it never enabled: the size
+  check compared the wrong things), is cleared on Cancel, and a swapped dataset
+  now keeps the detector, alignment, ROI, export ranges, display and mode.
+- First CoM/DPC visit runs AutoCurl (no orange highlight); entering CoM/DPC
+  shows the phase/magnitude, iCoM and dCoM windows and Settings > Windows.  The
+  Auto button sits in the top row only.  AutoCurl keeps the current flip for a
+  symmetric field.
+- The scan-direction lock icon no longer vanishes (icons were loaded relative
+  to the current folder).
+- Real-space ROI right-click menu: Fix aspect ratio, Fix circle / Fix square.
+- iCoM/dCoM bandpass limits in px, 1/Å or mrad (unit dropdown).
+- Diffraction Scale in mrad/px or 1/Å/px; detector coordinate options back in
+  Misc, so the Diffraction and Real-space tabs match.
+- Histogram: draggable gamma handle on the gamma curve.
+- Tooltips on the ROI invert, show image, lock and invert-colour-map buttons.
+- Settings window minimum height 600 px.
 - DM3/DM4 detector calibration sets the diffraction scale after import (mrad,
   rad, or 1/nm and Å⁻¹ converted at the accelerating voltage); the beam centre
   still comes from auto-alignment.

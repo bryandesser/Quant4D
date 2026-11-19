@@ -808,17 +808,19 @@ def importBoxInput(self, source=_SENDER):
         # Allow to swap dataset/keep parameters if the dimensions are identical and self.D is not None
         # self.ImportWindow.ImpKeepP.Enable = ~isempty(self.D) and isequal(irng,
         # [self.D.NPxX self.D.NPxY self.D.NFrX self.D.NFrY])
-        self.ImportWindow.ImpKeepP.setEnabled(
-            (self.D is not None) and (
-                irng == [
-                    self.D.NPxX,
-                    self.D.NPxY,
-                    self.D.NFrX,
-                    self.D.NFrY]))
-        if not self.ImportWindow.ImpKeepP.isEnabled():
+        # (irng is two (x, y) arrays: compared with the four sizes it was never equal, so the box
+        # stayed disabled, ticked by File > Swap Dataset and impossible to untick)
+        dims = [int(nPx[0]), int(nPx[1]), int(nFr[0]), int(nFr[1])]
+        loaded = self.D is not None and self.Data is not None
+        same = loaded and dims == [self.D.NPxX, self.D.NPxY, self.D.NFrX, self.D.NFrY]
+        self.ImportWindow.ImpKeepP.setEnabled(same)
+        if not same:
             self.ImportWindow.ImpKeepP.setChecked(False)
         if self.ImportWindow.ImpKeepP.isChecked():
             notes += "\n\nSwapping dataset - keeping current setups/alignments etc."
+        elif loaded and not same:
+            notes += "\n\nSwap Dataset needs the size of the loaded dataset ({} x {} px, {} x {} positions).".format(
+                self.D.NPxX, self.D.NPxY, self.D.NFrX, self.D.NFrY)
 
     # update notes in the text field
     self.ImportWindow.ImpNotes.setText(notes)

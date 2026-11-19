@@ -23,12 +23,14 @@ def annular(loaded_app, qapp):
 class TestCalibrationsInWindowsTab:
     def test_layout(self, app):
         sw = app.SettingsWindow
-        for name in ("DfScale", "DCSys", "DCPos", "DCUnit", "ScaleBarDfrn"):
+        for name in ("DfScale", "DfScaleUnits", "ScaleBarDfrn"):
             assert sw.DfrnWindowTab.isAncestorOf(getattr(sw, name)), name
         for name in ("RsStep", "RsUnits", "ScaleBarReal"):
             assert sw.RealWindowTab.isAncestorOf(getattr(sw, name)), name
-        for name in ("DCSys", "RsStep"):
-            assert not sw.MiscTab.isAncestorOf(getattr(sw, name)), name
+        # detector coordinate options back in Misc (Bryan, 2026-11-20: the two tabs look alike)
+        for name in ("DCSys", "DCPos", "DCUnit"):
+            assert sw.MiscTab.isAncestorOf(getattr(sw, name)), name
+        assert not sw.MiscTab.isAncestorOf(sw.RsStep)
 
     def test_rotation_icons_gone(self, app):
         sw = app.SettingsWindow
@@ -108,7 +110,7 @@ class TestHistogramHandles:
 
         assert hover(box._lo) == qtc.Qt.SizeHorCursor
         assert hover(box._hi) == qtc.Qt.SizeHorCursor
-        assert hover((box._lo + box._hi) / 2) == qtc.Qt.SizeAllCursor
+        assert hover(box._lo + 0.25 * (box._hi - box._lo)) == qtc.Qt.SizeAllCursor
         assert hover(ax.get_xlim()[0] + 1e-9) == qtc.Qt.ArrowCursor       # in the margin: nothing to drag
 
     def test_handles_follow_a_drag(self, hist, qapp):

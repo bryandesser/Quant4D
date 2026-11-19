@@ -135,6 +135,9 @@
          </item>
          <item row="0" column="5">
           <widget class="QPushButton" name="RealROIInvert">
+           <property name="toolTip">
+            <string>Invert the real-space ROI: use everything outside it</string>
+           </property>
            <property name="minimumSize">
             <size>
              <width>24</width>
@@ -1739,7 +1742,7 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="1" colspan="2">
+             <item row="1" column="1" colspan="3">
               <widget class="QDoubleSlider" name="ScanDir">
                <property name="enabled">
                 <bool>false</bool>
@@ -1839,13 +1842,13 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="3" rowspan="2">
+             <item row="0" column="3">
               <widget class="QPushButton" name="AutoCurl">
                <property name="enabled">
                 <bool>false</bool>
                </property>
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>

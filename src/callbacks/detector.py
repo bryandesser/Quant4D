@@ -78,9 +78,10 @@ def detectorModeCallbacks(self):
                 # self.Fig[ii].ax.cla()
                 self.Fig[ii].canvas.draw_idle()
 
-    # Enable/Disable CoM/DPC related buttons/images
+    # Enable/Disable CoM/DPC related buttons/images (and the Window menu's Center of Mass items)
     for btn in self.G.CoM_btns:
         btn.setEnabled(dmod in ["CoMMod", "DPCMod"])
+    syncCoMActions(self)
 
     # a locked display selection survives the mode change (if the image is still listed)
     locked_id = self.SettingsWindow.DispImage.currentData() if self.SettingsWindow.DispLock.isChecked() else None
@@ -218,12 +219,16 @@ def detectorModeCallbacks(self):
             self.DfrnDetrTabGroup.setCurrentIndex(2)
             self.dpcControls.setVisible("DPC" in dmod)
             self.comControls.setVisible(True)
-            annularDetectorCallbacks(self)  # TODO
+            annularDetectorCallbacks(self)  # first visit per dataset: also AutoCurl
             plotImage(self, 'ColorWheel')  # Plot ColorWheel #TODO
+            # the phase/magnitude image and iCoM/dCoM always come up (even if hidden earlier); the
+            # others are a click away on Settings > Windows, which is brought forward
+            from callbacks.window_manager import showImageContent  # noqa: E402
+            for id in COM_WINDOWS:
+                self.Fig[id].show()
+                showImageContent(self, id)
             self.Fig.CoMPhMag.activateWindow()
-            self.Fig.ColorWheel.activateWindow()
-            if not self.P.ScanDirInit:
-                pass  # flashBackground(self, self.ScanDirGrid) # Flashing to align scan direction #TODO
+            self.SettingsWindow.SettingsTabGroup.setCurrentWidget(self.SettingsWindow.WindowsTab)
         case "VrApMod":  # 'Virtual Aperture'
             self.DfrnDetrTabGroup.setCurrentIndex(3)
             virtualApertureCallbacks(self)
@@ -239,6 +244,16 @@ def detectorModeCallbacks(self):
 
 
 _SENDER = object()
+
+COM_WINDOWS = ("CoMPhMag", "iCoM", "dCoM")       # shown on entering CoM/DPC mode
+
+
+def syncCoMActions(self) -> None:
+    """Window > Center of Mass (submenu and its items, shortcuts included) only in CoM/DPC mode."""
+    in_com = self.DetrMode.currentData() in ("CoMMod", "DPCMod")
+    self.menuCenter_of_Mass.menuAction().setEnabled(in_com)
+    for action in self.menuCenter_of_Mass.actions():
+        action.setEnabled(in_com)
 
 
 def detrCoordCallbacks(self, source=_SENDER):

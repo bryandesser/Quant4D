@@ -59,6 +59,13 @@ def connectMenus(self) -> None:
     self.actionQuant4D_Manual.triggered.connect(lambda *_: qtg.QDesktopServices.openUrl(qtc.QUrl(MANUAL_URL)))
     self.actionAbout_Quant4D.triggered.connect(lambda *_: about(self))
 
+    # keyboard shortcuts work whichever pyQuant4D window has the focus (Ctrl+1 brings the
+    # diffraction window forward, and Ctrl+2 must still work from there); debug actions excepted
+    for action in self.findChildren(qtw.QAction):
+        if not action.shortcut().isEmpty() and "debug" not in action.iconText().lower() \
+                and action.objectName() not in ("enableAllUIs", "debugImport", "breakpoint"):
+            action.setShortcutContext(qtc.Qt.ApplicationShortcut)
+
     # icons beside controls: information only (MATLAB shows these as tooltips)
     sw.MathHelpIcon.setToolTip(MATH_HELP)
     sw.MathHelpIcon.clicked.connect(lambda *_: qtw.QToolTip.showText(qtg.QCursor.pos(), MATH_HELP, sw.MathHelpIcon))

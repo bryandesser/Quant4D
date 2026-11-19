@@ -225,9 +225,10 @@ def slotsSignals(self):
     self.TBR.valueChanged.connect(lambda: moveTransBeam(self))
     self.Alpha.valueChanged.connect(lambda: moveTransBeam(self))
     self.mradPx.valueChanged.connect(lambda: moveTransBeam(self))
-    # Settings > Windows > Diffraction: the same scale; edits go through mrad/px (recalculating the angle etc.)
-    self.SettingsWindow.DfScale.valueChanged.connect(
-        lambda v: None if self.blockAllSignals else self.mradPx.setValue(v))
+    # Settings > Windows > Diffraction: the same scale (mrad/px or 1/Å/px); edits go through mrad/px
+    # (recalculating the angle etc.)
+    from callbacks.alignment import connectDfScale  # noqa: E402
+    connectDfScale(self)
     self.TBX_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBY_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBR_NF.valueChanged.connect(lambda: moveTransBeam(self))
@@ -722,8 +723,12 @@ def startupFcn(self):
     self.SaveWindow = SaveWindow()
 
     # get lock and unlock icons for later user
-    self.unlock = qtg.QIcon('./gui/icons/unlock.png')
-    self.lock = qtg.QIcon('./gui/icons/lock.png')
+    # (from the package folder: the relative './gui/icons' depended on the current folder, which
+    # changes when a file is opened, so the scan-direction button went blank)
+    import gui  # noqa: E402
+    icons = os.path.join(os.path.dirname(os.path.abspath(gui.__file__)), "icons")
+    self.unlock = qtg.QIcon(os.path.join(icons, "unlock.png"))
+    self.lock = qtg.QIcon(os.path.join(icons, "lock.png"))
 
     # get current screen size information
     checkMonitors(self)
@@ -797,19 +802,24 @@ def reinitializeUI(self):
     self.DfrnDetrTabGroup.setVisible(True)
     self.DetectorModeGroup.setVisible(True)
 
-    # turn ALL actions back on
+    # turn ALL actions back on (but the Center of Mass windows only in CoM/DPC mode)
     for action in self.findChildren(qtw.QAction):
         action.setEnabled(True)
+    from callbacks.detector import syncCoMActions  # noqa: E402
+    syncCoMActions(self)
 
-    # update annular QRangeSlider to match
-    with signals_blocked(self.AnnRi):
-        self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
+    # update annular QRangeSlider to match (a swapped dataset keeps its detector)
+    if not (self.D is not None and getattr(self.D, "KeepP", False)):
+        with signals_blocked(self.AnnRi):
+            self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
 
     # re-enable windows
     enableWindows(self, True)
 
-    # start alignment mode
-    self.DetrMode.setCurrentIndex(self.DetrMode.findData("AlignMod"))
+    # start alignment mode (a swapped dataset: the mode it replaced, as prepareData chose)
+    mode = getattr(self, "_swapMode", None) or "AlignMod"
+    self._swapMode = None
+    self.DetrMode.setCurrentIndex(self.DetrMode.findData(mode))
 
 
 def resetQuant4DCallbacks(self):

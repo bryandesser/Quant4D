@@ -133,8 +133,7 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
         self.TBY_NF.setValue(b0[1])
         self.Alpha.setValue(a)
         self.mradPx.setValue(mrad_per_px)
-        with signals_blocked(self.SettingsWindow.DfScale):     # Settings > Windows > Diffraction
-            self.SettingsWindow.DfScale.setValue(float(self.mradPx.value()))
+        showDfScale(self)                    # Settings > Windows > Diffraction, in its unit
 
         # Annular integration step (MATLAB's AnnularStep): one pixel, but at most 250 rings out to the
         # farthest corner (finer makes the pre-computed annular images slow), shown in mrad
@@ -150,6 +149,46 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
     detrCoordCallbacks(self, source=None)    # mrad values follow the scale (not via self.sender(): see above)
     from callbacks.scale_bar import refreshScaleBars  # noqa: E402
     refreshScaleBars(self, "Dfrn")      # the scale (mrad/px) may have changed
+
+
+DF_SCALE_UNITS = (("mrad/px", "mrad"), ("1/Å/px", "invA"))
+
+
+def _invA_per_mrad(self) -> "float | None":
+    from callbacks.io.emd import mrad_per_inverse_angstrom  # noqa: E402
+    kv = getattr(self.D, "kV", None) if self.D is not None else None
+    return 1.0 / mrad_per_inverse_angstrom(kv) if kv and kv > 0 else None
+
+
+def showDfScale(self) -> None:
+    """Settings > Windows > Diffraction > Scale: the main window's mrad/px, in the unit chosen."""
+    sw = self.SettingsWindow
+    f = _invA_per_mrad(self) if sw.DfScaleUnits.currentData() == "invA" else 1.0
+    with signals_blocked(sw.DfScale):
+        sw.DfScale.setDecimals(4 if f == 1.0 else 6)
+        sw.DfScale.setValue(float(self.mradPx.value()) * (f or 1.0))
+
+
+def dfScaleEdited(self) -> None:
+    """The Scale field was edited: set mrad/px from it (which recalculates through moveTransBeam)."""
+    if self.blockAllSignals:
+        return
+    sw = self.SettingsWindow
+    f = _invA_per_mrad(self) if sw.DfScaleUnits.currentData() == "invA" else 1.0
+    if f:
+        self.mradPx.setValue(sw.DfScale.value() / f)
+
+
+def connectDfScale(self) -> None:
+    """Scale field and its unit; called once from ``slotsSignals``."""
+    sw = self.SettingsWindow
+    with signals_blocked(sw.DfScaleUnits):
+        sw.DfScaleUnits.clear()
+        for text, unit in DF_SCALE_UNITS:
+            sw.DfScaleUnits.addItem(text, unit)
+    sw.DfScale.setMaximum(1e6)
+    sw.DfScale.valueChanged.connect(lambda *_: dfScaleEdited(self))
+    sw.DfScaleUnits.currentIndexChanged.connect(lambda *_: showDfScale(self))
 
 
 def fileCalibration(self):

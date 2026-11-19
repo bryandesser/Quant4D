@@ -703,6 +703,10 @@ def main():
     _step("mode AnnMod", lambda: _set_mode(w, "AnnMod"))
     _step("annular image equals masked sum", lambda: _check_annular(w))
     _step("annular radii full range", lambda: w.AnnRi.setValue((0, int(w.AnnRi.maximum()))))
+    # The first CoM/DPC visit runs AutoCurl, which turns this coarse, binary disc's field; these steps
+    # check the raw field, so mark the scan direction as already aligned (AutoCurl itself is covered by
+    # tests/integration/test_feedback_2026_11_20b.py)
+    w.P.ScanDirInit = 1
     _step("mode CoMMod", lambda: (_set_mode(w, "CoMMod"), _check_com(w)))
     _step("CoM scan direction controls", lambda: _check_scan_direction(w))
     _step("mode DPCMod recomputes", lambda: _changes(w, ["CoMX", "CoMY"], lambda: _set_mode(w, "DPCMod")))

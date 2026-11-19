@@ -112,31 +112,33 @@ the window closes pyQuant4D's windows without ending the Python session.
 Settings window
 ---------------
 
-Contains tabs for display, windows, and miscellaneous options:
+Contains tabs for display, windows, and miscellaneous options (it does not
+shrink below 600 px tall, so its controls are never squeezed):
 
 - **Display** — image selection (and lock), colour map, histogram, brightness,
   contrast, gamma and mask opacity.  Each slider's button resets it (the mask
   button sets the opacity to 0 %; the mask windows open from the Show
   buttons).  On the histogram, the shaded box is the display range: drag a
   round handle (or its edge) to move one limit, drag inside the box to shift
-  both; the cursor shows which.  The axis extends a little past the image's
+  both; the cursor shows which.  The yellow handle on the gamma curve sets
+  gamma: drag it up or down.  The axis extends a little past the image's
   range so the default limits can be grabbed
 - **Windows** — buttons to show each image window and the vector-field overlay;
   the iCoM/dCoM bandpass filter; and per space, window size and orientation
   (axis directions, reversal, rotation, size), **Show scale bar** and the
   calibration:
 
-  - **Diffraction**: **Scale** (mrad/px), the same value as the main window's
-    mrad/px — changing either recalculates the convergence angle, every
-    detector value shown in mrad, the scale bars and the export calibration;
-    and the **Detector Coordinate Options** (polar/Cartesian,
-    relative/absolute, mrad/pixels)
+  - **Diffraction**: **Scale**, the same value as the main window's mrad/px,
+    shown in mrad/px or 1/Å/px (at the accelerating voltage) — changing either
+    recalculates the convergence angle, every detector value shown in mrad, the
+    scale bars and the export calibration
   - **Real-space**: **Scan Step** of the loaded data (the file's step × the
     import sampling), editable after import; export multiplies it by the
     export sampling; choosing ``px`` returns to uncalibrated
 
-- **Misc** — calculation policy and the byte-order and X/Y swaps of the
-  dataset
+- **Misc** — calculation policy, the **Detector Coordinate Options**
+  (polar/Cartesian, relative/absolute, mrad/pixels) and the byte-order and X/Y
+  swaps of the dataset
 - **Info** — dataset information, including both scan steps (e.g.
   ``Scan Step: 0.5 nm (file 0.25 nm × sampling 2)``); **Show all variables**
   adds a **Variables** tab listing the dataset parameters and settings
