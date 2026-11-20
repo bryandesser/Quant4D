@@ -123,8 +123,9 @@ shrink below 600 px tall, so its controls are never squeezed):
   buttons).  On the histogram, the shaded box is the display range: drag a
   round handle (or its edge) to move one limit, drag inside the box to shift
   both; the cursor shows which.  The yellow handle on the gamma curve sets
-  gamma: drag it up or down.  The axis extends a little past the image's
-  range so the default limits can be grabbed
+  gamma: drag it up or down.  The sliders and the image follow while you
+  drag.  The axis extends a little past the image's range so the default
+  limits can be grabbed
 - **Windows** — buttons to show each image window and the vector-field overlay;
   the iCoM/dCoM bandpass filter; and per space, window size and orientation
   (axis directions, reversal, rotation, size), **Scale bar**, **Group into
@@ -159,10 +160,18 @@ Image windows
 Each analysis mode opens a set of image windows (diffraction pattern,
 real-space image, CoM channels, etc.), each with a matplotlib toolbar for pan,
 zoom and restore-view.  After the first import they open at the top of the
-screen, right of the Settings window: the diffraction-space windows stacked in
-one column, the real-space windows in the next (overlapping it on a narrow
-screen).  Later imports leave them where you put them.  Entering CoM/DPC brings
-the real-space image up last, on top of the other real-space windows.
+screen, right of the Settings window: the diffraction-space windows in one
+column, the real-space windows in the next (overlapping it on a narrow
+screen).  In each column the diffraction pattern or real-space image sits at
+the corner and the other windows are staggered behind it, a title bar's height
+apart, so they can all be seen and picked.  Later imports leave them where you
+put them.  Entering CoM/DPC brings the real-space image up last, on top.
+
+**Window size** (Settings > Windows, W and H) is the display area: the image
+canvas itself, with the toolbar, status bar and margins added around it.
+Entering the data's size (or a multiple with the same aspect ratio) and
+pressing **Set** makes the image fill the window with no black bars; resizing
+a window by hand shows its display area in the fields.
 
 - **Scale bar**: bottom right, a round length (1, 2 or 5 × 10ⁿ) of about a
   fifth of the window, recomputed as you zoom, resize or rotate the view and

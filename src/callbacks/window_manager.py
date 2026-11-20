@@ -25,12 +25,19 @@ def placeBesideMain(self, window) -> None:
     window.move(x, main.top())
 
 
+# stagger order of each space's windows: the primary image at the column's corner, the others
+# offset behind it (title bars and edges showing), the CoM/DPC windows that come up together first
+STAGGER = {"Dfrn": ("Dfrn", "DfrnMask"),
+           "Real": ("Real", "RealMask", "CoMPhMag", "iCoM", "dCoM", "CoMX", "CoMY", "CoMMag", "CoMPh")}
+
+
 def placeImageWindows(self) -> None:
     """First layout of the image windows, beside the Settings window and at the top of its screen:
-    the diffraction-space windows stacked in one column, the real-space windows in the next (at
-    their default size; on a screen too narrow for both columns the real-space one overlaps the
-    diffraction one rather than leave the screen).  Done once (on the first import); after that the
-    windows stay where the user puts them."""
+    the diffraction-space windows in one column, the real-space windows in the next (on a screen too
+    narrow for both, the real-space column overlaps the diffraction one rather than leave the
+    screen).  In each column the primary image sits at the corner and the others are staggered
+    behind it by a title bar's height, so they can all be seen and picked.  Done once (on the first
+    import); after that the windows stay where the user puts them."""
     if getattr(self, "_imageWindowsPlaced", False):
         return
     self._imageWindowsPlaced = True
@@ -41,18 +48,24 @@ def placeImageWindows(self) -> None:
     avail = screen.availableGeometry()
     pad = int(self.C.decorPad or 0)
     title = int(self.C.titleHeight or 0)
+    step = max(title + pad, 24)
     frame_w = self.Fig.Dfrn.width() + 2 * pad
     x0 = sw.frameGeometry().right() + 1
     if x0 + frame_w > avail.right() + 1:          # Settings at the right edge: start from the left
         x0 = avail.left()
     x_real = max(x0, min(x0 + frame_w, avail.right() + 1 - frame_w))
-    for id in self.G.ImgID:
-        fig = self.Fig[id]
-        if fig.space not in ("Dfrn", "Real") or getattr(fig, "group", None) is not None:
-            continue
-        x = x_real if fig.space == "Real" else x0
-        # the client area, inside the frame: title bar at the top of the screen
-        fig.setGeometry(qtc.QRect(int(x + pad), int(avail.top() + title), fig.width(), fig.height()))
+    for space, column in (("Dfrn", x0), ("Real", x_real)):
+        ids = [id for id in STAGGER[space] if id in self.Fig and getattr(self.Fig[id], "group", None) is None]
+        n = len(ids) - 1
+        # stagger right if there is room, else left (back over the screen); down as far as fits
+        dx = step if column + frame_w + n * step <= avail.right() + 1 else -step
+        for k, id in enumerate(ids):
+            fig = self.Fig[id]
+            frame_h = fig.height() + title + pad
+            x = max(avail.left(), column + k * dx)
+            y = max(avail.top(), min(avail.top() + k * step, avail.bottom() + 1 - frame_h))
+            # the client area, inside the frame: title bar at the top of the screen
+            fig.setGeometry(qtc.QRect(int(x + pad), int(y + title), fig.width(), fig.height()))
 
 
 @contextmanager
@@ -187,19 +200,18 @@ def resizeWindowCallbacks(self):
     if self.blockAllSignals:
         return
 
-    # set the space: `Dfrn` or `Real`; get updated height and width, add mpl decor size
+    # set the space: `Dfrn` or `Real`; the fields are the display area (the canvas): each window adds
+    # its own toolbar, status bar and margins (a fixed estimate left black bars beside the image)
     if self.sender() in [
             self.SettingsWindow.WdwWDfrn,
             self.SettingsWindow.WdwHDfrn,
             self.SettingsWindow.WdwSetDfrn,
             self.SettingsWindow.WdwSetAllDfrn]:
         space = "Dfrn"
-        width = self.SettingsWindow.WdwWDfrn.value() + self.C.mplDecor.width()
-        height = self.SettingsWindow.WdwHDfrn.value() + self.C.mplDecor.height()
+        width, height = self.SettingsWindow.WdwWDfrn.value(), self.SettingsWindow.WdwHDfrn.value()
     else:
         space = "Real"
-        width = self.SettingsWindow.WdwWReal.value() + self.C.mplDecor.width()
-        height = self.SettingsWindow.WdwHReal.value() + self.C.mplDecor.height()
+        width, height = self.SettingsWindow.WdwWReal.value(), self.SettingsWindow.WdwHReal.value()
 
     match self.sender():
         case self.SettingsWindow.WdwSetDfrn | self.SettingsWindow.WdwSetReal:  # Set size for just one image window
@@ -211,14 +223,13 @@ def resizeWindowCallbacks(self):
 
             # temporarily block slots/signals to avoid recursion
             with signals_blocked(self.Fig[id]):
-                # set the height and wdith
-                self.Fig[id].resize(width, height)
+                self.Fig[id].setImageSize(width, height)
 
         case self.SettingsWindow.WdwSetAllDfrn | self.SettingsWindow.WdwSetAllReal:  # Set all image windows of the given space to the same size
             for fig in self.G.ImgFig:
                 if fig.space == space:
                     with signals_blocked(fig):
-                        fig.resize(width, height)
+                        fig.setImageSize(width, height)
 
 
 def enableWindows(self, sw=True):

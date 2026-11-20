@@ -264,7 +264,10 @@ class ImageWindow(qtw.QMainWindow):
     def showEvent(self, a0) -> None:
         if self.group is None:              # grouped: the group keeps the menu ticks (tab switches hide pages)
             self._syncMenuAction(True)
-        return super().showEvent(a0)
+        result = super().showEvent(a0)
+        if self._wantImage is not None and self.isWindow():     # sized while hidden: make it exact now
+            self.setImageSize(*self._wantImage)
+        return result
 
     def hideEvent(self, a0) -> None:
         if self.group is None:
@@ -277,6 +280,51 @@ class ImageWindow(qtw.QMainWindow):
         self.isShown = False
         a0.ignore()
         return super().closeEvent(a0)
+
+    _decor = None          # (class default) the last decoration measured on any shown image window
+    _wantImage = None      # display size asked for while hidden: applied exactly when shown
+
+    def _layoutNow(self) -> None:
+        """Lay the window out at its current size now, so the canvas has its size."""
+        for lay in (self.layout(), self.centralWidget().layout() if self.centralWidget() else None):
+            if lay is not None:
+                lay.activate()
+
+    def _shown(self) -> bool:
+        return qtw.QMainWindow.isVisible(self)          # the widget itself (not its tab group)
+
+    def decorSize(self) -> qtc.QSize:
+        """Everything in the window around the image canvas (margins, toolbar, status bar): measured
+        while the window is shown, otherwise the last measurement (a hidden window is not laid out)."""
+        if self._shown():
+            self._layoutNow()
+            d = self.size() - self.canvas.size()
+            self._decor = ImageWindow._decor = d
+            return d
+        return self._decor or ImageWindow._decor or qtc.QSize(0, 0)
+
+    def imageSize(self) -> qtc.QSize:
+        """The display area: the canvas the image is drawn on (for a hidden window, what it will be)."""
+        if self._shown():
+            self._layoutNow()
+            return self.canvas.size()
+        return self.size() - self.decorSize()
+
+    def setImageSize(self, width: int, height: int) -> None:
+        """Resize the window so its display area (the canvas) is *width* x *height*, the toolbar,
+        status bar and margins coming on top.  Checked again after the layout (the toolbar can
+        wrap at a new width); a hidden window is checked when it is next shown."""
+        self._wantImage = (int(width), int(height))
+        if not self._shown():
+            d = self.decorSize()
+            self.resize(int(width) + d.width(), int(height) + d.height())
+            return
+        for _ in range(3):
+            have = self.imageSize()
+            if have.width() == width and have.height() == height:
+                break
+            self.resize(self.width() + width - have.width(), self.height() + height - have.height())
+        self._wantImage = None
 
     def resizeEvent(self, a0: qtg.QResizeEvent) -> None:
         if not self.isWindow():             # a tab of a grouped space: not a window size

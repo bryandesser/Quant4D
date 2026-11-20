@@ -393,7 +393,7 @@ def startupFcn(self):
         if [self.C.decorPad, self.C.titleHeight] == [0, 0]:  # TODO
             self.C.decorPad = 5
             self.C.titleHeight = 25
-        self.C.mplDecor = tmp.size() - qtc.QSize(400, 400)
+        self.C.mplDecor = tmp.decorSize()      # toolbar, status bar and margins around the canvas, measured
         tmp.close()
 
         # available monitor space
@@ -574,7 +574,7 @@ def startupFcn(self):
 
         # connect image resizeEvent signal to slot; updates window size numerical fields in SettingsWindow
         for fig in self.G.ImgFig:
-            fig.imageResize.connect(lambda size, space: updateImageWindowSize(self, size, space))
+            fig.imageResize.connect(lambda size, space, _f=fig: updateImageWindowSize(self, size, space, _f))
             fig.activateFigure.connect(lambda id: updateDispImg(self, id))
 
         # Axes objects for all diffraction-sized figures/axes/images
@@ -593,7 +593,7 @@ def startupFcn(self):
         self.G.AllFig = self.G.ImgFig.copy()
         self.G.AllFig.extend([self, self.SettingsWindow, self.ImportWindow, self.SaveWindow])
 
-    def updateImageWindowSize(self, size, space):
+    def updateImageWindowSize(self, size, space, fig=None):
         """Settings > Windows > window size: the image area of the window just resized, i.e. its size less
         the toolbar/decoration (``mplDecor``, which the Set buttons add back).  This used to add each
         resize's change to the fields, and the first change of a new window is its whole size
@@ -602,9 +602,11 @@ def startupFcn(self):
                  "Real": (self.SettingsWindow.WdwWReal, self.SettingsWindow.WdwHReal)}.get(space)
         if boxes is None or size.width() <= 0 or size.height() <= 0:
             return
+        # the display area: the canvas, measured (the window less its own toolbar, status bar, margins)
+        area = fig.imageSize() if fig is not None else size - self.C.mplDecor
         with signals_blocked(*boxes):
-            boxes[0].setValue(max(1, size.width() - self.C.mplDecor.width()))
-            boxes[1].setValue(max(1, size.height() - self.C.mplDecor.height()))
+            boxes[0].setValue(max(1, area.width()))
+            boxes[1].setValue(max(1, area.height()))
 
     def updateDispImg(self, id):
         """Clicking an image window selects it for the display controls, unless the selection is locked."""

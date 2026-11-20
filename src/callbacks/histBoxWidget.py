@@ -320,10 +320,12 @@ class HistBox(AxesWidget):
             self._hi = float(new_lo + span)
 
         self._redraw()
+        if callable(self._on_change):
+            self._on_change(self._lo, self._hi)         # live: the sliders and the image follow the drag
 
     def _on_release(self, event) -> None:
         if self._drag_mode is None or event.button != 1:
             return
         mode, self._drag_mode = self._drag_mode, None
         if mode != "gamma" and callable(self._on_change):
-            self._on_change(self._lo, self._hi)
+            self._on_change(self._lo, self._hi)         # the final position (Reduced policy waits for it)

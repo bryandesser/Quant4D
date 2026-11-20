@@ -2,6 +2,7 @@
 import numpy as np
 import pytest
 from matplotlib.backend_bases import MouseEvent
+from PyQt5 import QtCore as qtc
 
 from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, import_raw, set_mode
 
@@ -26,9 +27,15 @@ def test_image_windows_start_beside_settings_at_the_top(app, qapp, sample_raw_fi
     assert F.Dfrn.frameGeometry().left() > sw.frameGeometry().right() - 5          # right of Settings
     assert F.Real.frameGeometry().left() > F.Dfrn.frameGeometry().left() + 100     # then real space
     # (side by side when the screen is wide enough; this offscreen one is 800 px)
-    for id in ("Dfrn", "DfrnMask", "Real", "RealMask", "CoMX", "iCoM"):
-        assert F[id].frameGeometry().top() <= top + 5, id                          # all at the top
-    assert F.DfrnMask.geometry() == F.Dfrn.geometry() and F.RealMask.geometry() == F.Real.geometry()
+    assert F.Dfrn.frameGeometry().top() <= top + 5 and F.Real.frameGeometry().top() <= top + 5
+    # the others staggered behind the primary image of their column, each one step further out
+    from callbacks.window_manager import STAGGER
+    for space in ("Dfrn", "Real"):
+        corners = [(F[id].x(), F[id].y()) for id in STAGGER[space]]
+        assert len(set(corners)) == len(corners), space                             # none hidden exactly
+        steps = np.diff(np.array(corners), axis=0)
+        assert (np.abs(steps[:, 0]) > 0).all(), space
+        assert (steps[:, 1] >= 0).all() and steps[0, 1] > 0, space
     assert F.Dfrn.width() == F.Real.width() and sw.WdwWDfrn.value() == sw.WdwWReal.value()
     moved = F.Real.geometry().translated(40, 40)
     F.Real.setGeometry(moved)
@@ -273,3 +280,123 @@ def axisMenuEnabled(app, cmask):
     from callbacks.customDetectorCallbacks import axisMenu
     menu = axisMenu(app, cmask)                 # (kept: its actions go with it)
     return menu.actions()[0].isEnabled()
+
+
+# ---------------------------------------------------------------------- live histogram drags
+def _hist_events(canvas, ax, points, release=False, frac=None, press=True):
+    """Press at the first of data *points* (unless *press* is False: a drag going on), move through the
+    rest, and release if asked; with *frac*, at that height of the axes instead."""
+    def screen(x, y):
+        px, py = ax.transData.transform((x, y))
+        return (px, ax.transAxes.transform((0, frac))[1]) if frac is not None else (px, py)
+    for i, (x, y) in enumerate(points):
+        px, py = screen(x, y)
+        down = press and i == 0
+        kind = "button_press_event" if down else "motion_notify_event"
+        canvas.callbacks.process(kind, MouseEvent(kind, canvas, px, py, **({"button": 1} if down else {})))
+    if release:
+        px, py = screen(*points[-1])
+        canvas.callbacks.process("button_release_event",
+                                 MouseEvent("button_release_event", canvas, px, py, button=1))
+
+
+@pytest.mark.parametrize("grab", ["hi", "lo", "body"])
+def test_sliders_follow_a_histogram_drag(loaded_app, qapp, grab):
+    w, sw = loaded_app, loaded_app.SettingsWindow
+    set_mode(w, qapp, "AnnMod")
+    sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))       # (always has a range of values)
+    sw.show()                                  # the histogram at its real size (grab tolerances are in pixels)
+    sw.SettingsTabGroup.setCurrentWidget(sw.DisplayTab)
+    sw.DispBrightnessReset.click()
+    sw.DispContrastReset.click()
+    qapp.processEvents()
+    canvas, box = sw.HistAxes, w.A.histBox
+    canvas.draw()
+    ax = canvas.axes
+    y, top = 0.0, 0.9                       # near the top of the box: away from the gamma handle
+    lo, hi = box._lo, box._hi
+    span = hi - lo
+    assert ax.transData.transform((hi, 0))[0] - ax.transData.transform((lo, 0))[0] > 100   # wide enough to grab
+    start = {"hi": hi, "lo": lo, "body": lo + 0.3 * span}[grab]
+    step = {"hi": -0.3, "lo": 0.3, "body": 0.15}[grab] * span
+    image_before = w.Fig.Dfrn.contrast, w.Fig.Dfrn.brightness
+    try:
+        _hist_events(canvas, ax, [(start, y), (start + step, y)], frac=top)    # pressed, moved: not released
+        qapp.processEvents()
+        assert box._drag_mode == grab                                     # still dragging
+        assert (sw.DispBrightness.value(), sw.DispContrast.value()) != (50, 50)
+        assert (sw.DispBrightness_NF.value(), sw.DispContrast_NF.value()) == \
+            (sw.DispBrightness.value(), sw.DispContrast.value())
+        assert (w.Fig.Dfrn.contrast, w.Fig.Dfrn.brightness) != image_before   # the image follows too
+        first = sw.DispBrightness.value(), sw.DispContrast.value()
+        _hist_events(canvas, ax, [(start + 1.5 * step, y)], release=True, frac=top, press=False)
+        qapp.processEvents()
+        assert box._drag_mode is None
+        assert (sw.DispBrightness.value(), sw.DispContrast.value()) != first or grab == "body"
+    finally:
+        box._drag_mode = None
+        sw.DispBrightnessReset.click()
+        sw.DispContrastReset.click()
+        qapp.processEvents()
+
+
+def test_gamma_slider_follows_the_gamma_handle(loaded_app, qapp):
+    w, sw = loaded_app, loaded_app.SettingsWindow
+    set_mode(w, qapp, "AnnMod")
+    sw.DispImage.setCurrentIndex(sw.DispImage.findData("Real"))
+    sw.show()
+    sw.SettingsTabGroup.setCurrentWidget(sw.DisplayTab)
+    sw.DispGammaReset.click()
+    qapp.processEvents()
+    canvas, box = sw.HistAxes, w.A.histBox
+    canvas.draw()
+    (hx,), (hy,) = box._handle_gamma.get_data()
+    y0, y1 = box._gamma_y
+    try:
+        _hist_events(canvas, canvas.axes, [(hx, hy), (hx, y0 + 0.25 * (y1 - y0))])   # not released
+        qapp.processEvents()
+        assert box._drag_mode == "gamma"
+        assert sw.DispGamma.value() == pytest.approx(2.0, abs=0.05)
+        assert sw.DispGamma_NF.value() == pytest.approx(2.0, abs=0.02)
+    finally:
+        box._drag_mode = None
+        sw.DispGammaReset.click()
+        qapp.processEvents()
+
+
+# ---------------------------------------------------------------------- window size = display area
+def test_set_size_is_the_display_area(loaded_app, qapp):
+    w, sw = loaded_app, loaded_app.SettingsWindow
+    set_mode(w, qapp, "AnnMod")
+    sw.DispImage.setCurrentIndex(sw.DispImage.findData("Real"))
+    w.Fig.CoMX.hide()
+    qapp.processEvents()
+    sw.WdwWReal.setValue(150)
+    sw.WdwHReal.setValue(120)
+    sw.WdwSetReal.click()
+    qapp.processEvents()
+    canvas = w.Fig.Real.canvas
+    assert (canvas.width(), canvas.height()) == (150, 120)          # the image area itself
+    assert w.Fig.Real.width() > 150 and w.Fig.Real.height() > 120  # decorations on top
+    sw.WdwWReal.setValue(140)
+    sw.WdwHReal.setValue(140)
+    sw.WdwSetAllReal.click()
+    qapp.processEvents()
+    for id in ("Real", "RealMask", "CoMX"):                          # hidden ones too
+        assert w.Fig[id].imageSize() == qtc.QSize(140, 140), id
+    w.Fig.CoMX.show()                                                # and exactly so once shown
+    qapp.processEvents()
+    assert (w.Fig.CoMX.canvas.width(), w.Fig.CoMX.canvas.height()) == (140, 140)
+    w.Fig.CoMX.hide()
+    # a display area with the scan's aspect ratio: the image fills it, no black bars
+    sw.WdwWReal.setValue(30 * SCAN_X)
+    sw.WdwHReal.setValue(30 * SCAN_Y)
+    sw.WdwSetReal.click()
+    qapp.processEvents()
+    w.Fig.Real.canvas.draw()
+    bbox = w.Fig.Real.ax.get_window_extent()
+    assert (round(bbox.width), round(bbox.height)) == (30 * SCAN_X, 30 * SCAN_Y)
+    # resizing a window by hand fills the fields with its display area
+    w.Fig.Real.resize(w.Fig.Real.width() + 10, w.Fig.Real.height())
+    qapp.processEvents()
+    assert (sw.WdwWReal.value(), sw.WdwHReal.value()) == (30 * SCAN_X + 10, 30 * SCAN_Y)

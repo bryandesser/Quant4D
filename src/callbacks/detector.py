@@ -228,7 +228,7 @@ def detectorModeCallbacks(self):
             # the phase/magnitude image and iCoM/dCoM always come up (even if hidden earlier); the
             # others are a click away on Settings > Windows, which is brought forward
             from callbacks.window_manager import showImageContent  # noqa: E402
-            for id in COM_WINDOWS:
+            for id in reversed(COM_WINDOWS):      # staggered behind Real: the nearer ones on top
                 self.Fig[id].show()
                 showImageContent(self, id)
             # the real-space image comes up last, on top of the other real-space windows

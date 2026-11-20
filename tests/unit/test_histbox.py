@@ -111,10 +111,11 @@ class TestHistBoxWidget:
         event = types.SimpleNamespace(xdata=0.9, ydata=50, inaxes=self.ax,
                                       button=1)
         self.hb._on_motion(event)
+        assert len(self.changes) == 1                 # live, while dragging
         self.hb._on_release(event)
 
-        assert len(self.changes) == 1
-        lo, hi = self.changes[0]
+        assert len(self.changes) == 2                 # and once more on release
+        lo, hi = self.changes[-1]
         assert hi == pytest.approx(0.9, abs=1e-6)
 
     def test_update_position(self):

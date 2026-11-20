@@ -4,6 +4,13 @@ Changelog
 Unreleased
 ----------
 
+- Histogram: dragging the display box or its edges updates the brightness and
+  contrast sliders and the image live (gamma already did).
+- Settings > Windows > W/H is the display area (the canvas); Set adds each
+  window's own toolbar, status bar and margins, so no black bars are left
+  (the diffraction window's taller status bar was not allowed for).
+- First window layout: the other windows of each space are staggered behind
+  the diffraction pattern / real-space image instead of hidden exactly behind.
 - Notebook round trip: the window ``pyquant4d.show`` returns has
   ``calibration()``, ``apply_calibration(datacube)``, ``image(id)``,
   ``images()`` and ``mask(id)``, in py4DSTEM's conventions (new page "From
