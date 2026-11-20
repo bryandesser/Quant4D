@@ -2,7 +2,7 @@ Changelog
 =========
 
 0.3.0 (2026)
-----------
+------------
 
 - Draggable points (wedge handles, custom-mask axis, DPC segment and scan-direction
   handles, virtual-aperture mirror) followed the mouse only for a single move:

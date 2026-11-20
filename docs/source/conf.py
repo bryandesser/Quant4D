@@ -2,6 +2,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
+import re
 import sys
 from datetime import datetime
 import sphinx_rtd_theme
@@ -14,7 +15,26 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = "pyQuant4D"
 copyright = f"{datetime.today().year}, Bryan D Esser"
 author = "Bryan D Esser"
-release = "0.2.0"
+
+
+def _version() -> str:
+    """The version in pyproject.toml (the checkout being documented), else the installed package's."""
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "..", "..", "pyproject.toml"), encoding="utf-8") as f:
+            match = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.MULTILINE)
+        if match:
+            return match.group(1)
+    except OSError:
+        pass
+    try:
+        from importlib.metadata import version
+        return version("pyquant4d")
+    except Exception:
+        return "unknown"
+
+
+release = _version()                  # e.g. 0.3.0 (never edited here: pyproject.toml is the one place)
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 extensions = [
