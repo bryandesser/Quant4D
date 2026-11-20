@@ -400,3 +400,55 @@ def test_set_size_is_the_display_area(loaded_app, qapp):
     w.Fig.Real.resize(w.Fig.Real.width() + 10, w.Fig.Real.height())
     qapp.processEvents()
     assert (sw.WdwWReal.value(), sw.WdwHReal.value()) == (30 * SCAN_X + 10, 30 * SCAN_Y)
+
+
+# ---------------------------------------------------------------------- drags over several motions
+def _drag_steps(fig, start, end, n=4):
+    canvas, ax = fig.canvas, fig.ax
+    canvas.draw()
+    pts = [ax.transData.transform(np.asarray(start) + (np.asarray(end) - start) * k / n) for k in range(n + 1)]
+    canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, *pts[0]))
+    canvas.callbacks.process("button_press_event", MouseEvent("button_press_event", canvas, *pts[0], button=1))
+    for p in pts[1:]:
+        canvas.callbacks.process("motion_notify_event", MouseEvent("motion_notify_event", canvas, *p))
+    canvas.callbacks.process("button_release_event", MouseEvent("button_release_event", canvas, *pts[-1], button=1))
+
+
+def test_point_follows_the_mouse_over_many_motions(cust, qapp):
+    """InteractivePoint kept a view of its offsets as the drag's start, so every motion added its
+    move to an already-moved start and the point ran ahead of the mouse."""
+    cmask = _new(cust, qapp, "CDNewWedge")
+    start = np.array(cmask.p1, float)
+    _drag_steps(cust.Fig.Dfrn, start, start + [3, 2])
+    assert np.allclose(cmask.p1, start + [3, 2], atol=1e-6)
+    assert np.allclose(cmask.handles[0].point.get_offsets()[0], cmask.p1)
+    p = cmask.handles[0].position
+    p += 5                                                       # a copy: the point does not move
+    assert np.allclose(cmask.handles[0].point.get_offsets()[0], cmask.p1)
+
+
+@pytest.mark.parametrize("button", ["CDNewBandpass", "CDNewGrid", "CDNewWedge"])
+def test_axis_drag_leaves_nothing_behind(cust, qapp, button):
+    """Moving a mask by its axis over several motions: everything ends where a fresh drawing would put it."""
+    from callbacks.customDetectorCallbacks import _axis, _draw
+    cmask = _new(cust, qapp, button)
+    cust.CDAxis.click()
+    qapp.processEvents()
+    fig = cust.Fig.Dfrn
+    start = _axis(cust, cmask)
+    before = [np.array(getattr(cmask, a), float) for a in ("p1", "p2") if getattr(cmask, a) is not None]
+    _drag_steps(fig, start, start + [3, 2])
+    qapp.processEvents()
+    assert np.allclose(_axis(cust, cmask), start + [3, 2], atol=1e-6)
+    now = [np.array(getattr(cmask, a), float) for a in ("p1", "p2") if getattr(cmask, a) is not None]
+    for b, a in zip(before, now):
+        assert np.allclose(a, b + [3, 2], atol=1e-6)
+    centres = [h.center for h in cmask.handles if hasattr(h, "center")]   # the apertures followed the axis
+    for c, a in zip(centres, now):
+        assert np.allclose(c, a, atol=1e-6)
+    fig.canvas.draw()
+    shown = np.asarray(fig.canvas.buffer_rgba()).copy()
+    _draw(cust, cmask)                                            # the same state, drawn afresh
+    fig.canvas.draw()
+    fresh = np.asarray(fig.canvas.buffer_rgba()).copy()
+    assert (np.abs(shown.astype(int) - fresh.astype(int)).sum(-1) > 30).sum() == 0

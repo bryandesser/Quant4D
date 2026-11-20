@@ -245,8 +245,11 @@ def _onAxisMoved(self, cmask, handle, new=None):
     """The axis point was dragged (or reset to *new*): grids and wedges move with it (keeping their
     shape), the band-pass is centred on it, a circle keeps its place (only its mirror moves)."""
     if new is None:
-        new = np.asarray(handle.point.get_offsets()[0], float)
+        # a copy: the point's offsets array changes with the next motion, and the mask would then
+        # alias it (the axis already "there", so nothing else moved after the first motion)
+        new = np.array(handle.point.get_offsets()[0], dtype=float)
     else:
+        new = np.array(new, dtype=float)
         handle.point.set_offsets([new])
     delta = new - _axis(self, cmask)
     if cmask.type == "Bandpass":

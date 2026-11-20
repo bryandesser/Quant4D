@@ -4,6 +4,10 @@ Changelog
 Unreleased
 ----------
 
+- Draggable points (wedge handles, custom-mask axis, DPC segment and scan-direction
+  handles, virtual-aperture mirror) followed the mouse only for a single move:
+  over a longer drag they ran ahead of it, and a band-pass ring moved by its
+  axis stayed behind as a phantom.  They now track the mouse exactly.
 - Histogram: dragging the display box or its edges updates the brightness and
   contrast sliders and the image live (gamma already did).
 - Settings > Windows > W/H is the display area (the canvas); Set adds each

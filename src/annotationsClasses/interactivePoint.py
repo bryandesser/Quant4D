@@ -89,7 +89,9 @@ class InteractivePoint(qtc.QObject):
         self.idx = attrd["ind"][0]
 
         # save info to the self.press
-        self.press = (self.point.get_offsets()[attrd["ind"][0]]), event.xdata, event.ydata
+        # a copy: get_offsets() is the artist's own array, which the drag writes to (a view here made
+        # every motion add its move to an already-moved start, so points ran ahead of the mouse)
+        self.press = np.array(self.point.get_offsets()[attrd["ind"][0]], dtype=float), event.xdata, event.ydata
 
         InteractivePoint.lock = self
 
@@ -208,8 +210,8 @@ class InteractivePoint(qtc.QObject):
 
     @property
     def position(self):
-        """Current (x, y) position as a 1-D NumPy array."""
-        return np.asarray(self.point.get_offsets()[self.idx])
+        """Current (x, y) position as a 1-D NumPy array (a copy: not tied to the artist's offsets)."""
+        return np.array(self.point.get_offsets()[self.idx], dtype=float)
 
     @position.setter
     def position(self, xy):
