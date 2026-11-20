@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Unreleased
+0.3.0 (2026)
 ----------
 
 - Draggable points (wedge handles, custom-mask axis, DPC segment and scan-direction
