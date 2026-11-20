@@ -48,10 +48,11 @@ _DRAG_EVENTS = (qtc.QEvent.Type.DragEnter, qtc.QEvent.Type.DragMove, qtc.QEvent.
 
 
 def droppedFiles(mime: qtc.QMimeData | None) -> list[str]:
-    """The local files (not folders) in a drag's data, in order."""
+    """The local files (not folders) in a drag's data, in order, with the system's separators
+    (Qt gives ``C:/...`` on Windows, which then showed in the Import window's path field)."""
     if mime is None or not mime.hasUrls():
         return []
-    paths = (url.toLocalFile() for url in mime.urls() if url.isLocalFile())
+    paths = (os.path.normpath(url.toLocalFile()) for url in mime.urls() if url.isLocalFile())
     return [p for p in paths if p and os.path.isfile(p)]
 
 

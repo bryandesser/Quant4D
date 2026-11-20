@@ -42,8 +42,10 @@ class TestMenu:
     def test_visible_with_py4dstem_only(self, app, monkeypatch):
         import importlib.util
         from callbacks.py4dstem_bridge import connectPy4DSTEM
-        assert app.actionOpen_with_py4DSTEM.isVisible() == (py4DSTEM is not None)
-        assert app.actionOpen_with_py4DSTEM.isEnabled()                 # available before any import
+        action = app.actionOpen_with_py4DSTEM
+        assert action.isVisible() == (py4DSTEM is not None)
+        # available before any import (Qt reports a hidden action as disabled, so only when shown)
+        assert action.isEnabled() or not action.isVisible()
         monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a, **k: None)
         connectPy4DSTEM(app)
         assert not app.actionOpen_with_py4DSTEM.isVisible()
