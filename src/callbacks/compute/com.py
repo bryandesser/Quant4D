@@ -106,7 +106,7 @@ def _mean_abs_curl(curl_p, div_p, angles_deg, batch=64):
 
 
 def scan_rotation_by_curl(fx: np.ndarray, fy: np.ndarray, prefer_deg: float = 0.0,
-                          step_deg: float = 0.01) -> tuple[float, bool, float]:
+                          step_deg: float = 0.01, prefer_flip: bool = False) -> tuple[float, bool, float]:
     """Scan rotation (and Y flip) that makes a deflection field curl-free (MATLAB Quant4D's AutoCurl).
 
     A CoM/DPC deflection field is the gradient of a potential, so it has no curl once it is
@@ -115,7 +115,8 @@ def scan_rotation_by_curl(fx: np.ndarray, fy: np.ndarray, prefer_deg: float = 0.
     in the scan frame).  Every angle (1° steps, refined to *step_deg*) is tried with and without
     the flip; the smallest mean |curl| wins.  A field and its negative have the same curl, so
     the angle is found only up to 180°: of the two, the one nearer *prefer_deg* (the current scan
-    direction) is returned.
+    direction) is returned.  A field fits equally well with and without the flip only when it is
+    symmetric (e.g. purely radial); then *prefer_flip* (the current setting) is kept.
 
     Returns
     -------
@@ -131,7 +132,7 @@ def scan_rotation_by_curl(fx: np.ndarray, fy: np.ndarray, prefer_deg: float = 0.
         raise ValueError("the deflection images must be 2-D, of the same shape, at least 3 x 3")
     if not (np.isfinite(fx) & np.isfinite(fy)).any():
         raise ValueError("the deflection images have no finite values")
-    best = None
+    fits = {}
     for flip in (False, True):
         py = -fy if flip else fy
         curl_p, div_p = curl(fx, py), divergence(fx, py)
@@ -141,9 +142,11 @@ def scan_rotation_by_curl(fx: np.ndarray, fy: np.ndarray, prefer_deg: float = 0.
         fine = np.arange(a0 - 1.0, a0 + 1.0 + step_deg / 2, step_deg)
         mf = _mean_abs_curl(curl_p, div_p, fine)
         k = int(np.argmin(mf))
-        if best is None or mf[k] < best[2]:
-            best = (float(fine[k]), flip, float(mf[k]))
-    angle, flip, residual = best
+        fits[flip] = (float(fine[k]), flip, float(mf[k]))
+    keep, other = fits[bool(prefer_flip)], fits[not prefer_flip]
+    scale = float(np.nanmean(np.hypot(fx, fy))) or 1.0
+    tie = abs(keep[2] - other[2]) <= 1e-9 * scale              # symmetric field: no evidence either way
+    angle, flip, residual = keep if (tie or keep[2] <= other[2]) else other
     # of angle and angle + 180, the nearer to the preferred (current) direction
     candidates = np.array([angle, angle + 180.0]) % 360.0
     dist = np.abs((candidates - prefer_deg + 180.0) % 360.0 - 180.0)

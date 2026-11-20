@@ -1,4 +1,5 @@
 from typing import Any
+from matplotlib.backend_bases import MouseButton, MouseEvent
 from matplotlib.backend_tools import Cursors
 from PyQt5 import QtCore as qtc
 import numpy as np
@@ -21,6 +22,7 @@ class InteractivePoint(qtc.QObject):
         previously mis-named ``redrawCircle`` signal.
     """
     positionChanged = qtc.pyqtSignal()
+    rightClick = qtc.pyqtSignal(MouseEvent)      # a right click on the point (for a context menu)
 
     lock = None  # only one can be animated at a time
 
@@ -34,6 +36,7 @@ class InteractivePoint(qtc.QObject):
         # Artists that move with this point (e.g. the DPC segment lines, the scan-direction arrows):
         # a callable returning them, blitted with the point while it is dragged.
         self.companions: Any = None
+        self.isAxis = False     # a custom mask's centre axis (customDetectorCallbacks)
 
     def disconnect(self):
         """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
@@ -80,11 +83,16 @@ class InteractivePoint(qtc.QObject):
 
         if not contains:
             return
+        if event.button == MouseButton.RIGHT:   # a menu, not a drag
+            self.rightClick.emit(event)
+            return
         # if the point is contained, save point index (i.e. adfInner or adfOuter)
         self.idx = attrd["ind"][0]
 
         # save info to the self.press
-        self.press = (self.point.get_offsets()[attrd["ind"][0]]), event.xdata, event.ydata
+        # a copy: get_offsets() is the artist's own array, which the drag writes to (a view here made
+        # every motion add its move to an already-moved start, so points ran ahead of the mouse)
+        self.press = np.array(self.point.get_offsets()[attrd["ind"][0]], dtype=float), event.xdata, event.ydata
 
         InteractivePoint.lock = self
 
@@ -203,8 +211,8 @@ class InteractivePoint(qtc.QObject):
 
     @property
     def position(self):
-        """Current (x, y) position as a 1-D NumPy array."""
-        return np.asarray(self.point.get_offsets()[self.idx])
+        """Current (x, y) position as a 1-D NumPy array (a copy: not tied to the artist's offsets)."""
+        return np.array(self.point.get_offsets()[self.idx], dtype=float)
 
     @position.setter
     def position(self, xy):

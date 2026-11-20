@@ -31,6 +31,7 @@ Contents
    custom_apertures
    rois
    export
+   notebook
    api
    changelog
    license

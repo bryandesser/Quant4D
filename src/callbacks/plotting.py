@@ -116,7 +116,7 @@ def displayCallbacks(self, source=None):
 
             # Disable mask opacity UIs if: ColorWheel/Mask/Preview images selected
             enabledState = (fig.space != "ColorWheel") and (fig.type not in ["Mask", "Preview"])
-            self.SettingsWindow.ShowMaskWdw.setEnabled(enabledState)
+            self.SettingsWindow.DispMaskOpaReset.setEnabled(enabledState)
             self.SettingsWindow.DispMaskOpa_NF.setEnabled(enabledState)
             self.SettingsWindow.DispMaskOpa.setEnabled(enabledState)
 
@@ -223,6 +223,8 @@ def plotImage(self, id):
             self.ImageAx[id].set_extent((-0.5, nx - 0.5, ny - 0.5, -0.5))
             fitAxesToImage(ax, disp.shape)
     self.ImageAx[id].set_clim(0, 1)
+    from callbacks.scale_bar import ensureScaleBar  # noqa: E402
+    ensureScaleBar(self, id)        # bottom-right scale bar (re-added after ax.cla())
 
     # Plot mask opacity on non-mask/non-preview image; maskOpa is in percent (i.e. 50 => 50%)
     if fig.type not in ["Mask", "Preview"]:
@@ -300,8 +302,11 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
         binCounts, binEdges = np.histogram(values, bins=128)
         self.A.hist = hax.stairs(binCounts, binEdges, fill=True, facecolor="C0", edgecolor="k", linewidth=0.5)
 
-        # Set histogram limits
-        self.SettingsWindow.HistAxes.axes.set_xlim(binEdges.min(), binEdges.max())
+        # Set histogram limits, with a margin so the edges of the default display window (the data
+        # range) sit inside the axes, where they can be grabbed
+        lo_edge, hi_edge = float(binEdges.min()), float(binEdges.max())
+        pad = 0.05 * (hi_edge - lo_edge) if hi_edge > lo_edge else 0.5
+        self.SettingsWindow.HistAxes.axes.set_xlim(lo_edge - pad, hi_edge + pad)
         self.SettingsWindow.HistAxes.axes.set_ylim(
             0.5, (1.1 * binCounts).max().clip(1))  # Make sure upper limit is at least 1
 
@@ -355,8 +360,19 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
                 finally:
                     self.A._histDrag = False
 
+            def _on_gamma(gamma):
+                """The gamma handle was dragged: set gamma as the slider does."""
+                sw = self.SettingsWindow
+                self.A._histDrag = True
+                try:
+                    sw.DispGamma_NF.setValue(gamma)        # its slot updates the slider and the image
+                finally:
+                    self.A._histDrag = False
+
             self.A.histBox = HistBox(hist_ax, limitLow, limitHigh,
-                                     on_change=_on_histbox_change)
+                                     on_change=_on_histbox_change, on_gamma=_on_gamma)
+            gmin = max(self.SettingsWindow.DispGamma_NF.minimum(), 1e-3)
+            self.A.histBox.gamma_range = (gmin, self.SettingsWindow.DispGamma_NF.maximum())
 
         # Reposition the box unless it is being dragged (avoid a loop); a flag, because this also
         # runs from matplotlib events, where self.sender() can be a deleted object
@@ -386,6 +402,7 @@ def updateDispImgStats(self, id, minVal, maxVal, limitLow, limitHigh, limitRange
         ramp = (x - limitLow) / span if span > 0 else np.zeros_like(x)   # a flat image has no ramp
         y0, y1 = self.SettingsWindow.HistAxes.axes.get_ylim()
         self.A.histGamma, = self.SettingsWindow.HistAxes.axes.plot(x, ramp**fig.gamma * (y1 - y0) + y0, color='k')
+        self.A.histBox.set_gamma(fig.gamma, y0, y1)        # its handle sits on the curve
 
         # Print display limits on the histogram
         textstr = "High:{:< 9.2e}\nLow:{:< 9.2e}".format(limitHigh, limitLow)
@@ -532,7 +549,7 @@ def updateImagesCallbacks(self):
                 case "PrvwMod":
                     previewCallbacks(self)
                 case "AlignMod":
-                    transBeamCallbacks(self)
+                    transBeamCallbacks(self, self.UpdateImages)
                 case 'AnnMod' | 'CoMMod' | 'DPCMod':
                     annularDetectorCallbacks(self)
                 case "VrApMod":

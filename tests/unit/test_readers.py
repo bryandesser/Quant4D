@@ -13,56 +13,7 @@ from callbacks.io.dm_header import read_dm_header
 from callbacks.io.export import Region
 from callbacks.io.raw import float_type_for, frame_record_dtype, open_frames, read_frames
 
-# DM image DataType codes and tag encodings used by the writer
-_DM_TYPE = {"u2": 10, "f4": 2, "u4": 11, "i2": 1}
-_ENC = {"u2": 4, "f4": 6, "u4": 5, "i2": 2}
-
-
-class _DMWriter:
-    def __init__(self, version, little):
-        self.v4, self.o = version == 4, "<" if little else ">"
-        self.version, self.little = version, little
-
-    def L(self, n):                                   # big-endian length field
-        return struct.pack(">Q" if self.v4 else ">I", n)
-
-    def tag(self, kind, label, body):
-        label = label.encode()
-        head = struct.pack(">BH", kind, len(label)) + label
-        return head + (struct.pack(">Q", len(body)) if self.v4 else b"") + body
-
-    def group(self, entries):
-        return b"\x00\x01" + self.L(len(entries)) + b"".join(entries)
-
-    def long(self, label, v):
-        return self.tag(21, label, b"%%%%" + self.L(1) + self.L(3) + struct.pack(self.o + "i", v))
-
-    def string(self, label, text):                     # ushort array holding UTF-16 text
-        raw = text.encode("utf-16-le" if self.o == "<" else "utf-16-be")
-        return self.tag(21, label, b"%%%%" + self.L(3) + self.L(20) + self.L(4) + self.L(len(raw) // 2) + raw)
-
-    def struct_tag(self, label):                       # a 2-field struct, to exercise struct parsing
-        info = [15, 0, 2, 0, 6, 0, 6]
-        return self.tag(21, label, b"%%%%" + self.L(len(info)) + b"".join(self.L(i) for i in info)
-                        + struct.pack(self.o + "ff", 1.5, 2.5))
-
-    def array(self, label, arr, code):
-        info = [20, _ENC[code], arr.size]
-        head = b"%%%%" + self.L(len(info)) + b"".join(self.L(i) for i in info)
-        return self.tag(21, label, head + arr.astype(np.dtype(code).newbyteorder(self.o)).tobytes())
-
-    def image(self, name, arr, code):
-        dims = arr.shape[::-1]                         # DM lists the fastest dimension first
-        data = self.group([self.long("DataType", _DM_TYPE[code]), self.array("Data", arr.ravel(), code),
-                           self.tag(20, "Dimensions", self.group([self.long("", d) for d in dims])),
-                           self.struct_tag("Calibrations")])
-        return self.tag(20, "", self.group([self.string("Name", name), self.tag(20, "ImageData", data)]))
-
-    def file(self, images):
-        root = self.group([self.struct_tag("Something"),
-                           self.tag(20, "ImageList", self.group([self.image(*im) for im in images]))])
-        head = struct.pack(">I", self.version) + self.L(len(root)) + struct.pack(">I", 1 if self.little else 0)
-        return head + root + b"\x00" * 8
+from dm_writer import _DMWriter  # noqa: E402  (tests/dm_writer.py, shared with the integration tests)
 
 
 @pytest.mark.parametrize("version", [3, 4])
@@ -85,6 +36,27 @@ def test_dm_header_finds_images_offsets_and_dims(tmp_path, version, little):
     small = info.images[0]
     assert small.dims == (5, 6) and small.dtype == "u2"
     np.testing.assert_array_equal(np.fromfile(path, dtype=order + "u2", count=30, offset=small.offset).reshape(6, 5), thumb)
+
+
+@pytest.mark.parametrize("version", [3, 4])
+@pytest.mark.parametrize("little", [True, False])
+def test_dm_header_reads_calibrations_and_voltage(tmp_path, version, little):
+    cube = np.zeros((3, 4, 7, 9), "f4")
+    cals = [(0.57, "mrad", 4.0), (0.57, "mrad", 3.0), (0.023, "nm", 0.0), (0.023, "nm", 0.0)]
+    path = tmp_path / f"cal.dm{version}"
+    path.write_bytes(_DMWriter(version, little).file([("thumb", np.zeros((2, 2), "u2"), "u2"),
+                                                      ("SI", cube, "f4", cals, 300000.0)]))
+    thumb, si = read_dm_header(str(path)).images
+    assert [(pytest.approx(s), u, o) for s, u, o in si.calibrations] == cals
+    assert si.calibration(2) == (pytest.approx(0.023), "nm") and si.calibration(0)[1] == "mrad"
+    assert si.voltage_V == 300000.0
+    assert thumb.calibrations == () and thumb.calibration(0) is None and thumb.voltage_V is None
+
+
+def test_dm_uncalibrated_dimension_is_none():
+    from callbacks.io.dm_header import DMImage
+    im = DMImage("x", 0, "f4", 2, (2, 2, 2, 2), 16, calibrations=((1.0, "", 0.0),) * 4)
+    assert im.calibration(2) is None and im.calibration(7) is None
 
 
 def test_dm_header_rejects_other_files(tmp_path):

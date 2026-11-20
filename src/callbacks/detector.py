@@ -47,6 +47,10 @@ def clearDetectors(self):
         if getattr(ln, '_vrAp_clone', False):
             ln.remove()
 
+    # Cross alignment lines (Alignment mode only)
+    from callbacks.alignment import crossAlign  # noqa: E402
+    crossAlign(self, False)
+
     # Custom detectors: remove their annotations; they are redrawn on returning to CustMod
     from callbacks.customDetectorCallbacks import _removeArtists  # noqa: E402
     for cmask in self.A.Custom.values():
@@ -78,9 +82,10 @@ def detectorModeCallbacks(self):
                 # self.Fig[ii].ax.cla()
                 self.Fig[ii].canvas.draw_idle()
 
-    # Enable/Disable CoM/DPC related buttons/images
+    # Enable/Disable CoM/DPC related buttons/images (and the Window menu's Center of Mass items)
     for btn in self.G.CoM_btns:
         btn.setEnabled(dmod in ["CoMMod", "DPCMod"])
+    syncCoMActions(self)
 
     # a locked display selection survives the mode change (if the image is still listed)
     locked_id = self.SettingsWindow.DispImage.currentData() if self.SettingsWindow.DispLock.isChecked() else None
@@ -207,7 +212,7 @@ def detectorModeCallbacks(self):
                 self.Fig.Dfrn.canvas.flush_events()
 
             self.DfrnDetrTabGroup.setCurrentIndex(1)
-            transBeamCallbacks(self)
+            transBeamCallbacks(self, self.DetrMode)
 
         case "AnnMod":
             self.DfrnDetrTabGroup.setCurrentIndex(2)
@@ -218,12 +223,19 @@ def detectorModeCallbacks(self):
             self.DfrnDetrTabGroup.setCurrentIndex(2)
             self.dpcControls.setVisible("DPC" in dmod)
             self.comControls.setVisible(True)
-            annularDetectorCallbacks(self)  # TODO
+            annularDetectorCallbacks(self)  # first visit per dataset: also AutoCurl
             plotImage(self, 'ColorWheel')  # Plot ColorWheel #TODO
-            self.Fig.CoMPhMag.activateWindow()
-            self.Fig.ColorWheel.activateWindow()
-            if not self.P.ScanDirInit:
-                pass  # flashBackground(self, self.ScanDirGrid) # Flashing to align scan direction #TODO
+            # the phase/magnitude image and iCoM/dCoM always come up (even if hidden earlier); the
+            # others are a click away on Settings > Windows, which is brought forward
+            from callbacks.window_manager import showImageContent  # noqa: E402
+            for id in reversed(COM_WINDOWS):      # staggered behind Real: the nearer ones on top
+                self.Fig[id].show()
+                showImageContent(self, id)
+            # the real-space image comes up last, on top of the other real-space windows
+            self.Fig.Real.show()
+            self.Fig.Real.raise_()
+            self.Fig.Real.activateWindow()
+            self.SettingsWindow.SettingsTabGroup.setCurrentWidget(self.SettingsWindow.WindowsTab)
         case "VrApMod":  # 'Virtual Aperture'
             self.DfrnDetrTabGroup.setCurrentIndex(3)
             virtualApertureCallbacks(self)
@@ -238,9 +250,25 @@ def detectorModeCallbacks(self):
     enableWindows(self, True)
 
 
-def detrCoordCallbacks(self):
+_SENDER = object()
+
+COM_WINDOWS = ("CoMPhMag", "iCoM", "dCoM")       # shown on entering CoM/DPC mode
+
+
+def syncCoMActions(self) -> None:
+    """Window > Center of Mass (submenu and its items, shortcuts included) only in CoM/DPC mode."""
+    in_com = self.DetrMode.currentData() in ("CoMMod", "DPCMod")
+    self.menuCenter_of_Mass.menuAction().setEnabled(in_com)
+    for action in self.menuCenter_of_Mass.actions():
+        action.setEnabled(in_com)
+
+
+def detrCoordCallbacks(self, source=_SENDER):
+    """Detector coordinate options changed, or the diffraction scale/beam moved (*source* None:
+    called from :func:`callbacks.alignment.moveTransBeam`, possibly outside a slot)."""
+    src = self.sender() if source is _SENDER else source
     # "Polar" and "Absolute" are mutually exclusive
-    match self.sender():
+    match src:
         case self.SettingsWindow.DCSys:
             if self.SettingsWindow.DCSys.currentText() == "Polar":
                 self.SettingsWindow.DCPos.setCurrentIndex(self.SettingsWindow.DCPos.findText("Relative"))
@@ -264,7 +292,7 @@ def detrCoordCallbacks(self):
     match self.DetrMode.currentData():
         case "AnnMod" | "DPCMod" | "CoMMod":
             from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
-            annularDetectorCallbacks(self)      # self.sender() is still the DC* combo box
+            annularDetectorCallbacks(self, source="units")      # radii shown in the (new) unit and scale
         case "VrApMod":
             from callbacks.virtualApertureCallbacks import syncVrApControls  # noqa: E402
             syncVrApControls(self)

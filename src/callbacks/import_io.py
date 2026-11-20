@@ -134,43 +134,60 @@ def gatherImportOptions(self, preview):
     if self.ImportWindow.HDF5Button.isChecked() and ("Physical Memory" in d.mem):
         d.h5ds = d.subImg
 
+    # Accelerating voltage (converts between mrad and 1/Å)
+    d.kV = float(self.ImportWindow.ImpAccVolt.value())
+
+    # Scan step: the file's (Import window) times the import sampling; cropping leaves it unchanged
+    from callbacks.scan_step import importStep  # noqa: E402
+    d.ScanStepFile, d.ScanUnits = importStep(self)
+    d.ScanStep = d.ScanStepFile * d.FrD
+
+    # py4DSTEM calibration, when the dataset imported is the file's DataCube; a DM file's detector scale
+    # (not its origin: the beam centre comes from auto-alignment)
+    d.Calib = None
+    if self.ImportWindow.DM34Button.isChecked() and getattr(self.T.dm, "images", None):
+        from callbacks.io.dm import dmCalibration  # noqa: E402
+        images = self.T.dm.images
+        image = images[min(max(0, self.ImportWindow.ImpSubImg.currentIndex()), len(images) - 1)]
+        d.Calib = dmCalibration(self, image, d.kV)
+    if self.ImportWindow.HDF5Button.isChecked():
+        info = _emdInfo(d.filePath)
+        if info is not None and info.dataset == d.subImg:
+            from callbacks.io.emd import usable_calibration  # noqa: E402
+            d.Calib = usable_calibration(info.calibration, d.kV)
+
     return d
 
 
-def importSelectFile(self):
+def importSelectFile(self, path=None, source=None):
+    """Read the file in the Import window's path field and set the file type from it.
+
+    *path* (a file dropped on a window) or the file dialog (*source* is the
+    Select button) puts a new file in the field first.  *source* is the widget
+    that called; never ``self.sender()``, which is not valid outside a slot
+    (a drop arrives from an event filter; cf. the Linux segfault fixed in 664d923).
+    """
     # bypass execution if signals are actively being blocked (i.e. for programmatically updating UI values)
     if self.blockAllSignals:
         return
 
+    new_file = False
     # if the user pushes the "Select" button in the Import window, open file dialog, filter for known filetypes
-    if self.sender() is self.ImportWindow.ImpFileSelect:
-        fDialog = qtw.QFileDialog(self)
-        fDialog.setWindowTitle("Select 4DSTEM Dataset")
-        fDialog.setNameFilter("(*.raw *.mib *.mrc *.dm3 *.dm4 *.npy *.h5 *.hdf5);;(*.*)")
-        fDialog.setDirectory(qtc.QDir.currentPath())
-        fileName = None
-        if fDialog.exec_() == qtw.QDialog.Accepted:
-            fileName, = fDialog.selectedFiles()
-        else:  # user selected cancel
-            self.ImportWindow.activateWindow()
-            self.ImportWindow.ImportDataButton.setDefault(False)
-            self.ImportWindow.ImportDataButton.setAutoDefault(False)
-            self.ImportWindow.ImpFileSelect.setFocus(True)
-            self.ImportWindow.ImpFileSelect.setAutoDefault(True)
-            self.ImportWindow.ImpFileSelect.setDefault(True)
-            return
+    if path is not None or source is self.ImportWindow.ImpFileSelect:
+        new_file = True
+        if path is not None:
+            fileName = str(path)
+        else:
+            fileName = _chooseFile(self)
+            if fileName is None:  # user selected cancel
+                return
 
         # reflect user selection in path field box
-        if fileName is not None:
-            self.fname = fileName
-            self.ImportWindow.ImpFilePath.setText(self.fname)
-            # enable rest of wigets in window
-            for widget in self.ImportWindow.children():
-                widget.setEnabled(True)
-        else:
-            # keep wigets disabled
-            for widget in self.ImportWindow.children():
-                widget.setEnabled(False)
+        self.fname = fileName
+        self.ImportWindow.ImpFilePath.setText(self.fname)
+        # enable rest of wigets in window
+        for widget in self.ImportWindow.children():
+            widget.setEnabled(True)
 
         # switch to directory containing dataset for future saving
         os.chdir(qtc.QDir.currentPath())
@@ -185,6 +202,12 @@ def importSelectFile(self):
         self.ImportWindow.ImpFileSelect.setAutoDefault(False)
         self.ImportWindow.ImpFileSelect.setDefault(False)
 
+    elif source is self.ImportWindow.ImpFilePath:
+        # a typed or pasted path: a different file starts the HDF5 dataset list again
+        typed = self.ImportWindow.ImpFilePath.text()
+        new_file = typed != getattr(self, "fname", None)
+        self.fname = typed
+
     # get file directory, name, extension, and size. display in filesize field
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
         self.fileDir = os.path.dirname(self.ImportWindow.ImpFilePath.text())
@@ -192,6 +215,9 @@ def importSelectFile(self):
         _, self.fileExt = os.path.splitext(self.ImportWindow.ImpFilePath.text())
         os.chdir(self.fileDir)
         self.T.FileSize = os.path.getsize(self.fileName)
+        if new_file:              # a new file starts uncalibrated; a calibrated file fills the step in
+            from callbacks.scan_step import setImportStep  # noqa: E402
+            setImportStep(self)
         self.ImportWindow.ImpActualFilesize.setText(
             "{} bytes, {:.2f} GiB".format(
                 self.T.FileSize, self.T.FileSize / 1024**3))
@@ -210,7 +236,7 @@ def importSelectFile(self):
                 self.ImportWindow.MRCButton.setChecked(True)
             case ".dm3" | ".dm4":
                 self.ImportWindow.DM34Button.setChecked(True)
-            case ".h5":
+            case ".h5" | ".hdf5" | ".emd":
                 self.ImportWindow.HDF5Button.setChecked(True)
             case other:
                 self.ImportWindow.CustomButton.setChecked(True)
@@ -222,7 +248,68 @@ def importSelectFile(self):
         self.PreviewTab.setVisible(False)
         self.PreviewTab.setEnabled(False)
 
-    importFileType(self)
+    importFileType(self, source, new_file=new_file)
+
+
+def _chooseFile(self):
+    """The file picked in the "Select 4DSTEM Dataset" dialog, or None if cancelled."""
+    fDialog = qtw.QFileDialog(self)
+    fDialog.setWindowTitle("Select 4DSTEM Dataset")
+    fDialog.setNameFilter("(*.raw *.mib *.mrc *.dm3 *.dm4 *.npy *.h5 *.hdf5 *.emd);;(*.*)")
+    fDialog.setDirectory(qtc.QDir.currentPath())
+    if fDialog.exec_() == qtw.QDialog.Accepted:
+        fileName, = fDialog.selectedFiles()
+        return fileName
+    self.ImportWindow.activateWindow()
+    self.ImportWindow.ImportDataButton.setDefault(False)
+    self.ImportWindow.ImportDataButton.setAutoDefault(False)
+    self.ImportWindow.ImpFileSelect.setFocus(True)
+    self.ImportWindow.ImpFileSelect.setAutoDefault(True)
+    self.ImportWindow.ImpFileSelect.setDefault(True)
+    return None
+
+
+_EMD_MARK = "\n\npy4DSTEM DataCube"
+
+
+def _emdInfo(path):
+    """``read_emd_info(path)``, or None if the file is not a readable EMD file."""
+    from callbacks.io.emd import read_emd_info  # noqa: E402
+    try:
+        return read_emd_info(path)
+    except (OSError, KeyError, ValueError, TypeError):
+        return None
+
+
+def _emdNotes(self, dataset: str, adopt_kV: bool = False) -> str:
+    """File notes about a py4DSTEM DataCube when *dataset* is it, else ''.
+
+    *adopt_kV* (a new file): a voltage recorded in the file fills the
+    Accelerating Voltage field first.
+    """
+    from callbacks.io.emd import describe_emd  # noqa: E402
+    info = _emdInfo(self.ImportWindow.ImpFilePath.text())
+    if info is None or info.dataset != dataset:
+        return ""
+    kv = self.ImportWindow.ImpAccVolt
+    if adopt_kV and info.accelerating_voltage_kV:
+        with signals_blocked(kv):
+            kv.setValue(info.accelerating_voltage_kV)
+    if adopt_kV and info.calibration.r_units.strip().lower() not in ("", "pixels"):
+        from callbacks.scan_step import setImportStep  # noqa: E402
+        setImportStep(self, info.calibration.r_pixel_size, info.calibration.r_units)
+    return _EMD_MARK[:2] + describe_emd(info, kv.value())
+
+
+def importVoltageChanged(self):
+    """The accelerating voltage changed: redo the py4DSTEM part of the file notes (Å⁻¹ conversion)."""
+    if self.blockAllSignals or not self.ImportWindow.HDF5Button.isChecked():
+        return
+    notes = self.ImportWindow.ImpFileMetaNotes.toPlainText()
+    if _EMD_MARK not in notes:
+        return
+    self.ImportWindow.ImpFileMetaNotes.setText(
+        notes.split(_EMD_MARK)[0] + _emdNotes(self, self.ImportWindow.ImpSubImg.currentText()))
 
 
 def _h5dataset(h5file, key: str) -> "h5py.Dataset":
@@ -233,7 +320,12 @@ def _h5dataset(h5file, key: str) -> "h5py.Dataset":
     return obj
 
 
-def importFileType(self):
+def importFileType(self, source=None, new_file=False):
+    """Read the file's header/geometry for the file type chosen in the Import window.
+
+    *source* is the widget that called.  *new_file* lists the HDF5 datasets
+    again and selects the largest; otherwise the dataset picked is kept.
+    """
     from callbacks.io.dm import prepDM  # noqa: E402
 
     def guessFramesFromSize():
@@ -347,7 +439,7 @@ def importFileType(self):
         self.ImportWindow.ImpDataType.setCurrentIndex(0)
 
         # start with h5 directory combobox cleared and disabled
-        if self.sender() == self.ImportWindow.ImpFileSelect:
+        if new_file:
             self.ImportWindow.ImpSubImg.clear()
             self.ImportWindow.ImpSubImg.setEnabled(False)
 
@@ -482,7 +574,7 @@ def importFileType(self):
                 err = -1
                 return
         elif self.ImportWindow.DM34Button.isChecked():
-            notes = prepDM(self)
+            notes = prepDM(self, source, adopt=new_file)
         elif self.ImportWindow.HDF5Button.isChecked():
             try:
                 self.T.h5 = h5py.File(self.ImportWindow.ImpFilePath.text())
@@ -495,8 +587,10 @@ def importFileType(self):
                 # enable subimage dropdown
                 self.ImportWindow.ImpSubImg.setEnabled(True)
 
-                # Select sub-image with the 1st largest dimension; unless manually selected
-                if self.sender() is not self.ImportWindow.ImpSubImg:
+                # List the datasets and select the largest, for a new file (or a list that does not match
+                # it); otherwise keep the dataset picked (in the dropdown, or before a file-type change)
+                listed = [self.ImportWindow.ImpSubImg.itemText(i) for i in range(self.ImportWindow.ImpSubImg.count())]
+                if new_file or listed != keys:
                     # List all images' names in `self.ImportWindow.ImpSubImg`
                     with signals_blocked(self.ImportWindow.ImpSubImg):
                         pdim = [_h5dataset(self.T.h5, key).size for key in keys]
@@ -541,6 +635,9 @@ def importFileType(self):
 
                 notes = "Dim: X = {:d}, Y = {:d}, Z = {:d}, W = {:d}\n{:s}, {:s}\n{:s}".format(
                     *dims, bo, str(h5i.dtype), noteoffs)
+
+                # a py4DSTEM file: describe the DataCube's calibration when it is the dataset selected
+                notes += _emdNotes(self, str(h5i.name), adopt_kV=new_file)
                 if len(h5i.shape) == 3:       # a stack of frames: guess the scan from the frame count
                     guessFramesFromDimZ(dims[1])
         else:
@@ -569,10 +666,18 @@ def importFileType(self):
     # self.Fig.Dfrn.Image = np.zeros(self.D.NPx)
     # self.Fig.Dfrn.Real = np.zeros(self.D.NFr)
 
-    importBoxInput(self)
+    importBoxInput(self, None)
 
 
-def importBoxInput(self):
+_SENDER = object()
+
+
+def importBoxInput(self, source=_SENDER):
+    """Check the import ranges and memory against the file.
+
+    *source* is the range widget that changed; by default ``self.sender()``
+    (valid only when this runs as a slot: callers outside a slot pass it).
+    """
 
     def checkMem(nPx, nFr, byte_size):
         # Display estimated size in green if matches actual size, brown if smaller, red if larger
@@ -639,17 +744,18 @@ def importBoxInput(self):
 
     self.ImportWindow.ImpEstFilesize.clear()       # clear estimated file size
     notes = None                                   # initialize notes in case file is not on path
-    dfrn_src = real_src = self.sender()            # capture UI component that triggered this callback
+    if source is _SENDER:
+        source = self.sender()                     # capture UI component that triggered this callback
+    dfrn_src = real_src = source
 
     if os.path.isfile(self.ImportWindow.ImpFilePath.text()):
 
         # Update Diffraction and Real-space import ranges; use default source if
         # self.sender() is not a range UI component
-        if (not hasattr(self.sender(), 'accessibleDescription')) or (
-                "Dfrn" not in self.sender().accessibleDescription()):
+        describe = getattr(source, "accessibleDescription", None)
+        if describe is None or "Dfrn" not in describe():
             dfrn_src = self.ImportWindow.IPxD
-        if (not hasattr(self.sender(), 'accessibleDescription')) or (
-                "Real" not in self.sender().accessibleDescription()):
+        if describe is None or "Real" not in describe():
             real_src = self.ImportWindow.IFrD
 
         dnote, _, _, nPx, _ = rangeImportExport(self, dfrn_src)
@@ -701,17 +807,20 @@ def importBoxInput(self):
         # Allow to swap dataset/keep parameters if the dimensions are identical and self.D is not None
         # self.ImportWindow.ImpKeepP.Enable = ~isempty(self.D) and isequal(irng,
         # [self.D.NPxX self.D.NPxY self.D.NFrX self.D.NFrY])
-        self.ImportWindow.ImpKeepP.setEnabled(
-            (self.D is not None) and (
-                irng == [
-                    self.D.NPxX,
-                    self.D.NPxY,
-                    self.D.NFrX,
-                    self.D.NFrY]))
-        if not self.ImportWindow.ImpKeepP.isEnabled():
+        # (irng is two (x, y) arrays: compared with the four sizes it was never equal, so the box
+        # stayed disabled, ticked by File > Swap Dataset and impossible to untick)
+        dims = [int(nPx[0]), int(nPx[1]), int(nFr[0]), int(nFr[1])]
+        d = self.D
+        loaded = d is not None and self.Data is not None
+        same = d is not None and loaded and dims == [d.NPxX, d.NPxY, d.NFrX, d.NFrY]
+        self.ImportWindow.ImpKeepP.setEnabled(same)
+        if not same:
             self.ImportWindow.ImpKeepP.setChecked(False)
         if self.ImportWindow.ImpKeepP.isChecked():
             notes += "\n\nSwapping dataset - keeping current setups/alignments etc."
+        elif d is not None and loaded and not same:
+            notes += "\n\nSwap Dataset needs the size of the loaded dataset ({} x {} px, {} x {} positions).".format(
+                d.NPxX, d.NPxY, d.NFrX, d.NFrY)
 
     # update notes in the text field
     self.ImportWindow.ImpNotes.setText(notes)
@@ -719,6 +828,7 @@ def importBoxInput(self):
 
 def getImportInfo(self):
     """ Function to update current data info """
+    from callbacks.scan_step import describeScanStep  # noqa: E402
     d = self.D
     d0 = self.T.prev_D
     notes = "File: " + d.filePath
@@ -730,7 +840,8 @@ def getImportInfo(self):
         "\nData Type: " + np.dtype(d.DataType).name +\
         "\nByte Size: " + str(d.ByteSize) + " bytes" +\
         "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Diffraction", *d.NPx) +\
-        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", *d.NFr) +\
+        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", d.NFrX, d.NFrY) +\
+        "\nScan Step: " + describeScanStep(d) +\
         "\n\n# Data Structure in File #" +\
         "\nData Offset: " + str(d0.Offset) + " bytes" +\
         "\nFrame Header: " + str(d0.FrHead) + " bytes" +\
@@ -813,6 +924,7 @@ def unloadData(self, keep_p=False):
     from callbacks.window_manager import enableWindows  # deferred to break circular import
     enableWindows(self, False)  # Disable windows for the data unload process
     self.setWindowTitle('Quant4D')
+    self._sharedData = False    # the next dataset says whether it shares a caller's array
     # Whether to swap dataset only, without changing any existing parameters
     if not keep_p:
         # clear all axes

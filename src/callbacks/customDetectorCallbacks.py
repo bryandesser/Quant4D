@@ -52,6 +52,9 @@ _COLS = ("ID", "Type", "Label", "✓", "👁", "μ")
 _ENABLE, _SHOW, _WEIGHT, _LABEL = 3, 4, 5, 2
 
 
+AXIS_TYPES = ("Circle", "Grid", "GridNoCenter", "Bandpass", "Wedge")    # masks with a centre axis
+
+
 class CustomMask:
     """One custom detector mask: its settings, geometry, annotations and current mask."""
 
@@ -69,6 +72,8 @@ class CustomMask:
         self.vertices: Any = None       # polygon, (n, 2)
         self.file_mask: Any = None      # File type, (NPxY, NPxX)
         self.formula = "1"              # Math type
+        self.axis: Any = None           # centre axis (mirror centre, grid origin, wedge apex); None: the beam centre
+        self.axisFree = False           # the axis point is shown and can be dragged (CDAxis)
         self.mask: Any = None           # current (inverted, unweighted) mask
         self.handles: list = []         # interactive annotations
         self.artists: list = []         # passive matplotlib artists
@@ -110,10 +115,12 @@ def connectCustomDetector(self):
         self.CDNewGridNoCenter = btn
     if not hasattr(self, "CDDuplicate"):
         _addDuplicateButton(self)
+    if not hasattr(self, "CDAxis"):
+        _addAxisButton(self)
     tips = {"CDNewCircle": "New circular aperture", "CDNewGrid": "New grid of apertures",
             "CDNewBandpass": "New band-pass (ring)", "CDNewWedge": "New wedge", "CDNewPolygon": "Draw a polygon mask",
             "CDNewFromFile": "Mask from an image file", "CDNewMath": "Mask from a formula over other masks",
-            "CDDelMask": "Delete the selected mask", "CDDuplicate": "Duplicate the selected mask (new ID, same settings)", "CDMirror": "Mirror through the beam centre",
+            "CDDelMask": "Delete the selected mask", "CDDuplicate": "Duplicate the selected mask (new ID, same settings)", "CDMirror": "Mirror through the centre axis (the beam centre unless moved)",
             "CDInvert": "Invert the mask", "CDColor": "Mask colour", "CDRotCCW": "Rotate anticlockwise",
             "CDRotCW": "Rotate clockwise", "CDFlipHorz": "Flip across the horizontal axis (y → -y)",
             "CDFlipVert": "Flip across the vertical axis (x → -x)", "CDTranspose": "Transpose (swap x and y)"}
@@ -124,7 +131,7 @@ def connectCustomDetector(self):
                  "CDNewFromFile", "CDNewMath", "CDDelMask", "CDDuplicate", "CDColor", "CDRotCCW", "CDRotCW", "CDFlipHorz",
                  "CDFlipVert", "CDTranspose"):
         getattr(self, name).clicked.connect(cb)
-    for name in ("CDMirror", "CDInvert"):
+    for name in ("CDMirror", "CDInvert", "CDAxis"):
         getattr(self, name).setCheckable(True)
         getattr(self, name).clicked.connect(cb)
     self.CDIntraMask.currentIndexChanged.connect(cb)
@@ -190,6 +197,128 @@ def _addDuplicateButton(self):
     self.CDDuplicate = btn
 
 
+def _addAxisButton(self):
+    """The centre-axis toggle, above Mirror (a pyQuant4D addition): a crosshair in a circle."""
+    btn = qtw.QToolButton(self.CDMirror.parentWidget())
+    btn.setObjectName("CDAxis")
+    size = 24
+    pm = qtg.QPixmap(size, size)
+    pm.fill(qtc.Qt.GlobalColor.transparent)
+    p = qtg.QPainter(pm)
+    p.setRenderHint(qtg.QPainter.RenderHint.Antialiasing)
+    p.setPen(qtg.QPen(qtg.QColor(60, 60, 60), 1.6))
+    p.drawEllipse(qtc.QRectF(6, 6, 12, 12))
+    p.drawLine(qtc.QPointF(12, 2), qtc.QPointF(12, 22))
+    p.drawLine(qtc.QPointF(2, 12), qtc.QPointF(22, 12))
+    p.end()
+    btn.setIcon(qtg.QIcon(pm))
+    btn.setIconSize(self.CDMirror.iconSize())
+    btn.setToolTip("Free the centre axis: drag the + that appears to move the mask's centre (mirror centre, "
+                   "grid origin, band-pass centre, wedge apex) off the beam centre; right-click the + to reset it "
+                   "to the beam centre.  Untick to lock it there.")
+    for layout in self.CDMirror.parentWidget().findChildren(qtw.QBoxLayout):
+        index = layout.indexOf(self.CDMirror)
+        if index >= 0:
+            layout.insertWidget(index, btn)
+            break
+    else:
+        btn.hide()
+    self.CDAxis = btn
+
+
+def _axis(self, cmask):
+    """The centre axis of *cmask*: its own once moved (the band-pass centre is its axis), else the beam centre."""
+    if cmask.type == "Bandpass":
+        return np.asarray(cmask.p1, float)
+    return np.asarray(cmask.axis if cmask.axis is not None else self.B0, float)
+
+
+def _setAxisFree(self, cmask, free):
+    """CDAxis: show the axis point (free) or hide it, the axis staying where it is (locked)."""
+    cmask.axisFree = bool(free) and cmask.type in AXIS_TYPES
+    if cmask.axisFree and cmask.type != "Bandpass":
+        cmask.axis = _axis(self, cmask).copy()
+    _draw(self, cmask)
+
+
+def _onAxisMoved(self, cmask, handle, new=None):
+    """The axis point was dragged (or reset to *new*): grids and wedges move with it (keeping their
+    shape), the band-pass is centred on it, a circle keeps its place (only its mirror moves)."""
+    if new is None:
+        # a copy: the point's offsets array changes with the next motion, and the mask would then
+        # alias it (the axis already "there", so nothing else moved after the first motion)
+        new = np.array(handle.point.get_offsets()[0], dtype=float)
+    else:
+        new = np.array(new, dtype=float)
+        handle.point.set_offsets([new])
+    delta = new - _axis(self, cmask)
+    if cmask.type == "Bandpass":
+        cmask.p1 = new
+    else:
+        cmask.axis = new
+        if cmask.type != "Circle":
+            for attr in ("p1", "p2"):
+                if getattr(cmask, attr) is not None:
+                    setattr(cmask, attr, np.asarray(getattr(cmask, attr), float) + delta)
+    for h in cmask.handles:                    # the interactive parts follow without being rebuilt
+        if h is handle:
+            continue
+        if isinstance(h, InteractiveCircle) and (cmask.type != "Circle"):
+            _shiftCircle(h, delta)
+        elif isinstance(h, InteractivePoint):
+            h.point.set_offsets(np.asarray(h.point.get_offsets(), float) + delta)
+    _computeMask(self, cmask)
+    _drawPassive(self, cmask)
+    _fillDetailsTable(self, cmask)
+    from callbacks.plotting import toUpdateImage  # noqa: E402
+    if toUpdateImage(self):
+        _plotCustom(self)
+
+
+def resetAxis(self, cmask):
+    """Back to the beam centre: the mask moves as if its axis were dragged there, and the axis
+    follows the beam again."""
+    axis = next((h for h in cmask.handles if getattr(h, "isAxis", False)), None)
+    b0 = np.asarray(self.B0, float)
+    if axis is not None:
+        _onAxisMoved(self, cmask, axis, new=b0)
+    else:                                   # locked: shift the geometry the same way, then redraw
+        delta = b0 - _axis(self, cmask)
+        if cmask.type == "Bandpass":
+            cmask.p1 = b0
+        elif cmask.type != "Circle":
+            for attr in ("p1", "p2"):
+                if getattr(cmask, attr) is not None:
+                    setattr(cmask, attr, np.asarray(getattr(cmask, attr), float) + delta)
+    if cmask.type != "Bandpass":
+        cmask.axis = None
+    _update(self, cmask)
+
+
+def axisMenu(self, cmask):
+    """The right-click menu of a custom mask's centre axis (the + shown by the CDAxis button)."""
+    menu = qtw.QMenu()
+    reset = menu.addAction("Reset to beam centre")
+    assert reset is not None
+    reset.setToolTip("Put the centre axis back on the transmitted beam (the mask moves with it)")
+    reset.setEnabled(not np.allclose(_axis(self, cmask), np.asarray(self.B0, float)))
+    reset.triggered.connect(lambda: resetAxis(self, cmask))
+    return menu
+
+
+def _showAxisMenu(self, cmask, event):
+    self._axisMenu = axisMenu(self, cmask)          # keep a reference while it is shown
+    self._axisMenu.popup(qtg.QCursor.pos())
+
+
+def _shiftCircle(h, delta):
+    h.center = np.asarray(h.center, float) + delta
+    for circ in h.circ:
+        circ.set_xdata(np.asarray(circ.get_xdata(), float) + delta[0])
+        circ.set_ydata(np.asarray(circ.get_ydata(), float) + delta[1])
+    h.point.set_offsets(np.asarray(h.point.get_offsets(), float) + delta)
+
+
 def resetCustomDetectors(self):
     """Remove every custom mask (dataset unloaded)."""
     for cmask in list(getattr(self.A, "Custom", {}).values()):
@@ -238,6 +367,8 @@ def customDetectorCallbacks(self, source=None):
         _deleteMask(self, sel)
     elif sender is self.CDDuplicate:
         _duplicateMask(self, sel)
+    elif sender is self.CDAxis:
+        _setAxisFree(self, sel, self.CDAxis.isChecked())
     elif sender in (self.CDMirror, self.CDInvert, self.CDIntraMask):
         sel.mirrored = self.CDMirror.isChecked()
         sel.inverted = self.CDInvert.isChecked()
@@ -363,7 +494,7 @@ def _duplicateMask(self, cmask):
         return
     new = CustomMask(_nextId(self), cmask.type, cmask.color)
     for name in ("enabled", "shown", "weight", "mirrored", "inverted", "intra", "formula",
-                 "p1", "p2", "r1", "r2", "vertices", "file_mask"):
+                 "p1", "p2", "r1", "r2", "vertices", "file_mask", "axis"):
         value = getattr(cmask, name)
         setattr(new, name, value.copy() if isinstance(value, np.ndarray) else value)
     new.label = new.id if cmask.label == cmask.id else cmask.label
@@ -520,7 +651,7 @@ def _syncFromDetailsTable(self, cmask):
 def _updateDetailsUI(self):
     """Enable and fill the details panel for the selected mask."""
     sel = _selected(self)
-    widgets = (self.CDMirror, self.CDInvert, self.CDColor, self.CDIntraMask, self.CDRotCW, self.CDRotCCW,
+    widgets = (self.CDAxis, self.CDMirror, self.CDInvert, self.CDColor, self.CDIntraMask, self.CDRotCW, self.CDRotCCW,
                self.CDRotStep, self.CDFlipHorz, self.CDFlipVert, self.CDTranspose, self.CDDTable, self.CDDelMask,
                self.CDDuplicate)
     for w in widgets:
@@ -528,7 +659,9 @@ def _updateDetailsUI(self):
     _fillDetailsTable(self, sel)
     if sel is None:
         return
-    with signals_blocked(self.CDMirror, self.CDInvert, self.CDIntraMask, self.CDRotStep):
+    with signals_blocked(self.CDAxis, self.CDMirror, self.CDInvert, self.CDIntraMask, self.CDRotStep):
+        self.CDAxis.setChecked(sel.axisFree)
+        self.CDAxis.setEnabled(sel.type in AXIS_TYPES)
         self.CDMirror.setChecked(sel.mirrored)
         self.CDInvert.setChecked(sel.inverted)
         self.CDIntraMask.setCurrentIndex(max(0, self.CDIntraMask.findText(sel.intra)))
@@ -554,8 +687,8 @@ def _updateDetailsUI(self):
 # Geometry changes
 # ---------------------------------------------------------------------------
 def _transform(self, cmask, sender):
-    """Flip, transpose or rotate the selected mask about the beam centre."""
-    b0 = np.asarray(self.B0, float)
+    """Flip, transpose or rotate the selected mask about its centre axis (the beam centre unless moved)."""
+    b0 = _axis(self, cmask) if cmask.type in AXIS_TYPES else np.asarray(self.B0, float)
     if sender in (self.CDRotCW, self.CDRotCCW):
         from callbacks.axis_direction import clockwise_angle  # noqa: E402
         step = float(self.CDRotStep.currentData())
@@ -643,7 +776,7 @@ def _onHandleMoved(self, cmask, handle_index):
 # ---------------------------------------------------------------------------
 def _computeMask(self, cmask):
     shape = dfrn_shape(self.D)
-    b0 = np.asarray(self.B0, float)
+    b0 = _axis(self, cmask)
     t = cmask.type
     if t == "Circle":
         mask = cm.circle_detector(shape, cmask.p1, cmask.r1, b0, cmask.mirrored, cmask.intra)
@@ -748,13 +881,27 @@ def _draw(self, cmask):
     elif cmask.type in ("Grid", "GridNoCenter"):
         hs.append(InteractiveCircle(ax, center=cmask.p1, radius=cmask.r1, color=color, interactions="all"))
         hs.append(InteractiveCircle(ax, center=cmask.p2, radius=cmask.r1, color=color, interactions="all"))
-    elif cmask.type == "Bandpass":
-        hs.append(InteractiveCircle(ax, center=cmask.p1, radius=[cmask.r1, cmask.r2], color=color, interactions="all"))
+    elif cmask.type == "Bandpass":         # centred on its axis: moved with the CDAxis point, not dragged
+        hs.append(InteractiveCircle(ax, center=cmask.p1, radius=[cmask.r1, cmask.r2], color=color, interactions="resize"))
     elif cmask.type == "Wedge":
         for p in (cmask.p1, cmask.p2):
             hs.append(InteractivePoint(ax.scatter([p[0]], [p[1]], color=[color], s=60, zorder=8)))
     elif cmask.type == "Polygon":
         hs.append(InteractivePolygon(ax, vertices=cmask.vertices, color=color))
+    axis = None
+    if cmask.axisFree and cmask.type in AXIS_TYPES:
+        # the centre axis: a + to drag; the rest of the mask is blitted with it.  Connected before
+        # the other handles, so a press on it is not also taken by an aperture lying under it
+        c = _axis(self, cmask)
+        axis = InteractivePoint(ax.scatter([c[0]], [c[1]], marker="P", s=110, color=[color],
+                                           edgecolors="k", linewidths=0.8, zorder=9))
+        axis.isAxis = True
+        axis.connect()
+        axis.positionChanged.connect(lambda *_, _c=cmask, _h=axis: _onAxisMoved(self, _c, _h))
+        axis.rightClick.connect(lambda ev, _c=cmask: _showAxisMenu(self, _c, ev))
+        others = list(hs)
+        axis.companions = lambda _c=cmask, _o=others: list(_c.artists) + [
+            a for h in _o for a in ((getattr(h, "circ", None) or []) + [getattr(h, "point", None), getattr(h, "patch", None)])]
     for k, h in enumerate(hs):
         # the annotation classes start animated (blitting); they animate themselves while dragged,
         # so leave them as ordinary artists in between, otherwise full redraws would drop them
@@ -764,10 +911,12 @@ def _draw(self, cmask):
         h.connect()
         signal = getattr(h, "updateCircle", None) or getattr(h, "updatePoly", None) or h.positionChanged
         signal.connect(lambda *_, _c=cmask, _k=k: _onHandleMoved(self, _c, _k))
-    cmask.handles = hs
     for h in hs:
         # the passive outline (mirrored copy, grid sites, wedge, contour) moves with the dragged handle
         h.companions = lambda _c=cmask: list(_c.artists)
+    if axis is not None:
+        hs.append(axis)
+    cmask.handles = hs
     _drawPassive(self, cmask)
     _setVisible(self, cmask)
 
@@ -781,7 +930,7 @@ def _drawPassive(self, cmask):
             pass
     cmask.artists = []
     ax = self.Fig.Dfrn.ax
-    b0 = np.asarray(self.B0, float)
+    b0 = _axis(self, cmask)
     ny, nx = dfrn_shape(self.D)
     t = np.linspace(0, 2 * np.pi, 73)
     color = cmask.color

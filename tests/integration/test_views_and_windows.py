@@ -162,13 +162,15 @@ class TestWindowSizeFields:
     def test_fields_show_the_image_area(self, loaded_app, qapp):
         w = loaded_app
         sw = w.SettingsWindow
+        # the fields are the display area: the canvas, measured in that window (the diffraction
+        # window's status bar is taller, with the Pattern dropdown)
         w.Fig.Dfrn.resize(420, 380)
         qapp.processEvents()
-        assert sw.WdwWDfrn.value() == 420 - w.C.mplDecor.width()
-        assert sw.WdwHDfrn.value() == 380 - w.C.mplDecor.height()
+        assert (sw.WdwWDfrn.value(), sw.WdwHDfrn.value()) == (w.Fig.Dfrn.canvas.width(), w.Fig.Dfrn.canvas.height())
+        assert sw.WdwHDfrn.value() < 380 - 20
         w.Fig.DfrnMask.resize(500, 500)                    # another window: no accumulation
         qapp.processEvents()
-        assert sw.WdwWDfrn.value() == 500 - w.C.mplDecor.width()
+        assert sw.WdwWDfrn.value() == w.Fig.DfrnMask.canvas.width() < 500
 
 
 class TestByteOrderPrompt:

@@ -37,7 +37,15 @@ def calcCoM(obj, mask, cx, cy):
     return compute.weighted_mean_position(obj.D.Data, mask, cx, cy, getattr(obj.D, "GPU", None))
 
 
-def annularDetectorCallbacks(self):
+_SENDER = object()
+
+
+def annularDetectorCallbacks(self, source=_SENDER):
+    """Annular/CoM/DPC detector callbacks, dispatched on *source* (default ``self.sender()``).
+
+    ``source="units"``: the coordinate unit or the diffraction scale changed; the radius fields
+    are shown again in the current unit (callable outside a slot).
+    """
 
     def limitAnnUI():
         """Update annular detector UI limits/labels when coordinate options change."""
@@ -523,7 +531,8 @@ def annularDetectorCallbacks(self):
                 # back to the detector frame: undo the current rotation and Y flip
                 u, v = compute.rotate_field(self.Fig.CoMX.Image, self.Fig.CoMY.Image, -sd)
                 try:
-                    angle, flip, _ = compute.scan_rotation_by_curl(u, v * syf, prefer_deg=sd)
+                    angle, flip, _ = compute.scan_rotation_by_curl(u, v * syf, prefer_deg=sd,
+                                                                   prefer_flip=bool(self.ScanDirYFlip.isChecked()))
                 except ValueError as exc:
                     notifDLG(self, self, "warn", f"The scan direction could not be estimated: {exc}\n"
                                                  "Try changing the detector and repeating.",
@@ -578,8 +587,8 @@ def annularDetectorCallbacks(self):
     b0 = self.B0
     dmod = self.DetrMode.currentData()
 
-    match self.sender():
-        case self.SettingsWindow.DCSys | self.SettingsWindow.DCPos | self.SettingsWindow.DCUnit:
+    match self.sender() if source is _SENDER else source:
+        case "units" | self.SettingsWindow.DCSys | self.SettingsWindow.DCPos | self.SettingsWindow.DCUnit:
             limitAnnUI()
         case self.DetrMode:
             limitAnnUI()
@@ -596,6 +605,8 @@ def annularDetectorCallbacks(self):
             if dmod == "DPCMod":
                 drawSegDetr()
             moveAnnDetr()
+            if dmod in ("CoMMod", "DPCMod") and not self.P.ScanDirInit:
+                autoCurl()          # first CoM/DPC visit with this dataset: align the scan direction
             enableWindows(self, True)
         case (self.AnnRi | self.AnnRi_NF | self.AnnRo_NF
               | self.DetRot | self.DetRot_NF | self.NSeg | self.NRung
@@ -711,10 +722,39 @@ def _alignmentStepLayout(self):
 # ------------------------------------------------------------------
 # iCoM / dCoM bandpass filter (Settings > Windows)
 # ------------------------------------------------------------------
+# iCoM/dCoM bandpass filter.  The limits are kept in pixels of the scan's Fourier transform
+# (MATLAB's kx/ky index units, ``compute.fourier_radius``) in ``P.Bandpass``; the spin boxes show them
+# in the unit chosen beside them.  1/Å and mrad need a calibrated scan step (mrad also the accelerating
+# voltage: θ = λk); a radius r px is ``r / (NFrX · step)`` 1/Å, along the scan's x (the fast axis; a
+# non-square scan has a different pixel along y).
+BANDPASS_UNITS = (("px", "px"), ("1/Å", "invA"), ("mrad", "mrad"))
+_ANGSTROM = {"pm": 0.01, "A": 1.0, "nm": 10.0, "um": 1e4}
+
+
+def bandpassScale(self, unit=None) -> "float | None":
+    """Display units per Fourier pixel for *unit* (default: the one chosen), or None if not available."""
+    unit = unit or (self.SettingsWindow.BandpassUnits.currentData() or "px")
+    if unit == "px":
+        return 1.0
+    d = self.D
+    if d is None or d.ScanUnits not in _ANGSTROM or d.ScanStep <= 0:
+        return None
+    per_A = 1.0 / (d.NFrX * d.ScanStep * _ANGSTROM[d.ScanUnits])        # 1/Å per Fourier pixel
+    if unit == "invA":
+        return per_A
+    from callbacks.io.emd import mrad_per_inverse_angstrom  # noqa: E402
+    return per_A * mrad_per_inverse_angstrom(d.kV) if d.kV and d.kV > 0 else None
+
+
 def bandpassLimits(self) -> tuple:
     """(low, high) of the iCoM/dCoM bandpass filter, pixels of the scan's Fourier transform."""
-    sw = self.SettingsWindow
-    lo, hi = sw.BandpassFilterLow.value(), sw.BandpassFilterHigh.value()
+    stored = getattr(self.P, "Bandpass", None)
+    if stored is not None:
+        lo, hi = stored
+    else:                                               # before a dataset sets them
+        sw = self.SettingsWindow
+        f = bandpassScale(self) or 1.0
+        lo, hi = sw.BandpassFilterLow.value() / f, sw.BandpassFilterHigh.value() / f
     return min(lo, hi), max(lo, hi)
 
 
@@ -728,36 +768,65 @@ def integratedImages(self) -> None:
     self.Fig.dCoM.Image = compute.fourier_bandpass(compute.divergence(fx, fy), lo, hi)
 
 
-def resetBandpass(self) -> None:
-    """New dataset: the filter keeps every spatial frequency of the scan (0 .. the corner of its FFT)."""
+def _bandpassMax(self) -> float:
     from callbacks.layout import real_shape
     ny, nx = real_shape(self.D)
-    kmax = int(np.ceil(np.hypot(nx // 2, ny // 2)))
+    return float(np.ceil(np.hypot(nx // 2, ny // 2)))
+
+
+def showBandpass(self) -> None:
+    """Show the stored limits on the slider (px) and spin boxes (chosen unit); grey out the units
+    that need a calibration that is not there (falling back to px)."""
     sw = self.SettingsWindow
+    if self.D is None:
+        return
+    combo = sw.BandpassUnits
+    with signals_blocked(combo):
+        for i in range(combo.count()):
+            item = combo.model().item(i)
+            ok = bandpassScale(self, combo.itemData(i)) is not None
+            item.setEnabled(ok)
+            item.setToolTip("" if ok else "Needs a calibrated scan step (Settings > Windows > Real-space)"
+                            + (" and an accelerating voltage" if combo.itemData(i) == "mrad" else ""))
+        if bandpassScale(self) is None:
+            combo.setCurrentIndex(combo.findData("px"))
+    f = bandpassScale(self) or 1.0
+    kmax = _bandpassMax(self)
+    lo, hi = bandpassLimits(self)
+    px = combo.currentData() == "px"
     with signals_blocked(sw.BandpassFilter, sw.BandpassFilterLow, sw.BandpassFilterHigh):
-        for w in (sw.BandpassFilterLow, sw.BandpassFilterHigh):
-            w.setRange(0, kmax)
-        sw.BandpassFilter.setRange(0, kmax)
-        sw.BandpassFilter.setValue((0, kmax))
-        sw.BandpassFilterLow.setValue(0)
-        sw.BandpassFilterHigh.setValue(kmax)
+        sw.BandpassFilter.setRange(0, int(kmax))
+        sw.BandpassFilter.setValue((int(round(lo)), int(round(hi))))
+        for w, v in ((sw.BandpassFilterLow, lo), (sw.BandpassFilterHigh, hi)):
+            w.setDecimals(0 if px else 4)
+            w.setSingleStep(1.0 if px else max(f, 10.0 ** -4))
+            w.setRange(0, kmax * f)
+            w.setValue(v * f)
+
+
+def resetBandpass(self) -> None:
+    """New dataset: the filter keeps every spatial frequency of the scan (0 .. the corner of its FFT)."""
+    self.P.Bandpass = (0.0, _bandpassMax(self))
+    showBandpass(self)
 
 
 def bandpassCallbacks(self, source=None) -> None:
-    """Range slider and spin boxes kept in step; iCoM/dCoM recomputed from the stored CoM images."""
+    """Range slider, spin boxes and units kept in step; iCoM/dCoM recomputed from the stored CoM images."""
     from callbacks.plotting import plotImage
     sw = self.SettingsWindow
+    if self.D is None:
+        return
     source = source if source is not None else self.sender()
-    with signals_blocked(sw.BandpassFilter, sw.BandpassFilterLow, sw.BandpassFilterHigh):
-        if source is sw.BandpassFilter:
-            lo, hi = sw.BandpassFilter.value()
-            sw.BandpassFilterLow.setValue(int(lo))
-            sw.BandpassFilterHigh.setValue(int(hi))
-        else:
-            lo, hi = bandpassLimits(self)
-            sw.BandpassFilter.setValue((lo, hi))
-            sw.BandpassFilterLow.setValue(lo)
-            sw.BandpassFilterHigh.setValue(hi)
+    before = bandpassLimits(self)
+    if source is sw.BandpassFilter:
+        self.P.Bandpass = tuple(float(v) for v in sw.BandpassFilter.value())
+    elif source in (sw.BandpassFilterLow, sw.BandpassFilterHigh):
+        f = bandpassScale(self) or 1.0
+        lo, hi = sw.BandpassFilterLow.value() / f, sw.BandpassFilterHigh.value() / f
+        self.P.Bandpass = (min(lo, hi), max(lo, hi))
+    showBandpass(self)                       # (units: only the display changes)
+    if bandpassLimits(self) == before:
+        return
     if self.DetrMode.currentData() in ("CoMMod", "DPCMod") and self.Fig.CoMX.Image is not None:
         integratedImages(self)
         for id in ("iCoM", "dCoM"):
@@ -767,6 +836,11 @@ def bandpassCallbacks(self, source=None) -> None:
 
 def connectBandpass(self) -> None:
     sw = self.SettingsWindow
+    with signals_blocked(sw.BandpassUnits):
+        sw.BandpassUnits.clear()
+        for text, unit in BANDPASS_UNITS:
+            sw.BandpassUnits.addItem(text, unit)
     sw.BandpassFilter.valueChanged.connect(lambda *_: bandpassCallbacks(self))
     sw.BandpassFilterLow.valueChanged.connect(lambda *_: bandpassCallbacks(self))
     sw.BandpassFilterHigh.valueChanged.connect(lambda *_: bandpassCallbacks(self))
+    sw.BandpassUnits.currentIndexChanged.connect(lambda *_: bandpassCallbacks(self))

@@ -50,7 +50,41 @@ class MainWindow(MW_Base, MW_Ui):
         # self.windowHandle().screenChanged.connect(lambda: self.C.__setattr__("dpi",self.screen().physicalDotsPerInch()))
         # self.windowHandle().screenChanged.connect(lambda: self.pointPickerRadius.emit(self.screen().physicalDotsPerInch()))
 
+    embedded = False      # opened by pyquant4d.show(): closing must not end the Python session
+
+    # Results for Python / notebooks, in py4DSTEM's conventions (callbacks.results)
+    def calibration(self) -> dict:
+        """The loaded dataset's calibration in py4DSTEM's names: see :func:`callbacks.results.calibration`."""
+        from callbacks.results import calibration
+        return calibration(self)
+
+    def apply_calibration(self, datacube, *, scan_step: bool = True) -> dict:
+        """Write the calibration into a py4DSTEM DataCube: see :func:`callbacks.results.apply_calibration`."""
+        from callbacks.results import apply_calibration
+        return apply_calibration(self, datacube, scan_step=scan_step)
+
+    def image(self, key: str = "Real"):
+        """A copy of an image, (Rx, Ry) or (Qx, Qy): see :func:`callbacks.results.image`."""
+        from callbacks.results import image
+        return image(self, key)
+
+    def images(self) -> dict:
+        """The images computed so far, ``{id: name}``."""
+        from callbacks.results import images
+        return images(self)
+
+    def mask(self, key=None):
+        """A copy of the current detector, the ROI or a custom detector: see :func:`callbacks.results.mask`."""
+        from callbacks.results import mask
+        return mask(self, key)
+
     def closeEvent(self, event):
+        if self.embedded:
+            for w in [self.ImportWindow, self.SettingsWindow, self.SaveWindow, *self.Fig.values()]:
+                if isinstance(w, qtw.QWidget):
+                    w.close()
+            event.accept()
+            return
         # In headless / CI mode (QT_QPA_PLATFORM=offscreen) do not show a
         # QMessageBox: on Windows it triggers a fatal access violation at the
         # C++ level before Python can handle it.  Also avoid sys.exit() which
@@ -119,6 +153,32 @@ class ImageWindow(qtw.QMainWindow):
     imageResize = qtc.pyqtSignal((qtc.QSize, str))
     activateFigure = qtc.pyqtSignal(str)
 
+    # callbacks.window_groups.GroupWindow holding this image when its space is grouped into tabs.
+    # show/hide/isVisible/activateWindow then ask the group (Python callers only: Qt's own calls,
+    # e.g. a tab widget hiding the pages not shown, go to QMainWindow directly).
+    group = None
+
+    def show(self):
+        if self.group is not None:
+            self.group.showMember(self)
+        else:
+            super().show()
+
+    def hide(self):
+        if self.group is not None:
+            self.group.hideMember(self)
+        else:
+            super().hide()
+
+    def isVisible(self) -> bool:
+        return self.group.isShown(self) if self.group is not None else super().isVisible()
+
+    def activateWindow(self):
+        if self.group is not None:
+            self.group.selectMember(self)
+        else:
+            super().activateWindow()
+
     def __init__(self, id, name, space, typ, cmap, pos):
         super().__init__
         qtw.QMainWindow.__init__(self)
@@ -171,6 +231,11 @@ class ImageWindow(qtw.QMainWindow):
 
         self.toolbar = NavigationToolbar(self.canvas, self)
         layout.addWidget(self.toolbar)
+        # the cursor position and intensity go to a status bar under the toolbar, so the toolbar keeps
+        # its width (the readout used to push the diffraction "Pattern" dropdown behind ">>")
+        status = self.statusBar()
+        assert status is not None
+        status.setSizeGripEnabled(False)
 
         # only use self.move() for dummy window test, it triggers a moveEvent
         # which draws the decoration so they can be measured
@@ -199,11 +264,16 @@ class ImageWindow(qtw.QMainWindow):
             action.blockSignals(False)
 
     def showEvent(self, a0) -> None:
-        self._syncMenuAction(True)
-        return super().showEvent(a0)
+        if self.group is None:              # grouped: the group keeps the menu ticks (tab switches hide pages)
+            self._syncMenuAction(True)
+        result = super().showEvent(a0)
+        if self._wantImage is not None and self.isWindow():     # sized while hidden: make it exact now
+            self.setImageSize(*self._wantImage)
+        return result
 
     def hideEvent(self, a0) -> None:
-        self._syncMenuAction(False)
+        if self.group is None:
+            self._syncMenuAction(False)
         return super().hideEvent(a0)
 
     # change closeEvent behavior to hide rather than close window
@@ -213,8 +283,56 @@ class ImageWindow(qtw.QMainWindow):
         a0.ignore()
         return super().closeEvent(a0)
 
+    _decor = None          # (class default) the last decoration measured on any shown image window
+    _wantImage = None      # display size asked for while hidden: applied exactly when shown
+
+    def _layoutNow(self) -> None:
+        """Lay the window out at its current size now, so the canvas has its size."""
+        central = self.centralWidget()
+        for lay in (self.layout(), central.layout() if central is not None else None):
+            if lay is not None:
+                lay.activate()
+
+    def _shown(self) -> bool:
+        return qtw.QMainWindow.isVisible(self)          # the widget itself (not its tab group)
+
+    def decorSize(self) -> qtc.QSize:
+        """Everything in the window around the image canvas (margins, toolbar, status bar): measured
+        while the window is shown, otherwise the last measurement (a hidden window is not laid out)."""
+        if self._shown():
+            self._layoutNow()
+            d = self.size() - self.canvas.size()
+            self._decor = ImageWindow._decor = d
+            return d
+        return self._decor or ImageWindow._decor or qtc.QSize(0, 0)
+
+    def imageSize(self) -> qtc.QSize:
+        """The display area: the canvas the image is drawn on (for a hidden window, what it will be)."""
+        if self._shown():
+            self._layoutNow()
+            return self.canvas.size()
+        return self.size() - self.decorSize()
+
+    def setImageSize(self, width: int, height: int) -> None:
+        """Resize the window so its display area (the canvas) is *width* x *height*, the toolbar,
+        status bar and margins coming on top.  Checked again after the layout (the toolbar can
+        wrap at a new width); a hidden window is checked when it is next shown."""
+        self._wantImage = (int(width), int(height))
+        if not self._shown():
+            d = self.decorSize()
+            self.resize(int(width) + d.width(), int(height) + d.height())
+            return
+        for _ in range(3):
+            have = self.imageSize()
+            if have.width() == width and have.height() == height:
+                break
+            self.resize(self.width() + width - have.width(), self.height() + height - have.height())
+        self._wantImage = None
+
     def resizeEvent(self, a0: qtg.QResizeEvent) -> None:
-        self.imageResize.emit(a0.size(), self.space)     # the new size (Settings > Misc > window size)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
+        if not self.isWindow():             # a tab of a grouped space: not a window size
+            return super().resizeEvent(a0)
+        self.imageResize.emit(a0.size(), self.space)     # the new size (Settings > Windows > window size)  # pyright: ignore[reportAttributeAccessIssue] (class-level pyqtSignal)
         return super().resizeEvent(a0)
 
     def on_key_press(self, event):
@@ -253,8 +371,17 @@ class ImageWindow(qtw.QMainWindow):
 # event-based data picking has been modified:
 # data = a.get_cursor_data(event)
 class NavigationToolbar(NavigationToolbar2QT):
+    """Matplotlib's toolbar without its coordinate label: the readout goes to the window's status bar."""
+
     def __init__(self, canvas, frame, name=None):
-        NavigationToolbar2QT.__init__(self, canvas, frame)
+        NavigationToolbar2QT.__init__(self, canvas, frame, coordinates=False)
+        self._frame = frame
+
+    def set_message(self, s):
+        frame = getattr(self, "_frame", None)          # set after matplotlib's __init__
+        bar = frame.statusBar() if isinstance(frame, qtw.QMainWindow) else None
+        if bar is not None:
+            bar.showMessage("  ".join(part.strip() for part in str(s).splitlines() if part.strip()))
 
     @staticmethod
     def _mouse_event_to_message(event):
@@ -284,6 +411,8 @@ class NavigationToolbar(NavigationToolbar2QT):
                         if data is not None:
                             data_str = a.format_cursor_data(data).rstrip()
                             if data_str:
-                                s = s + '\n' + data_str
+                                # pixel indices and the raw value: short enough to share the status bar
+                                # with the diffraction "Pattern" dropdown
+                                s = f"x={x}, y={y}\n{data_str.strip('[]')}"
                 return s
         return ""

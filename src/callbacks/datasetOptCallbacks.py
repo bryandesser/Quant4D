@@ -65,6 +65,8 @@ def datasetOptCallbacks(self):
             # Check data NaN/Inf, without asking to sway byte-order
             sel = checkNaN(self, image=self.ImageAx.Preview.get_array(), preview=True)
             if sel == 'Set NaNs to 0':
+                from callbacks.py4dstem_bridge import ownData  # noqa: E402
+                ownData(self)                   # never write into a notebook's DataCube
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
                 compute.release_device_data()   # the GPU copy is now stale
 
@@ -73,6 +75,8 @@ def datasetOptCallbacks(self):
             # Check data NaN/Inf, ask whether to sway byte-order
             sel = checkNaN(self, image=self.ImageAx.Dfrn.get_array(), preview=False)
             if sel == 'Set NaNs to 0':
+                from callbacks.py4dstem_bridge import ownData  # noqa: E402
+                ownData(self)                   # never write into a notebook's DataCube
                 self.Data[np.ma.masked_invalid(self.Data).mask] = 0
                 compute.release_device_data()   # the GPU copy is now stale
 
@@ -102,6 +106,8 @@ def swapByteOrder(self, update: bool = True) -> bool:
             if isinstance(self.Data, np.memmap) or not self.Data.flags.writeable:
                 self.Data = self.Data.view(self.Data.dtype.newbyteorder())
             else:
+                from callbacks.py4dstem_bridge import ownData  # noqa: E402
+                ownData(self)                   # never write into a notebook's DataCube
                 self.Data.byteswap(inplace=True)
     except MemoryError:
         notifDLG(self, self, 'error',
@@ -114,30 +120,3 @@ def swapByteOrder(self, update: bool = True) -> bool:
     if update:
         self.UpdateImages.trigger()
     return True
-
-
-def getImportInfo(self):
-    """ Function to update current data info """
-    d = self.D
-    d0 = self.T.prev_D
-    notes = "File: " + d.filePath
-    if d.subImg != '':
-        notes = notes + "\nSub-dataset: " + d.subImg
-
-    notes += "\n\n# Current Data Info #" +\
-        "\nByte Order: " + self.C.EndianTxt[d.ByteOrder] +\
-        "\nData Type: " + np.dtype(d.DataType).name +\
-        "\nByte Size: " + str(d.ByteSize) + " bytes" +\
-        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Diffraction", *d.NPx) +\
-        "\n{:s} (X\u2A2FY): {:d}\u2A2F{:d}".format("Real-space", *d.NFr) +\
-        "\n\n# Data Structure in File #" +\
-        "\nData Offset: " + str(d0.Offset) + " bytes" +\
-        "\nFrame Header: " + str(d0.FrHead) + " bytes" +\
-        "\nFrame Footer: " + str(d0.FrFoot) + " bytes" +\
-        "\nByte Order: " + self.C.EndianTxt[d0.ByteOrder] +\
-        "\nData Type: " + np.dtype(d0.DataType).name +\
-        "\nByte Size: " + str(d0.ByteSize) + " bytes" +\
-        "\n\n# File Meta Info Notes #\n" + d0.NoteFileMeta + '\n' +\
-        "\n\n# Import Option Notes #\n" + d0.NoteImp + '\n'
-
-    return notes

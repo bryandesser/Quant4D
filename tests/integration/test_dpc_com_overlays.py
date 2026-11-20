@@ -158,7 +158,7 @@ class TestAutoCurl:
             assert w.AutoCurl.isEnabled()
             w.ScanDirUnlock.click()
             qapp.processEvents()
-            monkeypatch.setattr(compute, "scan_rotation_by_curl", lambda fx, fy, prefer_deg=0: (123.4, True, 0.0))
+            monkeypatch.setattr(compute, "scan_rotation_by_curl", lambda fx, fy, prefer_deg=0, **kw: (123.4, True, 0.0))
             w.AutoCurl.click()
             qapp.processEvents()
             assert w.ScanDir_NF.value() == pytest.approx(123.4)

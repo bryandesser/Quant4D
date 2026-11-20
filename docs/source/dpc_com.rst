@@ -24,10 +24,21 @@ iCoM / dCoM bandpass filter
 ---------------------------
 
 **Settings → Windows → iCoM / dCoM Bandpass Filter** keeps only the spatial
-frequencies between the low and high limits (pixels of the scan's Fourier
-transform) in the iCoM and dCoM (iDPC/dDPC) images: a lowpass, highpass or
-bandpass filter.  It covers every frequency after an import; changing it updates
-the two images at once.
+frequencies between the low and high limits in the iCoM and dCoM (iDPC/dDPC)
+images: a lowpass, highpass or bandpass filter.  It covers every frequency
+after an import; changing it updates the two images at once.
+
+The dropdown beside the limits sets their unit:
+
+- **px** — pixels of the scan's Fourier transform (MATLAB's kx/ky index units);
+- **1/Å** — r px is r / (NFrX × scan step) 1/Å (needs a calibrated scan step,
+  Settings → Windows → Real-space);
+- **mrad** — the same frequency as a scattering angle, θ = λk with the
+  relativistic wavelength at the accelerating voltage set on import.
+
+The filter itself does not change with the unit.  For a non-square scan the
+conversion uses the scan's x (fast) axis, as the filter radius is in index
+units of each axis.
 
 Segmented DPC
 -------------
@@ -51,12 +62,18 @@ is flipped) relates the two.
 - **Unlock** (the lock button) shows the scan X and Y arrows on the diffraction
   pattern; drag their handles, or use the angle slider and spin box, and the
   Y-flip button.  Lock again when done.
-- **Auto** estimates both automatically, as MATLAB Quant4D's AutoCurl does: a
+- **Auto** (also run automatically the first time CoM or DPC mode is entered
+  with a dataset) estimates both, as MATLAB Quant4D's AutoCurl does: a
   deflection field is the gradient of a potential, so it has no curl in the
   scan's frame.  Every angle (refined to 0.01°) is tried with and without the Y
   flip, and the one with the least curl is chosen.  The curl cannot tell an angle
   from the same angle plus 180°; of the two, the one nearer the current
-  direction is kept.  Auto also locks the scan direction.
+  direction is kept.  A field that fits equally well with and without the flip
+  (a symmetric one) keeps the current flip.  Auto also locks the scan direction.
+
+Entering CoM or DPC mode always brings up the phase/magnitude, iCoM and dCoM
+windows, and Settings → Windows, where the other CoM images can be shown.  The
+Window menu's Center of Mass items are available only in these modes.
 
 .. note::
    Full mathematical background will be added in a future documentation update.

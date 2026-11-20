@@ -68,6 +68,11 @@ def _unit_pair() -> np.ndarray:
 class D:
     """ Parameters of the current imported dataset; should be constants (except for data type conversion) """
     annWidth: float = 0.5           # annuli width for BF/ADF integration
+    Calib: Any = None               # callbacks.io.emd.EmdCalibration of a py4DSTEM file (file pixels), or None
+    kV: float = 300.0               # accelerating voltage (Import window), for mrad <-> 1/Å
+    ScanStep: float = 1.0           # size of one imported scan step (source step x import sampling) ...
+    ScanUnits: str = 'pixels'       # ... in these units ('pixels' = scan positions of the source file)
+    ScanStepFile: float = 1.0       # the file's scan step (Import window), in ScanUnits
     ByteOrder: str = 'l'
     ByteSize: int = 4
     DataType: str = 'single'
@@ -114,6 +119,9 @@ class D:
         self.NPxX, self.NPxY = self.NPxY, self.NPxX
         self.PxX1, self.PxY1 = self.PxY1, self.PxX1
         self.NPx = np.flip(self.NPx)
+        if self.Calib is not None and self.Calib.beam_xy is not None:
+            from dataclasses import replace
+            self.Calib = replace(self.Calib, beam_xy=tuple(reversed(self.Calib.beam_xy)))
 
     def swapReal(self):
         # Swap real X/Y dimensions
@@ -176,6 +184,7 @@ class P:
     """ Common parameters, should be cleared when a dataset is unloaded """
     ScanDirInit: int = 0
     CoMRadiusInit: bool = False     # CoM/DPC entered with this dataset (inner radius set to 0 the first time)
+    Bandpass: Any = None            # iCoM/dCoM bandpass (low, high) in pixels of the scan's Fourier transform
     DfCtr: Any = field(default_factory=list)       # (x, y) centre of the diffraction image
     RsCtr: Any = field(default_factory=list)       # (x, y) centre of the real-space image
     VrApXY: Any = field(default_factory=list)      # (x, y) virtual aperture centre

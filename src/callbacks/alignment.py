@@ -11,17 +11,20 @@ from callbacks.appClass import *
 from callbacks.layout import dfrn_grids, dfrn_shape, real_shape
 from annotationsClasses.interactiveCircle import InteractiveCircle
 from annotationsClasses.interactivePoint import InteractivePoint
-from callbacks.signals import all_signals_blocked  # noqa: E402
+from callbacks.signals import all_signals_blocked, signals_blocked  # noqa: E402
 try:
     from callbacks.imfindcircles import imfindcircles
 except ImportError:
     imfindcircles = None
 
 
-def transBeamCallbacks(self):
+def transBeamCallbacks(self, sender=None):
+    """Transmitted-beam step: *sender* says why (``DetrMode`` entering Align mode, ``UpdateImages``,
+    ``TBAutoAlign``, ``TBCrossAlign``; ``None`` just refreshes).  Passed explicitly, never read from
+    ``self.sender()``, because this is also called outside a Qt slot (see :func:`moveTransBeam`)."""
     from callbacks.datasetOptCallbacks import datasetOptCallbacks  # noqa: E402
     from callbacks.window_manager import enableWindows  # noqa: E402
-    match self.sender():
+    match sender:
         case self.DetrMode:  # Entering mode
             # Create transmitted beam annotation, allow for disk as large as the entire diffraction pattern
             if self.A.tb is None:
@@ -42,9 +45,15 @@ def transBeamCallbacks(self):
             self.Fig.Dfrn.activateWindow()
 
             # If this is the initializing alignment, then do swap byte check and auto-align
+            # (a py4DSTEM file's calibration then sets the beam; with centre, scale and angle all
+            # given there is nothing to fit)
             if not self.P.TransBeamInit:
                 datasetOptCallbacks(self)  # checks for nans and asks if user wants to swap byteorder
-                autoAlign(self)
+                cal = fileCalibration(self)
+                if cal is None or not _completeCalibration(cal):
+                    autoAlign(self)
+                if cal is not None:
+                    applyCalibration(self, cal)
 
             enableWindows(self, True)  # Enable windows
 
@@ -57,10 +66,10 @@ def transBeamCallbacks(self):
             autoAlign(self)
 
         case self.TBCrossAlign:  # Align transmitted beam via two crossed lines
-            crossAlign(self)
+            crossAlign(self, self.TBCrossAlign.isChecked())
 
-    # Update dependent variables
-    moveTransBeam(self)
+    # Update dependent variables (not via self.sender(): this also runs outside a slot)
+    moveTransBeam(self, sender=None)
 
 
 _FROM_SIGNAL = object()
@@ -100,7 +109,7 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
         case self.mradPx:
             mrad_per_px = src.value()
             a = mrad_per_px * r  # Manually set the diffraction scale
-        case self.A.tb:   # dragged: the annotation holds an array of radii (one here) and its own centre array
+        case self.A.tb if src is not None:   # dragged (the annotation holds its radii and centre); None is no sender
             b0 = np.array(self.A.tb.center, dtype=float)
             r = float(np.ravel(self.A.tb.radius)[-1])
 
@@ -127,6 +136,7 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
         self.TBY_NF.setValue(b0[1])
         self.Alpha.setValue(a)
         self.mradPx.setValue(mrad_per_px)
+        showDfScale(self)                    # Settings > Windows > Diffraction, in its unit
 
         # Annular integration step (MATLAB's AnnularStep): one pixel, but at most 250 rings out to the
         # farthest corner (finer makes the pre-computed annular images slow), shown in mrad
@@ -139,7 +149,122 @@ def moveTransBeam(self, sender=_FROM_SIGNAL):
             self.A.tb.radius = np.array([r])
             self.A.tb.redraw()
 
-    detrCoordCallbacks(self)
+    detrCoordCallbacks(self, source=None)    # mrad values follow the scale (not via self.sender(): see above)
+    from callbacks.scale_bar import refreshScaleBars  # noqa: E402
+    refreshScaleBars(self, "Dfrn")      # the scale (mrad/px) may have changed
+
+
+DF_SCALE_UNITS = (("mrad/px", "mrad"), ("1/Å/px", "invA"), ("px", "px"))   # px: uncalibrated (detector values in pixels)
+
+
+def _invA_per_mrad(self) -> "float | None":
+    from callbacks.io.emd import mrad_per_inverse_angstrom  # noqa: E402
+    kv = getattr(self.D, "kV", None) if self.D is not None else None
+    return 1.0 / mrad_per_inverse_angstrom(kv) if kv and kv > 0 else None
+
+
+def showDfScale(self) -> None:
+    """Settings > Windows > Diffraction > Scale: the main window's mrad/px, in the unit chosen
+    (``px``: 1, not editable, like an uncalibrated real-space scan step)."""
+    sw = self.SettingsWindow
+    unit = sw.DfScaleUnits.currentData()
+    f = _invA_per_mrad(self) if unit == "invA" else 1.0
+    with signals_blocked(sw.DfScale):
+        sw.DfScale.setDecimals(4 if f == 1.0 else 6)
+        sw.DfScale.setValue(1.0 if unit == "px" else float(self.mradPx.value()) * (f or 1.0))
+    sw.DfScale.setEnabled(unit != "px")
+
+
+def dfScaleUnitChanged(self) -> None:
+    """The Scale unit sets the unit of every detector value: pixels for ``px``, mrad otherwise."""
+    sw = self.SettingsWindow
+    showDfScale(self)
+    want = "px" if sw.DfScaleUnits.currentData() == "px" else "mrad"
+    if sw.DCUnit.currentData() != want:
+        sw.DCUnit.setCurrentIndex(sw.DCUnit.findData(want))     # its slots recalculate the detectors
+
+
+def dcUnitChanged(self) -> None:
+    """Detector units set elsewhere (a reset, a script): the Scale unit follows."""
+    sw = self.SettingsWindow
+    unit, shown = sw.DCUnit.currentData(), sw.DfScaleUnits.currentData()
+    if (unit == "px") != (shown == "px"):
+        with signals_blocked(sw.DfScaleUnits):
+            sw.DfScaleUnits.setCurrentIndex(sw.DfScaleUnits.findData("px" if unit == "px" else "mrad"))
+        showDfScale(self)
+
+
+def dfScaleEdited(self) -> None:
+    """The Scale field was edited: set mrad/px from it (which recalculates through moveTransBeam)."""
+    if self.blockAllSignals:
+        return
+    sw = self.SettingsWindow
+    f = _invA_per_mrad(self) if sw.DfScaleUnits.currentData() == "invA" else 1.0
+    if f and sw.DfScaleUnits.currentData() != "px":
+        self.mradPx.setValue(sw.DfScale.value() / f)
+
+
+def connectDfScale(self) -> None:
+    """Scale field and its unit; called once from ``slotsSignals``."""
+    sw = self.SettingsWindow
+    with signals_blocked(sw.DfScaleUnits):
+        sw.DfScaleUnits.clear()
+        for text, unit in DF_SCALE_UNITS:
+            sw.DfScaleUnits.addItem(text, unit)
+    sw.DfScale.setMaximum(1e6)
+    sw.DfScale.valueChanged.connect(lambda *_: dfScaleEdited(self))
+    sw.DfScaleUnits.currentIndexChanged.connect(lambda *_: dfScaleUnitChanged(self))
+    sw.DCUnit.currentIndexChanged.connect(lambda *_: dcUnitChanged(self))
+    dcUnitChanged(self)
+
+
+def fileCalibration(self):
+    """The calibration of the imported py4DSTEM file in pixels of the imported pattern, or None."""
+    from callbacks.io.emd import calibration_for_region  # noqa: E402
+    if self.D is None or self.D.Calib is None:
+        return None
+    return calibration_for_region(self.D.Calib, (self.D.PxX1, self.D.PxY1), self.D.PxD)
+
+
+def _completeCalibration(cal) -> bool:
+    return cal.beam_xy is not None and cal.q_units == "mrad" and bool(cal.probe_semiangle_mrad)
+
+
+def applyCalibration(self, cal):
+    """Set the transmitted beam from a file's calibration (imported pixels).
+
+    The beam centre is taken as given.  With the detector scale (mrad/px) and
+    the convergence semi-angle both known, the disk radius follows
+    (semi-angle / scale); with the scale only, the semi-angle follows from the
+    current (fitted) radius; with the semi-angle only, it is set and the
+    scale follows from the radius.  The scale is then semi-angle / radius,
+    both fields rounded to 0.01, so it matches the file to about 0.1 %.
+    """
+    has_q = cal.q_units == "mrad" and cal.q_pixel_size > 0
+    semi = cal.probe_semiangle_mrad
+    with all_signals_blocked(self):
+        if cal.beam_xy is not None:
+            nPx = dfrn_shape(self.D)       # (height, width)
+            x = float(np.clip(cal.beam_xy[0], 0, nPx[1] - 1))
+            y = float(np.clip(cal.beam_xy[1], 0, nPx[0] - 1))
+            for w, v in ((self.TBX, x), (self.TBX_NF, x), (self.TBY, y), (self.TBY_NF, y)):
+                w.setValue(v)
+        if has_q and semi:
+            r = float(semi) / float(cal.q_pixel_size)
+            self.TBR.setValue(r)
+            self.TBR_NF.setValue(r)
+            self.Alpha.setValue(float(semi))
+        elif has_q:
+            self.Alpha.setValue(float(cal.q_pixel_size) * float(self.TBR.value()))
+        elif semi:
+            self.Alpha.setValue(float(semi))
+        if not (has_q and semi) and cal.probe_radius_px:      # the measured disk radius (pixels)
+            r = float(cal.probe_radius_px)
+            self.TBR.setValue(r)
+            self.TBR_NF.setValue(r)
+            if has_q:
+                self.Alpha.setValue(float(cal.q_pixel_size) * r)
+    moveTransBeam(self, sender=None)
 
 
 def _beamCandidates(self, broad=False):
@@ -246,77 +371,50 @@ def connectBeamPick(self) -> None:
                                 "double-click the right one on the diffraction pattern.")
 
 
-def crossAlign(self):
-    """
-    Manual beam-centre alignment via an interactive cross-hair cursor.
+def crossAlign(self, on=None):
+    """Beam centre at the crossing of two lines (MATLAB's ``cross_align``): the X button shows two
+    lines on the diffraction pattern, each with two draggable end points (drag the line to move it),
+    for the user to lay along two Kikuchi lines; the beam centre follows their intersection while
+    they are dragged.  Click X again (or leave Alignment mode) to finish.
 
-    Draws two draggable lines (H + V) on the diffraction window that
-    follow the mouse.  A single left-click fixes the intersection as the
-    new B0 (TBX, TBY) and removes the cursor.
-
-    A second call to crossAlign (e.g. user presses the button again)
-    while a cursor is already active will remove it without updating B0.
-    """
-    canvas = self.Fig.Dfrn.canvas
-    ax = self.Fig.Dfrn.ax
-
-    # ── toggle off if already active ────────────────────────────────────
-    if hasattr(self, '_crossAlignState') and self._crossAlignState is not None:
-        _state = self._crossAlignState
-        for cid in _state['cids']:
-            canvas.mpl_disconnect(cid)
-        for line in _state['lines']:
-            try:
+    *on*: True / False to start / finish; None toggles."""
+    from annotationsClasses.interactiveLine import InteractiveLine, intersection  # noqa: E402
+    state = getattr(self, "_crossAlignState", None)
+    if on is None:
+        on = state is None
+    if not on:
+        if state is not None:
+            for line in state["lines"]:
                 line.remove()
-            except Exception:
-                pass
-        canvas.draw_idle()
-        self._crossAlignState = None
+            self._crossAlignState = None
+        with signals_blocked(self.TBCrossAlign):
+            self.TBCrossAlign.setChecked(False)
+        return
+    if state is not None or self.Data is None:
         return
 
-    # ── create crosshair lines ───────────────────────────────────────────
-    xl = ax.get_xlim()
-    yl = ax.get_ylim()
-    b0 = self.B0
+    # two lines crossing at the current beam centre, at ±45°, half the pattern long
+    ax = self.Fig.Dfrn.ax
+    b0 = np.asarray(self.B0, float)
+    h = np.array([self.D.NPxX, self.D.NPxY], float) / 4
+    lines = [InteractiveLine(ax, [b0 - h, b0 + h], color="r"),
+             InteractiveLine(ax, [b0 + h * [-1, 1], b0 + h * [1, -1]], color="r")]
 
-    h_line = ax.axhline(b0[1], color='yellow', linewidth=1,
-                        linestyle='--', alpha=0.8, zorder=10)
-    v_line = ax.axvline(b0[0], color='yellow', linewidth=1,
-                        linestyle='--', alpha=0.8, zorder=10)
-    canvas.draw_idle()
-
-    def _on_move(event):
-        if event.inaxes is not ax or event.xdata is None:
+    def moved():
+        p = intersection(lines[0].ends, lines[1].ends)
+        if p is None:                                   # parallel: no crossing
             return
-        h_line.set_ydata([event.ydata, event.ydata])
-        v_line.set_xdata([event.xdata, event.xdata])
-        canvas.draw_idle()
-
-    def _on_click(event):
-        if event.inaxes is not ax or event.xdata is None:
-            return
-        if event.button != 1:   # left-click only
-            return
-
-        new_x = float(np.clip(event.xdata, 0, self.D.NPxX - 1))
-        new_y = float(np.clip(event.ydata, 0, self.D.NPxY - 1))
-
+        p = p.clip(0, np.array([self.D.NPxX, self.D.NPxY]) - 1)
         with all_signals_blocked(self):
-            self.TBX.setValue(new_x)
-            self.TBX_NF.setValue(new_x)
-            self.TBY.setValue(new_y)
-            self.TBY_NF.setValue(new_y)
-
-        # Tear down the crosshair
-        crossAlign(self)   # second call → removes state
+            for box, v in ((self.TBX, p[0]), (self.TBX_NF, p[0]), (self.TBY, p[1]), (self.TBY_NF, p[1])):
+                box.setValue(float(v))
         moveTransBeam(self, sender=None)
 
-    cids = [
-        canvas.mpl_connect('motion_notify_event', _on_move),
-        canvas.mpl_connect('button_press_event', _on_click),
-    ]
-
-    self._crossAlignState = {
-        'cids': cids,
-        'lines': [h_line, v_line],
-    }
+    for line in lines:
+        line.connect()
+        line.updateLine.connect(moved)
+    self._crossAlignState = {"lines": lines}
+    with signals_blocked(self.TBCrossAlign):
+        self.TBCrossAlign.setChecked(True)
+    self.Fig.Dfrn.show()
+    self.Fig.Dfrn.activateWindow()

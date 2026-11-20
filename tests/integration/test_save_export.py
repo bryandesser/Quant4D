@@ -118,3 +118,116 @@ class TestExportDataset:
         assert path.endswith(f"_{DET_X}x{DET_Y}x{SCAN_X}x{SCAN_Y}.raw"), path
         got = np.fromfile(path, dtype=dtype).reshape(SCAN_X * SCAN_Y, DET_X * DET_Y)
         assert np.array_equal(got, np.asarray(loaded_app.Data))
+
+
+class TestExportEmd:
+    """py4DSTEM EMD export: the dataset, its calibration and the images selected on the Save Images tab."""
+
+    def _export(self, sw, qapp, tmp_path, ids, binning=1):
+        _select_images(sw, ids)
+        sw.SaveDir.setText(str(tmp_path))
+        sw.SaveTabGroup.setCurrentWidget(sw.ExportTab)
+        sw.ExpFormat.setCurrentIndex(sw.ExpFormat.findData("emd"))
+        sw.ExpByteOrder.setCurrentIndex(sw.ExpByteOrder.findData("l"))
+        sw.ExpFilename.setText("export")
+        sw.ExpDimSuff.setChecked(False)
+        sw.ExpFrPart.setChecked(False)
+        sw.ExpPxPart.setChecked(binning > 1)
+        sw.ExpPxPart.clicked.emit(binning > 1)
+        if binning > 1:
+            sw.EPxX1.setValue(0)
+            sw.EPxY1.setValue(0)
+            sw.EPxD.setValue(binning)
+            sw.ENPxX.setValue(DET_X // binning)
+            sw.ENPxY.setValue(DET_Y // binning)
+        qapp.processEvents()
+        notes = sw.ExpNotes.toPlainText()
+        path = notes.splitlines()[0].replace("File: ", "")
+        sw.SaveExport.click()
+        qapp.processEvents()
+        return path, notes
+
+    @pytest.fixture()
+    def annular(self, loaded_app, qapp, save_window):
+        set_mode(loaded_app, qapp, "AnnMod")
+        yield loaded_app
+        sw = save_window
+        sw.ExpPxPart.setChecked(False)
+        sw.ExpPxPart.clicked.emit(False)
+        sw.EPxD.setValue(1)
+        sw.ExpFormat.setCurrentIndex(sw.ExpFormat.findData("h5"))
+
+    def test_format_listed_with_h5_extension(self, annular, qapp, save_window, tmp_path):
+        assert save_window.ExpFormat.findData("emd") >= 0
+        path, notes = self._export(save_window, qapp, tmp_path, ["Real"])
+        assert path.endswith("export.h5"), path
+        assert "py4DSTEM calibration: beam (x, y)" in notes
+        assert "Images (selected on the Save Images tab): Real" in notes
+
+    def test_dataset_calibration_and_images(self, annular, qapp, save_window, tmp_path):
+        h5py = pytest.importorskip("h5py")
+        from callbacks.io.emd import is_emd, read_emd_info
+        app = annular
+        path, _ = self._export(save_window, qapp, tmp_path, ["Real", "Dfrn"])
+        assert is_emd(path)
+        info = read_emd_info(path)
+        assert info.shape == (SCAN_Y, SCAN_X, DET_Y, DET_X)
+        cal = info.calibration
+        assert np.allclose(cal.beam_xy, app.B0)
+        assert (cal.q_pixel_size, cal.q_units) == (pytest.approx(app.mradPx.value()), "mrad")
+        assert cal.probe_semiangle_mrad == pytest.approx(app.Alpha.value())
+        assert sorted(info.images) == ["/pyquant4d_root/datacube/Dfrn", "/pyquant4d_root/datacube/Real"]
+        with h5py.File(path) as f:
+            dc = f["pyquant4d_root/datacube"]
+            assert np.array_equal(dc["data"][()], np.asarray(app.Data).reshape(SCAN_Y, SCAN_X, DET_Y, DET_X))
+            assert np.allclose(dc["Real/data"][()], app.Fig.Real.Image)
+            assert np.allclose(dc["Dfrn/data"][()], app.Fig.Dfrn.Image)
+            assert dc["Real"].attrs["python_class"] == "VirtualImage"
+            assert dc["Dfrn"].attrs["python_class"] == "DiffractionSlice"
+            meta = f["pyquant4d_root/metadatabundle/pyquant4d"]
+            assert np.allclose(meta["beam_center_xy"][()], app.B0)
+
+    def test_binned_calibration(self, annular, qapp, save_window, tmp_path):
+        from callbacks.io.emd import read_emd_info
+        app = annular
+        path, _ = self._export(save_window, qapp, tmp_path, ["Dfrn"], binning=2)
+        info = read_emd_info(path)
+        assert info.shape == (SCAN_Y, SCAN_X, DET_Y // 2, DET_X // 2)
+        assert info.calibration.q_pixel_size == pytest.approx(2 * app.mradPx.value())
+        assert np.allclose(info.calibration.beam_xy, (np.asarray(app.B0, float) + 0.5) / 2 - 0.5)
+
+    def test_uncomputed_images_skipped(self, annular, qapp, save_window, tmp_path, monkeypatch):
+        h5py = pytest.importorskip("h5py")
+        monkeypatch.setattr(annular.Fig.RealMask, "Image", None)       # not computed yet
+        path, notes = self._export(save_window, qapp, tmp_path, ["Real", "RealMask"])
+        assert "Not embedded" in notes and notes.rstrip().endswith("RealMask")
+        with h5py.File(path) as f:
+            assert "Real" in f["pyquant4d_root/datacube"]
+            assert "RealMask" not in f["pyquant4d_root/datacube"]
+
+    @pytest.mark.parametrize("normalise, top", [(False, 4.0), (True, 1.0)])
+    def test_binned_mask_raw_by_default(self, annular, qapp, save_window, tmp_path, normalise, top):
+        h5py = pytest.importorskip("h5py")
+        save_window.ExpNormMasks.setChecked(normalise)
+        try:
+            path, notes = self._export(save_window, qapp, tmp_path, ["DfrnMask"], binning=2)
+        finally:
+            save_window.ExpNormMasks.setChecked(False)
+        assert ("normalised, 0 to 1" if normalise else "raw sums, 0 to 4") in notes
+        with h5py.File(path) as f:
+            mask = f["pyquant4d_root/datacube/DfrnMask/data"][()]
+        expected = annular.Fig.DfrnMask.Image.reshape(DET_Y // 2, 2, DET_X // 2, 2).sum(axis=(1, 3))
+        assert np.allclose(mask, expected / (4.0 if normalise else 1.0))
+        assert mask.max() == pytest.approx(top)
+
+    def test_normalise_off_by_default(self, annular, save_window):
+        assert not save_window.ExpNormMasks.isChecked()
+
+    def test_py4dstem_reads_the_export(self, annular, qapp, save_window, tmp_path):
+        py4DSTEM = pytest.importorskip("py4DSTEM")
+        app = annular
+        path, _ = self._export(save_window, qapp, tmp_path, ["Real"])
+        dc = py4DSTEM.read(path)
+        bx, by = (float(v) for v in app.B0)
+        assert dc.calibration.get_origin_mean() == pytest.approx((by, bx))     # py4DSTEM (row, column)
+        assert np.allclose(dc.tree("Real").data, app.Fig.Real.Image)

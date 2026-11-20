@@ -60,6 +60,9 @@ Saving and exporting
 .. automodule:: callbacks.io.export
    :members:
 
+.. automodule:: callbacks.io.emd
+   :members:
+
 .. automodule:: callbacks.save_export
    :members:
 
@@ -161,6 +164,36 @@ callbacks.importCallbacks
    :members:
    :undoc-members:
    :show-inheritance:
+
+callbacks.file_drop
+-------------------
+
+.. automodule:: callbacks.file_drop
+   :members:
+
+callbacks.scan_step
+-------------------
+
+.. automodule:: callbacks.scan_step
+   :members:
+
+callbacks.scale_bar
+-------------------
+
+.. automodule:: callbacks.scale_bar
+   :members:
+
+callbacks.py4dstem_bridge
+-------------------------
+
+.. automodule:: callbacks.py4dstem_bridge
+   :members:
+
+pyquant4d
+---------
+
+.. automodule:: pyquant4d
+   :members: show
 
 callbacks.realSpaceROICallbacks
 --------------------------------

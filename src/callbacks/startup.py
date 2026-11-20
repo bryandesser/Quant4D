@@ -40,7 +40,7 @@ from callbacks.plotting import displayCallbacks, sliderReleased, updateImagesCal
 from callbacks.detector import detectorModeCallbacks, detrCoordCallbacks  # noqa: E402
 from callbacks.annularDetectorCallbacks import annularDetectorCallbacks  # noqa: E402
 from callbacks.importCallbacks import importCallbacks  # noqa: E402
-from callbacks.import_io import importSelectFile, importBoxInput, importFileType  # noqa: E402
+from callbacks.import_io import importSelectFile, importBoxInput, importFileType, importVoltageChanged  # noqa: E402
 from callbacks.window_manager import (  # noqa: E402
     resizeWindowCallbacks, showAllWindows, hideAllWindows, showWindowCallbacks,
 )
@@ -99,9 +99,11 @@ def slotsSignals(self):
     self.ImportWindow.ImportCancelButton.clicked.connect(lambda: importCallbacks(self))
     self.ImportWindow.xEvent.connect(lambda: self.ShowImportWdw.setChecked(False)
                                      )  # ImportWindow.ImportCancelButton.click())
-    self.ImportWindow.ImpFileSelect.clicked.connect(lambda: importSelectFile(self))
+    self.ImportWindow.ImpFileSelect.clicked.connect(
+        lambda: importSelectFile(self, source=self.ImportWindow.ImpFileSelect))
     # a path typed or pasted into the field is read when editing finishes (Enter or focus change)
-    self.ImportWindow.ImpFilePath.editingFinished.connect(lambda: importSelectFile(self))
+    self.ImportWindow.ImpFilePath.editingFinished.connect(
+        lambda: importSelectFile(self, source=self.ImportWindow.ImpFilePath))
     self.ImportWindow.ImportDataButton.clicked.connect(lambda: importCallbacks(self))
     self.ImportWindow.ImpKeepP.clicked.connect(lambda: importBoxInput(self))
     self.ImportWindow.ImpGPU.currentIndexChanged.connect(lambda: importBoxInput(self))
@@ -126,7 +128,9 @@ def slotsSignals(self):
     self.ImportWindow.DataOffset.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.FrFoot.valueChanged.connect(lambda: importBoxInput(self))
     self.ImportWindow.FrHead.valueChanged.connect(lambda: importBoxInput(self))
-    self.ImportWindow.ImpSubImg.currentIndexChanged.connect(lambda: importFileType(self))
+    self.ImportWindow.ImpSubImg.currentIndexChanged.connect(
+        lambda: importFileType(self, self.ImportWindow.ImpSubImg))
+    self.ImportWindow.ImpAccVolt.valueChanged.connect(lambda *_: importVoltageChanged(self))
     # file-type radio buttons: re-read the file's header/geometry for the chosen type
     for button in (self.ImportWindow.EMPADButton, self.ImportWindow.MedipixButton, self.ImportWindow.MRCButton,
                    self.ImportWindow.DM34Button, self.ImportWindow.HDF5Button, self.ImportWindow.CustomButton):
@@ -138,6 +142,18 @@ def slotsSignals(self):
     from callbacks.save_export import connectSaveWindow  # noqa: E402
     connectSaveWindow(self)
     connectCustomDetector(self)   # Custom Detector tab and Math → Evaluate
+    from callbacks.window_groups import connectWindowGroups  # noqa: E402
+    connectWindowGroups(self)     # Settings > Windows: Group into tabs (with tear-off)
+    from callbacks.scale_bar import connectScaleBars  # noqa: E402
+    connectScaleBars(self)        # Settings > Windows: Scale bar (diffraction / real space)
+    from callbacks.scan_step import connectScanStep  # noqa: E402
+    connectScanStep(self)         # Scan Step: Import window (file) and Settings > Windows > Real-space (loaded data)
+    from callbacks.window_groups import matchWindowTabs  # noqa: E402
+    matchWindowTabs(self)         # Settings > Windows: identical Diffraction / Real-space columns (after the dropdowns fill)
+    from callbacks.py4dstem_bridge import connectPy4DSTEM  # noqa: E402
+    connectPy4DSTEM(self)         # File > Open with py4DSTEM Reader... (only with py4DSTEM installed)
+    from callbacks.file_drop import installFileDrop  # noqa: E402
+    installFileDrop(self)         # drop a dataset file on any window to open it in the Import window
     connectAxisDirection(self)    # Settings: reverse X/Y, rotate view, axis-direction arrows
     connectMenus(self)            # menu-bar actions and help icons
     connectPatternCombine(self)   # diffraction window: how a region's patterns are combined
@@ -196,7 +212,9 @@ def slotsSignals(self):
     self.SettingsWindow.ShowdCoMWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowiCoMWdw.clicked.connect(lambda: showWindowCallbacks(self))
     self.SettingsWindow.ShowImageWdw.clicked.connect(lambda: showWindowCallbacks(self))
-    self.SettingsWindow.ShowMaskWdw.clicked.connect(lambda: showWindowCallbacks(self))
+    # the mask button beside the opacity slider resets it, like brightness/contrast/gamma
+    # (the mask windows open from the Show buttons)
+    self.SettingsWindow.DispMaskOpaReset.clicked.connect(lambda: self.SettingsWindow.DispMaskOpa.setValue(0))
     # the main window's show-window buttons had no accessible name, which names the window to show
     for button, id, tip in ((self.ShowRealMaskWdw, "RealMask", "Show the real-space mask"),
                             (self.ShowDfrnMaskWdw, "DfrnMask", "Show the diffraction mask")):
@@ -211,11 +229,18 @@ def slotsSignals(self):
     self.TBR.valueChanged.connect(lambda: moveTransBeam(self))
     self.Alpha.valueChanged.connect(lambda: moveTransBeam(self))
     self.mradPx.valueChanged.connect(lambda: moveTransBeam(self))
+    # Settings > Windows > Diffraction: the same scale (mrad/px or 1/Å/px); edits go through mrad/px
+    # (recalculating the angle etc.)
+    from callbacks.alignment import connectDfScale  # noqa: E402
+    connectDfScale(self)
     self.TBX_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBY_NF.valueChanged.connect(lambda: moveTransBeam(self))
     self.TBR_NF.valueChanged.connect(lambda: moveTransBeam(self))
-    self.TBAutoAlign.clicked.connect(lambda: transBeamCallbacks(self))
-    self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self))
+    self.TBAutoAlign.clicked.connect(lambda: transBeamCallbacks(self, self.TBAutoAlign))
+    self.TBCrossAlign.setCheckable(True)        # on while the two alignment lines are shown
+    self.TBCrossAlign.setToolTip("Beam centre at the crossing of two lines: drag their end points onto two "
+                                 "Kikuchi lines (drag a line to move it).  Click again to finish.")
+    self.TBCrossAlign.clicked.connect(lambda: transBeamCallbacks(self, self.TBCrossAlign))
 
     # Math formula (CustMod)
 
@@ -368,7 +393,7 @@ def startupFcn(self):
         if [self.C.decorPad, self.C.titleHeight] == [0, 0]:  # TODO
             self.C.decorPad = 5
             self.C.titleHeight = 25
-        self.C.mplDecor = tmp.size() - qtc.QSize(400, 400)
+        self.C.mplDecor = tmp.decorSize()      # toolbar, status bar and margins around the canvas, measured
         tmp.close()
 
         # available monitor space
@@ -549,7 +574,7 @@ def startupFcn(self):
 
         # connect image resizeEvent signal to slot; updates window size numerical fields in SettingsWindow
         for fig in self.G.ImgFig:
-            fig.imageResize.connect(lambda size, space: updateImageWindowSize(self, size, space))
+            fig.imageResize.connect(lambda size, space, _f=fig: updateImageWindowSize(self, size, space, _f))
             fig.activateFigure.connect(lambda id: updateDispImg(self, id))
 
         # Axes objects for all diffraction-sized figures/axes/images
@@ -568,8 +593,8 @@ def startupFcn(self):
         self.G.AllFig = self.G.ImgFig.copy()
         self.G.AllFig.extend([self, self.SettingsWindow, self.ImportWindow, self.SaveWindow])
 
-    def updateImageWindowSize(self, size, space):
-        """Settings > Misc > window size: the image area of the window just resized, i.e. its size less
+    def updateImageWindowSize(self, size, space, fig=None):
+        """Settings > Windows > window size: the image area of the window just resized, i.e. its size less
         the toolbar/decoration (``mplDecor``, which the Set buttons add back).  This used to add each
         resize's change to the fields, and the first change of a new window is its whole size
         (Qt's old size is -1 x -1), so the fields filled up to about the monitor's size."""
@@ -577,9 +602,11 @@ def startupFcn(self):
                  "Real": (self.SettingsWindow.WdwWReal, self.SettingsWindow.WdwHReal)}.get(space)
         if boxes is None or size.width() <= 0 or size.height() <= 0:
             return
+        # the display area: the canvas, measured (the window less its own toolbar, status bar, margins)
+        area = fig.imageSize() if fig is not None else size - self.C.mplDecor
         with signals_blocked(*boxes):
-            boxes[0].setValue(max(1, size.width() - self.C.mplDecor.width()))
-            boxes[1].setValue(max(1, size.height() - self.C.mplDecor.height()))
+            boxes[0].setValue(max(1, area.width()))
+            boxes[1].setValue(max(1, area.height()))
 
     def updateDispImg(self, id):
         """Clicking an image window selects it for the display controls, unless the selection is locked."""
@@ -663,7 +690,13 @@ def startupFcn(self):
         self.SettingsWindow.DCPos.clear()
         self.SettingsWindow.DCPos.addItems(['Relative', 'Absolute'])
 
-        # settings window, diffraction space units
+        # diffraction-space units of the detector coordinates: set from Settings > Windows > Diffraction
+        # > Scale (mrad/px or 1/Å/px → mrad, px → pixels), so no longer shown; kept as a hidden combo
+        # because everything that shows a detector value reads its unit from it
+        if not hasattr(self.SettingsWindow, "DCUnit"):
+            self.SettingsWindow.DCUnit = qtw.QComboBox(self.SettingsWindow)
+            self.SettingsWindow.DCUnit.setObjectName("DCUnit")
+            self.SettingsWindow.DCUnit.hide()
         self.SettingsWindow.DCUnit.clear()
         self.SettingsWindow.DCUnit.addItem('mrad', 'mrad')
         self.SettingsWindow.DCUnit.addItem('Pixel', 'px')
@@ -705,8 +738,12 @@ def startupFcn(self):
     self.SaveWindow = SaveWindow()
 
     # get lock and unlock icons for later user
-    self.unlock = qtg.QIcon('./gui/icons/unlock.png')
-    self.lock = qtg.QIcon('./gui/icons/lock.png')
+    # (from the package folder: the relative './gui/icons' depended on the current folder, which
+    # changes when a file is opened, so the scan-direction button went blank)
+    import gui  # noqa: E402
+    icons = os.path.join(os.path.dirname(os.path.abspath(gui.__file__)), "icons")
+    self.unlock = qtg.QIcon(os.path.join(icons, "unlock.png"))
+    self.lock = qtg.QIcon(os.path.join(icons, "lock.png"))
 
     # get current screen size information
     checkMonitors(self)
@@ -766,7 +803,7 @@ def startupFcn(self):
 
     # only allow user to import data
     self.ShowImportWdw.setEnabled(True)
-    for action in (self.actionQuit, self.actionQuant4D_Manual, self.actionAbout_Quant4D):
+    for action in (self.actionQuit, self.actionQuant4D_Manual, self.actionAbout_Quant4D, self.actionOpen_with_py4DSTEM):
         action.setEnabled(True)      # always available
 
 
@@ -780,19 +817,24 @@ def reinitializeUI(self):
     self.DfrnDetrTabGroup.setVisible(True)
     self.DetectorModeGroup.setVisible(True)
 
-    # turn ALL actions back on
+    # turn ALL actions back on (but the Center of Mass windows only in CoM/DPC mode)
     for action in self.findChildren(qtw.QAction):
         action.setEnabled(True)
+    from callbacks.detector import syncCoMActions  # noqa: E402
+    syncCoMActions(self)
 
-    # update annular QRangeSlider to match
-    with signals_blocked(self.AnnRi):
-        self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
+    # update annular QRangeSlider to match (a swapped dataset keeps its detector)
+    if not (self.D is not None and getattr(self.D, "KeepP", False)):
+        with signals_blocked(self.AnnRi):
+            self.AnnRi.setValue((self.AnnRi.minimum(), self.AnnRi.maximum()))
 
     # re-enable windows
     enableWindows(self, True)
 
-    # start alignment mode
-    self.DetrMode.setCurrentIndex(self.DetrMode.findData("AlignMod"))
+    # start alignment mode (a swapped dataset: the mode it replaced, as prepareData chose)
+    mode = getattr(self, "_swapMode", None) or "AlignMod"
+    self._swapMode = None
+    self.DetrMode.setCurrentIndex(self.DetrMode.findData(mode))
 
 
 def resetQuant4DCallbacks(self):

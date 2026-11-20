@@ -61,6 +61,7 @@ class InteractiveRectangle(qtc.QObject):
         self.rotation = float(rotation)
         self.color = color
         self.interactions = interactions
+        self.keep_aspect = False      # resize keeps the width:height ratio, as with Shift (right-click menu)
         self.axis = axis
         self.canvas = axis.figure.canvas
         self._press = None          # (center0, size0, rotation0, x0, y0) while dragging
@@ -104,6 +105,13 @@ class InteractiveRectangle(qtc.QObject):
         else:
             self.canvas.set_cursor(Cursors.POINTER if hit is None else
                                    Cursors.MOVE if hit == 'translate' else Cursors.HAND)
+
+    def equalise(self) -> None:
+        """Make the rectangle a square (both sides the longer one) and tell listeners."""
+        self.size = np.full(2, float(np.max(self.size)))
+        self._update_artists()
+        self.canvas.draw_idle()
+        self.updateRect.emit()
 
     def _update_artists(self):
         c = self._corner_positions()
@@ -198,7 +206,7 @@ class InteractiveRectangle(qtc.QObject):
             fixed = corners0[(i + 2) % 4]                 # the opposite corner stays put
             new = corners0[i] + p - np.array([x0, y0])
             span = R.T @ (new - fixed)                    # diagonal in the rectangle's own frame
-            if shift_held(event) and size0.min() > 0:
+            if (shift_held(event) or self.keep_aspect) and size0.min() > 0:
                 # Shift: keep the aspect ratio, scaled to the larger of the two stretches
                 scale = max(abs(span[0]) / size0[0], abs(span[1]) / size0[1])
                 span = np.where(span < 0, -1.0, 1.0) * size0 * scale

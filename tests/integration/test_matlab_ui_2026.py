@@ -29,13 +29,14 @@ class TestLayout:
             for name in (f"Show{space}Axes", f"RvsX{space}", f"RvsY{space}", f"Rot{space}", f"WdwW{space}",
                          f"WdwH{space}", f"WdwSet{space}", f"WdwSetAll{space}"):
                 assert page.isAncestorOf(getattr(sw, name)), name
-        assert isinstance(sw.BandpassFilterLow, qtw.QSpinBox)
+        assert isinstance(sw.BandpassFilterLow, qtw.QDoubleSpinBox) and sw.BandpassFilterLow.suffix() == ""
 
     def test_misc_and_info(self, app):
         sw = app.SettingsWindow
-        for name in ("CalcPolicy", "DCSys", "DCPos", "DCUnit", "SwapByteOrder", "SwapDfrnXY", "SwapRealXY"):
+        for name in ("CalcPolicy", "DCSys", "DCPos", "SwapByteOrder", "SwapDfrnXY", "SwapRealXY"):
             assert sw.MiscTab.isAncestorOf(getattr(sw, name)), name
-        for name in ("ShowDfrnWdw", "WdwWDfrn", "RotDfrn"):
+        # both calibrations live in Settings > Windows (Bryan, 2026-11-20)
+        for name in ("ShowDfrnWdw", "WdwWDfrn", "RotDfrn", "DfScale", "RsStep", "RsUnits"):
             assert not sw.MiscTab.isAncestorOf(getattr(sw, name)), name
         assert sw.InfoTab.isAncestorOf(sw.ShowVariables) and sw.InfoTab.isAncestorOf(sw.DataInfo)
 

@@ -185,6 +185,6 @@ def color_mix(data: np.ndarray, masks: Sequence[np.ndarray], weights: Sequence[f
     rgb_mask = (colors.T @ color_masks).T.reshape(*shape, 3)
     images = project(data, color_masks.T, device)                                                # (n_frames, k)
     rgb_real = np.asarray(images, float) @ colors                                                # (n_frames, 3)
-    lo, hi = np.nanmin(rgb_real), np.nanmax(rgb_real)
+    lo, hi = float(np.nanmin(rgb_real)), float(np.nanmax(rgb_real))
     rgb_real = (rgb_real - lo) / (hi - lo) if hi > lo else np.zeros_like(rgb_real)
     return rgb_mask, rgb_real

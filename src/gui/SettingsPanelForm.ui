@@ -13,7 +13,7 @@
   <property name="minimumSize">
    <size>
     <width>260</width>
-    <height>360</height>
+    <height>600</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -70,7 +70,7 @@
         <number>4</number>
        </property>
        <item row="8" column="0">
-        <widget class="QToolButton" name="ShowMaskWdw">
+        <widget class="QToolButton" name="DispMaskOpaReset">
          <property name="minimumSize">
           <size>
            <width>29</width>
@@ -82,6 +82,9 @@
            <width>29</width>
            <height>29</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Reset the mask opacity to 0 %</string>
          </property>
          <property name="text">
           <string>...</string>
@@ -180,6 +183,9 @@
        </item>
        <item row="0" column="0">
         <widget class="QToolButton" name="ShowImageWdw">
+         <property name="toolTip">
+          <string>Bring the selected image's window to the front</string>
+         </property>
          <property name="minimumSize">
           <size>
            <width>29</width>
@@ -360,6 +366,9 @@
        </item>
        <item row="0" column="6">
         <widget class="QPushButton" name="DispLock">
+         <property name="toolTip">
+          <string>Lock the selection: keep this image selected when the detector mode changes</string>
+         </property>
          <property name="maximumSize">
           <size>
            <width>29</width>
@@ -380,6 +389,9 @@
        </item>
        <item row="2" column="6">
         <widget class="QPushButton" name="DispCMapInvert">
+         <property name="toolTip">
+          <string>Invert the colour map</string>
+         </property>
          <property name="maximumSize">
           <size>
            <width>29</width>
@@ -777,7 +789,7 @@
           <string>QGroupBox { font-weight: bold; }</string>
          </property>
          <property name="toolTip">
-          <string>Bandpass, lowpass or highpass filter for iCoM/dCoM (iDPC/dDPC): spatial frequencies kept, in pixels of the scan's Fourier transform.</string>
+          <string>Bandpass, lowpass or highpass filter for iCoM/dCoM (iDPC/dDPC): spatial frequencies kept, in pixels of the scan's Fourier transform, 1/Å or mrad.</string>
          </property>
          <property name="title">
           <string>iCoM / dCoM Bandpass Filter</string>
@@ -789,18 +801,18 @@
           <bool>true</bool>
          </property>
          <layout class="QGridLayout" name="BandpassFilterGrid">
-          <item row="0" column="0" colspan="2">
+          <item row="0" column="0" colspan="3">
            <widget class="QRangeSlider" name="BandpassFilter">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
             <property name="toolTip">
-             <string>Bandpass, lowpass or highpass filter for iCoM/dCoM (iDPC/dDPC): spatial frequencies kept, in pixels of the scan's Fourier transform.</string>
+             <string>Bandpass, lowpass or highpass filter for iCoM/dCoM (iDPC/dDPC): spatial frequencies kept, in pixels of the scan's Fourier transform, 1/Å or mrad.</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QSpinBox" name="BandpassFilterLow">
+           <widget class="QDoubleSpinBox" name="BandpassFilterLow">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -815,21 +827,21 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>Lowest spatial frequency kept (px)</string>
+             <string>Lowest spatial frequency kept (in the units chosen beside)</string>
             </property>
-            <property name="suffix">
-             <string> px</string>
+            <property name="decimals">
+             <number>4</number>
             </property>
             <property name="maximum">
-             <number>100000</number>
+             <double>100000.000000000000000</double>
             </property>
             <property name="value">
-             <number>0</number>
+             <double>0.000000000000000</double>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QSpinBox" name="BandpassFilterHigh">
+           <widget class="QDoubleSpinBox" name="BandpassFilterHigh">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -844,16 +856,23 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>Highest spatial frequency kept (px)</string>
+             <string>Highest spatial frequency kept (in the units chosen beside)</string>
             </property>
-            <property name="suffix">
-             <string> px</string>
+            <property name="decimals">
+             <number>4</number>
             </property>
             <property name="maximum">
-             <number>100000</number>
+             <double>100000.000000000000000</double>
             </property>
             <property name="value">
-             <number>100</number>
+             <double>100.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QComboBox" name="BandpassUnits">
+            <property name="toolTip">
+             <string>Units of the filter: pixels of the scan's Fourier transform, 1/Å or mrad (both need a calibrated scan step; mrad also the accelerating voltage)</string>
             </property>
            </widget>
           </item>
@@ -891,7 +910,7 @@
              <attribute name="title">
               <string>Diffraction</string>
              </attribute>
-             <layout class="QGridLayout" name="DfrnWindowGrid">
+             <layout class="QGridLayout" name="DfrnWindowGrid" columnstretch="1,1,1,1,1,1">
               <item row="0" column="0">
                <widget class="QToolButton" name="ShowDfrnAxes">
                 <property name="text">
@@ -940,18 +959,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="3">
-               <widget class="QToolButton" name="RotDfrnIcon">
-                <property name="text">
-                 <string>...</string>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>icons/right_rotate.png</normaloff>icons/right_rotate.png</iconset>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4" colspan="2">
+              <item row="0" column="3" colspan="3">
                <widget class="QComboBox" name="RotDfrn">
                 <item>
                  <property name="text">
@@ -1078,13 +1086,84 @@
                 </property>
                </widget>
               </item>
+              <item row="3" column="0" colspan="3">
+               <widget class="QCheckBox" name="ScaleBarDfrn">
+                <property name="toolTip">
+                 <string>Scale bar on the diffraction windows: mrad once the transmitted beam is set (or a file calibrated it) and the detector coordinates are in mrad, else pixels</string>
+                </property>
+                <property name="text">
+                 <string>Scale bar</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="3">
+               <widget class="QCheckBox" name="GroupDfrn">
+                <property name="toolTip">
+                 <string>Collect the diffraction images into one window with a tab each (untick to float them again). Drag a tab out of the bar, or double-click it, to float that image on its own; closing it returns it to the tabs.</string>
+                </property>
+                <property name="text">
+                 <string>Group into tabs</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QLabel" name="DfScaleLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Scale</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>DfScale</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2" colspan="2">
+               <widget class="QDoubleSpinBox" name="DfScale">
+                <property name="toolTip">
+                 <string>Diffraction scale (the main window's mrad/px): changing it recalculates the convergence angle, detector coordinates in mrad, scale bars and export</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="4" colspan="2">
+               <widget class="QComboBox" name="DfScaleUnits">
+                <property name="toolTip">
+                 <string>Units of the diffraction scale: mrad per pixel, or 1/Å per pixel (at the accelerating voltage set on import)</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="RealWindowTab">
              <attribute name="title">
               <string>Real-space</string>
              </attribute>
-             <layout class="QGridLayout" name="RealWindowGrid">
+             <layout class="QGridLayout" name="RealWindowGrid" columnstretch="1,1,1,1,1,1">
               <item row="0" column="0">
                <widget class="QToolButton" name="ShowRealAxes">
                 <property name="text">
@@ -1136,18 +1215,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="3">
-               <widget class="QToolButton" name="RotRealIcon">
-                <property name="text">
-                 <string>...</string>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>icons/right_rotate.png</normaloff>icons/right_rotate.png</iconset>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4" colspan="2">
+              <item row="0" column="3" colspan="3">
                <widget class="QComboBox" name="RotReal">
                 <item>
                  <property name="text">
@@ -1280,6 +1348,76 @@
                 </property>
                </widget>
               </item>
+              <item row="3" column="0" colspan="3">
+               <widget class="QCheckBox" name="ScaleBarReal">
+                <property name="toolTip">
+                 <string>Scale bar on the real-space windows, from the Scan Step below; pixels when the step is not set</string>
+                </property>
+                <property name="text">
+                 <string>Scale bar</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="3">
+               <widget class="QCheckBox" name="GroupReal">
+                <property name="toolTip">
+                 <string>Collect the real-space images into one window with a tab each (untick to float them again). Drag a tab out of the bar, or double-click it, to float that image on its own; closing it returns it to the tabs.</string>
+                </property>
+                <property name="text">
+                 <string>Group into tabs</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QLabel" name="RsStepLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Scan Step</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>RsStep</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2" colspan="2">
+               <widget class="QDoubleSpinBox" name="RsStep">
+                <property name="toolTip">
+                 <string>Distance between neighbouring probe positions of the loaded data (the file's step times the import sampling); used for export</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="4" colspan="2">
+               <widget class="QComboBox" name="RsUnits"/>
+              </item>
              </layout>
             </widget>
            </widget>
@@ -1329,7 +1467,37 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="3" colspan="3">
+       <item row="1" column="0" colspan="8">
+        <widget class="QLabel" name="DetectorCoordinatePanel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Detector Coordinate Options</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="4">
+        <widget class="QComboBox" name="DCSys">
+         <item>
+          <property name="text">
+           <string>Polar</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Cartesian</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="4" colspan="4">
         <widget class="QComboBox" name="DCPos">
          <item>
           <property name="text">
@@ -1360,50 +1528,6 @@
            <string>Passive</string>
           </property>
          </item>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="3">
-        <widget class="QComboBox" name="DCSys">
-         <item>
-          <property name="text">
-           <string>Polar</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Cartesian</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="2" column="6" colspan="2">
-        <widget class="QComboBox" name="DCUnit">
-         <item>
-          <property name="text">
-           <string>mrad</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>pixel</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="8">
-        <widget class="QLabel" name="DetectorCoordinatePanel">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Detector Coordinate Options</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-         </property>
         </widget>
        </item>
        <item row="0" column="0">

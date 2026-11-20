@@ -866,6 +866,114 @@ p, li { white-space: pre-wrap; }
               </item>
              </widget>
             </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="ImpAccVoltLabel">
+              <property name="text">
+               <string>Accelerating Voltage</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="buddy">
+               <cstring>ImpAccVolt</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QDoubleSpinBox" name="ImpAccVolt">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Beam energy, used to convert between scattering angle (mrad) and spatial frequency (Å⁻¹) with the relativistic electron wavelength</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="suffix">
+               <string> kV</string>
+              </property>
+              <property name="decimals">
+               <number>1</number>
+              </property>
+              <property name="minimum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>3000.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>300.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="ImpScanStepLabel">
+              <property name="text">
+               <string>Scan Step</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="buddy">
+               <cstring>ImpScanStep</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <layout class="QHBoxLayout" name="ImpScanStepGrid" stretch="1,0">
+              <item>
+               <widget class="QDoubleSpinBox" name="ImpScanStep">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Distance between neighbouring probe positions in the file; partial import multiplies it by the sampling step</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="ImpScanUnits">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>px: uncalibrated (one probe position of the file)</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
             <item row="1" column="1">
              <widget class="QLargeIntSpinBox" name="DataOffset">
               <property name="minimumSize">
@@ -1272,6 +1380,9 @@ p, li { white-space: pre-wrap; }
   <tabstop>FrFoot</tabstop>
   <tabstop>ImpDataType</tabstop>
   <tabstop>ImpByteOrder</tabstop>
+  <tabstop>ImpAccVolt</tabstop>
+  <tabstop>ImpScanStep</tabstop>
+  <tabstop>ImpScanUnits</tabstop>
   <tabstop>DNPxX</tabstop>
   <tabstop>DNPxY</tabstop>
   <tabstop>DNFrX</tabstop>

@@ -287,6 +287,9 @@ def realSpaceROICallbacks(self):
             if signal is not None:
                 signal.connect(lambda *, _roi=roi: moveRealROI(roi_src=_roi))
 
+            if typ in ('ellipse', 'rectangle'):
+                roi.rightClick.connect(lambda event, _roi=roi: showROIMenu(self, _roi, event))
+
             self.A.RealROI[img_id] = roi
 
         moveRealROI()
@@ -474,14 +477,57 @@ def connectPatternCombine(self) -> None:
     for mode in compute.COMBINE_MODES:
         combo.addItem(mode, mode)
     combo.setCurrentIndex(combo.findData(DEFAULT_COMBINE))
-    combo.setToolTip("Set how patterns are combined in real space. NOTE: max() and std() can be "
-                     "significantly slower when interacting with a real-space ROI!")
-    toolbar = self.Fig.Dfrn.toolbar
-    toolbar.addSeparator()
-    toolbar.addWidget(qtw.QLabel(" Pattern: "))
-    toolbar.addWidget(combo)
+    combo.setToolTip("Pattern: how the diffraction patterns of the real-space ROI are combined "
+                     "(sum, mean, max, std). NOTE: max() and std() can be significantly slower when "
+                     "interacting with a real-space ROI!")
+    # on the right of the diffraction window's status bar: always visible, whatever the window width
+    # and the cursor readout on its left (in the toolbar it went behind ">>")
+    self.Fig.Dfrn.statusBar().addPermanentWidget(combo)
     self.DfrnCombine = combo
     combo.currentIndexChanged.connect(lambda *_: realSpaceROICallbacks(self))
+
+
+def roiMenu(self, roi):
+    """The right-click menu of an ellipse or rectangle real-space ROI.
+
+    **Fix aspect ratio** keeps the current width:height (as holding Shift);
+    **Fix circle** / **Fix square** makes the sides equal and keeps them so.
+    Both apply to the ROI on every real-space window.
+    """
+    from annotationsClasses.interactiveEllipse import InteractiveEllipse
+    rois = [r for r in self.A.RealROI.values() if type(r) is type(roi)]
+    equal_name = "Fix circle" if isinstance(roi, InteractiveEllipse) else "Fix square"
+    sides = roi.semiaxes if isinstance(roi, InteractiveEllipse) else roi.size
+    is_equal = bool(np.isclose(sides[0], sides[1]))
+    menu = qtw.QMenu()
+    aspect = menu.addAction("Fix aspect ratio")
+    equal = menu.addAction(equal_name)
+    assert aspect is not None and equal is not None
+    aspect.setCheckable(True)
+    aspect.setChecked(roi.keep_aspect and not is_equal)
+    equal.setCheckable(True)
+    equal.setChecked(roi.keep_aspect and is_equal)
+
+    def set_aspect(on):
+        for r in rois:
+            r.keep_aspect = bool(on)
+
+    def set_equal(on):
+        set_aspect(on)
+        if on:
+            roi.equalise()               # its update signal moves the copies on the other windows
+
+    aspect.toggled.connect(set_aspect)
+    equal.toggled.connect(set_equal)
+    return menu
+
+
+def showROIMenu(self, roi, event) -> None:
+    """Pop up :func:`roiMenu` at the cursor for a right click on the ROI's image."""
+    if getattr(event, "inaxes", None) is not roi.axis:
+        return
+    self._roiMenu = roiMenu(self, roi)          # keep a reference while it is shown
+    self._roiMenu.popup(qtg.QCursor.pos())
 
 
 def diffractionPattern(self, weights):

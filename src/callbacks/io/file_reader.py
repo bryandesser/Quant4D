@@ -120,40 +120,53 @@ def importFailed(self, msg):
     notifDLG(self, self, "error", f"Error during import:\n{msg}", "Import Failed")
 
 
-def prepareData(self):
+def prepareData(self, keep_beam=False):
+    """Reset the controls for the dataset just loaded (or swapped).
+
+    *keep_beam* keeps the transmitted-beam alignment (swapping real-space X/Y).  A dataset
+    swapped in with **Swap Dataset** (``D.KeepP``, same size as the one it replaces) keeps every
+    setting: detector, alignment, real-space ROI, export ranges and display, and its mode.
+    Never reads ``self.sender()``: this also runs outside a slot (``pyquant4d.show``).
+    """
     # self.T.progDLG = progDLG(self, 'Preparing data ...', "Data Preparation"); #TODO
 
     # block slots/signals whilst initializing UI components
     from callbacks.alignment import transBeamCallbacks  # noqa: E402
     from callbacks.detector import detectorModeCallbacks  # noqa: E402
+    keep = bool(getattr(self.D, "KeepP", False))
+    # the mode a swapped dataset returns to (P.DetrMode follows the Alignment mode entered below)
+    self._swapMode = self.P.DetrMode if keep and self.P.DetrMode not in ("", "PrvwMod") else None
     with all_signals_blocked(self):
-        # move to alignment mode
+        # move to alignment mode (a swapped dataset goes back to the mode it replaced afterwards, in
+        # reinitializeUI, once its annotations can be drawn again)
         self.DetrMode.setCurrentIndex(self.DetrMode.findData("AlignMod"))
 
-        # Detector controls
-        self.P.ScanDirInit = 0              # Reset alignments
-        self.P.CoMRadiusInit = False
-        from callbacks.annularDetectorCallbacks import resetBandpass  # noqa: E402
-        resetBandpass(self)                 # iCoM/dCoM filter keeps every frequency of this scan
-        self.NSeg.setValue(4)               # DPC defaults: 4 segments for DPC
-        self.NRung.setValue(1)  # 1 rung for DPC
-        self.DetRot.setValue(0)  # 0 detector rotation
-        self.DetRot_NF.setValue(0)          #
-        self.ScanDir.setValue(0)  # 0 scan rotation
-        self.ScanDir_NF.setValue(0)         #
+        if not keep:  # swapping a dataset of the same size keeps these (File > Swap Dataset)
+            # Detector controls
+            self.P.ScanDirInit = 0              # Reset alignments
+            self.P.CoMRadiusInit = False
+            from callbacks.annularDetectorCallbacks import resetBandpass  # noqa: E402
+            resetBandpass(self)                 # iCoM/dCoM filter keeps every frequency of this scan
+            self.NSeg.setValue(4)               # DPC defaults: 4 segments for DPC
+            self.NRung.setValue(1)  # 1 rung for DPC
+            self.DetRot.setValue(0)  # 0 detector rotation
+            self.DetRot_NF.setValue(0)          #
+            self.ScanDir.setValue(0)  # 0 scan rotation
+            self.ScanDir_NF.setValue(0)         #
 
-        self.VrApSymm.setCurrentIndex(0)    # default to one virtual aperture
-        self.VrApInvert.setChecked(False)   # without inversion
-        self.VrApMirror.setChecked(False)   # without mirror symmetry
-        self.VrApMirrRot.setValue(0)        # initialize mirror symmetry to 0 degrees
-        self.VrApMirrRot_NF.setValue(0)     #
+            self.VrApSymm.setCurrentIndex(0)    # default to one virtual aperture
+            self.VrApInvert.setChecked(False)   # without inversion
+            self.VrApMirror.setChecked(False)   # without mirror symmetry
+            self.VrApMirrRot.setValue(0)        # initialize mirror symmetry to 0 degrees
+            self.VrApMirrRot_NF.setValue(0)     #
 
         # Alignments
         # Exact (x, y) centres in 0-based pixel coordinates: pixel i spans [i - 0.5, i + 0.5]
         self.P.DfCtr = (np.array([self.D.NPxX, self.D.NPxY]) - 1) / 2   # Diffraction image
         self.P.RsCtr = (np.array([self.D.NFrX, self.D.NFrY]) - 1) / 2   # Real-space image
-        self.Alpha.setValue(12)             # initialize alpha to 12 mrad
-        self.P.VrApXY = self.P.DfCtr        # initialize virtual aperture to diffraction center
+        if not keep:
+            self.Alpha.setValue(12)             # initialize alpha to 12 mrad
+            self.P.VrApXY = self.P.DfCtr        # initialize virtual aperture to diffraction center
 
         # Axes limits, restrict to avoid rounding to pixels outside the image. Origin upper left as in raster scanning
         self.P.DfrnAxLim = np.array([0, self.D.NPxX, self.D.NPxY, 0]) - 0.5
@@ -172,7 +185,7 @@ def prepareData(self):
             self.Fig[id].canvas.draw_idle()
 
         # Transmitted Beam controls
-        if self.sender() is not self.SettingsWindow.SwapRealXY:  # Keep transmitted beam alignment if swapping Real-space X/Y
+        if not (keep_beam or keep):  # Keep transmitted beam alignment if swapping Real-space X/Y or the dataset
             self.P.TransBeamInit = 0
             # set transmitted beam ranges and values for sliders and number fields
             self.TBR.setRange(0, max(self.D.NPx))
@@ -187,25 +200,31 @@ def prepareData(self):
             self.TBY_NF.setValue(self.P.DfCtr[1])
             transBeamCallbacks(self)  # Update Transmitted Beam dependant variables
 
-        # Real-space ROI controls
-        self.FrameX.setRange(0, self.D.NFrX - 1)
-        self.FrameY.setRange(0, self.D.NFrY - 1)
-        self.FrameX.setValue(round(self.P.RsCtr[0]))
-        self.FrameY.setValue(round(self.P.RsCtr[1]))
-        self.RealROIInvert.setChecked(False)  # do not invert the real space ROI picker on initialization
-        self.RealROIShape.setCurrentIndex(self.RealROIShape.findData("full"))  # display PACBED from the entire dataset
+        if not keep:  # swapping a dataset of the same size keeps these (File > Swap Dataset)
+            # Real-space ROI controls
+            self.FrameX.setRange(0, self.D.NFrX - 1)
+            self.FrameY.setRange(0, self.D.NFrY - 1)
+            self.FrameX.setValue(round(self.P.RsCtr[0]))
+            self.FrameY.setValue(round(self.P.RsCtr[1]))
+            self.RealROIInvert.setChecked(False)  # do not invert the real space ROI picker on initialization
+            self.RealROIShape.setCurrentIndex(self.RealROIShape.findData("full"))  # display PACBED from the entire dataset
 
-        # Export controls: whole dataset
-        from callbacks.save_export import resetExportRanges  # noqa: E402
-        resetExportRanges(self)
+            # Export controls: whole dataset
+            from callbacks.save_export import resetExportRanges  # noqa: E402
+            resetExportRanges(self)
+        from callbacks.scan_step import showScanStep  # noqa: E402
+        showScanStep(self)                  # Settings > Windows > Real-space: the loaded data's scan step
+        from callbacks.annularDetectorCallbacks import showBandpass  # noqa: E402
+        showBandpass(self)                  # bandpass limits in the chosen unit (kept on a swap)
 
-        # initiate image display parameters for all ImageWindows
-        for id in self.G.ImgID:
-            self.Fig[id].brightness = 50
-            self.Fig[id].contrast = 50
-            self.Fig[id].gamma = 1
-            self.Fig[id].maskOpa = 0
-            self.Fig[id].vecField = 0
+        if not keep:  # swapping a dataset of the same size keeps these (File > Swap Dataset)
+            # initiate image display parameters for all ImageWindows
+            for id in self.G.ImgID:
+                self.Fig[id].brightness = 50
+                self.Fig[id].contrast = 50
+                self.Fig[id].gamma = 1
+                self.Fig[id].maskOpa = 0
+                self.Fig[id].vecField = 0
 
     self.UpdateImages.trigger()  # Update all images
     # delete(self.T.progDLG);  # Close progress bar and Enable panel objects #TODO
@@ -215,6 +234,8 @@ def prepareData(self):
     from callbacks.window_manager import placeBesideMain  # noqa: E402
     placeBesideMain(self, self.SettingsWindow)
     self.SettingsWindow.show()
+    from callbacks.window_manager import placeImageWindows  # noqa: E402
+    placeImageWindows(self)         # first import: image windows beside Settings, at the top
 
     # Enter alignment mode.  The mode callbacks dispatch on self.sender(), so
     # emit the combo's own signal rather than calling them directly (the index
