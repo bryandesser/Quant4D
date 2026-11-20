@@ -299,6 +299,7 @@ def axisMenu(self, cmask):
     """The right-click menu of a custom mask's centre axis (the + shown by the CDAxis button)."""
     menu = qtw.QMenu()
     reset = menu.addAction("Reset to beam centre")
+    assert reset is not None
     reset.setToolTip("Put the centre axis back on the transmitted beam (the mask moves with it)")
     reset.setEnabled(not np.allclose(_axis(self, cmask), np.asarray(self.B0, float)))
     reset.triggered.connect(lambda: resetAxis(self, cmask))

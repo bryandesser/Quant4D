@@ -637,7 +637,7 @@ def importFileType(self, source=None, new_file=False):
                     *dims, bo, str(h5i.dtype), noteoffs)
 
                 # a py4DSTEM file: describe the DataCube's calibration when it is the dataset selected
-                notes += _emdNotes(self, h5i.name, adopt_kV=new_file)
+                notes += _emdNotes(self, str(h5i.name), adopt_kV=new_file)
                 if len(h5i.shape) == 3:       # a stack of frames: guess the scan from the frame count
                     guessFramesFromDimZ(dims[1])
         else:
@@ -752,11 +752,10 @@ def importBoxInput(self, source=_SENDER):
 
         # Update Diffraction and Real-space import ranges; use default source if
         # self.sender() is not a range UI component
-        if (not hasattr(source, 'accessibleDescription')) or (
-                "Dfrn" not in source.accessibleDescription()):
+        describe = getattr(source, "accessibleDescription", None)
+        if describe is None or "Dfrn" not in describe():
             dfrn_src = self.ImportWindow.IPxD
-        if (not hasattr(source, 'accessibleDescription')) or (
-                "Real" not in source.accessibleDescription()):
+        if describe is None or "Real" not in describe():
             real_src = self.ImportWindow.IFrD
 
         dnote, _, _, nPx, _ = rangeImportExport(self, dfrn_src)
@@ -811,16 +810,17 @@ def importBoxInput(self, source=_SENDER):
         # (irng is two (x, y) arrays: compared with the four sizes it was never equal, so the box
         # stayed disabled, ticked by File > Swap Dataset and impossible to untick)
         dims = [int(nPx[0]), int(nPx[1]), int(nFr[0]), int(nFr[1])]
-        loaded = self.D is not None and self.Data is not None
-        same = loaded and dims == [self.D.NPxX, self.D.NPxY, self.D.NFrX, self.D.NFrY]
+        d = self.D
+        loaded = d is not None and self.Data is not None
+        same = d is not None and loaded and dims == [d.NPxX, d.NPxY, d.NFrX, d.NFrY]
         self.ImportWindow.ImpKeepP.setEnabled(same)
         if not same:
             self.ImportWindow.ImpKeepP.setChecked(False)
         if self.ImportWindow.ImpKeepP.isChecked():
             notes += "\n\nSwapping dataset - keeping current setups/alignments etc."
-        elif loaded and not same:
+        elif d is not None and loaded and not same:
             notes += "\n\nSwap Dataset needs the size of the loaded dataset ({} x {} px, {} x {} positions).".format(
-                self.D.NPxX, self.D.NPxY, self.D.NFrX, self.D.NFrY)
+                d.NPxX, d.NPxY, d.NFrX, d.NFrY)
 
     # update notes in the text field
     self.ImportWindow.ImpNotes.setText(notes)

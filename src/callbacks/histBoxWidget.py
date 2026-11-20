@@ -186,7 +186,7 @@ class HistBox(AxesWidget):
                 artist.remove()
             except Exception:
                 pass
-        self._set_cursor(None)
+        self._show_cursor(None)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -232,11 +232,12 @@ class HistBox(AxesWidget):
         return abs(event.x - hx) <= 2 * EDGE_PX and abs(event.y - hy) <= 2 * EDGE_PX
 
     def _gamma_from(self, ydata: float) -> float:
+        assert self._gamma_y is not None                # (only called while the curve is shown)
         y0, y1 = self._gamma_y
         frac = float(np.clip((ydata - y0) / (y1 - y0), 1e-6, 1 - 1e-6)) if y1 != y0 else 0.5
         return float(np.clip(np.log(frac) / np.log(0.5), *self.gamma_range))
 
-    def _set_cursor(self, cursor) -> None:
+    def _show_cursor(self, cursor) -> None:
         """Show *cursor* (a matplotlib ``Cursors``) over the histogram, or the default for None."""
         if cursor == self._cursor:
             return
@@ -290,7 +291,7 @@ class HistBox(AxesWidget):
             mode = None
             if event.inaxes is self.ax:
                 mode = "gamma" if self._gamma_hit(event) else self._classify_hit(event.xdata)
-            self._set_cursor(self.cursor_for(mode))
+            self._show_cursor(self.cursor_for(mode))
             return
         if event.inaxes is not self.ax:
             return

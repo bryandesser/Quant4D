@@ -46,12 +46,12 @@ class TearOffTabBar(qtw.QTabBar):
         self._press = None
 
     def mousePressEvent(self, e):
-        if e.button() == qtc.Qt.LeftButton:
+        if e.button() == qtc.Qt.MouseButton.LeftButton:
             self._press = self.tabAt(e.pos())
         super().mousePressEvent(e)
 
     def mouseMoveEvent(self, e):
-        if self._press is not None and self._press >= 0 and e.buttons() & qtc.Qt.LeftButton:
+        if self._press is not None and self._press >= 0 and e.buttons() & qtc.Qt.MouseButton.LeftButton:
             if not self.rect().adjusted(-self.MARGIN, -self.MARGIN, self.MARGIN, self.MARGIN).contains(e.pos()):
                 index, self._press = self._press, None
                 self.tearOff.emit(index, e.globalPos())
@@ -129,7 +129,7 @@ class GroupWindow(qtw.QMainWindow):
         index = self._tabIndex(fig)
         if index >= 0:
             self.tabs.removeTab(index)
-        fig.setParent(self, qtc.Qt.Widget)
+        fig.setParent(self, qtc.Qt.WindowType.Widget)
         qtw.QMainWindow.hide(fig)
 
     def _closeCurrent(self) -> None:
@@ -185,12 +185,13 @@ class GroupWindow(qtw.QMainWindow):
         if id is None or id in self.torn:
             return
         fig = self.app.Fig[id]
-        size = self.tabs.currentWidget().size() if self.tabs.currentWidget() is not None else fig.size()
+        current = self.tabs.currentWidget()
+        size = current.size() if current is not None else fig.size()
         index = self._tabIndex(fig)
         if index >= 0:
             self.tabs.removeTab(index)
         fig.setParent(None)
-        fig.setWindowFlags(qtc.Qt.Window)
+        fig.setWindowFlags(qtc.Qt.WindowType.Window)
         fig.shortcut.setEnabled(True)
         self.torn.add(id)
         if global_pos is not None:
@@ -218,7 +219,8 @@ class GroupWindow(qtw.QMainWindow):
             else:
                 self._park(fig)
         if first is not None:
-            self.setGeometry(first.adjusted(0, 0, 0, self.tabs.tabBar().sizeHint().height()))
+            bar = self.tabs.tabBar()
+            self.setGeometry(first.adjusted(0, 0, 0, bar.sizeHint().height() if bar is not None else 0))
             qtw.QMainWindow.show(self)
         else:
             self.resize(self.app.Fig[self.members[0]].size())
@@ -247,7 +249,7 @@ class GroupWindow(qtw.QMainWindow):
             fig.group = None
             if not torn:
                 fig.setParent(None)
-                fig.setWindowFlags(qtc.Qt.Window)
+                fig.setWindowFlags(qtc.Qt.WindowType.Window)
                 if id in self.saved:
                     fig.setGeometry(self.saved[id])
             fig.shortcut.setEnabled(True)
@@ -263,7 +265,8 @@ class GroupWindow(qtw.QMainWindow):
         """Closing the group window hides its tabbed images (torn-off ones stay)."""
         for i in reversed(range(self.tabs.count())):
             self.app.Fig[self._idAt(i)].hide()
-        a0.ignore()
+        if a0 is not None:
+            a0.ignore()
         qtw.QMainWindow.hide(self)
 
 
@@ -303,7 +306,9 @@ def matchWindowTabs(self) -> None:
     def match(a, b):
         if isinstance(a, QLayout):                      # a nested layout (the W / H fields): pair by index
             for i in range(min(a.count(), b.count())):
-                wa, wb = a.itemAt(i).widget(), b.itemAt(i).widget()
+                ia, ib = a.itemAt(i), b.itemAt(i)
+                wa = ia.widget() if ia is not None else None
+                wb = ib.widget() if ib is not None else None
                 if wa is not None and wb is not None:
                     match(wa, wb)
             return

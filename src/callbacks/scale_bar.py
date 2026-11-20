@@ -96,7 +96,7 @@ class ScaleBar(Artist):
         except ValueError:
             return
         width = length / units_per_display
-        pt = renderer.points_to_pixels(1.0)
+        pt = float(renderer.points_to_pixels(1.0))  # pyright: ignore[reportArgumentType] (a float for a float)
         margin, height = 8 * pt, 4 * pt
         x1, y0 = box.x1 - margin, box.y0 + margin
         bar = Rectangle((x1 - width, y0), width, height, transform=IdentityTransform(),

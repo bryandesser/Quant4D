@@ -107,7 +107,7 @@ class InteractiveLine(qtc.QObject):
         ends0, x0, y0 = self._press
         delta = np.array([event.xdata - x0, event.ydata - y0])
         self.ends = ends0 + delta if self._grab == 'line' else ends0.copy()
-        if self._grab != 'line':
+        if isinstance(self._grab, int):             # an end point
             self.ends[self._grab] += delta
         self.line.set_data(self.ends[:, 0], self.ends[:, 1])
         self.canvas.draw_idle()

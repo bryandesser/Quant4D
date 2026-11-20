@@ -188,7 +188,7 @@ def _voltage(entry: dict) -> Optional[float]:
     info = tags.get("Microscope Info") if isinstance(tags, dict) else None
     value = info.get("Voltage") if isinstance(info, dict) else None
     try:
-        volts = float(value)
+        volts = float(value)  # pyright: ignore[reportArgumentType] (None and odd tags raise, handled below)
     except (TypeError, ValueError):
         return None
     return volts if volts > 0 else None

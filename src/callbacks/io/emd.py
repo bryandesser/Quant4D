@@ -31,7 +31,7 @@ from __future__ import annotations
 import os
 import uuid
 from dataclasses import dataclass, field, replace
-from typing import Mapping, Optional
+from typing import Any, Mapping, Optional
 
 import numpy as np
 
@@ -263,6 +263,20 @@ def _str(value) -> str:
     return value.decode() if isinstance(value, bytes) else str(value)
 
 
+def _is_datacube(g: Any) -> bool:
+    """An EMD DataCube group: tagged so, with a 4-D ``data`` dataset (h5py nodes typed loosely)."""
+    import h5py
+    if not isinstance(g, h5py.Group) or _str(g.attrs.get("python_class", "")) != "DataCube":
+        return False
+    data = g.get("data")
+    return isinstance(data, h5py.Dataset) and data.ndim == 4
+
+
+def _value(group: Any, key: str, default=None) -> Any:
+    """``group[key][()]`` if there is one, else *default*."""
+    return group[key][()] if key in group else default
+
+
 def read_emd_info(path: str) -> Optional[EmdInfo]:
     """The first DataCube of an EMD file and its calibration, or None if there is none.
 
@@ -276,24 +290,22 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
         for root_name, root in f.items():
             if not isinstance(root, h5py.Group):
                 continue
-            cube = next((g for g in root.values() if isinstance(g, h5py.Group)
-                         and _str(g.attrs.get("python_class", "")) == "DataCube"
-                         and isinstance(g.get("data"), h5py.Dataset) and g["data"].ndim == 4), None)
+            cube: Any = next((g for g in root.values() if _is_datacube(g)), None)
             if cube is None:
                 continue
             cal = EmdCalibration()
             spread = 0.0
-            cg = root.get("metadatabundle/calibration")
+            cg: Any = root.get("metadatabundle/calibration")
             if isinstance(cg, h5py.Group):
-                def get(key, default=None):
-                    return cg[key][()] if key in cg else default
+                def get(key, default=None) -> Any:
+                    return _value(cg, key, default)
                 cal.q_pixel_size = float(get("Q_pixel_size", 1.0))
                 cal.q_units = _str(get("Q_pixel_units", b"pixels"))
                 cal.r_pixel_size = float(get("R_pixel_size", 1.0))
                 cal.r_units = _str(get("R_pixel_units", b"pixels"))
                 qx0, qy0 = get("qx0_mean"), get("qy0_mean")
                 if "qx0" in cg and "qy0" in cg:
-                    maps = np.asarray(cg["qx0"][()], float), np.asarray(cg["qy0"][()], float)
+                    maps = np.asarray(get("qx0"), float), np.asarray(get("qy0"), float)
                     if all(m.size and np.isfinite(m).any() for m in maps):
                         spread = max(float(np.nanmax(m) - np.nanmin(m)) for m in maps)
                         if qx0 is None:                    # maps but no means
@@ -303,11 +315,11 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
                 semi, radius = get("convergence_semiangle_mrad"), get("probe_semiangle")
                 cal.probe_semiangle_mrad = None if semi is None else float(semi)
                 cal.probe_radius_px = None if radius is None else float(radius)   # pixels in py4DSTEM
-            images = [g.name for g in cube.values() if isinstance(g, h5py.Group)
+            images = [str(g.name) for g in cube.values() if isinstance(g, h5py.Group)
                       and g.attrs.get("emd_group_type") == "array"]
             data = cube["data"]
             s = data.shape
-            return EmdInfo(dataset=data.name, shape=(s[0], s[1], s[2], s[3]), dtype=data.dtype,
+            return EmdInfo(dataset=str(data.name), shape=(s[0], s[1], s[2], s[3]), dtype=data.dtype,
                            calibration=cal, images=images,
                            authoring_program=_str(f.attrs.get("authoring_program", "")),
                            origin_spread_px=spread, accelerating_voltage_kV=_session_kV(root))
@@ -429,6 +441,7 @@ def describe_emd(info: EmdInfo, kV: Optional[float] = None) -> str:
         lines.append(f"Detector: {cal.q_pixel_size:g} mrad/px")
     elif cal.q_pixel_size > 0 and mrad_per_unit(cal.q_units, kV) is not None:
         factor = mrad_per_unit(cal.q_units, kV)
+        assert factor is not None
         at = f" at {kV:g} kV" if cal.q_units.strip().lower().replace(" ", "") not in _ANGLES_MRAD else ""
         lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px = "
                      f"{cal.q_pixel_size * factor:.4g} mrad/px{at}")

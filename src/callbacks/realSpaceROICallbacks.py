@@ -501,9 +501,10 @@ def roiMenu(self, roi):
     is_equal = bool(np.isclose(sides[0], sides[1]))
     menu = qtw.QMenu()
     aspect = menu.addAction("Fix aspect ratio")
+    equal = menu.addAction(equal_name)
+    assert aspect is not None and equal is not None
     aspect.setCheckable(True)
     aspect.setChecked(roi.keep_aspect and not is_equal)
-    equal = menu.addAction(equal_name)
     equal.setCheckable(True)
     equal.setChecked(roi.keep_aspect and is_equal)
 

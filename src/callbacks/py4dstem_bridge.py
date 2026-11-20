@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -86,7 +86,8 @@ def findDataCube(obj):
                 return found
         return None
     branch = getattr(obj, "_branch", None)            # an emdfile tree node: search its children
-    children = list(branch.values()) if hasattr(branch, "values") else []
+    values: Any = getattr(branch, "values", None)
+    children: list = list(values()) if values is not None else []
     for child in children:
         found = findDataCube(child)
         if found is not None:

@@ -44,7 +44,7 @@ def runningElevated() -> bool:
         return False
 
 
-_DRAG_EVENTS = (qtc.QEvent.DragEnter, qtc.QEvent.DragMove, qtc.QEvent.Drop)
+_DRAG_EVENTS = (qtc.QEvent.Type.DragEnter, qtc.QEvent.Type.DragMove, qtc.QEvent.Type.Drop)
 
 
 def droppedFiles(mime: qtc.QMimeData | None) -> list[str]:
@@ -77,15 +77,15 @@ class FileDropFilter(qtc.QObject):
         mime = event.mimeData()
         files = droppedFiles(mime)
         accepting = bool(files) and self._accepting()
-        if event.type() != qtc.QEvent.DragMove:
-            _debug(f"{'enter' if event.type() == qtc.QEvent.DragEnter else 'drop'} on "
+        if event.type() != qtc.QEvent.Type.DragMove:
+            _debug(f"{'enter' if event.type() == qtc.QEvent.Type.DragEnter else 'drop'} on "
                    f"{type(obj).__name__} {obj.objectName()!r}: urls={[u.toString() for u in mime.urls()] if mime else []} "
                    f"files={files} accepting={accepting}")
         if not accepting:
             return False
-        event.setDropAction(qtc.Qt.CopyAction)
+        event.setDropAction(qtc.Qt.DropAction.CopyAction)
         event.accept()
-        if event.type() == qtc.QEvent.Drop:
+        if event.type() == qtc.QEvent.Type.Drop:
             self.filesDropped.emit(files)
         return True
 
@@ -115,7 +115,9 @@ def installFileDrop(self) -> FileDropFilter:
     drop = FileDropFilter(windows, parent=self,
                           accepting=lambda: self.ShowImportWdw.isEnabled() and self.ImportWindow.isEnabled())
     drop.filesDropped.connect(lambda files: openDroppedFiles(self, files))
-    qtw.QApplication.instance().installEventFilter(drop)
+    app = qtw.QApplication.instance()
+    assert app is not None, "a QApplication is needed"
+    app.installEventFilter(drop)
     self.fileDrop = drop
     if runningElevated():
         print("pyQuant4D is running as Administrator: Windows does not let Explorer drop files on it. "

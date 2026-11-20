@@ -233,7 +233,9 @@ class ImageWindow(qtw.QMainWindow):
         layout.addWidget(self.toolbar)
         # the cursor position and intensity go to a status bar under the toolbar, so the toolbar keeps
         # its width (the readout used to push the diffraction "Pattern" dropdown behind ">>")
-        self.statusBar().setSizeGripEnabled(False)
+        status = self.statusBar()
+        assert status is not None
+        status.setSizeGripEnabled(False)
 
         # only use self.move() for dummy window test, it triggers a moveEvent
         # which draws the decoration so they can be measured
@@ -286,7 +288,8 @@ class ImageWindow(qtw.QMainWindow):
 
     def _layoutNow(self) -> None:
         """Lay the window out at its current size now, so the canvas has its size."""
-        for lay in (self.layout(), self.centralWidget().layout() if self.centralWidget() else None):
+        central = self.centralWidget()
+        for lay in (self.layout(), central.layout() if central is not None else None):
             if lay is not None:
                 lay.activate()
 

@@ -36,6 +36,7 @@ class InteractivePoint(qtc.QObject):
         # Artists that move with this point (e.g. the DPC segment lines, the scan-direction arrows):
         # a callable returning them, blitted with the point while it is dragged.
         self.companions: Any = None
+        self.isAxis = False     # a custom mask's centre axis (customDetectorCallbacks)
 
     def disconnect(self):
         """Stop listening to the mouse.  A removed annotation that kept its handlers went on reacting
