@@ -169,7 +169,7 @@ def connectCustomDetector(self):
 
 
 def _addDuplicateButton(self):
-    """A "duplicate mask" button beside Delete (not in the .ui file: a pyQuant4D addition)."""
+    """A "duplicate mask" button beside Delete (not in the .ui file: a Quant4D addition)."""
     btn = qtw.QToolButton(self.CDDelMask.parentWidget())
     btn.setObjectName("CDDuplicate")
     size = 24
@@ -198,7 +198,7 @@ def _addDuplicateButton(self):
 
 
 def _addAxisButton(self):
-    """The centre-axis toggle, above Mirror (a pyQuant4D addition): a crosshair in a circle."""
+    """The centre-axis toggle, above Mirror (a Quant4D addition): a crosshair in a circle."""
     btn = qtw.QToolButton(self.CDMirror.parentWidget())
     btn.setObjectName("CDAxis")
     size = 24

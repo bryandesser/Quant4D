@@ -7,7 +7,7 @@ the entries that are not simply "show a window":
   (opens the Import window with *Keep parameters* ticked).
 * File → Auto Save Images… — save the selected images straight away with the
   Save window's current settings (MATLAB's ``AutoSaveImage`` button).
-* File → Quit — close pyQuant4D (asks first, like the window's close button).
+* File → Quit — close Quant4D (asks first, like the window's close button).
 * Settings → Miscellaneous / Brightness and Contrast, Custom Aperture Maths —
   open the Settings window on that tab (maths: in Custom detector mode).
 * Help → Quant4D Help (F1) — the online manual; Help → About.
@@ -22,8 +22,8 @@ from PyQt5 import QtWidgets as qtw
 
 __all__ = ["connectMenus", "MANUAL_URL", "REPO_URL", "version"]
 
-MANUAL_URL = "https://pyquant4d.readthedocs.io"
-REPO_URL = "https://github.com/bryandesser/pyQuant4D"
+MANUAL_URL = "https://quant4d.readthedocs.io"
+REPO_URL = "https://github.com/bryandesser/Quant4D"
 
 MATH_HELP = ("• MATLAB syntax and functions are used (evaluated safely, not by MATLAB or eval).\n"
              "• Masks are referred to by their IDs (A, B, …, AA, …).\n"
@@ -41,7 +41,7 @@ POLICY_HELP = ("Calculation policy\n"
 def version() -> str:
     try:
         from importlib.metadata import version as _v
-        return _v("pyquant4d")
+        return _v("quant4d")
     except Exception:          # running from a source checkout without installing
         return "development version"
 
@@ -59,7 +59,7 @@ def connectMenus(self) -> None:
     self.actionQuant4D_Manual.triggered.connect(lambda *_: qtg.QDesktopServices.openUrl(qtc.QUrl(MANUAL_URL)))
     self.actionAbout_Quant4D.triggered.connect(lambda *_: about(self))
 
-    # keyboard shortcuts work whichever pyQuant4D window has the focus (Ctrl+1 brings the
+    # keyboard shortcuts work whichever Quant4D window has the focus (Ctrl+1 brings the
     # diffraction window forward, and Ctrl+2 must still work from there); debug actions excepted
     for action in self.findChildren(qtw.QAction):
         if not action.shortcut().isEmpty() and "debug" not in action.iconText().lower() \
@@ -131,8 +131,8 @@ def autoSaveImages(self):
 
 def about(self) -> None:
     qtw.QMessageBox.about(
-        self, "About pyQuant4D",
-        f"<b>pyQuant4D</b> {version()}<br>"
+        self, "About Quant4D",
+        f"<b>Quant4D</b> {version()}<br>"
         "Quantitative 4D-STEM data visualisation and analysis.<br><br>"
         "Python port of Quant4D (MATLAB) by Bryan Esser, Monash Imaging Physics.<br>"
         "Licensed under the GNU General Public License v3.0.<br><br>"

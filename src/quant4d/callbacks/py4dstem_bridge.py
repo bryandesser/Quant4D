@@ -6,7 +6,7 @@ Two ways in, both through :func:`loadDataCube`:
   imported) reads a file with ``py4DSTEM.read``: legacy py4DSTEM files
   (0.12 and earlier) and anything else py4DSTEM reads.  EMD 1.0 files open
   through the Import window without py4DSTEM.
-* :func:`pyquant4d.show` takes a ``py4DSTEM.DataCube`` (or a 4-D array) from
+* :func:`quant4d.show` takes a ``py4DSTEM.DataCube`` (or a 4-D array) from
   a Python session or notebook.
 
 The DataCube's calibration is used as for an imported EMD file: beam centre,
@@ -29,7 +29,7 @@ __all__ = ["ownData", "py4dstem_available", "calibrationFromPy4DSTEM", "findData
 
 def ownData(self) -> None:
     """Before changing the dataset in place: copy it if it is the caller's array
-    (``pyquant4d.show(..., copy=False)``), so their DataCube is left as it was."""
+    (``quant4d.show(..., copy=False)``), so their DataCube is left as it was."""
     if getattr(self, "_sharedData", False) and self.Data is not None:
         self.Data = np.array(self.Data, copy=True)
         self._sharedData = False
@@ -48,7 +48,7 @@ def _get(getter):
 
 
 def calibrationFromPy4DSTEM(datacube) -> Optional[EmdCalibration]:
-    """The calibration of a py4DSTEM DataCube in pyQuant4D's (x, y) order, or None if it has none."""
+    """The calibration of a py4DSTEM DataCube in Quant4D's (x, y) order, or None if it has none."""
     c = getattr(datacube, "calibration", None)
     if c is None:
         return None
@@ -62,7 +62,7 @@ def calibrationFromPy4DSTEM(datacube) -> Optional[EmdCalibration]:
     origin = _get(c.get_origin_mean)
     if origin is not None and len(origin) == 2 and None not in origin and np.all(np.isfinite(origin)):
         qx0, qy0 = (float(v) for v in origin)
-        cal.beam_xy = (qy0, qx0)                 # py4DSTEM Qx = rows = pyQuant4D y
+        cal.beam_xy = (qy0, qx0)                 # py4DSTEM Qx = rows = Quant4D y
     # py4DSTEM's probe_semiangle is the disk radius in pixels (get_probe_size); the angle is
     # convergence_semiangle_mrad
     semi, radius = _get(c.get_convergence_semiangle_mrad), _get(c.get_probe_semiangle)
@@ -103,7 +103,7 @@ def loadDataCube(self, data, name: str = "py4DSTEM DataCube", calibration: Optio
     *calibration* is given) or an array.  *kV* converts an Å⁻¹ calibration
     (default: the Import window's accelerating voltage).
 
-    *copy*: pyQuant4D works on its own copy (the caller's array is never
+    *copy*: Quant4D works on its own copy (the caller's array is never
     changed).  ``copy=False`` uses the array itself when it can (no extra
     memory); the two options that change the dataset in place (Set NaNs to 0,
     Swap Byte Order) then copy it first (:func:`ownData`).

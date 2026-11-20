@@ -28,11 +28,11 @@ except ImportError:
 
             @staticmethod
             def get_device_properties(i):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
             @staticmethod
             def get_device_name(i):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
         @staticmethod
         def device(x): return x
@@ -126,7 +126,7 @@ def prepareData(self, keep_beam=False):
     *keep_beam* keeps the transmitted-beam alignment (swapping real-space X/Y).  A dataset
     swapped in with **Swap Dataset** (``D.KeepP``, same size as the one it replaces) keeps every
     setting: detector, alignment, real-space ROI, export ranges and display, and its mode.
-    Never reads ``self.sender()``: this also runs outside a slot (``pyquant4d.show``).
+    Never reads ``self.sender()``: this also runs outside a slot (``quant4d.show``).
     """
     # self.T.progDLG = progDLG(self, 'Preparing data ...', "Data Preparation"); #TODO
 

@@ -29,10 +29,10 @@ QMessageBox.exec = lambda self: QMessageBox.Ok
 errors = []
 sys.excepthook = lambda t, v, tb: errors.append("".join(traceback.format_exception(t, v, tb)[-3:]))
 
-from pyquant4d.callbacks.guiClass import MainWindow  # noqa: E402
-from pyquant4d.callbacks.import_io import importSelectFile  # noqa: E402
-from pyquant4d.callbacks.io.raw import open_frames  # noqa: E402
-import pyquant4d.callbacks.utils as _utils  # noqa: E402
+from quant4d.callbacks.guiClass import MainWindow  # noqa: E402
+from quant4d.callbacks.import_io import importSelectFile  # noqa: E402
+from quant4d.callbacks.io.raw import open_frames  # noqa: E402
+import quant4d.callbacks.utils as _utils  # noqa: E402
 
 _utils.notifDLG = lambda *a, **k: ''
 

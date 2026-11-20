@@ -31,7 +31,7 @@ class TestProgressBar:
         assert not app.progressBarPanel.isVisibleTo(app), "progress bar left on the main window after import"
 
     def test_hidden_after_a_byte_swap(self, loaded_app, qapp):
-        from pyquant4d.callbacks.datasetOptCallbacks import swapByteOrder
+        from quant4d.callbacks.datasetOptCallbacks import swapByteOrder
         seen = []
         bar = loaded_app.progressBarPanel
         saved = bar.setVisible
@@ -80,7 +80,7 @@ class TestDisplayLock:
 
 def test_settings_go_left_when_the_right_is_off_screen(app, qapp, monkeypatch):
     from PyQt5.QtCore import QRect
-    from pyquant4d.callbacks.window_manager import placeBesideMain
+    from quant4d.callbacks.window_manager import placeBesideMain
 
     class Screen:
         @staticmethod

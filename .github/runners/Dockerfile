@@ -1,5 +1,5 @@
 # ============================================================
-# pyQuant4D — Self-hosted GitHub Actions GPU runner
+# Quant4D — Self-hosted GitHub Actions GPU runner
 # ============================================================
 # Base: NVIDIA CUDA 13.0 + cuDNN on Ubuntu 22.04
 #

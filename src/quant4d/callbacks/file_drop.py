@@ -1,4 +1,4 @@
-"""Drop a dataset file on any pyQuant4D window to open it in the Import window.
+"""Drop a dataset file on any Quant4D window to open it in the Import window.
 
 One :class:`FileDropFilter` is installed on the application, so a drop is
 caught whichever widget is under the cursor (the path field, an image canvas,
@@ -11,8 +11,8 @@ slot (cf. the Linux segfault fixed in 664d923).
 
 Troubleshooting: on Windows, a program run as Administrator cannot receive
 drops from Explorer (User Interface Privilege Isolation shows a no-entry
-cursor); pyQuant4D says so on the console at startup.  Set the environment
-variable ``PYQUANT4D_DEBUG_DROP=1`` to print every drag event the filter sees
+cursor); Quant4D says so on the console at startup.  Set the environment
+variable ``QUANT4D_DEBUG_DROP=1`` to print every drag event the filter sees
 and what it decided.
 """
 from __future__ import annotations
@@ -25,12 +25,12 @@ from PyQt5 import QtWidgets as qtw
 
 __all__ = ["FileDropFilter", "droppedFiles", "installFileDrop", "openDroppedFiles", "runningElevated"]
 
-_DEBUG = os.environ.get("PYQUANT4D_DEBUG_DROP", "") not in ("", "0")
+_DEBUG = os.environ.get("QUANT4D_DEBUG_DROP", "") not in ("", "0")
 
 
 def _debug(*parts) -> None:
     if _DEBUG:
-        print("[pyQuant4D drop]", *parts, file=sys.stderr, flush=True)
+        print("[Quant4D drop]", *parts, file=sys.stderr, flush=True)
 
 
 def runningElevated() -> bool:
@@ -121,7 +121,7 @@ def installFileDrop(self) -> FileDropFilter:
     app.installEventFilter(drop)
     self.fileDrop = drop
     if runningElevated():
-        print("pyQuant4D is running as Administrator: Windows does not let Explorer drop files on it. "
+        print("Quant4D is running as Administrator: Windows does not let Explorer drop files on it. "
               "Start it from a normal (not elevated) prompt to use drag and drop.", file=sys.stderr, flush=True)
     _debug(f"filter installed on {len(windows)} windows")
     return drop

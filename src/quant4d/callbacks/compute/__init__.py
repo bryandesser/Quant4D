@@ -1,4 +1,4 @@
-"""Pure computation for pyQuant4D.
+"""Pure computation for Quant4D.
 
 Nothing in this package touches Qt, matplotlib or the application object:
 every function takes NumPy arrays (and plain numbers) and returns NumPy

@@ -1748,7 +1748,7 @@
   <customwidget>
    <class>MplCanvas</class>
    <extends>QWidget</extends>
-   <header>pyquant4d.callbacks.mplWidget</header>
+   <header>quant4d.callbacks.mplWidget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

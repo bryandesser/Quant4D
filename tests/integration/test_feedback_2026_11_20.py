@@ -147,8 +147,8 @@ class TestMaskOpacityReset:
 
 
 def test_drop_diagnostics(monkeypatch, capsys):
-    import pyquant4d.callbacks.file_drop as fd
+    import quant4d.callbacks.file_drop as fd
     assert fd.runningElevated() is False or fd.sys.platform == "win32"
     monkeypatch.setattr(fd, "_DEBUG", True)
     fd._debug("hello")
-    assert "[pyQuant4D drop] hello" in capsys.readouterr().err
+    assert "[Quant4D drop] hello" in capsys.readouterr().err

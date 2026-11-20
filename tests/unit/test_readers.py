@@ -9,9 +9,9 @@ import struct
 import numpy as np
 import pytest
 
-from pyquant4d.callbacks.io.dm_header import read_dm_header
-from pyquant4d.callbacks.io.export import Region
-from pyquant4d.callbacks.io.raw import float_type_for, frame_record_dtype, open_frames, read_frames
+from quant4d.callbacks.io.dm_header import read_dm_header
+from quant4d.callbacks.io.export import Region
+from quant4d.callbacks.io.raw import float_type_for, frame_record_dtype, open_frames, read_frames
 
 from dm_writer import _DMWriter  # noqa: E402  (tests/dm_writer.py, shared with the integration tests)
 
@@ -54,7 +54,7 @@ def test_dm_header_reads_calibrations_and_voltage(tmp_path, version, little):
 
 
 def test_dm_uncalibrated_dimension_is_none():
-    from pyquant4d.callbacks.io.dm_header import DMImage
+    from quant4d.callbacks.io.dm_header import DMImage
     im = DMImage("x", 0, "f4", 2, (2, 2, 2, 2), 16, calibrations=((1.0, "", 0.0),) * 4)
     assert im.calibration(2) is None and im.calibration(7) is None
 
@@ -126,7 +126,7 @@ def test_float_type():
 
 
 # -------------------------------------------------------------------- EMPAD
-from pyquant4d.callbacks.io.empad import detect_empad, scan_from_name  # noqa: E402
+from quant4d.callbacks.io.empad import detect_empad, scan_from_name  # noqa: E402
 
 _V1, _V2 = 128 * 128 * 4 + 1024, 128 * 128 * 4
 
@@ -178,7 +178,7 @@ def test_empad_v1_and_v2_read_the_same_frames(tmp_path):
 # --------------------------------------------------------------- mask files
 from PIL import Image  # noqa: E402
 
-from pyquant4d.callbacks.io.mask_file import load_mask_image  # noqa: E402
+from quant4d.callbacks.io.mask_file import load_mask_image  # noqa: E402
 
 
 def test_mask_png_scaled_and_kept_as_weights(tmp_path):
@@ -248,7 +248,7 @@ class TestH5Frames:
         return h5py.File(tmp_path / "d.h5", "r")["data"]
 
     def test_dims4(self):
-        from pyquant4d.callbacks.io.hdf5 import dims4
+        from quant4d.callbacks.io.hdf5 import dims4
         assert dims4((2, 3, 4, 5)) == (2, 3, 4, 5)
         assert dims4((12, 4, 5)) == (1, 12, 4, 5)
         assert dims4((4, 5)) == (1, 1, 4, 5)
@@ -257,7 +257,7 @@ class TestH5Frames:
 
     @pytest.mark.parametrize("kw", [{}, {"chunks": (1, 2, 6, 7), "compression": "gzip"}])
     def test_4d_indexing(self, tmp_path, cube, kw):
-        from pyquant4d.callbacks.io.hdf5 import H5Frames
+        from quant4d.callbacks.io.hdf5 import H5Frames
         frames = H5Frames(self._ds(tmp_path, cube, **kw))
         flat = cube.reshape(self.NY * self.NX, -1)
         assert frames.shape == flat.shape and frames.dtype == np.float32
@@ -268,7 +268,7 @@ class TestH5Frames:
         frames.close()
 
     def test_3d_stack(self, tmp_path, cube):
-        from pyquant4d.callbacks.io.hdf5 import H5Frames
+        from quant4d.callbacks.io.hdf5 import H5Frames
         stack = cube.reshape(-1, self.PY, self.PX)
         frames = H5Frames(self._ds(tmp_path, stack, chunks=(4, 6, 7), compression="gzip"))
         assert frames.shape == (stack.shape[0], self.PY * self.PX)
@@ -276,9 +276,9 @@ class TestH5Frames:
 
     def test_read_frames_crop_bin_sample(self, tmp_path, cube):
         """The same cropping/binning/sampling as the offset reader."""
-        from pyquant4d.callbacks.io.export import Region
-        from pyquant4d.callbacks.io.hdf5 import H5Frames
-        from pyquant4d.callbacks.io.raw import read_frames
+        from quant4d.callbacks.io.export import Region
+        from quant4d.callbacks.io.hdf5 import H5Frames
+        from quant4d.callbacks.io.raw import read_frames
         frames = H5Frames(self._ds(tmp_path, cube, chunks=True, compression="gzip"))
         got = read_frames(frames, (self.NX, self.NY), (self.PX, self.PY),
                           Region((1, 0), (2, 2), 2), Region((1, 2), (3, 2), 2))

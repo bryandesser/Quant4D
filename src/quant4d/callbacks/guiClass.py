@@ -50,7 +50,7 @@ class MainWindow(MW_Base, MW_Ui):
         # self.windowHandle().screenChanged.connect(lambda: self.C.__setattr__("dpi",self.screen().physicalDotsPerInch()))
         # self.windowHandle().screenChanged.connect(lambda: self.pointPickerRadius.emit(self.screen().physicalDotsPerInch()))
 
-    embedded = False      # opened by pyquant4d.show(): closing must not end the Python session
+    embedded = False      # opened by quant4d.show(): closing must not end the Python session
 
     # Results for Python / notebooks, in py4DSTEM's conventions (callbacks.results)
     def calibration(self) -> dict:

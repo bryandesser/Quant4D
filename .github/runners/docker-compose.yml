@@ -1,5 +1,5 @@
 # ============================================================
-# pyQuant4D GPU test runner — Docker Compose
+# Quant4D GPU test runner — Docker Compose
 # ============================================================
 #
 # QUICK START
@@ -43,8 +43,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: pyquant4d-gpu-runner:latest
-    container_name: pyquant4d-gpu-runner
+    image: quant4d-gpu-runner:latest
+    container_name: quant4d-gpu-runner
 
     # Restart unless explicitly stopped (survives host reboots)
     restart: unless-stopped
@@ -69,7 +69,7 @@ services:
       GITHUB_PAT: ${GITHUB_PAT:-}
       RUNNER_TOKEN: ${RUNNER_TOKEN:-}
       # Optional: override the display name shown in GitHub
-      RUNNER_NAME: ${RUNNER_NAME:-pyquant4d-gpu-runner}
+      RUNNER_NAME: ${RUNNER_NAME:-quant4d-gpu-runner}
       # Optional: extra labels beyond self-hosted,gpu,Linux,X64
       # Example: RUNNER_LABELS=cuda12,torch
       RUNNER_LABELS: ${RUNNER_LABELS:-}

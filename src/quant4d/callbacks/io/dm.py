@@ -22,7 +22,7 @@ def prepDM(self, source=None, adopt=False):
 
     DM stores dimensions fastest first; a 4-D STEM dataset is
     ``(kx, ky, rx, ry)``, i.e. whole diffraction patterns one after another,
-    which is the layout pyQuant4D reads.
+    which is the layout Quant4D reads.
 
     Returns
     -------
@@ -102,7 +102,7 @@ def _calibrationNotes(self, image, adopt: bool) -> str:
             if mrad_per_unit(units) is None:
                 line += " (converted to mrad at the Accelerating Voltage)"
         else:
-            line += " (not used: pyQuant4D calibrates in mrad)"
+            line += " (not used: Quant4D calibrates in mrad)"
         lines.append(line)
     return ("\n\nDM calibration\n" + "\n".join(lines)) if lines else ""
 

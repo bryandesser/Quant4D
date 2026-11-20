@@ -42,7 +42,7 @@ def _images(app, qapp, mode):
 
 
 def test_dataset_is_resident_on_gpu(loaded_app, qapp):
-    from pyquant4d.callbacks import compute
+    from quant4d.callbacks import compute
     loaded_app.D.GPU = 0
     _images(loaded_app, qapp, "AnnMod")
     info = compute.device_data_info()
@@ -52,7 +52,7 @@ def test_dataset_is_resident_on_gpu(loaded_app, qapp):
 
 @pytest.mark.parametrize("mode", list(MODES))
 def test_gpu_matches_cpu(loaded_app, qapp, mode):
-    from pyquant4d.callbacks import compute
+    from quant4d.callbacks import compute
     loaded_app.D.GPU = 0
     gpu = _images(loaded_app, qapp, mode)
     loaded_app.D.GPU = None
@@ -66,7 +66,7 @@ def test_gpu_matches_cpu(loaded_app, qapp, mode):
 
 def test_import_window_selects_the_gpu(app, qapp, sample_raw_file):
     """Through the app, not by setting D.GPU: the Import window offers the card, an import uses it."""
-    from pyquant4d.callbacks import compute
+    from quant4d.callbacks import compute
     from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, import_raw
     gpu = app.ImportWindow.ImpGPU.currentData()
     assert gpu is not None, f"no GPU selected; offered: {[app.ImportWindow.ImpGPU.itemText(i) for i in range(app.ImportWindow.ImpGPU.count())]}"

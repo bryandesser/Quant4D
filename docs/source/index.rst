@@ -1,16 +1,16 @@
 .. _index:
 
-Welcome to the pyQuant4D documentation
+Welcome to the Quant4D documentation
 =======================================
 
-`pyQuant4D` is an open source graphical interface for quickly and intuitively
+`Quant4D` is an open source graphical interface for quickly and intuitively
 opening, interacting with, and performing basic analysis of 4D-STEM data.
 It is a Python port of the original
-`Quant4D <https://github.com/bryandesser/Quant4D>`_ MATLAB application,
+`Quant4D <https://github.com/bryandesser/Quant4D_matlab>`_ MATLAB application,
 developed at `Monash Imaging Physics <https://www.monash.edu/medicine/ccs/research/monash-imaging-physics>`_.
 
 .. note::
-   pyQuant4D is currently in early development (version |release|, alpha).
+   Quant4D is currently in early development (version |release|, alpha).
    The API and UI may change without notice.
 
 |

@@ -1,6 +1,6 @@
 """Reading 4D-STEM data stored as consecutive frames in a binary file.
 
-Covers every format pyQuant4D imports by offset (raw/EMPAD, Medipix, MRC,
+Covers every format Quant4D imports by offset (raw/EMPAD, Medipix, MRC,
 DM3/DM4, contiguous HDF5): the file holds ``n_frames`` records of
 ``[header][NPxY x NPxX elements][footer]`` starting at ``offset``.
 

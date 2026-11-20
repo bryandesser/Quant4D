@@ -35,7 +35,7 @@ def _set_units(combo, code):
 
 
 def test_unit_codes():
-    from pyquant4d.callbacks.scan_step import unitCode
+    from quant4d.callbacks.scan_step import unitCode
     assert [unitCode(u) for u in ("A", "Å", "angstrom", "nm", "µm", "um", "pixels", "px", "")] == \
         ["A", "A", "A", "nm", "um", "um", "pixels", "pixels", "pixels"]
     assert unitCode("m") == "m"                       # unknown units are kept
@@ -52,8 +52,8 @@ def test_import_field_starts_uncalibrated(app, qapp, sample_hdf5_file):
 
 def test_calibrated_file_fills_the_field_and_a_new_file_resets_it(app, qapp, tmp_path, synthetic_data,
                                                                   sample_hdf5_file):
-    from pyquant4d.callbacks.io.emd import EmdCalibration, write_emd
-    from pyquant4d.callbacks.io.export import full_region
+    from quant4d.callbacks.io.emd import EmdCalibration, write_emd
+    from quant4d.callbacks.io.export import full_region
     path = tmp_path / "angstrom.h5"
     write_emd(str(path), synthetic_data, (SCAN_X, SCAN_Y), (DET_X, DET_Y), full_region((SCAN_X, SCAN_Y)),
               full_region((DET_X, DET_Y)), EmdCalibration(r_pixel_size=2.5, r_units="A"))

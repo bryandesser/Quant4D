@@ -9,8 +9,8 @@ import numpy as np
 import pytest
 from matplotlib.lines import Line2D
 
-from pyquant4d.annotationsClasses.interactiveAnnulus import InteractiveAnnulus
-from pyquant4d.annotationsClasses.interactiveCircle import InteractiveCircle
+from quant4d.annotationsClasses.interactiveAnnulus import InteractiveAnnulus
+from quant4d.annotationsClasses.interactiveCircle import InteractiveCircle
 from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, set_mode
 
 

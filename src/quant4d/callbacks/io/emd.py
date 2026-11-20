@@ -1,10 +1,10 @@
 """py4DSTEM-compatible EMD 1.0 files, written and read with h5py alone.
 
 py4DSTEM saves through the ``emdfile`` package.  The layout used for a
-``DataCube`` is small and fixed, so pyQuant4D writes it directly: the dataset
+``DataCube`` is small and fixed, so Quant4D writes it directly: the dataset
 is streamed block by block (partial, sampled and binned exports work exactly
 as for the plain HDF5 export, at any dataset size), it is stored contiguously
-(so pyQuant4D can import the file again by offset) and py4DSTEM does not have
+(so Quant4D can import the file again by offset) and py4DSTEM does not have
 to be installed.  ``tests/unit/test_emd.py`` reads every file back with
 ``py4DSTEM.read`` whenever py4DSTEM is installed, which pins the layout.
 
@@ -17,14 +17,14 @@ Layout (``emdfile`` 0.0.x / EMD 1.0, as written by py4DSTEM 0.14)::
         dim0 .. dim3             two-point calibration vectors, attrs name/units
         <image>                  child arrays (VirtualImage, RealSlice, DiffractionSlice)
     /<root>/metadatabundle/calibration   python_class=Calibration
-    /<root>/metadatabundle/pyquant4d     python_class=Metadata (session record)
+    /<root>/metadatabundle/quant4d     python_class=Metadata (session record)
 
 Axis names
 ----------
 py4DSTEM uses matrix order: its first axis ``Rx``/``Qx`` is the *row*.
-pyQuant4D's x is the column (the fast scan axis).  The array needs no
+Quant4D's x is the column (the fast scan axis).  The array needs no
 transposition, but every coordinate pair swaps: py4DSTEM's ``qx0`` is
-pyQuant4D's beam **y**, ``qy0`` its beam **x**.
+Quant4D's beam **y**, ``qy0`` its beam **x**.
 """
 from __future__ import annotations
 
@@ -42,13 +42,13 @@ __all__ = ["EmdCalibration", "EmdImage", "EmdInfo", "write_emd", "is_emd", "read
            "usable_calibration", "calibration_for_region", "describe_emd",
            "electron_wavelength_A", "mrad_per_inverse_angstrom", "is_inverse_angstrom", "mrad_per_unit"]
 
-ROOT = "pyquant4d_root"
+ROOT = "quant4d_root"
 DATACUBE = "datacube"
 
 
 @dataclass
 class EmdCalibration:
-    """Calibration of the *exported* dataset, in pyQuant4D's (x, y) convention.
+    """Calibration of the *exported* dataset, in Quant4D's (x, y) convention.
 
     Attributes
     ----------
@@ -56,7 +56,7 @@ class EmdCalibration:
         Transmitted-beam centre in exported detector pixels.  A single global
         centre: written as py4DSTEM's mean origin and as constant origin maps
         over the scan.  #descan: per-position centres would replace the
-        constant maps once pyQuant4D measures them.
+        constant maps once Quant4D measures them.
     q_pixel_size, q_units : detector pixel size, e.g. (0.25, "mrad").
     r_pixel_size, r_units : scan step, e.g. (1.0, "pixels").
     probe_semiangle_mrad : convergence semi-angle in mrad (py4DSTEM's
@@ -97,7 +97,7 @@ class EmdInfo:
     images: list[str] = field(default_factory=list)   # HDF5 paths of child arrays
     authoring_program: str = ""
     origin_spread_px: float = 0.0               # how far the origin maps vary over the scan (#descan)
-    accelerating_voltage_kV: Optional[float] = None   # from pyQuant4D's session record, if present
+    accelerating_voltage_kV: Optional[float] = None   # from Quant4D's session record, if present
 
 
 # ---------------------------------------------------------------------------
@@ -175,13 +175,13 @@ def write_emd(path: str, data: np.ndarray, scan, detector, frames: Region, pixel
 
     tmp = path + ".part"
     with h5py.File(tmp, "w") as f:
-        f.attrs.update({"UUID": str(uuid.uuid4()), "authoring_program": "pyQuant4D",
+        f.attrs.update({"UUID": str(uuid.uuid4()), "authoring_program": "Quant4D",
                         "authoring_user": "", "emd_group_type": "file",
                         "version_major": 1, "version_minor": 0})
         root = f.create_group(ROOT)
         root.attrs.update({"emd_group_type": "root", "python_class": "Root"})
 
-        # the 4-D dataset, streamed; contiguous so pyQuant4D can re-import it by offset
+        # the 4-D dataset, streamed; contiguous so Quant4D can re-import it by offset
         dc = root.create_group(DATACUBE)
         dc.attrs.update({"emd_group_type": "array", "python_class": "DataCube"})
         dset = dc.create_dataset("data", shape=shape, dtype=dtype)
@@ -220,7 +220,7 @@ def write_emd(path: str, data: np.ndarray, scan, detector, frames: Region, pixel
         if cal.beam_xy is not None:
             bx, by = (float(v) for v in cal.beam_xy)
             rshape = shape[:2]
-            _put(cg, "qx0_mean", by, "number")          # py4DSTEM Qx = rows = pyQuant4D y
+            _put(cg, "qx0_mean", by, "number")          # py4DSTEM Qx = rows = Quant4D y
             _put(cg, "qy0_mean", bx, "number")
             # #descan: constant maps until per-position centres are measured
             _put(cg, "qx0", np.full(rshape, by), "array")
@@ -236,9 +236,9 @@ def write_emd(path: str, data: np.ndarray, scan, detector, frames: Region, pixel
         if radius is not None:
             _put(cg, "probe_semiangle", float(radius), "number")
 
-        # pyQuant4D's own record of the session
+        # Quant4D's own record of the session
         if metadata:
-            mg = mb.create_group("pyquant4d")
+            mg = mb.create_group("quant4d")
             mg.attrs.update({"emd_group_type": "metadata", "python_class": "Metadata"})
             for key, value in metadata.items():
                 _put_any(mg, key, value)
@@ -280,7 +280,7 @@ def _value(group: Any, key: str, default=None) -> Any:
 def read_emd_info(path: str) -> Optional[EmdInfo]:
     """The first DataCube of an EMD file and its calibration, or None if there is none.
 
-    Coordinates are returned in pyQuant4D's (x, y) order.
+    Coordinates are returned in Quant4D's (x, y) order.
     """
     import h5py
 
@@ -327,8 +327,8 @@ def read_emd_info(path: str) -> Optional[EmdInfo]:
 
 
 def _session_kV(root) -> Optional[float]:
-    """The accelerating voltage pyQuant4D recorded with an export, if any."""
-    ds = root.get("metadatabundle/pyquant4d/accelerating_voltage_kV")
+    """The accelerating voltage Quant4D recorded with an export, if any."""
+    ds = root.get("metadatabundle/quant4d/accelerating_voltage_kV")
     try:
         kv = float(ds[()]) if ds is not None else None
     except (TypeError, ValueError):
@@ -366,7 +366,7 @@ def is_inverse_angstrom(units: str) -> bool:
     return units.strip().lower().replace(" ", "") in _INVERSE_ANGSTROM
 
 
-# detector units pyQuant4D converts to mrad: angles directly, spatial frequencies (no 2π) at a voltage
+# detector units Quant4D converts to mrad: angles directly, spatial frequencies (no 2π) at a voltage
 _ANGLES_MRAD = {"mrad": 1.0, "rad": 1000.0, "urad": 1e-3, "µrad": 1e-3, "μrad": 1e-3}
 _PER_ANGSTROM = {"1/nm": 0.1, "nm^-1": 0.1, "nm-1": 0.1, "nm^{-1}": 0.1, "1/pm": 100.0, "pm^-1": 100.0}
 
@@ -383,16 +383,16 @@ def mrad_per_unit(units: str, kV: Optional[float] = None) -> Optional[float]:
 
 
 # ---------------------------------------------------------------------------
-# Using a file's calibration in pyQuant4D
+# Using a file's calibration in Quant4D
 # ---------------------------------------------------------------------------
 def _in_mrad(cal: EmdCalibration) -> bool:
     return cal.q_units.strip().lower() == "mrad" and cal.q_pixel_size > 0
 
 
 def usable_calibration(cal: EmdCalibration, kV: Optional[float] = None) -> Optional[EmdCalibration]:
-    """The parts of *cal* pyQuant4D can use, or None if there are none.
+    """The parts of *cal* Quant4D can use, or None if there are none.
 
-    pyQuant4D calibrates the detector in mrad.  Other angles (rad, µrad) are
+    Quant4D calibrates the detector in mrad.  Other angles (rad, µrad) are
     rescaled; a pixel size in Å⁻¹ (py4DSTEM's ``A^-1``) or nm⁻¹ (DM's
     ``1/nm``) is converted with the relativistic wavelength at *kV*; without a
     voltage, or in other units (plain pixels), it is dropped.
@@ -447,7 +447,7 @@ def describe_emd(info: EmdInfo, kV: Optional[float] = None) -> str:
                      f"{cal.q_pixel_size * factor:.4g} mrad/px{at}")
     elif cal.q_units.strip().lower() != "pixels":
         lines.append(f"Detector: {cal.q_pixel_size:g} {cal.q_units}/px, not used "
-                     "(pyQuant4D calibrates in mrad; set the accelerating voltage to convert Å⁻¹)")
+                     "(Quant4D calibrates in mrad; set the accelerating voltage to convert Å⁻¹)")
     if cal.r_units.strip().lower() != "pixels":
         lines.append(f"Scan step: {cal.r_pixel_size:g} {cal.r_units}")
     if info.accelerating_voltage_kV:

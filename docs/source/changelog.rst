@@ -4,13 +4,21 @@ Changelog
 0.4.0 (2026)
 ------------
 
-- One package: everything now lives in ``pyquant4d`` (``pyquant4d.callbacks``,
-  ``pyquant4d.annotationsClasses``, ``pyquant4d.gui``, ``pyquant4d.app``).  The
+- **Renamed: pyQuant4D is now Quant4D.**  The Python version takes the name
+  (repository https://github.com/bryandesser/Quant4D, documentation
+  https://quant4d.readthedocs.io, ``pip install quant4d``); the MATLAB
+  version is now https://github.com/bryandesser/Quant4D_matlab.  The import
+  name changes from ``pyquant4d`` to ``quant4d``: ``pyquant4d.show(dc)``
+  becomes ``quant4d.show(dc)``.  The ``quant4d`` command is unchanged.
+- One package: everything now lives in ``quant4d`` (``quant4d.callbacks``,
+  ``quant4d.annotationsClasses``, ``quant4d.gui``, ``quant4d.app``).  The
   generic top-level names ``callbacks``, ``annotationsClasses``, ``gui`` and
   ``Quant4D_app`` are no longer installed.  Scripts that imported them change
-  ``from callbacks.x import y`` to ``from pyquant4d.callbacks.x import y``;
-  ``pyquant4d.show`` is unchanged.
-- ``python -m pyquant4d`` starts the app (as the ``quant4d`` command does).
+  ``from callbacks.x import y`` to ``from quant4d.callbacks.x import y``.
+- ``python -m quant4d`` starts the app (as the ``quant4d`` command does).
+- py4DSTEM EMD exports keep Quant4D's session record in a ``quant4d`` group
+  (``pyquant4d`` in files from 0.3.0; neither is needed to read the file).
+- The drag-and-drop debug switch is now ``QUANT4D_DEBUG_DROP=1``.
 - Package metadata: licence given as ``GPL-3.0-or-later`` (SPDX).
 - The documentation takes its version from ``pyproject.toml``.
 
@@ -28,11 +36,11 @@ Changelog
   (the diffraction window's taller status bar was not allowed for).
 - First window layout: the other windows of each space are staggered behind
   the diffraction pattern / real-space image instead of hidden exactly behind.
-- Notebook round trip: the window ``pyquant4d.show`` returns has
+- Notebook round trip: the window ``quant4d.show`` returns has
   ``calibration()``, ``apply_calibration(datacube)``, ``image(id)``,
   ``images()`` and ``mask(id)``, in py4DSTEM's conventions (new page "From
   Python and notebooks").
-- ``pyquant4d.show(..., copy=True)``: pyQuant4D works on a copy by default;
+- ``quant4d.show(..., copy=True)``: Quant4D works on a copy by default;
   with ``copy=False`` it shares the DataCube's array and copies it before Set
   NaNs to 0 or Swap Byte Order (which used to change the caller's DataCube).
 - py4DSTEM calibration: the convergence semi-angle is read and written as
@@ -69,7 +77,7 @@ Changelog
 - Accelerating voltage field in the Import window; a py4DSTEM calibration in
   Å⁻¹ is converted to mrad with the relativistic electron wavelength.
 - Real-space calibration: **Scan Step** of the file in the Import window
-  (filled in from calibrated py4DSTEM/pyQuant4D files) and of the loaded data
+  (filled in from calibrated py4DSTEM/Quant4D files) and of the loaded data
   in Settings > Misc (editable after import); scaled by import and export
   sampling, listed in the Info tab and written on export.
 - Info tab: the real-space size was shown as Y⨯X under an X⨯Y label.
@@ -87,10 +95,10 @@ Changelog
 - Display: the mask button resets the mask opacity to 0 % (like brightness,
   contrast and gamma) instead of opening the mask window.
 - Drag and drop: console warning when running as Administrator on Windows
-  (Explorer cannot drop on elevated programs); ``PYQUANT4D_DEBUG_DROP=1``
+  (Explorer cannot drop on elevated programs); ``QUANT4D_DEBUG_DROP=1``
   logs drag events.
 - Window menu: the Center of Mass items only in CoM/DPC mode.  Keyboard
-  shortcuts work from every pyQuant4D window (Ctrl+1 then Ctrl+2 from the
+  shortcuts work from every Quant4D window (Ctrl+1 then Ctrl+2 from the
   diffraction window).
 - Swap Dataset: the box can be ticked and unticked (it never enabled: the size
   check compared the wrong things), is cleared on Cancel, and a swapped dataset
@@ -116,7 +124,7 @@ Changelog
 - Binned diffraction masks in the py4DSTEM export: raw sums by default, or
   normalised to 0..1.
 - File > Open with py4DSTEM Reader... (when py4DSTEM is installed) and
-  ``pyquant4d.show(datacube)`` from Python; ``pip install pyquant4d[py4dstem]``.
+  ``quant4d.show(datacube)`` from Python; ``pip install quant4d[py4dstem]``.
 - The diffraction scale (mrad/px) shows 4 decimals.
 - A path typed into the Import window starts the HDF5 dataset list again for a
   new file; the dataset picked is kept otherwise (also across file-type changes).
@@ -194,6 +202,6 @@ Initial Python release.
 - Save images as 32-bit float TIFF or annotated PNG.
 - Export datasets as HDF5 (gzip-compressed) or raw binary.
 - Optional GPU acceleration via PyTorch.
-- pip-installable package (``pip install pyquant4d``).
+- pip-installable package (``pip install quant4d``).
 - GitHub Actions CI for lint and import tests on Linux and Windows.
 - ReadTheDocs documentation.

@@ -70,7 +70,7 @@ class TestAnnularStep:
         set_mode(w, qapp, "AnnMod")
 
     def test_coarser_step_reintegrates_and_keeps_the_detector_size(self, loaded_app, qapp):
-        from pyquant4d.callbacks import compute
+        from quant4d.callbacks import compute
         w = loaded_app
         set_mode(w, qapp, "AnnMod")
         step0 = w.AnnStep.value()
@@ -105,7 +105,7 @@ class TestBandpass:
         assert tuple(sw.BandpassFilter.value()) == (0, kmax)
 
     def test_filters_icom_and_dcom(self, loaded_app, qapp):
-        from pyquant4d.callbacks import compute
+        from quant4d.callbacks import compute
         w = loaded_app
         sw = w.SettingsWindow
         set_mode(w, qapp, "CoMMod")
@@ -153,7 +153,7 @@ class TestVariables:
         assert sw.ShowVariables.text() == "Show all variables"
 
     def test_describe(self):
-        from pyquant4d.callbacks.variables import describe
+        from quant4d.callbacks.variables import describe
         assert describe(np.arange(3)) == "[0, 1, 2]"
         assert describe(np.zeros((40, 50), np.float32)).startswith("array (40, 50) float32, 0 .. 0")
         assert describe(0.123456789) == "0.123457"

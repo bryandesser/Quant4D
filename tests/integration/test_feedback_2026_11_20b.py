@@ -137,7 +137,7 @@ class TestComEntry:
 
     @pytest.mark.parametrize("mode", ["CoMMod", "DPCMod"])
     def test_first_visit_runs_auto_curl(self, fresh, qapp, monkeypatch, mode):
-        from pyquant4d.callbacks import compute
+        from quant4d.callbacks import compute
         calls = []
         real = compute.scan_rotation_by_curl
         monkeypatch.setattr(compute, "scan_rotation_by_curl", lambda *a, **k: calls.append(1) or real(*a, **k))
@@ -160,7 +160,7 @@ class TestComEntry:
 
 
 def test_symmetric_field_keeps_the_flip():
-    from pyquant4d.callbacks import compute
+    from quant4d.callbacks import compute
     y, x = np.mgrid[0:12, 0:16].astype(float)
     for flip in (False, True):                    # a radial field is curl-free with and without the flip
         angle, got, _ = compute.scan_rotation_by_curl(0.3 * x, 0.3 * y, prefer_deg=0, prefer_flip=flip)
@@ -180,7 +180,7 @@ class TestROIMenu:
         qapp.processEvents()
 
     def test_fix_aspect_and_circle(self, ellipse, qapp):
-        from pyquant4d.callbacks.realSpaceROICallbacks import roiMenu
+        from quant4d.callbacks.realSpaceROICallbacks import roiMenu
         w = ellipse
         roi = w.A.RealROI["Real"]
         menu = roiMenu(w, roi)
@@ -198,7 +198,7 @@ class TestROIMenu:
         roi.background = roi.canvas.copy_from_bbox(roi.axis.bbox)
         roi._press = (roi.center.copy(), roi.semiaxes.copy(), roi.rotation, 0, 0)
         roi._transform = "axis_0"
-        from pyquant4d.annotationsClasses.interactiveEllipse import InteractiveEllipse
+        from quant4d.annotationsClasses.interactiveEllipse import InteractiveEllipse
         InteractiveEllipse.lock = roi
         try:
             x, y = roi.center + np.array([roi.semiaxes[0] * 1.5, 0])
@@ -212,7 +212,7 @@ class TestROIMenu:
         assert menu.actions()[1].isChecked() and not menu.actions()[0].isChecked()
 
     def test_rectangle_square(self, loaded_app, qapp):
-        from pyquant4d.callbacks.realSpaceROICallbacks import roiMenu
+        from quant4d.callbacks.realSpaceROICallbacks import roiMenu
         w = loaded_app
         set_mode(w, qapp, "AnnMod")
         w.RealROIShape.setCurrentIndex(w.RealROIShape.findData("rectangle"))
@@ -251,8 +251,8 @@ class TestBandpassUnits:
         assert sw.BandpassFilterLow.suffix() == "" and sw.BandpassFilterHigh.suffix() == ""
 
     def test_values_follow_the_unit_and_edits_convert_back(self, com, qapp):
-        from pyquant4d.callbacks.annularDetectorCallbacks import bandpassLimits
-        from pyquant4d.callbacks.io.emd import electron_wavelength_A
+        from quant4d.callbacks.annularDetectorCallbacks import bandpassLimits
+        from quant4d.callbacks.io.emd import electron_wavelength_A
         w, sw = com, com.SettingsWindow
         sw.RsUnits.setCurrentIndex(sw.RsUnits.findData("nm"))
         sw.RsStep.setValue(0.5)
@@ -272,13 +272,13 @@ class TestBandpassUnits:
         sw.BandpassFilterHigh.setValue(1.5 * mrad)
         qapp.processEvents()
         assert bandpassLimits(w)[1] == pytest.approx(1.5, rel=1e-3)
-        np.testing.assert_allclose(w.Fig.iCoM.Image, __import__("importlib").import_module("pyquant4d.callbacks.compute").fourier_bandpass(
-            __import__("importlib").import_module("pyquant4d.callbacks.compute").integrate_field(w.Fig.CoMX.Image, w.Fig.CoMY.Image), *bandpassLimits(w)))
+        np.testing.assert_allclose(w.Fig.iCoM.Image, __import__("importlib").import_module("quant4d.callbacks.compute").fourier_bandpass(
+            __import__("importlib").import_module("quant4d.callbacks.compute").integrate_field(w.Fig.CoMX.Image, w.Fig.CoMY.Image), *bandpassLimits(w)))
 
 
 # ---------------------------------------------------------------------- diffraction scale unit
 def test_diffraction_scale_in_inverse_angstrom(loaded_app, qapp):
-    from pyquant4d.callbacks.io.emd import mrad_per_inverse_angstrom
+    from quant4d.callbacks.io.emd import mrad_per_inverse_angstrom
     w, sw = loaded_app, loaded_app.SettingsWindow
     old = w.mradPx.value()
     try:

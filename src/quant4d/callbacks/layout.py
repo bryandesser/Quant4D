@@ -1,4 +1,4 @@
-"""Canonical array layout for pyQuant4D.
+"""Canonical array layout for Quant4D.
 
 One convention, used everywhere
 -------------------------------

@@ -7,8 +7,8 @@ import h5py
 import numpy as np
 import pytest
 
-from pyquant4d.callbacks.io.emd import EmdCalibration, EmdImage, is_emd, read_emd_info, write_emd
-from pyquant4d.callbacks.io.export import Region, full_region
+from quant4d.callbacks.io.emd import EmdCalibration, EmdImage, is_emd, read_emd_info, write_emd
+from quant4d.callbacks.io.export import Region, full_region
 
 try:
     import py4DSTEM
@@ -42,8 +42,8 @@ def test_layout_and_data(tmp_path):
     _, full = _dataset()
     with h5py.File(path) as f:
         assert f.attrs["emd_group_type"] == "file"
-        np.testing.assert_array_equal(f["pyquant4d_root/datacube/data"][()], full)
-        assert f["pyquant4d_root/datacube/data"].id.get_offset() is not None   # contiguous: re-importable by offset
+        np.testing.assert_array_equal(f["quant4d_root/datacube/data"][()], full)
+        assert f["quant4d_root/datacube/data"].id.get_offset() is not None   # contiguous: re-importable by offset
     assert is_emd(path)
 
 
@@ -59,14 +59,14 @@ def test_not_emd(tmp_path):
 def test_read_info_swaps_back_to_xy(tmp_path):
     cal = EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=21.4)
     path, _ = _write(tmp_path, calibration=cal,
-                     images={"ADF": EmdImage(np.ones((NFY, NFX)))}, metadata={"software": "pyQuant4D"})
+                     images={"ADF": EmdImage(np.ones((NFY, NFX)))}, metadata={"software": "Quant4D"})
     info = read_emd_info(path)
     assert info.shape == (NFY, NFX, NPY, NPX)
     assert info.calibration.beam_xy == BEAM_XY
     assert (info.calibration.q_pixel_size, info.calibration.q_units) == (0.5, "mrad")
     assert info.calibration.probe_semiangle_mrad == pytest.approx(21.4)
-    assert info.images == ["/pyquant4d_root/datacube/ADF"]
-    assert info.authoring_program == "pyQuant4D"
+    assert info.images == ["/quant4d_root/datacube/ADF"]
+    assert info.authoring_program == "Quant4D"
 
 
 def test_partial_binned_export_and_images(tmp_path):
@@ -78,8 +78,8 @@ def test_partial_binned_export_and_images(tmp_path):
                          images={"Real": EmdImage(real), "Dfrn": EmdImage(dfrn, "dfrn")})
     assert shape == (2, 2, 3, 4)
     with h5py.File(path) as f:
-        np.testing.assert_array_equal(f["pyquant4d_root/datacube/Real/data"][()], real[0:4:2, 1:5:2])
-        np.testing.assert_array_equal(f["pyquant4d_root/datacube/Dfrn/data"][()], np.full((3, 4), 4.0))
+        np.testing.assert_array_equal(f["quant4d_root/datacube/Real/data"][()], real[0:4:2, 1:5:2])
+        np.testing.assert_array_equal(f["quant4d_root/datacube/Dfrn/data"][()], np.full((3, 4), 4.0))
 
 
 @needs_py4dstem
@@ -91,7 +91,7 @@ def test_py4dstem_reads_datacube_and_calibration(tmp_path):
     assert dc.data.shape == (NFY, NFX, NPY, NPX)
     c = dc.calibration
     assert c.get_Q_pixel_size() == 0.5 and c.get_Q_pixel_units() == "mrad"
-    # py4DSTEM's (qx0, qy0) is (row, column) = pyQuant4D (y, x)
+    # py4DSTEM's (qx0, qy0) is (row, column) = Quant4D (y, x)
     assert c.get_origin_mean() == (BEAM_XY[1], BEAM_XY[0])
     assert c.get_qx0().shape == (NFY, NFX)
     # py4DSTEM: the angle is convergence_semiangle_mrad; probe_semiangle is the disk radius in pixels
@@ -101,7 +101,7 @@ def test_py4dstem_reads_datacube_and_calibration(tmp_path):
 
 @needs_py4dstem
 def test_py4dstem_centred_detector_lands_on_the_beam(tmp_path):
-    """A centred bright-field detector in py4DSTEM must see the beam pyQuant4D set."""
+    """A centred bright-field detector in py4DSTEM must see the beam Quant4D set."""
     path, _ = _write(tmp_path, calibration=EmdCalibration(beam_xy=BEAM_XY))
     dc = py4DSTEM.read(path)
     bf = dc.get_virtual_image("circle", ((0, 0), 0.5), centered=True, verbose=False, returncalc=True)
@@ -121,7 +121,7 @@ def test_py4dstem_reads_child_images(tmp_path):
 # Using a file's calibration (import)
 # ---------------------------------------------------------------------------
 def test_usable_calibration_keeps_mrad_drops_other_units():
-    from pyquant4d.callbacks.io.emd import usable_calibration
+    from quant4d.callbacks.io.emd import usable_calibration
     mrad = usable_calibration(EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad"))
     assert (mrad.q_pixel_size, mrad.q_units, mrad.beam_xy) == (0.5, "mrad", BEAM_XY)
     inv_a = usable_calibration(EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.01, q_units="A^-1",
@@ -132,7 +132,7 @@ def test_usable_calibration_keeps_mrad_drops_other_units():
 
 
 def test_calibration_for_region_crops_and_bins():
-    from pyquant4d.callbacks.io.emd import calibration_for_region
+    from quant4d.callbacks.io.emd import calibration_for_region
     cal = EmdCalibration(beam_xy=(10.0, 7.0), q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=20.0)
     assert calibration_for_region(cal, (0, 0), 1) == cal
     out = calibration_for_region(cal, (2, 1), 2)
@@ -143,7 +143,7 @@ def test_calibration_for_region_crops_and_bins():
 
 
 def test_describe_emd(tmp_path):
-    from pyquant4d.callbacks.io.emd import EmdInfo, describe_emd
+    from quant4d.callbacks.io.emd import EmdInfo, describe_emd
     cal = EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=21.4)
     path, _ = _write(tmp_path, calibration=cal, images={"ADF": EmdImage(np.ones((NFY, NFX)))})
     text = describe_emd(read_emd_info(path))
@@ -173,14 +173,14 @@ def test_reads_a_file_py4dstem_wrote(tmp_path):
     assert info.calibration.beam_xy == pytest.approx((2.0, float(qx0.mean())))   # (x, y) = (qy0, qx0)
     assert info.calibration.q_pixel_size == 0.25 and info.calibration.q_units == "mrad"
     assert info.calibration.probe_radius_px == pytest.approx(18.0) and info.calibration.probe_semiangle_mrad is None
-    from pyquant4d.callbacks.io.emd import usable_calibration
+    from quant4d.callbacks.io.emd import usable_calibration
     assert usable_calibration(info.calibration).probe_semiangle_mrad == pytest.approx(18.0 * 0.25)
     assert info.origin_spread_px == pytest.approx(0.5)
 
 
 def test_swapping_detector_xy_swaps_the_file_beam():
     """Settings > Misc 'swap diffraction X/Y' re-aligns from the file calibration: its beam must swap too."""
-    from pyquant4d.callbacks.appClass import D
+    from quant4d.callbacks.appClass import D
     d = D(Calib=EmdCalibration(beam_xy=(1.0, 2.0), q_pixel_size=0.5, q_units="mrad"))
     d.swapDiff()
     assert d.Calib.beam_xy == (2.0, 1.0) and d.Calib.q_pixel_size == 0.5
@@ -192,7 +192,7 @@ def test_swapping_detector_xy_swaps_the_file_beam():
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("kv, wavelength_pm", [(300, 1.9687), (200, 2.5079), (100, 3.7014), (80, 4.1757)])
 def test_relativistic_wavelength(kv, wavelength_pm):
-    from pyquant4d.callbacks.io.emd import electron_wavelength_A, mrad_per_inverse_angstrom
+    from quant4d.callbacks.io.emd import electron_wavelength_A, mrad_per_inverse_angstrom
     assert electron_wavelength_A(kv) * 100 == pytest.approx(wavelength_pm, abs=1e-4)
     assert mrad_per_inverse_angstrom(kv) == pytest.approx(10 * wavelength_pm, abs=1e-3)
     with pytest.raises(ValueError):
@@ -200,7 +200,7 @@ def test_relativistic_wavelength(kv, wavelength_pm):
 
 
 def test_inverse_angstrom_units_and_conversion():
-    from pyquant4d.callbacks.io.emd import is_inverse_angstrom, mrad_per_inverse_angstrom, usable_calibration
+    from quant4d.callbacks.io.emd import is_inverse_angstrom, mrad_per_inverse_angstrom, usable_calibration
     assert all(is_inverse_angstrom(u) for u in ("A^-1", "Å^-1", "1/A", " a^-1 "))
     assert not any(is_inverse_angstrom(u) for u in ("mrad", "pixels", "nm"))
     cal = EmdCalibration(q_pixel_size=0.02, q_units="A^-1", probe_semiangle_mrad=20.0)
@@ -216,8 +216,8 @@ def test_binned_masks_raw_or_normalised(tmp_path, normalize, expected):
     path, _ = _write(tmp_path, pixels=pixels, normalize_masks=normalize,
                      images={"M": EmdImage(mask, "dfrn", mask=True), "D": EmdImage(dfrn, "dfrn")})
     with h5py.File(path) as f:
-        np.testing.assert_array_equal(f["pyquant4d_root/datacube/M/data"][()], np.full((3, 4), expected))
-        np.testing.assert_array_equal(f["pyquant4d_root/datacube/D/data"][()], np.full((3, 4), 4.0))  # not a mask
+        np.testing.assert_array_equal(f["quant4d_root/datacube/M/data"][()], np.full((3, 4), expected))
+        np.testing.assert_array_equal(f["quant4d_root/datacube/D/data"][()], np.full((3, 4), 4.0))  # not a mask
 
 
 def test_recorded_voltage_and_scan_step_read_back(tmp_path):
@@ -226,7 +226,7 @@ def test_recorded_voltage_and_scan_step_read_back(tmp_path):
     info = read_emd_info(path)
     assert info.accelerating_voltage_kV == 200.0
     assert (info.calibration.r_pixel_size, info.calibration.r_units) == (0.5, "nm")
-    from pyquant4d.callbacks.io.emd import describe_emd
+    from quant4d.callbacks.io.emd import describe_emd
     text = describe_emd(info)
     assert "Scan step: 0.5 nm" in text and "Accelerating voltage: 200 kV" in text
 
@@ -237,6 +237,6 @@ def test_recorded_voltage_and_scan_step_read_back(tmp_path):
     ("1/nm", None, None), ("A^-1", 0, None), ("pixels", 300, None), ("nm", 300, None),
 ])
 def test_mrad_per_unit(units, kv, expected):
-    from pyquant4d.callbacks.io.emd import mrad_per_unit
+    from quant4d.callbacks.io.emd import mrad_per_unit
     got = mrad_per_unit(units, kv)
     assert got == (None if expected is None else pytest.approx(expected, rel=1e-4))

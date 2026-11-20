@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install pyquant4d and pyright
+      - name: Install quant4d and pyright
         # the package's dependencies are installed so pyright sees numpy/matplotlib/PyQt5/h5py types;
         # pyright is pinned so a new release can't fail CI on unchanged code
         run: pip install -e . --config-settings editable_mode=compat && pip install pyright==1.1.414
@@ -77,16 +77,16 @@ jobs:
             libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
             libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0
 
-      - name: Install pyquant4d (no GPU extras)
+      - name: Install quant4d (no GPU extras)
         run: pip install -e . --config-settings editable_mode=compat
 
       - name: Verify core imports (Linux — with Xvfb)
         if: runner.os == 'Linux'
         run: |
           xvfb-run --auto-servernum python - <<'EOF'
-          import pyquant4d.callbacks.appClass
-          import pyquant4d.callbacks.allFunctions
-          import pyquant4d.annotationsClasses.interactiveAnnulus
+          import quant4d.callbacks.appClass
+          import quant4d.callbacks.allFunctions
+          import quant4d.annotationsClasses.interactiveAnnulus
           print("Core imports OK")
           EOF
 
@@ -94,14 +94,14 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           python -c "
-          import pyquant4d.callbacks.appClass
-          import pyquant4d.callbacks.allFunctions
-          import pyquant4d.annotationsClasses.interactiveAnnulus
+          import quant4d.callbacks.appClass
+          import quant4d.callbacks.allFunctions
+          import quant4d.annotationsClasses.interactiveAnnulus
           print('Core imports OK')
           "
 
       - name: Check entry point exists
-        run: python -c "from pyquant4d.app import main; print('Entry point module OK')"
+        run: python -c "from quant4d.app import main; print('Entry point module OK')"
 
   test:
     name: Test suite (${{ matrix.os }} / Python ${{ matrix.python-version }})
@@ -136,7 +136,7 @@ jobs:
       # Install the package first (pulls in PyQt6, numpy, etc. from pyproject.toml),
       # then add test-only extras explicitly. PyQt6 is listed separately as a
       # belt-and-suspenders measure in case editable-install resolution is incomplete.
-      - name: Install pyquant4d + test dependencies
+      - name: Install quant4d + test dependencies
         run: pip install -e . --config-settings editable_mode=compat && pip install pytest pytest-qt pytest-cov pytest-mock tifffile h5py
 
       - name: Run test suite (Linux)
@@ -173,7 +173,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install pyquant4d + test dependencies
+      - name: Install quant4d + test dependencies
         run: pip install -e . --config-settings editable_mode=compat && pip install pytest pytest-qt pytest-cov tifffile h5py
       - name: Run GPU tests
         # torch backend on cpu + cuda, and every detector mode through the app on GPU vs CPU

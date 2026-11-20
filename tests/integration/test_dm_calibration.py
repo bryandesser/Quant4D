@@ -58,7 +58,7 @@ def test_mrad_scale_applied_centre_from_auto_alignment(app, qapp, tmp_path, synt
 
 
 def test_inverse_nm_converted_at_the_file_voltage(app, qapp, tmp_path, synthetic_data):
-    from pyquant4d.callbacks.io.emd import electron_wavelength_A
+    from quant4d.callbacks.io.emd import electron_wavelength_A
     notes = _import(app, qapp, _dm(tmp_path / "k.dm4", synthetic_data,
                                    [(0.5, "1/nm", 0.0), (0.5, "1/nm", 0.0)], voltage=200000.0))
     assert "converted to mrad at the Accelerating Voltage" in notes

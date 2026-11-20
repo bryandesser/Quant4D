@@ -32,7 +32,7 @@ import numpy as np
 try:
     import torch as _torch
     _TORCH_AVAILABLE = True
-except ImportError:  # torch is an optional dependency (pip install pyquant4d[gpu])
+except ImportError:  # torch is an optional dependency (pip install quant4d[gpu])
     _torch = None
     _TORCH_AVAILABLE = False
 torch: Any = _torch      # only used behind _TORCH_AVAILABLE / resolve_device

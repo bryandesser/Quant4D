@@ -10,7 +10,7 @@ import pytest
 # A class-level `from module import func` makes func a class attribute;
 # calling self.func(a, b) then passes self as the first positional arg,
 # giving TypeError (5 args to a 4-arg function).
-from pyquant4d.callbacks.histBoxWidget import histbox_to_sliders
+from quant4d.callbacks.histBoxWidget import histbox_to_sliders
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ class TestHistboxToSliders:
 class TestHistBoxWidget:
     @pytest.fixture(autouse=True)
     def setup(self, mpl_fig_ax):
-        from pyquant4d.callbacks.histBoxWidget import HistBox
+        from quant4d.callbacks.histBoxWidget import HistBox
         self.fig, self.ax = mpl_fig_ax
         self.ax.set_xlim(0, 1)
         self.ax.set_ylim(0, 100)

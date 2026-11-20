@@ -3,7 +3,7 @@
 Graphical User Interface
 ========================
 
-pyQuant4D presents four main windows that work together to let you load,
+Quant4D presents four main windows that work together to let you load,
 explore, and analyse 4D-STEM data.
 
 Main window
@@ -24,7 +24,7 @@ Import window
 Opened via the Import button.  Lets you:
 
 - Browse for a dataset file (DM4, DM3, raw binary, HDF5, MRC, Medipix), or
-  drop one onto any pyQuant4D window (see below)
+  drop one onto any Quant4D window (see below)
 - Set real-space and diffraction-pattern dimensions
 - Choose a partial frame or pixel sub-range
 - Estimate memory requirements before loading
@@ -36,7 +36,7 @@ Opened via the Import button.  Lets you:
   leaves it unchanged).  A new file fills it in when it carries a scan
   calibration, and starts at ``px`` otherwise:
 
-  - **py4DSTEM / pyQuant4D EMD**: ``R_pixel_size``;
+  - **py4DSTEM / Quant4D EMD**: ``R_pixel_size``;
   - **DM3/DM4**: the calibration of the 3rd dimension (the scan's X; a
     different Y step is noted).  The microscope voltage also fills the
     **Accelerating Voltage**, and the detector calibration (1st dimension) sets
@@ -48,7 +48,7 @@ Opened via the Import button.  Lets you:
     and more;
   - **MRC** files carry no scan step and stay uncalibrated (``px``).
 
-**Drag and drop.**  Drop a dataset file on any pyQuant4D window (main,
+**Drag and drop.**  Drop a dataset file on any Quant4D window (main,
 Import, Settings, Save/Export or an image window) to open it in the Import
 window, exactly as if it had been picked with **Select**: the file type is
 chosen from the extension and the dimensions are read from the file.  Nothing
@@ -61,25 +61,25 @@ Folders are not accepted, and drops are ignored while an import is running.
 
    On Windows, a program started as Administrator (for example from an
    elevated Anaconda Prompt) cannot receive drops from Explorer: the cursor
-   shows a no-entry sign.  Start pyQuant4D from a normal prompt; it prints a
+   shows a no-entry sign.  Start Quant4D from a normal prompt; it prints a
    warning on the console when it runs elevated.  Set
-   ``PYQUANT4D_DEBUG_DROP=1`` before starting it to print every drag event it
+   ``QUANT4D_DEBUG_DROP=1`` before starting it to print every drag event it
    sees.
 
 **py4DSTEM files.**  An EMD 1.0 file written by py4DSTEM (0.14 or later) or by
-pyQuant4D's py4DSTEM export opens as HDF5 with its 4-D ``DataCube`` selected,
+Quant4D's py4DSTEM export opens as HDF5 with its 4-D ``DataCube`` selected,
 and the file notes list its calibration.  After import, in Alignment mode,
 the calibration sets the transmitted beam:
 
 - the beam centre is py4DSTEM's mean origin (``qx0_mean``, ``qy0_mean``;
-  py4DSTEM's ``qx0`` is pyQuant4D's **y**).  If the origin varies over the
-  scan the notes say by how much; pyQuant4D uses the mean;
+  py4DSTEM's ``qx0`` is Quant4D's **y**).  If the origin varies over the
+  scan the notes say by how much; Quant4D uses the mean;
 - a detector pixel size in mrad is used as the diffraction scale.  A size in
   Å⁻¹ (py4DSTEM's ``A^-1``) is converted at the **Accelerating Voltage**:
   θ = λk (small angles; py4DSTEM's k has no 2π), with the relativistic
   wavelength λ = hc / √(E(E + 2mc²)) (1.9687 pm at 300 kV, 2.5079 pm at
   200 kV).  The notes show the converted value and follow the field; a file
-  exported by pyQuant4D fills the field with the voltage it recorded;
+  exported by Quant4D fills the field with the voltage it recorded;
 - the convergence semi-angle sets the angle;
 - the scan step (py4DSTEM's ``R_pixel_size``) fills the **Scan Step** field.
 
@@ -97,17 +97,17 @@ earlier) and anything else py4DSTEM reads; EMD 1.0 files also open through
 the Import window without py4DSTEM.  The whole dataset is loaded (no partial
 import).
 
-**From Python.**  ``pyquant4d.show`` opens pyQuant4D with a py4DSTEM DataCube
+**From Python.**  ``quant4d.show`` opens Quant4D with a py4DSTEM DataCube
 (or any 4-D array ``(ry, rx, py, px)``) already loaded, calibration
 included::
 
-    import py4DSTEM, pyquant4d
+    import py4DSTEM, quant4d
     datacube = py4DSTEM.read("scan.h5")
-    win = pyquant4d.show(datacube)          # kV=200 to convert an Å⁻¹ calibration
+    win = quant4d.show(datacube)          # kV=200 to convert an Å⁻¹ calibration
 
-In a script ``show`` runs until pyQuant4D is closed; in a notebook run
+In a script ``show`` runs until Quant4D is closed; in a notebook run
 ``%gui qt`` first and it returns at once (or pass ``block=False``).  Closing
-the window closes pyQuant4D's windows without ending the Python session.
+the window closes Quant4D's windows without ending the Python session.
 Results (calibration, images, detectors) can be read back into the notebook:
 see :ref:`notebook`.
 

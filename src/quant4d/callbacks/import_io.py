@@ -36,15 +36,15 @@ except ImportError:
 
             @staticmethod
             def get_device_properties(i):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
             @staticmethod
             def get_device_name(i):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
             @staticmethod
             def mem_get_info(i=0):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
         @staticmethod
         def device(x): return x

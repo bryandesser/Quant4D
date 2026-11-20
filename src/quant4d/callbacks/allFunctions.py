@@ -1,18 +1,18 @@
 """Deprecated: the old catch-all module of the MATLAB port.
 
 Every function that used to live here has a proper home now (see the table
-below).  Importing a name from ``pyquant4d.callbacks.allFunctions`` still works, but
+below).  Importing a name from ``quant4d.callbacks.allFunctions`` still works, but
 issues a :class:`DeprecationWarning` naming the module to import it from
-instead.  The module will be removed in pyQuant4D 2.0.
+instead.  The module will be removed in Quant4D 2.0.
 
 Example::
 
-    from pyquant4d.callbacks.allFunctions import plotImage     # deprecated
-    from pyquant4d.callbacks.plotting import plotImage         # use this
+    from quant4d.callbacks.allFunctions import plotImage     # deprecated
+    from quant4d.callbacks.plotting import plotImage         # use this
 
 The data classes that were re-exported here with ``from callbacks.appClass
 import *`` (``D``, ``P``, ...) are served the same way, from
-:mod:`pyquant4d.callbacks.appClass`.
+:mod:`quant4d.callbacks.appClass`.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ import importlib
 import warnings
 from typing import Any
 
-#: The package these modules live in (``pyquant4d``), so the table below survives a rename.
+#: The package these modules live in (``quant4d``), so the table below survives a rename.
 _ROOT = __name__.split(".")[0]
 
 #: Old name → module that defines it now (within the package).
@@ -107,7 +107,7 @@ def __getattr__(name: str) -> Any:
     module = _new_home(name)
     if module is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    warnings.warn(f"{_ROOT}.callbacks.allFunctions.{name} is deprecated and will be removed in pyQuant4D 2.0; "
+    warnings.warn(f"{_ROOT}.callbacks.allFunctions.{name} is deprecated and will be removed in Quant4D 2.0; "
                   f"import it from {_ROOT}.{module} instead", DeprecationWarning, stacklevel=2)
     return getattr(importlib.import_module(f"{_ROOT}.{module}"), name)
 

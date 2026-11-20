@@ -125,7 +125,7 @@ class TestCalculationPolicy:
         assert not np.array_equal(ann.Fig.Real.Image, before)
 
     def test_annotation_release_signals_once_more(self, ann, qapp):
-        from pyquant4d.annotationsClasses.interactiveCircle import InteractiveCircle
+        from quant4d.annotationsClasses.interactiveCircle import InteractiveCircle
         circle = ann.A.adf
         assert isinstance(circle, InteractiveCircle) and not circle.dragging
         hits = []
@@ -177,7 +177,7 @@ class TestMenus:
         monkeypatch.setattr(qtg.QDesktopServices, "openUrl", staticmethod(lambda url: opened.append(url.toString())))
         loaded_app.actionAbout_Quant4D.trigger()
         loaded_app.actionQuant4D_Manual.trigger()
-        assert "GNU General Public License" in shown[0] and opened == ["https://pyquant4d.readthedocs.io"]
+        assert "GNU General Public License" in shown[0] and opened == ["https://quant4d.readthedocs.io"]
 
     def test_always_available_before_import(self, app):
         assert all(a.isEnabled() for a in (app.actionQuit, app.actionAbout_Quant4D, app.actionQuant4D_Manual))
@@ -192,7 +192,7 @@ def test_no_unit_unaware_ui_links():
     """Designer links copy raw values; they must only join widgets that share a unit."""
     import pathlib
     import re
-    ui = (pathlib.Path(__file__).resolve().parents[2] / "src/pyquant4d/gui/Quant4D_FigForm.ui").read_text(encoding="utf-8")
+    ui = (pathlib.Path(__file__).resolve().parents[2] / "src/quant4d/gui/Quant4D_FigForm.ui").read_text(encoding="utf-8")
     pairs = {frozenset(re.findall(r"<(?:sender|receiver)>([^<]*)<", c)) for c in re.findall(r"<connection>(.*?)</connection>", ui, re.S)}
     for w in ("VrApR", "VrApX", "VrApY"):
         assert frozenset((w, w + "_NF")) not in pairs, f"{w} (px) is linked raw to {w}_NF (display unit)"

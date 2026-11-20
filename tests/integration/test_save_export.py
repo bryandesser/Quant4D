@@ -57,7 +57,7 @@ class TestSaveImages:
         _save(save_window, qapp, ["Real"], png=True)
         png = np.array(Image.open(tmp_path / "t_Real.png"))
         assert png.shape == (SCAN_Y, SCAN_X, 3), "one pixel per probe position"
-        from pyquant4d.callbacks.io.export import rgb_as_displayed
+        from quant4d.callbacks.io.export import rgb_as_displayed
         assert np.array_equal(png, rgb_as_displayed(loaded_app.ImageAx.Real))
 
     def test_annotated_png_is_the_figure(self, loaded_app, qapp, save_window, tmp_path):
@@ -166,7 +166,7 @@ class TestExportEmd:
 
     def test_dataset_calibration_and_images(self, annular, qapp, save_window, tmp_path):
         h5py = pytest.importorskip("h5py")
-        from pyquant4d.callbacks.io.emd import is_emd, read_emd_info
+        from quant4d.callbacks.io.emd import is_emd, read_emd_info
         app = annular
         path, _ = self._export(save_window, qapp, tmp_path, ["Real", "Dfrn"])
         assert is_emd(path)
@@ -176,19 +176,19 @@ class TestExportEmd:
         assert np.allclose(cal.beam_xy, app.B0)
         assert (cal.q_pixel_size, cal.q_units) == (pytest.approx(app.mradPx.value()), "mrad")
         assert cal.probe_semiangle_mrad == pytest.approx(app.Alpha.value())
-        assert sorted(info.images) == ["/pyquant4d_root/datacube/Dfrn", "/pyquant4d_root/datacube/Real"]
+        assert sorted(info.images) == ["/quant4d_root/datacube/Dfrn", "/quant4d_root/datacube/Real"]
         with h5py.File(path) as f:
-            dc = f["pyquant4d_root/datacube"]
+            dc = f["quant4d_root/datacube"]
             assert np.array_equal(dc["data"][()], np.asarray(app.Data).reshape(SCAN_Y, SCAN_X, DET_Y, DET_X))
             assert np.allclose(dc["Real/data"][()], app.Fig.Real.Image)
             assert np.allclose(dc["Dfrn/data"][()], app.Fig.Dfrn.Image)
             assert dc["Real"].attrs["python_class"] == "VirtualImage"
             assert dc["Dfrn"].attrs["python_class"] == "DiffractionSlice"
-            meta = f["pyquant4d_root/metadatabundle/pyquant4d"]
+            meta = f["quant4d_root/metadatabundle/quant4d"]
             assert np.allclose(meta["beam_center_xy"][()], app.B0)
 
     def test_binned_calibration(self, annular, qapp, save_window, tmp_path):
-        from pyquant4d.callbacks.io.emd import read_emd_info
+        from quant4d.callbacks.io.emd import read_emd_info
         app = annular
         path, _ = self._export(save_window, qapp, tmp_path, ["Dfrn"], binning=2)
         info = read_emd_info(path)
@@ -202,8 +202,8 @@ class TestExportEmd:
         path, notes = self._export(save_window, qapp, tmp_path, ["Real", "RealMask"])
         assert "Not embedded" in notes and notes.rstrip().endswith("RealMask")
         with h5py.File(path) as f:
-            assert "Real" in f["pyquant4d_root/datacube"]
-            assert "RealMask" not in f["pyquant4d_root/datacube"]
+            assert "Real" in f["quant4d_root/datacube"]
+            assert "RealMask" not in f["quant4d_root/datacube"]
 
     @pytest.mark.parametrize("normalise, top", [(False, 4.0), (True, 1.0)])
     def test_binned_mask_raw_by_default(self, annular, qapp, save_window, tmp_path, normalise, top):
@@ -215,7 +215,7 @@ class TestExportEmd:
             save_window.ExpNormMasks.setChecked(False)
         assert ("normalised, 0 to 1" if normalise else "raw sums, 0 to 4") in notes
         with h5py.File(path) as f:
-            mask = f["pyquant4d_root/datacube/DfrnMask/data"][()]
+            mask = f["quant4d_root/datacube/DfrnMask/data"][()]
         expected = annular.Fig.DfrnMask.Image.reshape(DET_Y // 2, 2, DET_X // 2, 2).sum(axis=(1, 3))
         assert np.allclose(mask, expected / (4.0 if normalise else 1.0))
         assert mask.max() == pytest.approx(top)

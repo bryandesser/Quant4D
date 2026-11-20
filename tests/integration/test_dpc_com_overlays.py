@@ -151,7 +151,7 @@ class TestVirtualApertureCopies:
 
 class TestAutoCurl:
     def test_sets_the_direction_and_closes_the_alignment(self, loaded_app, qapp, monkeypatch):
-        from pyquant4d.callbacks import compute
+        from quant4d.callbacks import compute
         w = loaded_app
         set_mode(w, qapp, "CoMMod")
         try:

@@ -6,7 +6,7 @@ axis_direction_callbacks.
 import numpy as np
 import pytest
 
-from pyquant4d.callbacks.axis_direction import screen_directions
+from quant4d.callbacks.axis_direction import screen_directions
 from conftest import set_mode
 
 

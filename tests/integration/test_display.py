@@ -141,7 +141,7 @@ class TestHistogram:
 
     def test_dragging_histbox_sets_sliders(self, real, qapp):
         """Moving the box (as a drag would) feeds brightness/contrast back to the sliders."""
-        from pyquant4d.callbacks.histBoxWidget import histbox_to_sliders
+        from quant4d.callbacks.histBoxWidget import histbox_to_sliders
         im = real.Fig.Real.Image
         lo, hi = np.nanmin(im), np.nanmax(im)
         lo2, hi2 = lo + 0.1 * (hi - lo), hi - 0.3 * (hi - lo)
@@ -172,7 +172,7 @@ class TestHoverReadout:
     @pytest.mark.parametrize("id", ["Real", "Dfrn"])
     def test_value_at_far_corner(self, real, qapp, id):
         from matplotlib.backend_bases import MouseEvent
-        from pyquant4d.callbacks.guiClass import NavigationToolbar
+        from quant4d.callbacks.guiClass import NavigationToolbar
         fig = real.Fig[id]
         fig.canvas.draw()
         im = fig.Image
@@ -290,7 +290,7 @@ class TestHistogramFollowsTheImage:
     was only repainted when the display limits changed."""
 
     def test_new_image_same_range_repaints_and_keeps_the_box(self, loaded_app, qapp, monkeypatch):
-        from pyquant4d.callbacks.plotting import plotImage
+        from quant4d.callbacks.plotting import plotImage
         w = loaded_app
         set_mode(w, qapp, "AnnMod")
         sw = w.SettingsWindow

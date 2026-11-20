@@ -4,7 +4,7 @@ Two fields (Bryan's choice, option D):
 
 * **Import window, Scan Step** — the step of the *file* (distance between
   neighbouring probe positions), filled in from a calibrated py4DSTEM or
-  pyQuant4D file, ``px`` (uncalibrated) otherwise.  Partial import multiplies
+  Quant4D file, ``px`` (uncalibrated) otherwise.  Partial import multiplies
   it by the sampling step; cropping leaves it unchanged.
 * **Settings > Windows > Real-space, Scan Step** — the step of the *loaded* data
   (``D.ScanStep``/``D.ScanUnits``), editable after import.  Export multiplies

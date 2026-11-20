@@ -1,17 +1,17 @@
-"""Results of a pyQuant4D session, for Python and notebooks (py4DSTEM conventions).
+"""Results of a Quant4D session, for Python and notebooks (py4DSTEM conventions).
 
-``pyquant4d.show(datacube)`` returns the main window; these functions are its
+``quant4d.show(datacube)`` returns the main window; these functions are its
 methods ``calibration``, ``apply_calibration``, ``image``, ``images`` and ``mask``:
 
->>> win = pyquant4d.show(dc)            # align, choose detectors... in the UI
+>>> win = quant4d.show(dc)            # align, choose detectors... in the UI
 >>> win.apply_calibration(dc)           # beam centre, detector scale, semi-angle, scan step
 >>> adf = win.image("Real")             # the real-space image as shown, (Rx, Ry)
 >>> det = win.mask()                    # the current detector, (Qx, Qy)
 
-Arrays come back in py4DSTEM's index order: pyQuant4D's real-space images are
+Arrays come back in py4DSTEM's index order: Quant4D's real-space images are
 (ry, rx) = py4DSTEM's (Rx, Ry), its patterns (py, px) = (Qx, Qy), so no
 transposes are needed.  Coordinates are swapped where they appear: py4DSTEM's
-``qx0`` is pyQuant4D's beam **y**.
+``qx0`` is Quant4D's beam **y**.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ _R_UNITS = {"A": "A", "nm": "nm", "pm": "pm", "um": "um", "mm": "mm", "pixels": 
 
 def _need_data(self) -> None:
     if getattr(self, "Data", None) is None or getattr(self, "D", None) is None:
-        raise RuntimeError("no dataset is loaded in pyQuant4D")
+        raise RuntimeError("no dataset is loaded in Quant4D")
 
 
 def calibration(self) -> dict:
@@ -47,7 +47,7 @@ def calibration(self) -> dict:
     units = str(d.ScanUnits or "pixels")
     calibrated_r = units != "pixels"
     return {
-        "qx0_mean": by,                                   # py4DSTEM Qx = rows = pyQuant4D y
+        "qx0_mean": by,                                   # py4DSTEM Qx = rows = Quant4D y
         "qy0_mean": bx,
         "probe_semiangle": float(self.TBR.value()),
         "convergence_semiangle_mrad": float(self.Alpha.value()),
@@ -68,18 +68,18 @@ def apply_calibration(self, datacube, *, scan_step: bool = True) -> dict:
     (``probe_semiangle``, pixels) and the origin.  Origin maps the DataCube
     already has (e.g. a fitted descan) keep their shape and are shifted so
     their mean is the new centre; without maps, constant ones are written.
-    The scan step is written too if it is set in pyQuant4D (``scan_step=False``
+    The scan step is written too if it is set in Quant4D (``scan_step=False``
     leaves the DataCube's).  The DataCube must have the loaded dataset's shape
     (pixel coordinates refer to it).
     """
     cal = calibration(self)
     shape = tuple(np.shape(getattr(datacube, "data", datacube)))
     if shape != cal["shape"]:
-        raise ValueError(f"the DataCube's shape {shape} is not the dataset's in pyQuant4D {cal['shape']} "
+        raise ValueError(f"the DataCube's shape {shape} is not the dataset's in Quant4D {cal['shape']} "
                          "(cropped or binned on import?): its pixel coordinates would not match")
     if not cal["aligned"]:
         import warnings
-        warnings.warn("the transmitted beam has not been aligned in pyQuant4D yet", stacklevel=2)
+        warnings.warn("the transmitted beam has not been aligned in Quant4D yet", stacklevel=2)
     c = datacube.calibration
     c.set_Q_pixel_size(cal["Q_pixel_size"])
     c.set_Q_pixel_units("mrad")

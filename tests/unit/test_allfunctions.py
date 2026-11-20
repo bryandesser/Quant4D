@@ -1,11 +1,11 @@
-"""pyquant4d.callbacks.allFunctions is a deprecated alias table (removal in 2.0)."""
+"""quant4d.callbacks.allFunctions is a deprecated alias table (removal in 2.0)."""
 import importlib
 import pathlib
 import warnings
 
 import pytest
 
-import pyquant4d.callbacks.allFunctions as af
+import quant4d.callbacks.allFunctions as af
 
 SRC = pathlib.Path(__file__).resolve().parents[2] / "src"
 
@@ -19,15 +19,15 @@ def test_alias_resolves_with_warning(name):
 
 def test_from_import_still_works():
     with pytest.warns(DeprecationWarning):
-        from pyquant4d.callbacks.allFunctions import plotImage
-    from pyquant4d.callbacks.plotting import plotImage as real
+        from quant4d.callbacks.allFunctions import plotImage
+    from quant4d.callbacks.plotting import plotImage as real
     assert plotImage is real
 
 
 def test_appclass_names_served():
-    with pytest.warns(DeprecationWarning, match="pyquant4d.callbacks.appClass"):
+    with pytest.warns(DeprecationWarning, match="quant4d.callbacks.appClass"):
         D = af.D
-    from pyquant4d.callbacks.appClass import D as real
+    from quant4d.callbacks.appClass import D as real
     assert D is real
 
 

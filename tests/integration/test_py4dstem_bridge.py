@@ -1,4 +1,4 @@
-"""py4DSTEM-only entry points (callbacks.py4dstem_bridge, pyquant4d.show).
+"""py4DSTEM-only entry points (callbacks.py4dstem_bridge, quant4d.show).
 
 The menu item is hidden without py4DSTEM; arrays load without it.  Tests that
 read or build py4DSTEM objects are skipped when py4DSTEM is not installed.
@@ -41,7 +41,7 @@ def _py4dstem_cube(synthetic_data):
 class TestMenu:
     def test_visible_with_py4dstem_only(self, app, monkeypatch):
         import importlib.util
-        from pyquant4d.callbacks.py4dstem_bridge import connectPy4DSTEM
+        from quant4d.callbacks.py4dstem_bridge import connectPy4DSTEM
         action = app.actionOpen_with_py4DSTEM
         assert action.isVisible() == (py4DSTEM is not None)
         # available before any import (Qt reports a hidden action as disabled, so only when shown)
@@ -56,7 +56,7 @@ class TestMenu:
 
 class TestLoadArray:
     def test_array_loads_like_an_import(self, app, qapp, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import loadDataCube
+        from quant4d.callbacks.py4dstem_bridge import loadDataCube
         loadDataCube(app, _cube(synthetic_data), name="from_array")
         _loaded(app, qapp)
         assert app.Data.shape == (SCAN_X * SCAN_Y, DET_X * DET_Y)
@@ -66,7 +66,7 @@ class TestLoadArray:
         assert app.windowTitle() == "from_array"
 
     def test_big_endian_and_odd_types(self, app, qapp, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import loadDataCube
+        from quant4d.callbacks.py4dstem_bridge import loadDataCube
         loadDataCube(app, _cube(synthetic_data).astype(">f8"))
         _loaded(app, qapp)
         assert app.Data.dtype.isnative and np.allclose(app.Data, synthetic_data)
@@ -75,7 +75,7 @@ class TestLoadArray:
         assert app.Data.dtype == np.float32
 
     def test_not_4d(self, app, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import loadDataCube
+        from quant4d.callbacks.py4dstem_bridge import loadDataCube
         with pytest.raises(ValueError):
             loadDataCube(app, synthetic_data)
 
@@ -83,7 +83,7 @@ class TestLoadArray:
 @needs_py4dstem
 class TestPy4DSTEM:
     def test_calibration_swapped_to_xy(self, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import calibrationFromPy4DSTEM
+        from quant4d.callbacks.py4dstem_bridge import calibrationFromPy4DSTEM
         cal = calibrationFromPy4DSTEM(_py4dstem_cube(synthetic_data))
         assert cal.beam_xy == (10.0, 7.0)
         assert (cal.q_pixel_size, cal.q_units, cal.probe_semiangle_mrad) == (0.5, "mrad", 4.0)
@@ -91,12 +91,12 @@ class TestPy4DSTEM:
         assert (cal.r_pixel_size, cal.r_units) == (2.5, "A")
 
     def test_uncalibrated_cube(self, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import calibrationFromPy4DSTEM
+        from quant4d.callbacks.py4dstem_bridge import calibrationFromPy4DSTEM
         cal = calibrationFromPy4DSTEM(py4DSTEM.DataCube(_cube(synthetic_data).copy()))
         assert cal.beam_xy is None and cal.probe_semiangle_mrad is None
 
     def test_datacube_sets_the_beam(self, app, qapp, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import loadDataCube
+        from quant4d.callbacks.py4dstem_bridge import loadDataCube
         loadDataCube(app, _py4dstem_cube(synthetic_data))
         _loaded(app, qapp)
         assert (app.TBX.value(), app.TBY.value()) == pytest.approx((10.0, 7.0))
@@ -104,7 +104,7 @@ class TestPy4DSTEM:
         assert (app.D.ScanStep, app.D.ScanUnits) == (2.5, "A")
 
     def test_open_with_reader(self, app, qapp, tmp_path, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import openWithPy4DSTEM
+        from quant4d.callbacks.py4dstem_bridge import openWithPy4DSTEM
         path = str(tmp_path / "saved_by_py4dstem.h5")
         py4DSTEM.save(path, _py4dstem_cube(synthetic_data), mode="o")
         assert openWithPy4DSTEM(app, path)
@@ -114,22 +114,22 @@ class TestPy4DSTEM:
         assert app.D.filePath == path and app.SaveWindow.SaveImgPrefix.text() == "saved_by_py4dstem_"
 
     def test_unreadable_file(self, app, tmp_path):
-        from pyquant4d.callbacks.py4dstem_bridge import openWithPy4DSTEM
+        from quant4d.callbacks.py4dstem_bridge import openWithPy4DSTEM
         bad = tmp_path / "bad.h5"
         bad.write_bytes(b"not hdf5")
         assert not openWithPy4DSTEM(app, str(bad))
         assert app.Data is None
 
     def test_find_datacube_in_lists_and_trees(self, synthetic_data):
-        from pyquant4d.callbacks.py4dstem_bridge import findDataCube
+        from quant4d.callbacks.py4dstem_bridge import findDataCube
         dc = _py4dstem_cube(synthetic_data)
         assert findDataCube(dc) is dc and findDataCube([None, dc]) is dc
         assert findDataCube(None) is None and findDataCube([1, "x"]) is None
 
 
 def test_show_returns_the_window_without_blocking(qapp, synthetic_data):
-    import pyquant4d
-    win = pyquant4d.show(_cube(synthetic_data), name="notebook", block=False)
+    import quant4d
+    win = quant4d.show(_cube(synthetic_data), name="notebook", block=False)
     try:
         _loaded(win, qapp)
         assert win.embedded and win.windowTitle() == "notebook"

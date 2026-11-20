@@ -2,7 +2,7 @@
 
 The offset-based reader (:mod:`callbacks.io.raw`) only works for datasets
 stored contiguously and uncompressed.  Chunked or compressed datasets (the
-usual case for files written by py4DSTEM, HyperSpy, LiberTEM and pyQuant4D's
+usual case for files written by py4DSTEM, HyperSpy, LiberTEM and Quant4D's
 own exporter with compression) have no single data offset, so they are read
 through h5py instead, with the same cropping/binning/sampling as any other
 format: :class:`H5Frames` presents the dataset as the ``(n_frames, n_pixels)``

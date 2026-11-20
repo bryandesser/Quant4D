@@ -1,5 +1,5 @@
 """
-Real-Space ROI callbacks for pyQuant4D.
+Real-Space ROI callbacks for Quant4D.
 
 Handles all interactions with the real-space ROI controls:
   - RealROIShape dropdown  (full / point / ellipse / rectangle / poly / file)

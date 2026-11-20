@@ -17,11 +17,11 @@ except ImportError:
 
             @staticmethod
             def get_device_properties(i):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
             @staticmethod
             def get_device_name(i):
-                raise RuntimeError("torch not installed; install pyquant4d[gpu]")
+                raise RuntimeError("torch not installed; install quant4d[gpu]")
 
         @staticmethod
         def device(x): return x
@@ -352,7 +352,7 @@ def startupFcn(self):
         if self.C.nGPU == 0:  # no GPU devices (or no CUDA-enabled torch)
             self.ImportWindow.ImpGPU.addItem('No GPU found.', None)   # None = CPU (it was device 0)
             self.ImportWindow.ImpGPU.setToolTip("No CUDA GPU found. GPU acceleration needs PyTorch with CUDA "
-                                                "(pip install pyquant4d[gpu]).")
+                                                "(pip install quant4d[gpu]).")
         else:  # 1 or more devices found
             maxmem = 0
             for i in np.arange(0, self.C.nGPU):

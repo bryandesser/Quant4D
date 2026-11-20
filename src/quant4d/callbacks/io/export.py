@@ -169,7 +169,7 @@ def write_hdf5(path: str, data: np.ndarray, scan, detector, frames: Region, pixe
     """Write the selection to an HDF5 file.
 
     The dataset ``/data`` has shape ``(NFrY, NFrX, NPxY, NPxX)``, is stored
-    contiguously and uncompressed (so pyQuant4D can import it again by
+    contiguously and uncompressed (so Quant4D can import it again by
     offset), and *metadata* is written as attributes of the group
     ``/metadata``.
 

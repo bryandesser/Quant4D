@@ -1,17 +1,17 @@
-"""pyQuant4D from Python: ``pyquant4d.show(datacube)``.
+"""Quant4D from Python: ``quant4d.show(datacube)``.
 
->>> import py4DSTEM, pyquant4d
+>>> import py4DSTEM, quant4d
 >>> datacube = py4DSTEM.read("scan.h5")
->>> win = pyquant4d.show(datacube)          # opens pyQuant4D with the data loaded
+>>> win = quant4d.show(datacube)          # opens Quant4D with the data loaded
 
 In a notebook, run ``%gui qt`` first: ``show`` then returns at once and the
 window stays live.  Read the results back from the window afterwards:
 
 >>> win.apply_calibration(datacube)        # beam centre, scale, semi-angle, scan step
->>> adf = win.image("Real")                # (Rx, Ry), as shown in pyQuant4D
+>>> adf = win.image("Real")                # (Rx, Ry), as shown in Quant4D
 >>> detector = win.mask()                  # the current detector, (Qx, Qy)
   In a plain script, ``show`` runs the Qt event loop until
-pyQuant4D is closed (pass ``block=False`` to return the window instead).
+Quant4D is closed (pass ``block=False`` to return the window instead).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ __all__ = ["show", "__version__"]
 
 try:
     from importlib.metadata import version as _version
-    __version__ = _version("pyquant4d")
+    __version__ = _version("quant4d")
 except Exception:              # running from a source checkout without installing
     __version__ = "development version"
 
@@ -36,16 +36,16 @@ def _event_loop_running() -> bool:
 
 def show(data, calibration=None, *, name: str = "py4DSTEM DataCube", kV: float | None = None,
          block: bool | None = None, copy: bool = True):
-    """Open pyQuant4D with *data* loaded and return its main window.
+    """Open Quant4D with *data* loaded and return its main window.
 
     Parameters
     ----------
     data : py4DSTEM.DataCube or array of shape (ry, rx, py, px)
         A DataCube brings its calibration (beam centre, detector scale,
         convergence angle, scan step); py4DSTEM's (Rx, Ry, Qx, Qy) axes are
-        pyQuant4D's (ry, rx, py, px), so the array is used as it is.
+        Quant4D's (ry, rx, py, px), so the array is used as it is.
     calibration : callbacks.io.emd.EmdCalibration, optional
-        Overrides the DataCube's calibration (pyQuant4D's (x, y) order).
+        Overrides the DataCube's calibration (Quant4D's (x, y) order).
     name : str
         Window title and file-name prefix for saving.
     kV : float, optional
@@ -71,12 +71,12 @@ def show(data, calibration=None, *, name: str = "py4DSTEM DataCube", kV: float |
     os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
     from PyQt5 import QtWidgets as qtw
 
-    app = qtw.QApplication.instance() or qtw.QApplication(sys.argv[:1] or ["pyquant4d"])
+    app = qtw.QApplication.instance() or qtw.QApplication(sys.argv[:1] or ["quant4d"])
     from .callbacks.guiClass import MainWindow
     from .callbacks.py4dstem_bridge import loadDataCube
 
     win = MainWindow()
-    win.embedded = True            # closing it closes pyQuant4D's windows, not the Python session
+    win.embedded = True            # closing it closes Quant4D's windows, not the Python session
     win.show()
     loadDataCube(win, data, name=name, calibration=calibration, kV=kV, copy=copy)
     if block is None:

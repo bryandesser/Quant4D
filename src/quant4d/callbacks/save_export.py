@@ -302,11 +302,11 @@ def _metadata(self, frames: ex.Region, pixels: ex.Region) -> dict:
     """What is known about the dataset and the export, stored with HDF5 exports."""
     try:
         from importlib.metadata import version
-        pkg_version = version("pyquant4d")
+        pkg_version = version("quant4d")
     except Exception:
         pkg_version = "unknown"
     meta = {
-        "software": f"pyQuant4D {pkg_version}",
+        "software": f"Quant4D {pkg_version}",
         "source_file": self.D.filePath,
         "source_scan_xy": np.array([self.D.NFrX, self.D.NFrY]),
         "source_detector_xy": np.array([self.D.NPxX, self.D.NPxY]),

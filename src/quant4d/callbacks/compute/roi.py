@@ -142,7 +142,7 @@ def _max_std_on_device(data, w, mode, device) -> Any:
 def combine_frames(data: np.ndarray, weights: np.ndarray, mode: str = "sum", device: Any = None) -> np.ndarray:
     """Combine the diffraction patterns of the frames selected by *weights*.
 
-    Modes (MATLAB Quant4D's diffraction dropdown; MATLAB defaults to ``sum``, pyQuant4D to ``mean``):
+    Modes (MATLAB Quant4D's diffraction dropdown; MATLAB defaults to ``sum``, this version to ``mean``):
 
     * ``sum`` — ``weights @ data``;  ``mean`` — that divided by ``weights.sum()``;
     * ``sqrt``, ``ln``, ``log10`` — of the sum (``sqrt`` of negatives is 0; the logarithms are

@@ -155,8 +155,8 @@ class TestCompressedHDF5:
 class TestMemoryWarning:
     def test_asked_once_on_import(self, app, qapp, sample_raw_file, monkeypatch):
         """Typing dimensions only notes it; clicking Import asks once, and Cancel keeps the window."""
-        import pyquant4d.callbacks.importCallbacks as ic
-        import pyquant4d.callbacks.import_io as io_
+        import quant4d.callbacks.importCallbacks as ic
+        import quant4d.callbacks.import_io as io_
         asked = []
         monkeypatch.setattr(io_, "notifDLG", lambda *a, **k: asked.append(a[3]) or "")
         monkeypatch.setattr(ic, "notifDLG", lambda *a, **k: asked.append(a[3]) or "Cancel")
