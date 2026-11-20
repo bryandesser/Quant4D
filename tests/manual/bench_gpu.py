@@ -15,7 +15,7 @@ import time
 
 import numpy as np
 
-from callbacks import compute
+from quant4d.callbacks import compute
 
 
 def _time(fn, repeats=3):

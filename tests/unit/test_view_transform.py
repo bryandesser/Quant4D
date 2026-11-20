@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pytest  # noqa: E402
 
-from callbacks.axis_direction import install_view_transform, mirrored, rotate_about, screen_directions, set_view  # noqa: E402
+from quant4d.callbacks.axis_direction import install_view_transform, mirrored, rotate_about, screen_directions, set_view  # noqa: E402
 
 NY, NX = 16, 24
 

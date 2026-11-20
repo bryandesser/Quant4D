@@ -125,7 +125,7 @@ def test_custom_polygon_is_editable_and_rotatable(loaded_app, qapp):
     """The custom-detector polygon: the drawing tool's outline is removed once the polygon is
     closed, and the mask follows its rotation handle."""
     from matplotlib.backend_bases import MouseEvent
-    from callbacks import compute
+    from quant4d.callbacks import compute
     from conftest import DET_X, DET_Y, just_outside, turned
     w = loaded_app
     set_mode(w, qapp, "CustMod")

@@ -29,7 +29,7 @@ def test_image_windows_start_beside_settings_at_the_top(app, qapp, sample_raw_fi
     # (side by side when the screen is wide enough; this offscreen one is 800 px)
     assert F.Dfrn.frameGeometry().top() <= top + 5 and F.Real.frameGeometry().top() <= top + 5
     # the others staggered behind the primary image of their column, each one step further out
-    from callbacks.window_manager import STAGGER
+    from quant4d.callbacks.window_manager import STAGGER
     for space in ("Dfrn", "Real"):
         corners = [(F[id].x(), F[id].y()) for id in STAGGER[space]]
         assert len(set(corners)) == len(corners), space                             # none hidden exactly
@@ -39,7 +39,7 @@ def test_image_windows_start_beside_settings_at_the_top(app, qapp, sample_raw_fi
     assert F.Dfrn.width() == F.Real.width() and sw.WdwWDfrn.value() == sw.WdwWReal.value()
     moved = F.Real.geometry().translated(40, 40)
     F.Real.setGeometry(moved)
-    from callbacks.window_manager import placeImageWindows
+    from quant4d.callbacks.window_manager import placeImageWindows
     placeImageWindows(app)                                     # once only: a later import keeps it
     assert F.Real.geometry() == moved
 
@@ -124,7 +124,7 @@ class TestCrossAlign:
         # move one end of each line: the beam follows the new crossing
         _drag(w.Fig.Dfrn, lines[0].ends[0], lines[0].ends[0] + [2, 0])
         _drag(w.Fig.Dfrn, lines[1].ends[1], lines[1].ends[1] + [0, 3])
-        from annotationsClasses.interactiveLine import intersection
+        from quant4d.annotationsClasses.interactiveLine import intersection
         p = intersection(lines[0].ends, lines[1].ends)
         assert np.allclose(w.B0, p, atol=1e-3)
         assert np.allclose([w.TBX.value(), w.TBY.value()], p, atol=0.01)
@@ -149,7 +149,7 @@ class TestCrossAlign:
         assert all(line.line.axes is None for line in lines)
 
     def test_intersection(self):
-        from annotationsClasses.interactiveLine import intersection
+        from quant4d.annotationsClasses.interactiveLine import intersection
         assert np.allclose(intersection(np.array([[0, 0], [2, 2]]), np.array([[0, 2], [2, 0]])), [1, 1])
         assert intersection(np.array([[0, 0], [1, 0]]), np.array([[0, 1], [1, 1]])) is None
 
@@ -173,7 +173,7 @@ def _new(app, qapp, button):
 
 
 def test_polygon_outline_moves_with_the_drag(cust, qapp):
-    from annotationsClasses.interactivePolygon import InteractivePolygon
+    from quant4d.annotationsClasses.interactivePolygon import InteractivePolygon
     fig = cust.Fig.Dfrn
     poly = InteractivePolygon(fig.ax, [[10, 10], [20, 10], [15, 20]], color="r")
     outline, = fig.ax.plot([10, 20], [10, 10], ":")
@@ -277,7 +277,7 @@ class TestCentreAxis:
 
 
 def axisMenuEnabled(app, cmask):
-    from callbacks.customDetectorCallbacks import axisMenu
+    from quant4d.callbacks.customDetectorCallbacks import axisMenu
     menu = axisMenu(app, cmask)                 # (kept: its actions go with it)
     return menu.actions()[0].isEnabled()
 
@@ -430,7 +430,7 @@ def test_point_follows_the_mouse_over_many_motions(cust, qapp):
 @pytest.mark.parametrize("button", ["CDNewBandpass", "CDNewGrid", "CDNewWedge"])
 def test_axis_drag_leaves_nothing_behind(cust, qapp, button):
     """Moving a mask by its axis over several motions: everything ends where a fresh drawing would put it."""
-    from callbacks.customDetectorCallbacks import _axis, _draw
+    from quant4d.callbacks.customDetectorCallbacks import _axis, _draw
     cmask = _new(cust, qapp, button)
     cust.CDAxis.click()
     qapp.processEvents()

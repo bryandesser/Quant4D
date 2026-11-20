@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 from PyQt5 import QtWidgets as qtw
 
-from callbacks.signals import all_signals_blocked, signals_blocked
+from quant4d.callbacks.signals import all_signals_blocked, signals_blocked
 
 
 def test_signals_blocked_suppresses_and_restores(qapp):

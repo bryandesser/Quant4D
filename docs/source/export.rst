@@ -8,13 +8,13 @@ Open the **Save / Export** panel from the toolbar.
 Launching the application
 -------------------------
 
-After installation, launch pyQuant4D from the command line::
+After installation, launch Quant4D from the command line::
 
     quant4d
 
-or run directly from the repository root::
+or, equivalently::
 
-    python Quant4D_app.py
+    python -m quant4d
 
 Save images
 -----------
@@ -39,7 +39,7 @@ binned sums cannot overflow.
 Formats:
 
 - **HDF5** (``.h5``) — the dataset ``/data``, stored contiguously and
-  uncompressed (so pyQuant4D can import it again quickly), with the session
+  uncompressed (so Quant4D can import it again quickly), with the session
   (source file, export region, beam centre, ``mrad``/px, convergence angle)
   as attributes of ``/metadata``.
 - **Raw binary** (``.raw``) — headerless, little- or big-endian, frame after
@@ -82,16 +82,16 @@ stay as they are.  In py4DSTEM::
 
     import py4DSTEM
     datacube = py4DSTEM.read("export.h5")
-    datacube.calibration.get_origin_mean()   # (row, column) = pyQuant4D (y, x)
+    datacube.calibration.get_origin_mean()   # (row, column) = Quant4D (y, x)
     datacube.tree("Real")                    # an embedded image
 
 .. note::
 
    py4DSTEM names its axes in matrix order: ``(Rx, Ry, Qx, Qy)`` is
-   pyQuant4D's ``(ry, rx, py, px)``.  The array is the same, but every
-   coordinate pair swaps: py4DSTEM's ``qx0`` is pyQuant4D's beam **y**.
+   Quant4D's ``(ry, rx, py, px)``.  The array is the same, but every
+   coordinate pair swaps: py4DSTEM's ``qx0`` is Quant4D's beam **y**.
 
-The pyQuant4D session record is stored alongside, in the metadata bundle
-``pyquant4d`` (it includes the scan step and the accelerating voltage, also
+The Quant4D session record is stored alongside, in the metadata bundle
+``quant4d`` (it includes the scan step and the accelerating voltage, also
 written to the plain HDF5 export's ``/metadata``).  A progress indicator is
 shown during export.

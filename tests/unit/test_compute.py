@@ -8,8 +8,8 @@ obviously-correct reference written out in the test.
 import numpy as np
 import pytest
 
-from callbacks import compute
-from callbacks.compute import backend
+from quant4d.callbacks import compute
+from quant4d.callbacks.compute import backend
 
 NFY, NFX, NPY, NPX = 3, 5, 8, 12
 CENTER = (5.3, 2.6)       # (x, y)

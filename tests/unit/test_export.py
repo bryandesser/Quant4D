@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from callbacks.io import export as ex
-from callbacks.io.export import Region
+from quant4d.callbacks.io import export as ex
+from quant4d.callbacks.io.export import Region
 
 NFX, NFY, NPX, NPY = 5, 3, 12, 8
 SCAN, DET = (NFX, NFY), (NPX, NPY)
@@ -114,7 +114,7 @@ def test_write_hdf5_is_contiguous_with_metadata(tmp_path, data, cube):
 
 
 def test_write_hdf5_offset_reads_back_as_raw(tmp_path, data, cube):
-    """pyQuant4D imports HDF5 by offset, so the bytes must be a plain C-order array."""
+    """Quant4D imports HDF5 by offset, so the bytes must be a plain C-order array."""
     h5py = pytest.importorskip("h5py")
     path = str(tmp_path / "x.h5")
     ex.write_hdf5(path, data, SCAN, DET, ex.full_region(SCAN), ex.full_region(DET))

@@ -14,8 +14,8 @@ Q_MRAD, SEMI = 0.5, 4.0          # disk radius 8 px
 
 
 def _write(path, data, **cal):
-    from callbacks.io.emd import EmdCalibration, EmdImage, write_emd
-    from callbacks.io.export import full_region
+    from quant4d.callbacks.io.emd import EmdCalibration, EmdImage, write_emd
+    from quant4d.callbacks.io.export import full_region
     write_emd(str(path), data, (SCAN_X, SCAN_Y), (DET_X, DET_Y),
               full_region((SCAN_X, SCAN_Y)), full_region((DET_X, DET_Y)),
               EmdCalibration(**cal), {"ADF": EmdImage(np.ones((SCAN_Y, SCAN_X)))})
@@ -52,9 +52,9 @@ def _beam(win):
 
 def test_notes_describe_the_datacube(app, qapp, emd_file):
     iw = _open(app, qapp, emd_file)
-    assert iw.ImpSubImg.currentText() == "/pyquant4d_root/datacube/data"
+    assert iw.ImpSubImg.currentText() == "/quant4d_root/datacube/data"
     notes = iw.ImpFileMetaNotes.toPlainText()
-    assert "py4DSTEM DataCube (written by pyQuant4D)" in notes
+    assert "py4DSTEM DataCube (written by Quant4D)" in notes
     assert "Beam centre (x, y) = (10.00, 7.00) px" in notes and "0.5 mrad/px" in notes
     assert "4 mrad" in notes and "Images: ADF" in notes and "applied" in notes
 
@@ -96,7 +96,7 @@ def test_angle_only_keeps_the_fitted_radius(app, qapp, tmp_path, synthetic_data)
 
 def test_inverse_angstrom_converted_at_the_voltage(app, qapp, tmp_path, synthetic_data):
     """A py4DSTEM scale in 1/Å becomes mrad with the relativistic wavelength at the field's voltage."""
-    from callbacks.io.emd import electron_wavelength_A
+    from quant4d.callbacks.io.emd import electron_wavelength_A
     k = 0.02                                                     # 1/Å per pixel
     path = _write(tmp_path / "inv_a.h5", synthetic_data, beam_xy=BEAM_XY, q_pixel_size=k,
                   q_units="A^-1", probe_semiangle_mrad=SEMI)
@@ -128,10 +128,10 @@ def test_plain_hdf5_is_unchanged(app, qapp, sample_hdf5_file):
 
 def test_other_dataset_of_the_file_is_not_calibrated(app, qapp, emd_file):
     """Picking the ADF image (not the DataCube) does not carry the DataCube's calibration."""
-    from callbacks.import_io import gatherImportOptions
+    from quant4d.callbacks.import_io import gatherImportOptions
     iw = _open(app, qapp, emd_file)
     assert gatherImportOptions(app, True).Calib is not None
-    iw.ImpSubImg.setCurrentIndex(iw.ImpSubImg.findText("/pyquant4d_root/datacube/ADF/data"))
+    iw.ImpSubImg.setCurrentIndex(iw.ImpSubImg.findText("/quant4d_root/datacube/ADF/data"))
     qapp.processEvents()
     assert gatherImportOptions(app, True).Calib is None
     assert "py4DSTEM" not in iw.ImpFileMetaNotes.toPlainText()
@@ -139,7 +139,7 @@ def test_other_dataset_of_the_file_is_not_calibrated(app, qapp, emd_file):
 
 def test_round_trip_through_export(loaded_app, qapp, tmp_path):
     """Export as py4DSTEM EMD, import the file again: same beam, scale and angle."""
-    from callbacks.guiClass import MainWindow
+    from quant4d.callbacks.guiClass import MainWindow
     from conftest import set_mode
     set_mode(loaded_app, qapp, "AnnMod")
     saved = _beam(loaded_app)
@@ -184,8 +184,8 @@ def test_round_trip_through_export(loaded_app, qapp, tmp_path):
 
 
 def test_voltage_recorded_in_the_file_fills_the_field(app, qapp, tmp_path, synthetic_data):
-    from callbacks.io.emd import EmdCalibration, write_emd
-    from callbacks.io.export import full_region
+    from quant4d.callbacks.io.emd import EmdCalibration, write_emd
+    from quant4d.callbacks.io.export import full_region
     path = tmp_path / "kv.h5"
     write_emd(str(path), synthetic_data, (SCAN_X, SCAN_Y), (DET_X, DET_Y),
               full_region((SCAN_X, SCAN_Y)), full_region((DET_X, DET_Y)),
@@ -199,7 +199,7 @@ def test_scan_step_follows_sampling_on_import_and_export(app, qapp, tmp_path, sy
     """0.5 nm steps, imported every 2nd position -> 1 nm; exported every 2nd of those -> 2 nm.
     Cropping (start points) leaves the step alone."""
     h5py = pytest.importorskip("h5py")
-    from callbacks.io.emd import read_emd_info
+    from quant4d.callbacks.io.emd import read_emd_info
     path = _write(tmp_path / "step.emd", synthetic_data, r_pixel_size=0.5, r_units="nm")
     iw = _open(app, qapp, path)
     assert "Scan step: 0.5 nm" in iw.ImpFileMetaNotes.toPlainText()
@@ -229,7 +229,7 @@ def test_scan_step_follows_sampling_on_import_and_export(app, qapp, tmp_path, sy
     cal = read_emd_info(str(tmp_path / "step_out.h5")).calibration
     assert (cal.r_pixel_size, cal.r_units) == (2.0, "nm")
     with h5py.File(tmp_path / "step_out.h5") as f:
-        meta = f["pyquant4d_root/metadatabundle/pyquant4d"]
+        meta = f["quant4d_root/metadatabundle/quant4d"]
         assert meta["scan_step"][()] == 2.0 and meta["accelerating_voltage_kV"][()] == app.D.kV
 
 
@@ -246,11 +246,11 @@ def test_plain_file_scan_step_in_source_positions(app, qapp, sample_hdf5_file):
 
 def test_typed_path_clears_the_dataset_list(app, qapp, sample_hdf5_file, emd_file):
     iw = _open(app, qapp, emd_file)
-    iw.ImpSubImg.setCurrentIndex(iw.ImpSubImg.findText("/pyquant4d_root/datacube/ADF/data"))
+    iw.ImpSubImg.setCurrentIndex(iw.ImpSubImg.findText("/quant4d_root/datacube/ADF/data"))
     qapp.processEvents()
     iw.ImpFilePath.editingFinished.emit()             # same path again (focus change): choice kept
     qapp.processEvents()
-    assert iw.ImpSubImg.currentText() == "/pyquant4d_root/datacube/ADF/data"
+    assert iw.ImpSubImg.currentText() == "/quant4d_root/datacube/ADF/data"
     _open(app, qapp, sample_hdf5_file)                # a different file typed in: list starts again
     items = [iw.ImpSubImg.itemText(i) for i in range(iw.ImpSubImg.count())]
     assert items == ["/data"]

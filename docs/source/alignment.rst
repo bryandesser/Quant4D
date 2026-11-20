@@ -9,7 +9,7 @@ aligned to the centre of the diffraction pattern.
 Alignment mode
 --------------
 
-Select **Alignment** from the Detector Mode dropdown.  pyQuant4D displays the
+Select **Alignment** from the Detector Mode dropdown.  Quant4D displays the
 probe-averaged convergent-beam electron diffraction (PACBED) pattern — the
 incoherent sum of all diffraction frames.
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# pyQuant4D GPU runner — entrypoint
+# Quant4D GPU runner — entrypoint
 # ============================================================
 # Registers the GitHub Actions runner on startup and
 # deregisters cleanly on SIGTERM/SIGINT (e.g. docker stop).

@@ -1,4 +1,4 @@
-# pyQuant4D runtime dependencies
+# Quant4D runtime dependencies
 # Install with: pip install -r requirements.txt
 #
 # Note: PyQt5 requires Qt 5.15+. On Linux you may also need:

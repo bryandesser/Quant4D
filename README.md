@@ -1,9 +1,9 @@
-# pyQuant4D
-[![CI](https://github.com/bryandesser/pyQuant4D/actions/workflows/ci.yml/badge.svg)](https://github.com/bryandesser/pyQuant4D/actions/workflows/ci.yml)
+# Quant4D
+[![CI](https://github.com/bryandesser/Quant4D/actions/workflows/ci.yml/badge.svg)](https://github.com/bryandesser/Quant4D/actions/workflows/ci.yml)
 
-A Python GUI application for quantitative 4D-STEM data visualisation and analysis, ported from the original MATLAB [Quant4D](https://github.com/bryandesser/Quant4D) application.
+A Python GUI application for quantitative 4D-STEM data visualisation and analysis, ported from the original MATLAB [Quant4D](https://github.com/bryandesser/Quant4D_matlab) application.
 
-4D-STEM (four-dimensional scanning transmission electron microscopy) collects a full diffraction pattern at each probe position in a 2-D scan, producing a 4-D dataset. pyQuant4D provides interactive tools to load, preview, and analyse these datasets — including annular integration, centre-of-mass (CoM/DPC), integrated CoM (iCoM), differential CoM (dCoM), and vector-field overlays — with optional GPU acceleration via PyTorch.
+4D-STEM (four-dimensional scanning transmission electron microscopy) collects a full diffraction pattern at each probe position in a 2-D scan, producing a 4-D dataset. Quant4D provides interactive tools to load, preview, and analyse these datasets — including annular integration, centre-of-mass (CoM/DPC), integrated CoM (iCoM), differential CoM (dCoM), and vector-field overlays — with optional GPU acceleration via PyTorch.
 
 ---
 
@@ -45,20 +45,20 @@ GPU acceleration additionally requires [PyTorch](https://pytorch.org/get-started
 ### From PyPI (once published)
 
 ```bash
-pip install pyquant4d
+pip install quant4d
 ```
 
 ### From source (recommended during development)
 
 ```bash
-git clone https://github.com/bryandesser/pyQuant4D.git
-cd pyQuant4D
+git clone https://github.com/bryandesser/Quant4D.git
+cd Quant4D
 pip install -e .
 ```
 
 ### With GPU support
 
-Install pyquant4d first, then install a CUDA-enabled PyTorch build matching your CUDA version.  
+Install quant4d first, then install a CUDA-enabled PyTorch build matching your CUDA version.  
 See https://pytorch.org/get-started/locally/ for the right command. For example, for CUDA 12.1:
 
 ```bash
@@ -82,10 +82,10 @@ After installation, launch the application with:
 quant4d
 ```
 
-or run directly from the repository:
+or, equivalently:
 
 ```bash
-python Quant4D_app.py
+python -m quant4d
 ```
 
 ### Loading a dataset
@@ -106,13 +106,13 @@ python Quant4D_app.py
 
 ## Documentation
 
-Full documentation is available at **https://pyquant4d.readthedocs.io**.
+Full documentation is available at **https://quant4d.readthedocs.io**.
 
 ---
 
 ## GPU acceleration
 
-When a CUDA-capable GPU is available and PyTorch is installed, pyQuant4D will automatically use it to accelerate matrix operations during data import and CoM calculations. GPU status is shown in the application title bar at startup.
+When a CUDA-capable GPU is available and PyTorch is installed, Quant4D will automatically use it to accelerate matrix operations during data import and CoM calculations. GPU status is shown in the application title bar at startup.
 
 To verify GPU detection:
 
@@ -126,14 +126,14 @@ print(torch.cuda.get_device_name(0))
 
 ## Contributing
 
-Bug reports and pull requests are welcome at https://github.com/bryandesser/pyQuant4D.  
+Bug reports and pull requests are welcome at https://github.com/bryandesser/Quant4D.  
 Please open an issue before submitting a large pull request.
 
 ---
 
 ## Original MATLAB version
 
-The original MATLAB application is available at https://github.com/bryandesser/Quant4D.
+The original MATLAB application is available at https://github.com/bryandesser/Quant4D_matlab.
 
 ---
 

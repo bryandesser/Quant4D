@@ -1,4 +1,4 @@
-# pyQuant4D — Self-hosted GPU test runner
+# Quant4D — Self-hosted GPU test runner
 
 This directory contains the Docker setup for running the `test-gpu` CI job
 locally on your own NVIDIA hardware. One image, same `docker compose` command
@@ -114,7 +114,7 @@ docker compose down && docker compose up -d
 docker compose up -d --build
 
 # Check GPU is visible inside the container
-docker exec pyquant4d-gpu-runner nvidia-smi
+docker exec quant4d-gpu-runner nvidia-smi
 ```
 
 ---
@@ -149,6 +149,6 @@ GitHub will warn in the runner list when a runner version is out of date.
 |---------|-----|
 | `docker: Error response from daemon: could not select device driver "nvidia"` | nvidia-container-toolkit not installed or Docker not restarted after install |
 | Runner appears **Offline** in GitHub | Check `docker compose logs`; most likely the token expired — generate a new one or use PAT |
-| `torch.cuda.is_available()` returns `False` inside the container | Run `docker exec pyquant4d-gpu-runner nvidia-smi` — if that fails, the GPU isn't passed through |
+| `torch.cuda.is_available()` returns `False` inside the container | Run `docker exec quant4d-gpu-runner nvidia-smi` — if that fails, the GPU isn't passed through |
 | Jobs stuck in queue / never picked up | Check the labels: the workflow uses `[self-hosted, gpu]`; verify the runner has both |
 | OOM during GPU tests | Increase `shm_size` in `docker-compose.yml` or reduce `pytest -n` parallelism |

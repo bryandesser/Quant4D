@@ -38,11 +38,11 @@ def _hook(t, v, tb):
 
 sys.excepthook = _hook
 
-from callbacks.guiClass import MainWindow  # noqa: E402
-from callbacks.appClass import D  # noqa: E402
-from callbacks.import_io import importSelectFile  # noqa: E402
-from callbacks.window_manager import showAllWindows, hideAllWindows  # noqa: E402
-import callbacks.utils as _utils  # noqa: E402
+from quant4d.callbacks.guiClass import MainWindow  # noqa: E402
+from quant4d.callbacks.appClass import D  # noqa: E402
+from quant4d.callbacks.import_io import importSelectFile  # noqa: E402
+from quant4d.callbacks.window_manager import showAllWindows, hideAllWindows  # noqa: E402
+import quant4d.callbacks.utils as _utils  # noqa: E402
 
 _utils.notifDLG = lambda *a, **k: ''
 
@@ -297,8 +297,8 @@ def _import_variants(w, data):
 
 def _check_polygon_roi(w):
     """Draw a polygon ROI by feeding vertices to the selector, as mouse clicks would."""
-    import callbacks.realSpaceROICallbacks as rs
-    from callbacks import compute
+    import quant4d.callbacks.realSpaceROICallbacks as rs
+    from quant4d.callbacks import compute
     real_name = w.G.Img[w.G.Img.id == "Real"].name.item()
     old = rs.notifDLG
     rs.notifDLG = lambda *a, **k: real_name        # "which image do you want to draw on?"
@@ -523,7 +523,7 @@ def _cd_select(w, mid):
 
 
 def _check_custom_masks(w):
-    from callbacks.compute import custom as cm
+    from quant4d.callbacks.compute import custom as cm
     _set_mode(w, "CustMod")
     assert w.CDInterMask.currentText() == "Color Mix" and w.CDRotStep.currentData() == 90
     b0 = np.asarray(w.B0, float)
@@ -550,7 +550,7 @@ def _check_custom_masks(w):
 
 
 def _check_custom_modes(w):
-    from callbacks.compute import custom as cm
+    from quant4d.callbacks.compute import custom as cm
     masks = [c.mask for c in w.A.Custom.values()]
     for mode in cm.INTER_MODES:
         w.CDInterMask.setCurrentIndex(w.CDInterMask.findText(mode))
@@ -630,7 +630,7 @@ def _check_custom_edit(w):
 def _check_custom_polygon_file_math(w):
     from PIL import Image
     from PyQt5 import QtWidgets as qtw
-    from callbacks import compute
+    from quant4d.callbacks import compute
     w.CDNewPolygon.click()
     qapp.processEvents()
     verts = [(2.0, 2.0), (10.0, 3.0), (5.0, 12.0)]

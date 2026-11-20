@@ -8,7 +8,7 @@ untouched, as in MATLAB Quant4D.
 import numpy as np
 import pytest
 
-import callbacks.datasetOptCallbacks as dso
+import quant4d.callbacks.datasetOptCallbacks as dso
 from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, import_raw, set_mode, wait_until
 
 

@@ -6,7 +6,7 @@ real-space image when dragged.
 """
 import pytest
 
-from annotationsClasses.interactiveCircle import InteractiveCircle
+from quant4d.annotationsClasses.interactiveCircle import InteractiveCircle
 from conftest import set_mode
 
 # modes and the annotation attributes (self.A.*) that may be on the diffraction pattern in them

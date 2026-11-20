@@ -41,8 +41,8 @@ def _drop(qapp, widget, *paths) -> bool:
 
 @pytest.fixture()
 def emd_file(tmp_path, synthetic_data):
-    from callbacks.io.emd import EmdCalibration, EmdImage, write_emd
-    from callbacks.io.export import full_region
+    from quant4d.callbacks.io.emd import EmdCalibration, EmdImage, write_emd
+    from quant4d.callbacks.io.export import full_region
     p = tmp_path / "py4dstem.emd"
     write_emd(str(p), synthetic_data, (SCAN_X, SCAN_Y), (DET_X, DET_Y),
               full_region((SCAN_X, SCAN_Y)), full_region((DET_X, DET_Y)),
@@ -56,7 +56,7 @@ def _hdf5_geometry(iw):
 
 class TestDroppedFiles:
     def test_local_files_only(self, tmp_path):
-        from callbacks.file_drop import droppedFiles
+        from quant4d.callbacks.file_drop import droppedFiles
         f = tmp_path / "a.raw"
         f.write_bytes(b"\0")
         mime = _mime(f, tmp_path, tmp_path / "missing.h5")
@@ -102,7 +102,7 @@ class TestDropOpensImport:
         _drop(qapp, app, emd_file)                     # a new file: the dataset list starts again
         items = [iw.ImpSubImg.itemText(i) for i in range(iw.ImpSubImg.count())]
         assert "/data" not in items
-        assert iw.ImpSubImg.currentText() == "/pyquant4d_root/datacube/data"
+        assert iw.ImpSubImg.currentText() == "/quant4d_root/datacube/data"
         assert _hdf5_geometry(iw) == (SCAN_X, SCAN_Y, DET_X, DET_Y)
 
     def test_only_the_first_file_is_opened(self, app, qapp, sample_hdf5_file, sample_raw_file):
@@ -138,7 +138,7 @@ class TestDropRefused:
 
 def test_select_and_typed_path_still_work(app, qapp, sample_hdf5_file, monkeypatch):
     """The Select button and a typed path go through the same code with an explicit source."""
-    import callbacks.import_io as io
+    import quant4d.callbacks.import_io as io
     iw = app.ImportWindow
     app.ShowImportWdw.trigger()
     monkeypatch.setattr(io, "_chooseFile", lambda self: str(sample_hdf5_file))

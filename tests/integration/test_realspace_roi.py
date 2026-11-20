@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from matplotlib.backend_bases import KeyEvent
 
-import callbacks.realSpaceROICallbacks as rs
+import quant4d.callbacks.realSpaceROICallbacks as rs
 from conftest import DET_X, DET_Y, SCAN_X, SCAN_Y, just_outside, turned
 
 
@@ -49,7 +49,7 @@ class TestPatternCombination:
 
     @pytest.mark.parametrize("mode", ["sum", "mean", "max", "std", "sqrt", "ln", "log10"])
     def test_modes(self, roi_app, qapp, mode):
-        from callbacks import compute
+        from quant4d.callbacks import compute
         _select(roi_app, qapp, "rectangle")
         mask = np.asarray(roi_app.Fig.RealMask.Image, float)
         roi_app.DfrnCombine.setCurrentIndex(roi_app.DfrnCombine.findData(mode))
@@ -109,7 +109,7 @@ class TestPolygonROI:
         assert app.A._tmp_selector is not None
 
     def test_polygon_drawn(self, roi_app, qapp, monkeypatch):
-        from callbacks import compute
+        from quant4d.callbacks import compute
         self._start(roi_app, qapp, monkeypatch)
         verts = [(0.2, 0.1), (4.6, 0.4), (1.0, 2.8)]
         roi_app.A._tmp_selector.onselect(verts)
@@ -208,7 +208,7 @@ class TestPolygonDrawnWithTheMouse:
 
     def test_closed_polygon_leaves_one_editable_roi(self, roi_app, qapp, monkeypatch):
         from matplotlib.lines import Line2D
-        from callbacks import compute
+        from quant4d.callbacks import compute
         fig = self._draw(roi_app, qapp, monkeypatch)
         assert roi_app.A._tmp_selector is None
         roi = roi_app.A.RealROI["Real"]
@@ -229,7 +229,7 @@ class TestPolygonDrawnWithTheMouse:
 
 class TestRotatableShapes:
     def test_polygon_roi_rotates(self, roi_app, qapp, monkeypatch):
-        from callbacks import compute
+        from quant4d.callbacks import compute
         name = roi_app.G.Img[roi_app.G.Img.id == "Real"].name.item()
         monkeypatch.setattr(rs, "notifDLG", lambda *a, **k: name)
         _select(roi_app, qapp, "poly")
@@ -249,7 +249,7 @@ class TestRotatableShapes:
         assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), expected)
 
     def test_ellipse_roi_is_an_ellipse(self, roi_app, qapp):
-        from callbacks import compute
+        from quant4d.callbacks import compute
         _select(roi_app, qapp, "ellipse")
         roi = roi_app.A.RealROI["Real"]
         assert roi.semiaxes[0] != roi.semiaxes[1], "should start as an ellipse, not a circle"
@@ -263,7 +263,7 @@ class TestRotatableShapes:
         assert np.array_equal(np.asarray(roi_app.Fig.RealMask.Image, bool), expected)
 
     def test_rectangle_roi_rotates(self, roi_app, qapp):
-        from callbacks import compute
+        from quant4d.callbacks import compute
         _select(roi_app, qapp, "rectangle")
         roi = roi_app.A.RealROI["Real"]
         roi.center, roi.size = np.array([2.5, 1.5]), np.array([3.0, 1.0])      # corners clear of the image edge
@@ -333,7 +333,7 @@ class TestPointPattern:
     def test_flat_image_does_not_divide_by_zero(self, roi_app, qapp):
         """A flat pattern (e.g. std of one frame) made the histogram's gamma curve divide by 0."""
         import warnings
-        from callbacks.plotting import plotImage
+        from quant4d.callbacks.plotting import plotImage
         sw = roi_app.SettingsWindow
         sw.DispImage.setCurrentIndex(sw.DispImage.findData("Dfrn"))
         qapp.processEvents()

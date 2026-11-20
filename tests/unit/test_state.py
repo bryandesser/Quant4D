@@ -4,8 +4,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from callbacks.appClass import A, C, D, G, P, Prev, T
-from callbacks.utils import isDiffToPrev
+from quant4d.callbacks.appClass import A, C, D, G, P, Prev, T
+from quant4d.callbacks.utils import isDiffToPrev
 
 
 @pytest.mark.parametrize("cls", [A, C, D, G, P, Prev, T])

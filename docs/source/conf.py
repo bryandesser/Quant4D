@@ -10,9 +10,10 @@ import sphinx_rtd_theme
 # Make the package importable from the repo root (for autodoc).
 # conf.py lives in docs/source/, so go up two levels.
 sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(0, os.path.abspath("../../src"))   # the quant4d package (src layout)
 
 # -- Project information -----------------------------------------------------
-project = "pyQuant4D"
+project = "Quant4D"
 copyright = f"{datetime.today().year}, Bryan D Esser"
 author = "Bryan D Esser"
 
@@ -28,7 +29,7 @@ def _version() -> str:
         pass
     try:
         from importlib.metadata import version
-        return version("pyquant4d")
+        return version("quant4d")
     except Exception:
         return "unknown"
 
@@ -80,12 +81,12 @@ html_theme = "sphinx_rtd_theme"
 this_dir = os.path.dirname(__file__)
 html_static_path = [os.path.abspath(os.path.join(this_dir, "..", "_static"))]
 
-html_baseurl = "https://pyquant4d.readthedocs.io/en/latest"
+html_baseurl = "https://quant4d.readthedocs.io/en/latest"
 
 html_context = {
     "display_github": True,
     "github_user": "bryandesser",
-    "github_repo": "pyQuant4D",
+    "github_repo": "Quant4D",
     "github_version": "main",
     "conf_py_path": "/docs/source/",
     "edit_on_github_text": "View on GitHub",

@@ -25,15 +25,15 @@ From PyPI
 
 Once published, install with::
 
-    pip install pyquant4d
+    pip install quant4d
 
 From source
 -----------
 
 Clone the repository and install in editable mode::
 
-    git clone https://github.com/bryandesser/pyQuant4D.git
-    cd pyQuant4D
+    git clone https://github.com/bryandesser/Quant4D.git
+    cd Quant4D
     pip install -e .
 
 This installs all core dependencies automatically.
@@ -43,7 +43,7 @@ This installs all core dependencies automatically.
 GPU setup
 ---------
 
-By default, pyQuant4D runs on the CPU.  To enable GPU acceleration:
+By default, Quant4D runs on the CPU.  To enable GPU acceleration:
 
 1. Check that your machine has a CUDA-capable NVIDIA GPU and the appropriate
    CUDA toolkit installed.
@@ -54,7 +54,7 @@ By default, pyQuant4D runs on the CPU.  To enable GPU acceleration:
 
        pip install torch --index-url https://download.pytorch.org/whl/cu121
 
-3. Launch pyQuant4D normally.  The title bar will show GPU information if a
+3. Launch Quant4D normally.  The title bar will show GPU information if a
    device is detected.
 
 You can verify GPU availability from Python::
@@ -66,11 +66,11 @@ You can verify GPU availability from Python::
 py4DSTEM
 --------
 
-pyQuant4D reads and writes py4DSTEM's EMD files without py4DSTEM.  Install it
+Quant4D reads and writes py4DSTEM's EMD files without py4DSTEM.  Install it
 for **File > Open with py4DSTEM Reader...** (legacy py4DSTEM files) and for
 round trips from Python::
 
-    pip install "pyquant4d[py4dstem]"
+    pip install "quant4d[py4dstem]"
 
 Developer extras
 ----------------

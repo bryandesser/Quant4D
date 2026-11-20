@@ -8,8 +8,8 @@ The pattern is deliberately non-square so x/y swaps show up.
 import numpy as np
 import pytest
 
-from callbacks.compute import custom as cm
-from callbacks.compute.mask_math import MaskMathError, evaluate_mask_formula, mask_ids
+from quant4d.callbacks.compute import custom as cm
+from quant4d.callbacks.compute.mask_math import MaskMathError, evaluate_mask_formula, mask_ids
 
 NY, NX = 20, 30
 SHAPE = (NY, NX)

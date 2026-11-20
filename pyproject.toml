@@ -1,16 +1,17 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77", "wheel"]          # >=77: SPDX license expression
 build-backend = "setuptools.build_meta"
 
 # ---------------------------------------------------------------------------
 # Project metadata
 # ---------------------------------------------------------------------------
 [project]
-name            = "pyquant4d"
-version         = "0.3.0"
+name            = "quant4d"
+version         = "0.4.0"
 description     = "Python GUI for quantitative 4D-STEM data visualisation and analysis"
 readme          = "README.md"
-license         = { file = "LICENSE" }
+license         = "GPL-3.0-or-later"
+license-files   = ["LICENSE"]
 requires-python = ">=3.10"
 
 authors = [
@@ -34,7 +35,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Visualization",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -63,7 +63,7 @@ dependencies = [
 # GPU acceleration via PyTorch — install CUDA-enabled torch separately if needed.
 # See https://pytorch.org/get-started/locally/ for the right wheel for your CUDA version.
 gpu  = ["torch>=2.0"]
-# py4DSTEM reader (legacy files) and pyquant4d.show(datacube); EMD files need only h5py
+# py4DSTEM reader (legacy files) and quant4d.show(datacube); EMD files need only h5py
 py4dstem = ["py4DSTEM>=0.14"]
 # Full developer extras
 dev  = [
@@ -80,30 +80,28 @@ docs = ["sphinx>=7", "furo", "myst-parser"]
 # Entry points
 # ---------------------------------------------------------------------------
 [project.scripts]
-quant4d = "Quant4D_app:main"
+quant4d = "quant4d.app:main"
 
 # ---------------------------------------------------------------------------
 # URLs
 # ---------------------------------------------------------------------------
 [project.urls]
-"Source Code"   = "https://github.com/bryandesser/pyQuant4D"
-"Bug Tracker"   = "https://github.com/bryandesser/pyQuant4D/issues"
-"Documentation" = "https://pyquant4d.readthedocs.io"
+"Source Code"   = "https://github.com/bryandesser/Quant4D"
+"Bug Tracker"   = "https://github.com/bryandesser/Quant4D/issues"
+"Documentation" = "https://quant4d.readthedocs.io"
 
 # ---------------------------------------------------------------------------
 # Package discovery — src/ layout
 # ---------------------------------------------------------------------------
-[tool.setuptools]
-# Quant4D_app.py lives in src/ and is the entry-point module.
-py-modules = ["Quant4D_app"]
-
+# Everything is one package, src/quant4d (callbacks, annotationsClasses, gui, app): nothing
+# else is installed at the top level of site-packages.
 [tool.setuptools.packages.find]
 where   = ["src"]
-exclude = ["*.tests*"]
+include = ["quant4d*"]
 
 # Include .ui files and icon assets shipped inside the gui/ package.
 [tool.setuptools.package-data]
-gui = ["*.ui", "icons/*", "icons/**/*"]
+"quant4d.gui" = ["*.ui", "icons/*", "icons/**/*"]
 
 # ---------------------------------------------------------------------------
 # Type checking (pyright, run in CI).  "basic" mode, zero errors required.

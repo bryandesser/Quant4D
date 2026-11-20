@@ -1,4 +1,4 @@
-"""callbacks.scale_bar: round lengths, units, and a bar that follows zoom and view rotation."""
+"""quant4d.callbacks.scale_bar: round lengths, units, and a bar that follows zoom and view rotation."""
 import matplotlib
 import numpy as np
 import pytest
@@ -6,7 +6,7 @@ import pytest
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from callbacks.scale_bar import ScaleBar, nice_length  # noqa: E402
+from quant4d.callbacks.scale_bar import ScaleBar, nice_length  # noqa: E402
 
 
 @pytest.mark.parametrize("target, units, expected", [
@@ -65,7 +65,7 @@ def test_bar_follows_zoom(axes):
 
 
 def test_bar_same_in_rotated_and_flipped_views(axes):
-    from callbacks.axis_direction import set_view
+    from quant4d.callbacks.axis_direction import set_view
     fig, ax = axes
     bar = ScaleBar(lambda: (0.1, "nm"))
     ax.add_artist(bar)
