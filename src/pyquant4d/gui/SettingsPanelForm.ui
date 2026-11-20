@@ -1,0 +1,1891 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingsPanelForm</class>
+ <widget class="QWidget" name="SettingsPanelForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>377</width>
+    <height>523</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>260</width>
+    <height>600</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Settings</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>4</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="SettingsTabGroup">
+     <property name="minimumSize">
+      <size>
+       <width>24</width>
+       <height>24</height>
+      </size>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="DisplayTab">
+      <attribute name="title">
+       <string>Display</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>9</number>
+       </property>
+       <property name="topMargin">
+        <number>9</number>
+       </property>
+       <property name="rightMargin">
+        <number>9</number>
+       </property>
+       <property name="bottomMargin">
+        <number>9</number>
+       </property>
+       <property name="spacing">
+        <number>4</number>
+       </property>
+       <item row="8" column="0">
+        <widget class="QToolButton" name="DispMaskOpaReset">
+         <property name="minimumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Reset the mask opacity to 0 %</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/Aperture.png</normaloff>icons/Aperture.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1" colspan="4">
+        <widget class="QSlider" name="DispContrast">
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="value">
+          <number>50</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1" colspan="4">
+        <widget class="QSlider" name="DispBrightness">
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="value">
+          <number>50</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QToolButton" name="DispBrightnessReset">
+         <property name="minimumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/brightness.png</normaloff>icons/brightness.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1" colspan="4">
+        <widget class="QSlider" name="DispMaskOpa">
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="7">
+        <widget class="QPlainTextEdit" name="ImStatsNotes">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>59</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>59</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>Courier</family>
+          </font>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QToolButton" name="ShowImageWdw">
+         <property name="toolTip">
+          <string>Bring the selected image's window to the front</string>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/frontWindow.png</normaloff>icons/frontWindow.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1" colspan="4">
+        <widget class="QDoubleSlider" name="DispGamma">
+         <property name="maximum">
+          <number>3</number>
+         </property>
+         <property name="pageStep">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>1</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="invertedAppearance">
+          <bool>false</bool>
+         </property>
+         <property name="invertedControls">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QToolButton" name="DispContrastReset">
+         <property name="minimumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/contrast.png</normaloff>icons/contrast.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QToolButton" name="DispGammaReset">
+         <property name="minimumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/gamma.png</normaloff>icons/gamma.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="5" colspan="2">
+        <widget class="QSpinBox" name="DispMaskOpa_NF">
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="correctionMode">
+          <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+         </property>
+         <property name="suffix">
+          <string> %</string>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="5" colspan="2">
+        <widget class="QSpinBox" name="DispBrightness_NF">
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="correctionMode">
+          <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+         </property>
+         <property name="suffix">
+          <string> %</string>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="value">
+          <number>50</number>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="5" colspan="2">
+        <widget class="QSpinBox" name="DispContrast_NF">
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="correctionMode">
+          <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+         </property>
+         <property name="suffix">
+          <string> %</string>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="value">
+          <number>50</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="7">
+        <widget class="MplCanvas" name="HistAxes" native="true">
+         <widget class="QPushButton" name="HistLog">
+          <property name="geometry">
+           <rect>
+            <x>312</x>
+            <y>10</y>
+            <width>29</width>
+            <height>29</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>29</width>
+            <height>29</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>29</width>
+            <height>29</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>log</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </widget>
+       </item>
+       <item row="0" column="6">
+        <widget class="QPushButton" name="DispLock">
+         <property name="toolTip">
+          <string>Lock the selection: keep this image selected when the detector mode changes</string>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/link.png</normaloff>icons/link.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="6">
+        <widget class="QPushButton" name="DispCMapInvert">
+         <property name="toolTip">
+          <string>Invert the colour map</string>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>29</width>
+           <height>29</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/invertColors.png</normaloff>icons/invertColors.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="3" colspan="3">
+        <widget class="QComboBox" name="DispCMap">
+         <item>
+          <property name="text">
+           <string>gray</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>hsv</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>jet</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>parula</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>hot</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>cool</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>spring</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>summer</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>winter</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>autumn</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>bone</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>copper</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>pink</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="3" colspan="3">
+        <widget class="QComboBox" name="DispImage"/>
+       </item>
+       <item row="0" column="1" colspan="2">
+        <widget class="QLabel" name="DispImageLabel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Image</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="buddy">
+          <cstring>DispImage</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="3">
+        <widget class="QLabel" name="DispCMapLabel">
+         <property name="text">
+          <string>Colormap</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="buddy">
+          <cstring>DispCMap</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="5" colspan="2">
+        <widget class="QDoubleSpinBox" name="DispGamma_NF">
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="correctionMode">
+          <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+         </property>
+         <property name="maximum">
+          <double>3.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.010000000000000</double>
+         </property>
+         <property name="value">
+          <double>1.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="WindowsTab">
+      <attribute name="title">
+       <string>Windows</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="WindowsTabLayout">
+       <item>
+        <widget class="QGroupBox" name="ShowImageWindowsBox">
+         <property name="styleSheet">
+          <string>QGroupBox { font-weight: bold; }</string>
+         </property>
+         <property name="title">
+          <string>Show Image Windows</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="ShowImageWindowsGrid">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="ShowDfrnWdw">
+            <property name="accessibleName">
+             <string>Dfrn</string>
+            </property>
+            <property name="text">
+             <string>Diffraction</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="ShowRealMaskWdw_2">
+            <property name="accessibleName">
+             <string>RealMask</string>
+            </property>
+            <property name="text">
+             <string>BF/DF</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>icons/Aperture.png</normaloff>icons/Aperture.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="ShowColorWheelWdw_2">
+            <property name="accessibleName">
+             <string>ColorWheel</string>
+            </property>
+            <property name="text">
+             <string>φ</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>icons/colorwheel.png</normaloff>icons/colorwheel.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="ShowDfrnMaskWdw_2">
+            <property name="accessibleName">
+             <string>DfrnMask</string>
+            </property>
+            <property name="text">
+             <string>Dfrn</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>icons/Aperture.png</normaloff>icons/Aperture.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="ShowCoMMagWdw">
+            <property name="accessibleName">
+             <string>CoMMag</string>
+            </property>
+            <property name="text">
+             <string>|CoM|</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="ShowCoMPhWdw">
+            <property name="accessibleName">
+             <string>CoMPh</string>
+            </property>
+            <property name="text">
+             <string>CoM φ</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="ShowCoMPhMagWdw">
+            <property name="accessibleName">
+             <string>CoMPhMag</string>
+            </property>
+            <property name="text">
+             <string>|CoM| φ</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="ShowRealWdw">
+            <property name="accessibleName">
+             <string>Real</string>
+            </property>
+            <property name="text">
+             <string>BF/DF</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="ShowCoMXWdw">
+            <property name="accessibleName">
+             <string>CoMX</string>
+            </property>
+            <property name="text">
+             <string>CoM X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="ShowCoMYWdw">
+            <property name="accessibleName">
+             <string>CoMY</string>
+            </property>
+            <property name="text">
+             <string>CoM Y</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="ShowdCoMWdw">
+            <property name="accessibleName">
+             <string>dCoM</string>
+            </property>
+            <property name="text">
+             <string>dCoM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="ShowiCoMWdw">
+            <property name="accessibleName">
+             <string>iCoM</string>
+            </property>
+            <property name="text">
+             <string>iCoM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="DispVecFieldLabel">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Vector Field</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="buddy">
+             <cstring>DispVecField</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">
+           <widget class="QComboBox" name="DispVecField">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <item>
+             <property name="text">
+              <string>None</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>1:1</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>1:2</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>1:4</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>1:8</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>1:16</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QToolButton" name="DispVecColor">
+            <property name="minimumSize">
+             <size>
+              <width>24</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>24</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>icons/colorPicker.png</normaloff>icons/colorPicker.png</iconset>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="BandpassFilterBox">
+         <property name="styleSheet">
+          <string>QGroupBox { font-weight: bold; }</string>
+         </property>
+         <property name="toolTip">
+          <string>Bandpass, lowpass or highpass filter for iCoM/dCoM (iDPC/dDPC): spatial frequencies kept, in pixels of the scan's Fourier transform, 1/Å or mrad.</string>
+         </property>
+         <property name="title">
+          <string>iCoM / dCoM Bandpass Filter</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="BandpassFilterGrid">
+          <item row="0" column="0" colspan="3">
+           <widget class="QRangeSlider" name="BandpassFilter">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="toolTip">
+             <string>Bandpass, lowpass or highpass filter for iCoM/dCoM (iDPC/dDPC): spatial frequencies kept, in pixels of the scan's Fourier transform, 1/Å or mrad.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QDoubleSpinBox" name="BandpassFilterLow">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Lowest spatial frequency kept (in the units chosen beside)</string>
+            </property>
+            <property name="decimals">
+             <number>4</number>
+            </property>
+            <property name="maximum">
+             <double>100000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>0.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="BandpassFilterHigh">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Highest spatial frequency kept (in the units chosen beside)</string>
+            </property>
+            <property name="decimals">
+             <number>4</number>
+            </property>
+            <property name="maximum">
+             <double>100000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>100.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QComboBox" name="BandpassUnits">
+            <property name="toolTip">
+             <string>Units of the filter: pixels of the scan's Fourier transform, 1/Å or mrad (both need a calibrated scan step; mrad also the accelerating voltage)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="WindowResizeBox">
+         <property name="styleSheet">
+          <string>QGroupBox { font-weight: bold; }</string>
+         </property>
+         <property name="title">
+          <string>Window Size and Orientation</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <layout class="QVBoxLayout" name="WindowResizeGrid">
+          <item>
+           <widget class="QTabWidget" name="WindowResizeTabGroup">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <widget class="QWidget" name="DfrnWindowTab">
+             <attribute name="title">
+              <string>Diffraction</string>
+             </attribute>
+             <layout class="QGridLayout" name="DfrnWindowGrid" columnstretch="1,1,1,1,1,1">
+              <item row="0" column="0">
+               <widget class="QToolButton" name="ShowDfrnAxes">
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/axes.png</normaloff>icons/axes.png</iconset>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QToolButton" name="RvsXDfrn">
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/axis-x.png</normaloff>icons/axis-x.png</iconset>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QToolButton" name="RvsYDfrn">
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/axis-y.png</normaloff>icons/axis-y.png</iconset>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3" colspan="3">
+               <widget class="QComboBox" name="RotDfrn">
+                <item>
+                 <property name="text">
+                  <string>0 °</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>90 °</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>180 °</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>-90 °</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="6">
+               <layout class="QHBoxLayout" name="DiffractionWindowHGrid">
+                <property name="spacing">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="WdwWDfrnLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>20</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>W: </string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="buddy">
+                   <cstring>WdwWDfrn</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="WdwWDfrn">
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="buttonSymbols">
+                   <enum>QAbstractSpinBox::NoButtons</enum>
+                  </property>
+                  <property name="suffix">
+                   <string> px</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>10000</number>
+                  </property>
+                  <property name="value">
+                   <number>400</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="WdwHDfrnLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>22</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string> H: </string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="buddy">
+                   <cstring>WdwHDfrn</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="WdwHDfrn">
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="buttonSymbols">
+                   <enum>QAbstractSpinBox::NoButtons</enum>
+                  </property>
+                  <property name="suffix">
+                   <string> px</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>10000</number>
+                  </property>
+                  <property name="value">
+                   <number>400</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <widget class="QPushButton" name="WdwSetDfrn">
+                <property name="text">
+                 <string>Set</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2" colspan="4">
+               <widget class="QPushButton" name="WdwSetAllDfrn">
+                <property name="text">
+                 <string>Set All Diffraction</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="3">
+               <widget class="QCheckBox" name="ScaleBarDfrn">
+                <property name="toolTip">
+                 <string>Scale bar on the diffraction windows: mrad once the transmitted beam is set (or a file calibrated it) and the detector coordinates are in mrad, else pixels</string>
+                </property>
+                <property name="text">
+                 <string>Scale bar</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="3">
+               <widget class="QCheckBox" name="GroupDfrn">
+                <property name="toolTip">
+                 <string>Collect the diffraction images into one window with a tab each (untick to float them again). Drag a tab out of the bar, or double-click it, to float that image on its own; closing it returns it to the tabs.</string>
+                </property>
+                <property name="text">
+                 <string>Group into tabs</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QLabel" name="DfScaleLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Scale</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>DfScale</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2" colspan="2">
+               <widget class="QDoubleSpinBox" name="DfScale">
+                <property name="toolTip">
+                 <string>Diffraction scale (the main window's mrad/px): changing it recalculates the convergence angle, detector coordinates in mrad, scale bars and export</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="4" colspan="2">
+               <widget class="QComboBox" name="DfScaleUnits">
+                <property name="toolTip">
+                 <string>Units of the diffraction scale: mrad per pixel, or 1/Å per pixel (at the accelerating voltage set on import)</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="RealWindowTab">
+             <attribute name="title">
+              <string>Real-space</string>
+             </attribute>
+             <layout class="QGridLayout" name="RealWindowGrid" columnstretch="1,1,1,1,1,1">
+              <item row="0" column="0">
+               <widget class="QToolButton" name="ShowRealAxes">
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/axes.png</normaloff>icons/axes.png</iconset>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QToolButton" name="RvsXReal">
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/axis-x.png</normaloff>icons/axis-x.png</iconset>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QToolButton" name="RvsYReal">
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/axis-y.png</normaloff>icons/axis-y.png</iconset>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3" colspan="3">
+               <widget class="QComboBox" name="RotReal">
+                <item>
+                 <property name="text">
+                  <string>0 °</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>90 °</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>180 °</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>-90 °</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="6">
+               <layout class="QHBoxLayout" name="RealSpaceWindowGGrid">
+                <property name="spacing">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="WdwWRealLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>20</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>W: </string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="buddy">
+                   <cstring>WdwWReal</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="WdwWReal">
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="buttonSymbols">
+                   <enum>QAbstractSpinBox::NoButtons</enum>
+                  </property>
+                  <property name="suffix">
+                   <string> px</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>10000</number>
+                  </property>
+                  <property name="value">
+                   <number>400</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="WdwHRealLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>22</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string> H: </string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="buddy">
+                   <cstring>WdwHReal</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="WdwHReal">
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="buttonSymbols">
+                   <enum>QAbstractSpinBox::NoButtons</enum>
+                  </property>
+                  <property name="suffix">
+                   <string> px</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>10000</number>
+                  </property>
+                  <property name="value">
+                   <number>400</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <widget class="QPushButton" name="WdwSetReal">
+                <property name="minimumSize">
+                 <size>
+                  <width>23</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Set</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2" colspan="4">
+               <widget class="QPushButton" name="WdwSetAllReal">
+                <property name="text">
+                 <string>Set All Real</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="3">
+               <widget class="QCheckBox" name="ScaleBarReal">
+                <property name="toolTip">
+                 <string>Scale bar on the real-space windows, from the Scan Step below; pixels when the step is not set</string>
+                </property>
+                <property name="text">
+                 <string>Scale bar</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="3">
+               <widget class="QCheckBox" name="GroupReal">
+                <property name="toolTip">
+                 <string>Collect the real-space images into one window with a tab each (untick to float them again). Drag a tab out of the bar, or double-click it, to float that image on its own; closing it returns it to the tabs.</string>
+                </property>
+                <property name="text">
+                 <string>Group into tabs</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QLabel" name="RsStepLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Scan Step</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buddy">
+                 <cstring>RsStep</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2" colspan="2">
+               <widget class="QDoubleSpinBox" name="RsStep">
+                <property name="toolTip">
+                 <string>Distance between neighbouring probe positions of the loaded data (the file's step times the import sampling); used for export</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="buttonSymbols">
+                 <enum>QAbstractSpinBox::NoButtons</enum>
+                </property>
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="4" colspan="2">
+               <widget class="QComboBox" name="RsUnits"/>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="WindowsTabSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="MiscTab">
+      <property name="autoFillBackground">
+       <bool>false</bool>
+      </property>
+      <attribute name="title">
+       <string>Misc</string>
+      </attribute>
+      <layout class="QGridLayout" name="_2">
+       <item row="0" column="1" colspan="4">
+        <widget class="QLabel" name="CalcPolicyLabel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Calculation Policy</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="buddy">
+          <cstring>CalcPolicy</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="8">
+        <widget class="QLabel" name="DetectorCoordinatePanel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Detector Coordinate Options</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="4">
+        <widget class="QComboBox" name="DCSys">
+         <item>
+          <property name="text">
+           <string>Polar</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Cartesian</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="4" colspan="4">
+        <widget class="QComboBox" name="DCPos">
+         <item>
+          <property name="text">
+           <string>Relative</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Absolute</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="5" colspan="3">
+        <widget class="QComboBox" name="CalcPolicy">
+         <item>
+          <property name="text">
+           <string>Active</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Reduced</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Passive</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QToolButton" name="LiveUpdateImageIcon">
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/refresh.png</normaloff>icons/refresh.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="8">
+        <widget class="QLabel" name="DatasetOptionPanel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Dataset Options</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="8">
+        <widget class="QPushButton" name="SwapByteOrder">
+         <property name="text">
+          <string>Swap Byte Order</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="4">
+        <widget class="QPushButton" name="SwapDfrnXY">
+         <property name="text">
+          <string>Swap Diffraction X/Y</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="4" colspan="4">
+        <widget class="QPushButton" name="SwapRealXY">
+         <property name="text">
+          <string>Swap Real-space X/Y</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="8">
+        <spacer name="MiscTabSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="InfoTab">
+      <attribute name="title">
+       <string>Info</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="1" column="0" colspan="2">
+        <widget class="QPlainTextEdit" name="DataInfo"/>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="DataInfoLabel">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Dataset Info</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QPushButton" name="ShowVariables">
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <italic>false</italic>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Show a Variables tab listing the dataset parameters and settings</string>
+         </property>
+         <property name="text">
+          <string>Show all variables</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="MathTab">
+      <attribute name="title">
+       <string>Math</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <item row="3" column="0" colspan="2">
+        <widget class="QPlainTextEdit" name="MathFormula"/>
+       </item>
+       <item row="0" column="1">
+        <widget class="QToolButton" name="MathHelpIcon">
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>icons/help.png</normaloff>icons/help.png</iconset>
+         </property>
+         <property name="autoRaise">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" rowspan="3" colspan="2">
+        <widget class="QLabel" name="MathExampleLabel">
+         <property name="font">
+          <font>
+           <kerning>true</kerning>
+          </font>
+         </property>
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="center"&gt;&lt;span style=" font-weight:700;"&gt;Syntax Examples&lt;/span&gt;&lt;/p&gt;&lt;p&gt;• Union of B and C, then intersects with A:&lt;br/&gt;&lt;span style=" font-family:'Consolas'; font-weight:700;"&gt;A &amp;amp; (B | C)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;• A squared plus B times C (element-wisely), then transposed: &lt;br/&gt;&lt;span style=" font-family:'Consolas'; font-weight:700;"&gt;(A.^2 + B .* C)'&lt;/span&gt;&lt;/p&gt;&lt;p&gt;• Concatenates (on X-dimension) A's Rows 1-3 to B's Rows 4-to-last: &lt;br/&gt;&lt;span style=" font-family:'Consolas'; font-weight:700;"&gt;[A(1:3,:) ; B(4:end,:)]&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::RichText</enum>
+         </property>
+         <property name="scaledContents">
+          <bool>false</bool>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="margin">
+          <number>0</number>
+         </property>
+         <property name="indent">
+          <number>-1</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QPushButton" name="MathEval">
+         <property name="text">
+          <string>Evaluate</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="VariablesTab">
+      <attribute name="title">
+       <string>Variables</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="VariablesTabLayout">
+       <item>
+        <widget class="QTreeWidget" name="VariablesTree">
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <italic>false</italic>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="columnCount">
+          <number>2</number>
+         </property>
+         <column>
+          <property name="text">
+           <string>Name</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Value</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QDoubleSlider</class>
+   <extends>QSlider</extends>
+   <header>superqt</header>
+   <slots>
+    <signal>valueChanged(double)</signal>
+    <slot>setValue(double)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>MplCanvas</class>
+   <extends>QWidget</extends>
+   <header>pyquant4d.callbacks.mplWidget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QRangeSlider</class>
+   <extends>QSlider</extends>
+   <header>superqt</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>DispContrast_NF</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DispContrast</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>319</x>
+     <y>430</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>255</x>
+     <y>433</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispBrightness_NF</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DispBrightness</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>363</x>
+     <y>407</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>142</x>
+     <y>406</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispContrast</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DispContrast_NF</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>147</x>
+     <y>435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>303</x>
+     <y>429</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispMaskOpa</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DispMaskOpa_NF</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>232</x>
+     <y>498</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>323</x>
+     <y>497</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispBrightness</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DispBrightness_NF</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>258</x>
+     <y>400</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>404</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispMaskOpa_NF</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>DispMaskOpa</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>323</x>
+     <y>497</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>497</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispGamma</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>DispGamma_NF</receiver>
+   <slot>setValue(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>257</x>
+     <y>463</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>307</x>
+     <y>464</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>DispGamma_NF</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>DispGamma</receiver>
+   <slot>setValue(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>329</x>
+     <y>457</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>237</x>
+     <y>459</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

@@ -84,9 +84,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           xvfb-run --auto-servernum python - <<'EOF'
-          import callbacks.appClass
-          import callbacks.allFunctions
-          import annotationsClasses.interactiveAnnulus
+          import pyquant4d.callbacks.appClass
+          import pyquant4d.callbacks.allFunctions
+          import pyquant4d.annotationsClasses.interactiveAnnulus
           print("Core imports OK")
           EOF
 
@@ -94,14 +94,14 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           python -c "
-          import callbacks.appClass
-          import callbacks.allFunctions
-          import annotationsClasses.interactiveAnnulus
+          import pyquant4d.callbacks.appClass
+          import pyquant4d.callbacks.allFunctions
+          import pyquant4d.annotationsClasses.interactiveAnnulus
           print('Core imports OK')
           "
 
       - name: Check entry point exists
-        run: python -c "import Quant4D_app; print('Entry point module OK')"
+        run: python -c "from pyquant4d.app import main; print('Entry point module OK')"
 
   test:
     name: Test suite (${{ matrix.os }} / Python ${{ matrix.python-version }})

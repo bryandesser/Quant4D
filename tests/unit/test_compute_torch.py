@@ -12,8 +12,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from callbacks import compute                    # noqa: E402
-from callbacks.compute import backend            # noqa: E402
+from pyquant4d.callbacks import compute                    # noqa: E402
+from pyquant4d.callbacks.compute import backend            # noqa: E402
 
 NFY, NFX, NPY, NPX = 6, 7, 16, 20
 CENTER = (9.3, 6.6)
@@ -197,7 +197,7 @@ def test_cuda_request_without_cuda_uses_numpy(data, weights, monkeypatch):
 
 def test_upload_non_native_byte_order(device):
     """A byte-swapped memory map (lazy data after Swap Byte Order) uploads and projects correctly."""
-    from callbacks import compute
+    from pyquant4d.callbacks import compute
     rng = np.random.default_rng(5)
     data = rng.random((6, 20), dtype=np.float32)
     swapped = data.byteswap().view(data.dtype.newbyteorder())     # same values, other byte order

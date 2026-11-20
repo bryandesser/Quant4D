@@ -12,181 +12,181 @@ Computation
 Pure functions that take and return NumPy arrays and never touch the GUI.
 All detector images are computed here.
 
-.. automodule:: callbacks.compute
+.. automodule:: pyquant4d.callbacks.compute
    :no-members:
 
-.. automodule:: callbacks.compute.backend
+.. automodule:: pyquant4d.callbacks.compute.backend
    :members:
 
-.. automodule:: callbacks.compute.annular
+.. automodule:: pyquant4d.callbacks.compute.annular
    :members:
 
-.. automodule:: callbacks.compute.com
+.. automodule:: pyquant4d.callbacks.compute.com
    :members:
 
-.. automodule:: callbacks.compute.dpc
+.. automodule:: pyquant4d.callbacks.compute.dpc
    :members:
 
-.. automodule:: callbacks.compute.masks
+.. automodule:: pyquant4d.callbacks.compute.masks
    :members:
 
-.. automodule:: callbacks.compute.roi
+.. automodule:: pyquant4d.callbacks.compute.roi
    :members:
 
-.. automodule:: callbacks.compute.custom
+.. automodule:: pyquant4d.callbacks.compute.custom
    :members:
 
-.. automodule:: callbacks.compute.mask_math
+.. automodule:: pyquant4d.callbacks.compute.mask_math
    :members:
 
 Reading files
 -------------
 
-.. automodule:: callbacks.io.raw
+.. automodule:: pyquant4d.callbacks.io.raw
    :members:
 
-.. automodule:: callbacks.io.dm_header
+.. automodule:: pyquant4d.callbacks.io.dm_header
    :members:
 
-.. automodule:: callbacks.io.empad
+.. automodule:: pyquant4d.callbacks.io.empad
    :members:
 
-.. automodule:: callbacks.io.hdf5
+.. automodule:: pyquant4d.callbacks.io.hdf5
    :members:
 
 Saving and exporting
 --------------------
 
-.. automodule:: callbacks.io.export
+.. automodule:: pyquant4d.callbacks.io.export
    :members:
 
-.. automodule:: callbacks.io.emd
+.. automodule:: pyquant4d.callbacks.io.emd
    :members:
 
-.. automodule:: callbacks.save_export
+.. automodule:: pyquant4d.callbacks.save_export
    :members:
 
 Array layout and coordinates
 ----------------------------
 
-.. automodule:: callbacks.layout
+.. automodule:: pyquant4d.callbacks.layout
    :members:
 
 Signal blocking
 ---------------
 
-.. automodule:: callbacks.signals
+.. automodule:: pyquant4d.callbacks.signals
    :members:
 
-callbacks.appClass
-------------------
+pyquant4d.callbacks.appClass
+----------------------------
 
-.. automodule:: callbacks.appClass
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-callbacks.guiClass
-------------------
-
-.. automodule:: callbacks.guiClass
+.. automodule:: pyquant4d.callbacks.appClass
    :members:
    :undoc-members:
    :show-inheritance:
 
-callbacks.allFunctions
-----------------------
+pyquant4d.callbacks.guiClass
+----------------------------
+
+.. automodule:: pyquant4d.callbacks.guiClass
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyquant4d.callbacks.allFunctions
+--------------------------------
 
 .. warning::
-   **Deprecated.** ``callbacks.allFunctions`` only re-exports names that now live in other
+   **Deprecated.** ``pyquant4d.callbacks.allFunctions`` only re-exports names that now live in other
    modules (each access warns and names the new module).  Import from those
    modules instead; this module will be removed in pyQuant4D 2.0.
 
-.. automodule:: callbacks.allFunctions
+.. automodule:: pyquant4d.callbacks.allFunctions
    :no-members:
    :no-undoc-members:
    :no-special-members:
 
-.. autodata:: callbacks.allFunctions.MOVED
+.. autodata:: pyquant4d.callbacks.allFunctions.MOVED
    :no-value:
 
-callbacks.annularDetectorCallbacks
------------------------------------
+pyquant4d.callbacks.annularDetectorCallbacks
+--------------------------------------------
 
-.. automodule:: callbacks.annularDetectorCallbacks
+.. automodule:: pyquant4d.callbacks.annularDetectorCallbacks
    :members:
    :undoc-members:
    :show-inheritance:
 
-callbacks.axis_direction
-------------------------
+pyquant4d.callbacks.axis_direction
+----------------------------------
 
-.. automodule:: callbacks.axis_direction
+.. automodule:: pyquant4d.callbacks.axis_direction
    :members:
 
-callbacks.view_zoom
--------------------
+pyquant4d.callbacks.view_zoom
+-----------------------------
 
-.. automodule:: callbacks.view_zoom
+.. automodule:: pyquant4d.callbacks.view_zoom
    :members:
 
-callbacks.variables
--------------------
+pyquant4d.callbacks.variables
+-----------------------------
 
-.. automodule:: callbacks.variables
+.. automodule:: pyquant4d.callbacks.variables
    :members:
 
-callbacks.menus
----------------
-
-.. automodule:: callbacks.menus
-   :members:
-
-callbacks.customDetectorCallbacks
----------------------------------
-
-.. automodule:: callbacks.customDetectorCallbacks
-   :members:
-   :show-inheritance:
-
-callbacks.displayCallbacks
---------------------------
-
-.. automodule:: callbacks.displayCallbacks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-callbacks.importCallbacks
---------------------------
-
-.. automodule:: callbacks.importCallbacks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-callbacks.file_drop
--------------------
-
-.. automodule:: callbacks.file_drop
-   :members:
-
-callbacks.scan_step
--------------------
-
-.. automodule:: callbacks.scan_step
-   :members:
-
-callbacks.scale_bar
--------------------
-
-.. automodule:: callbacks.scale_bar
-   :members:
-
-callbacks.py4dstem_bridge
+pyquant4d.callbacks.menus
 -------------------------
 
-.. automodule:: callbacks.py4dstem_bridge
+.. automodule:: pyquant4d.callbacks.menus
+   :members:
+
+pyquant4d.callbacks.customDetectorCallbacks
+-------------------------------------------
+
+.. automodule:: pyquant4d.callbacks.customDetectorCallbacks
+   :members:
+   :show-inheritance:
+
+pyquant4d.callbacks.displayCallbacks
+------------------------------------
+
+.. automodule:: pyquant4d.callbacks.displayCallbacks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyquant4d.callbacks.importCallbacks
+-----------------------------------
+
+.. automodule:: pyquant4d.callbacks.importCallbacks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyquant4d.callbacks.file_drop
+-----------------------------
+
+.. automodule:: pyquant4d.callbacks.file_drop
+   :members:
+
+pyquant4d.callbacks.scan_step
+-----------------------------
+
+.. automodule:: pyquant4d.callbacks.scan_step
+   :members:
+
+pyquant4d.callbacks.scale_bar
+-----------------------------
+
+.. automodule:: pyquant4d.callbacks.scale_bar
+   :members:
+
+pyquant4d.callbacks.py4dstem_bridge
+-----------------------------------
+
+.. automodule:: pyquant4d.callbacks.py4dstem_bridge
    :members:
 
 pyquant4d
@@ -195,10 +195,10 @@ pyquant4d
 .. automodule:: pyquant4d
    :members: show
 
-callbacks.realSpaceROICallbacks
---------------------------------
+pyquant4d.callbacks.realSpaceROICallbacks
+-----------------------------------------
 
-.. automodule:: callbacks.realSpaceROICallbacks
+.. automodule:: pyquant4d.callbacks.realSpaceROICallbacks
    :members:
    :undoc-members:
    :show-inheritance:
@@ -206,32 +206,32 @@ callbacks.realSpaceROICallbacks
 annotationsClasses
 ------------------
 
-.. automodule:: annotationsClasses.interactiveAnnulus
+.. automodule:: pyquant4d.annotationsClasses.interactiveAnnulus
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: annotationsClasses.interactiveCircle
+.. automodule:: pyquant4d.annotationsClasses.interactiveCircle
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: annotationsClasses.interactiveEllipse
+.. automodule:: pyquant4d.annotationsClasses.interactiveEllipse
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: annotationsClasses.interactiveRectangle
+.. automodule:: pyquant4d.annotationsClasses.interactiveRectangle
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: annotationsClasses.interactivePolygon
+.. automodule:: pyquant4d.annotationsClasses.interactivePolygon
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: annotationsClasses.interactivePoint
+.. automodule:: pyquant4d.annotationsClasses.interactivePoint
    :members:
    :undoc-members:
    :show-inheritance:

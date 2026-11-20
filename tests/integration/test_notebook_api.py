@@ -17,7 +17,7 @@ def _cube(synthetic_data):
 
 
 def _load(app, qapp, data, **kw):
-    from callbacks.py4dstem_bridge import loadDataCube
+    from pyquant4d.callbacks.py4dstem_bridge import loadDataCube
     loadDataCube(app, data, **kw)
     assert wait_until(qapp, lambda: app.Data is not None and app.Fig.Dfrn.Image is not None)
     qapp.processEvents()
@@ -31,7 +31,7 @@ class TestCopy:
         assert not np.shares_memory(app.Data, arr) and not app._sharedData
 
     def test_shared_then_copied_before_changing(self, app, qapp, synthetic_data):
-        from callbacks.datasetOptCallbacks import swapByteOrder
+        from pyquant4d.callbacks.datasetOptCallbacks import swapByteOrder
         arr = _cube(synthetic_data)
         before = arr.copy()
         _load(app, qapp, arr, copy=False)
@@ -42,7 +42,7 @@ class TestCopy:
         assert not np.array_equal(app.Data, before.reshape(app.Data.shape))
 
     def test_nan_zeroing_copies_first(self, app, qapp, synthetic_data):
-        from callbacks.py4dstem_bridge import ownData
+        from pyquant4d.callbacks.py4dstem_bridge import ownData
         arr = _cube(synthetic_data)
         arr[0, 0, 0, 0] = np.nan
         _load(app, qapp, arr, copy=False)
@@ -51,7 +51,7 @@ class TestCopy:
         assert np.isnan(arr[0, 0, 0, 0])
 
     def test_unload_resets(self, app, qapp, synthetic_data):
-        from callbacks.import_io import unloadData
+        from pyquant4d.callbacks.import_io import unloadData
         _load(app, qapp, _cube(synthetic_data), copy=False)
         unloadData(app)
         assert not app._sharedData
@@ -146,7 +146,7 @@ class TestApplyCalibration:
         assert c.get_Q_pixel_size() == pytest.approx(2.5, abs=0.01) and c.get_Q_pixel_units() == "mrad"
         assert (c.get_R_pixel_size(), c.get_R_pixel_units()) == (2.0, "A")
         # and back: the bridge reads it as pyQuant4D wrote it
-        from callbacks.py4dstem_bridge import calibrationFromPy4DSTEM
+        from pyquant4d.callbacks.py4dstem_bridge import calibrationFromPy4DSTEM
         cal = calibrationFromPy4DSTEM(dc)
         assert cal.beam_xy == pytest.approx((13.0, 9.0)) and cal.probe_radius_px == pytest.approx(4.0)
 

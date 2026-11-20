@@ -12,8 +12,8 @@ GB = 1024 ** 3
 
 @pytest.fixture()
 def fake_cuda(monkeypatch):
-    import callbacks.import_io as import_io
-    import callbacks.startup as startup
+    import pyquant4d.callbacks.import_io as import_io
+    import pyquant4d.callbacks.startup as startup
     cuda = types.SimpleNamespace(
         device_count=lambda: 2, is_available=lambda: True,
         get_device_properties=lambda i: types.SimpleNamespace(total_memory=(4, 8)[i] * GB),
@@ -57,7 +57,7 @@ def test_memory_note_never_switches_the_gpu_off(fake_cuda, app, qapp, sample_raw
 
 def test_no_gpu(monkeypatch, app):
     """Without CUDA the list says so and means 'CPU' (it used to carry device 0)."""
-    import callbacks.startup as startup
+    import pyquant4d.callbacks.startup as startup
     if startup.torch.cuda.device_count():
         pytest.skip("a GPU is present")
     assert _items(app) == [("No GPU found.", None)]

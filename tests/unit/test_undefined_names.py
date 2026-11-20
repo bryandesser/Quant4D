@@ -14,13 +14,14 @@ import symtable
 import pytest
 
 _SRC = pathlib.Path(__file__).resolve().parents[2] / "src"
-_SKIP = {"callbacks.moveHist"}          # deliberately raises ImportError (deprecated stub)
+_SKIP = {"pyquant4d.callbacks.moveHist"}          # deliberately raises ImportError (deprecated stub)
 _MODULES = sorted(
     ".".join(p.relative_to(_SRC).with_suffix("").parts)
     for pkg in ("callbacks", "annotationsClasses")
-    for p in (_SRC / pkg).rglob("*.py")
+    for p in (_SRC / "pyquant4d" / pkg).rglob("*.py")
     if p.name != "__init__.py"
 )
+assert _MODULES, "no modules found: has the package moved?"
 
 
 def _global_refs(table, out):

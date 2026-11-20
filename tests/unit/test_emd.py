@@ -7,8 +7,8 @@ import h5py
 import numpy as np
 import pytest
 
-from callbacks.io.emd import EmdCalibration, EmdImage, is_emd, read_emd_info, write_emd
-from callbacks.io.export import Region, full_region
+from pyquant4d.callbacks.io.emd import EmdCalibration, EmdImage, is_emd, read_emd_info, write_emd
+from pyquant4d.callbacks.io.export import Region, full_region
 
 try:
     import py4DSTEM
@@ -121,7 +121,7 @@ def test_py4dstem_reads_child_images(tmp_path):
 # Using a file's calibration (import)
 # ---------------------------------------------------------------------------
 def test_usable_calibration_keeps_mrad_drops_other_units():
-    from callbacks.io.emd import usable_calibration
+    from pyquant4d.callbacks.io.emd import usable_calibration
     mrad = usable_calibration(EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad"))
     assert (mrad.q_pixel_size, mrad.q_units, mrad.beam_xy) == (0.5, "mrad", BEAM_XY)
     inv_a = usable_calibration(EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.01, q_units="A^-1",
@@ -132,7 +132,7 @@ def test_usable_calibration_keeps_mrad_drops_other_units():
 
 
 def test_calibration_for_region_crops_and_bins():
-    from callbacks.io.emd import calibration_for_region
+    from pyquant4d.callbacks.io.emd import calibration_for_region
     cal = EmdCalibration(beam_xy=(10.0, 7.0), q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=20.0)
     assert calibration_for_region(cal, (0, 0), 1) == cal
     out = calibration_for_region(cal, (2, 1), 2)
@@ -143,7 +143,7 @@ def test_calibration_for_region_crops_and_bins():
 
 
 def test_describe_emd(tmp_path):
-    from callbacks.io.emd import EmdInfo, describe_emd
+    from pyquant4d.callbacks.io.emd import EmdInfo, describe_emd
     cal = EmdCalibration(beam_xy=BEAM_XY, q_pixel_size=0.5, q_units="mrad", probe_semiangle_mrad=21.4)
     path, _ = _write(tmp_path, calibration=cal, images={"ADF": EmdImage(np.ones((NFY, NFX)))})
     text = describe_emd(read_emd_info(path))
@@ -173,14 +173,14 @@ def test_reads_a_file_py4dstem_wrote(tmp_path):
     assert info.calibration.beam_xy == pytest.approx((2.0, float(qx0.mean())))   # (x, y) = (qy0, qx0)
     assert info.calibration.q_pixel_size == 0.25 and info.calibration.q_units == "mrad"
     assert info.calibration.probe_radius_px == pytest.approx(18.0) and info.calibration.probe_semiangle_mrad is None
-    from callbacks.io.emd import usable_calibration
+    from pyquant4d.callbacks.io.emd import usable_calibration
     assert usable_calibration(info.calibration).probe_semiangle_mrad == pytest.approx(18.0 * 0.25)
     assert info.origin_spread_px == pytest.approx(0.5)
 
 
 def test_swapping_detector_xy_swaps_the_file_beam():
     """Settings > Misc 'swap diffraction X/Y' re-aligns from the file calibration: its beam must swap too."""
-    from callbacks.appClass import D
+    from pyquant4d.callbacks.appClass import D
     d = D(Calib=EmdCalibration(beam_xy=(1.0, 2.0), q_pixel_size=0.5, q_units="mrad"))
     d.swapDiff()
     assert d.Calib.beam_xy == (2.0, 1.0) and d.Calib.q_pixel_size == 0.5
@@ -192,7 +192,7 @@ def test_swapping_detector_xy_swaps_the_file_beam():
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("kv, wavelength_pm", [(300, 1.9687), (200, 2.5079), (100, 3.7014), (80, 4.1757)])
 def test_relativistic_wavelength(kv, wavelength_pm):
-    from callbacks.io.emd import electron_wavelength_A, mrad_per_inverse_angstrom
+    from pyquant4d.callbacks.io.emd import electron_wavelength_A, mrad_per_inverse_angstrom
     assert electron_wavelength_A(kv) * 100 == pytest.approx(wavelength_pm, abs=1e-4)
     assert mrad_per_inverse_angstrom(kv) == pytest.approx(10 * wavelength_pm, abs=1e-3)
     with pytest.raises(ValueError):
@@ -200,7 +200,7 @@ def test_relativistic_wavelength(kv, wavelength_pm):
 
 
 def test_inverse_angstrom_units_and_conversion():
-    from callbacks.io.emd import is_inverse_angstrom, mrad_per_inverse_angstrom, usable_calibration
+    from pyquant4d.callbacks.io.emd import is_inverse_angstrom, mrad_per_inverse_angstrom, usable_calibration
     assert all(is_inverse_angstrom(u) for u in ("A^-1", "Å^-1", "1/A", " a^-1 "))
     assert not any(is_inverse_angstrom(u) for u in ("mrad", "pixels", "nm"))
     cal = EmdCalibration(q_pixel_size=0.02, q_units="A^-1", probe_semiangle_mrad=20.0)
@@ -226,7 +226,7 @@ def test_recorded_voltage_and_scan_step_read_back(tmp_path):
     info = read_emd_info(path)
     assert info.accelerating_voltage_kV == 200.0
     assert (info.calibration.r_pixel_size, info.calibration.r_units) == (0.5, "nm")
-    from callbacks.io.emd import describe_emd
+    from pyquant4d.callbacks.io.emd import describe_emd
     text = describe_emd(info)
     assert "Scan step: 0.5 nm" in text and "Accelerating voltage: 200 kV" in text
 
@@ -237,6 +237,6 @@ def test_recorded_voltage_and_scan_step_read_back(tmp_path):
     ("1/nm", None, None), ("A^-1", 0, None), ("pixels", 300, None), ("nm", 300, None),
 ])
 def test_mrad_per_unit(units, kv, expected):
-    from callbacks.io.emd import mrad_per_unit
+    from pyquant4d.callbacks.io.emd import mrad_per_unit
     got = mrad_per_unit(units, kv)
     assert got == (None if expected is None else pytest.approx(expected, rel=1e-4))

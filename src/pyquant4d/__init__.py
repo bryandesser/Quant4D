@@ -72,8 +72,8 @@ def show(data, calibration=None, *, name: str = "py4DSTEM DataCube", kV: float |
     from PyQt5 import QtWidgets as qtw
 
     app = qtw.QApplication.instance() or qtw.QApplication(sys.argv[:1] or ["pyquant4d"])
-    from callbacks.guiClass import MainWindow
-    from callbacks.py4dstem_bridge import loadDataCube
+    from .callbacks.guiClass import MainWindow
+    from .callbacks.py4dstem_bridge import loadDataCube
 
     win = MainWindow()
     win.embedded = True            # closing it closes pyQuant4D's windows, not the Python session

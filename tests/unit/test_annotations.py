@@ -38,7 +38,7 @@ SHAPE = (32, 32)   # detector pixel grid
 # ---------------------------------------------------------------------------
 def _roi_to_mask(roi, shape, typ: str):
     """Thin wrapper around the real mask-builder, which requires a typ string."""
-    from callbacks.realSpaceROICallbacks import _roi_to_mask as _m
+    from pyquant4d.callbacks.realSpaceROICallbacks import _roi_to_mask as _m
     return _m(roi, shape, typ)
 
 
@@ -48,7 +48,7 @@ def _roi_to_mask(roi, shape, typ: str):
 class TestInteractiveAnnulus:
     @pytest.fixture(autouse=True)
     def setup(self, mpl_fig_ax):
-        from annotationsClasses.interactiveAnnulus import InteractiveAnnulus
+        from pyquant4d.annotationsClasses.interactiveAnnulus import InteractiveAnnulus
         _, self.ax = mpl_fig_ax
         # Constructor params: inner_radius, outer_radius (NOT r_inner, r_outer)
         self.ann = InteractiveAnnulus(self.ax, CENTRE,
@@ -82,7 +82,7 @@ class TestInteractiveAnnulus:
 class TestInteractiveCircle:
     @pytest.fixture(autouse=True)
     def setup(self, mpl_fig_ax):
-        from annotationsClasses.interactiveCircle import InteractiveCircle
+        from pyquant4d.annotationsClasses.interactiveCircle import InteractiveCircle
         _, self.ax = mpl_fig_ax
         self.circ = InteractiveCircle(self.ax, CENTRE, radius=8)
 
@@ -111,7 +111,7 @@ class TestInteractiveCircle:
 class TestInteractiveRectangle:
     @pytest.fixture(autouse=True)
     def setup(self, mpl_fig_ax):
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         _, self.ax = mpl_fig_ax
         self.rect = InteractiveRectangle(self.ax, center=CENTRE,
                                          size=np.array([10.0, 6.0]))
@@ -158,7 +158,7 @@ class TestInteractiveRectangle:
 class TestInteractivePolygon:
     @pytest.fixture(autouse=True)
     def setup(self, mpl_fig_ax):
-        from annotationsClasses.interactivePolygon import InteractivePolygon
+        from pyquant4d.annotationsClasses.interactivePolygon import InteractivePolygon
         _, self.ax = mpl_fig_ax
         verts = np.array([[10, 10], [22, 10], [16, 22]], dtype=float)
         self.poly = InteractivePolygon(self.ax, verts)
@@ -227,7 +227,7 @@ def roi_ax(mpl_fig_ax):
 class TestInteractiveEllipse:
     @pytest.fixture(autouse=True)
     def setup(self, roi_ax):
-        from annotationsClasses.interactiveEllipse import InteractiveEllipse
+        from pyquant4d.annotationsClasses.interactiveEllipse import InteractiveEllipse
         self.ax = roi_ax
         self.ell = InteractiveEllipse(self.ax, CENTRE, semiaxes=(6.0, 3.0))
         self.ell.connect()
@@ -255,7 +255,7 @@ class TestInteractiveEllipse:
         np.testing.assert_allclose(self.ell.semiaxes, [6.0, 3.0])
 
     def test_mask_follows_rotation(self):
-        from callbacks import compute
+        from pyquant4d.callbacks import compute
         upright = _roi_to_mask(self.ell, SHAPE, 'ellipse')
         assert upright[16, 21] and not upright[21, 16]
         self.ell.rotation = 90.0
@@ -272,7 +272,7 @@ class TestInteractiveEllipse:
 class TestRectangleRotation:
     @pytest.fixture(autouse=True)
     def setup(self, roi_ax):
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         self.ax = roi_ax
         self.rect = InteractiveRectangle(self.ax, CENTRE, (10.0, 6.0))
         self.rect.connect()
@@ -292,7 +292,7 @@ class TestRectangleRotation:
         np.testing.assert_allclose(self.rect.size, [12.0, 7.0])
 
     def test_rotation_cursor_shown_just_outside_a_corner(self, monkeypatch):
-        import annotationsClasses.interactiveRectangle as mod
+        import pyquant4d.annotationsClasses.interactiveRectangle as mod
         shown = []
         monkeypatch.setattr(mod, "set_rotate_cursor", lambda canvas: shown.append(1))
         corner = self.rect.handles.get_offsets()[2].copy()
@@ -311,14 +311,14 @@ class TestRectangleRotation:
         assert self.rect.rotation == pytest.approx(30.0)
 
     def test_mask_is_rotated(self):
-        from callbacks import compute
+        from pyquant4d.callbacks import compute
         self.rect.rotation = 90.0
         np.testing.assert_array_equal(_roi_to_mask(self.rect, SHAPE, 'rectangle'),
                                       compute.rectangle_mask(SHAPE, CENTRE, (10.0, 6.0), 90.0))
 
     def test_rotates_near_the_image_edge(self):
         """Near the edge of the image the corners still rotate it (a handle off the image could not)."""
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         r = InteractiveRectangle(self.ax, (16.0, 2.0), (10.0, 3.0))
         r.connect()
         self.rect.remove()
@@ -328,7 +328,7 @@ class TestRectangleRotation:
         assert r.rotation == pytest.approx(-30.0)
 
     def test_static_rectangle_has_no_handles(self):
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         r = InteractiveRectangle(self.ax, CENTRE, (10.0, 6.0), interactions='none')
         assert not r.handles.get_visible()
         r.connect()
@@ -340,7 +340,7 @@ class TestRectangleRotation:
 class TestPolygonVertices:
     @pytest.fixture(autouse=True)
     def setup(self, roi_ax):
-        from annotationsClasses.interactivePolygon import InteractivePolygon
+        from pyquant4d.annotationsClasses.interactivePolygon import InteractivePolygon
         self.ax = roi_ax
         self.poly = InteractivePolygon(self.ax, [[10, 10], [22, 10], [16, 22]])
         self.poly.connect()
@@ -384,7 +384,7 @@ class TestShiftKeepsTheAspectRatio:
     """Holding Shift while resizing a rectangle or ellipse keeps its aspect ratio."""
 
     def test_rectangle_corner(self, roi_ax):
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         r = InteractiveRectangle(roi_ax, CENTRE, (10.0, 6.0), rotation=30.0)
         r.connect()
         corners = r.handles.get_offsets().copy()
@@ -395,7 +395,7 @@ class TestShiftKeepsTheAspectRatio:
         assert r.rotation == pytest.approx(30.0)
 
     def test_rectangle_corner_without_shift_is_free(self, roi_ax):
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         r = InteractiveRectangle(roi_ax, CENTRE, (10.0, 6.0))
         r.connect()
         corner = r.handles.get_offsets()[2].copy()
@@ -404,7 +404,7 @@ class TestShiftKeepsTheAspectRatio:
 
     def test_rectangle_shift_as_held_key(self, roi_ax):
         """Older matplotlib has no MouseEvent.modifiers: the held key is used."""
-        from annotationsClasses.interactiveRectangle import InteractiveRectangle
+        from pyquant4d.annotationsClasses.interactiveRectangle import InteractiveRectangle
         r = InteractiveRectangle(roi_ax, CENTRE, (10.0, 6.0))
         r.connect()
         corner = r.handles.get_offsets()[2].copy()
@@ -416,7 +416,7 @@ class TestShiftKeepsTheAspectRatio:
         (1, [-6, 0], [12.0, 6.0]),         # minor handle out to 6: major follows 6 -> 12
     ])
     def test_ellipse_handle(self, roi_ax, handle, target, expected):
-        from annotationsClasses.interactiveEllipse import InteractiveEllipse
+        from pyquant4d.annotationsClasses.interactiveEllipse import InteractiveEllipse
         e = InteractiveEllipse(roi_ax, CENTRE, semiaxes=(6.0, 3.0))
         e.connect()
         start = e.handles.get_offsets()[handle].copy()

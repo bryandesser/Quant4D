@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from callbacks.layout import (
+from pyquant4d.callbacks.layout import (
     as_4d, check_layout, dfrn_grids, dfrn_shape, ensure_c_contiguous, real_shape,
 )
 
@@ -106,7 +106,7 @@ def test_ensure_c_contiguous():
 # ---------------------------------------------------------------------------
 # Source guard: hand-rolled (x, y) grids / NPx-as-shape must not come back
 # ---------------------------------------------------------------------------
-_SRC = pathlib.Path(__file__).resolve().parents[2] / "src" / "callbacks"
+_SRC = pathlib.Path(__file__).resolve().parents[2] / "src" / "pyquant4d" / "callbacks"
 _BAD = [
     r"np\.(mgrid|ogrid)\[[^\]]*NPxX[^\]]*NPxY",   # (x, y)-ordered pixel grid
     r"reshape\(\s*self\.D\.NPx\s*\)",             # NPx is (x, y), not a shape
@@ -116,6 +116,7 @@ _BAD = [
 
 @pytest.mark.parametrize("pattern", _BAD)
 def test_no_transposed_layout_idioms(pattern):
+    assert _SRC.is_dir(), _SRC                     # (a moved package would make this pass vacuously)
     hits = [
         f"{p.name}:{i}"
         for p in _SRC.rglob("*.py") if p.name != "layout.py"   # its docstring quotes the idiom

@@ -1,6 +1,19 @@
 Changelog
 =========
 
+0.4.0 (2026)
+------------
+
+- One package: everything now lives in ``pyquant4d`` (``pyquant4d.callbacks``,
+  ``pyquant4d.annotationsClasses``, ``pyquant4d.gui``, ``pyquant4d.app``).  The
+  generic top-level names ``callbacks``, ``annotationsClasses``, ``gui`` and
+  ``Quant4D_app`` are no longer installed.  Scripts that imported them change
+  ``from callbacks.x import y`` to ``from pyquant4d.callbacks.x import y``;
+  ``pyquant4d.show`` is unchanged.
+- ``python -m pyquant4d`` starts the app (as the ``quant4d`` command does).
+- Package metadata: licence given as ``GPL-3.0-or-later`` (SPDX).
+- The documentation takes its version from ``pyproject.toml``.
+
 0.3.0 (2026)
 ------------
 

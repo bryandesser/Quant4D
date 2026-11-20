@@ -101,5 +101,5 @@ yourself).  The results are also available through a file: export
 API
 ---
 
-.. automodule:: callbacks.results
+.. automodule:: pyquant4d.callbacks.results
    :members:

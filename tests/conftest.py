@@ -102,7 +102,7 @@ def import_raw(win, qapp, path, nfx, nfy, npx, npy, dtype="f4"):
 def _no_modal_dialogs():
     """Never block on a message box: notifDLG answers '' and QMessageBox.exec returns Ok."""
     from PyQt5.QtWidgets import QMessageBox
-    import callbacks.utils as utils
+    import pyquant4d.callbacks.utils as utils
     saved = (utils.notifDLG, QMessageBox.exec_, QMessageBox.exec)
     utils.notifDLG = lambda *a, **k: ""
     QMessageBox.exec_ = lambda self: QMessageBox.Ok
@@ -135,7 +135,7 @@ def sample_hdf5_file(tmp_path_factory, synthetic_data):
 @pytest.fixture()
 def app(qtbot):
     """A fresh MainWindow with nothing loaded (startup state)."""
-    from callbacks.guiClass import MainWindow
+    from pyquant4d.callbacks.guiClass import MainWindow
     win = MainWindow()
     qtbot.addWidget(win)
     win.show()
@@ -147,8 +147,8 @@ def loaded_app(qapp, sample_raw_file):
     """A MainWindow with the synthetic dataset imported through the Import window, all
     image windows shown.  Module-scoped (importing takes ~1 s): tests set the mode and
     controls they rely on rather than assuming what an earlier test left behind."""
-    from callbacks.guiClass import MainWindow
-    from callbacks.window_manager import showAllWindows
+    from pyquant4d.callbacks.guiClass import MainWindow
+    from pyquant4d.callbacks.window_manager import showAllWindows
     win = MainWindow()
     win.show()
     import_raw(win, qapp, sample_raw_file, SCAN_X, SCAN_Y, DET_X, DET_Y)

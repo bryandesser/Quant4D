@@ -176,7 +176,7 @@ class TestWindowSizeFields:
 class TestByteOrderPrompt:
     @pytest.mark.parametrize("answer", ["Yes", "No. Revert"])
     def test_other_windows_hidden_while_asking(self, loaded_app, qapp, monkeypatch, answer):
-        import callbacks.datasetOptCallbacks as ds
+        import pyquant4d.callbacks.datasetOptCallbacks as ds
         w = loaded_app
         set_mode(w, qapp, "AnnMod")
         for id in ("Real", "RealMask", "DfrnMask"):
@@ -195,7 +195,7 @@ class TestByteOrderPrompt:
             qapp.processEvents()
         finally:
             w.UpdateImages.triggered.disconnect()
-            w.UpdateImages.triggered.connect(lambda: __import__("callbacks.plotting", fromlist=["x"])
+            w.UpdateImages.triggered.connect(lambda: __import__("pyquant4d.callbacks.plotting", fromlist=["x"])
                                              .updateImagesCallbacks(w))
         assert seen == {"Dfrn": True, "Real": False, "RealMask": False, "DfrnMask": False}
         for id in ("Real", "RealMask", "DfrnMask"):
@@ -239,7 +239,7 @@ class TestPickTheBeam:
                                      MouseEvent("button_release_event", fig.canvas, x, y, button=1))
 
     def test_double_click_picks_the_nearest_detected_disk(self, loaded_app, qapp, monkeypatch):
-        import callbacks.alignment as al
+        import pyquant4d.callbacks.alignment as al
         w = loaded_app
         set_mode(w, qapp, "AlignMod")
         before = (w.TBX.value(), w.TBY.value(), w.TBR.value())
@@ -261,7 +261,7 @@ class TestPickTheBeam:
         """After a double-click moved the beam, hovering the old place still gave the move cursor:
         the circle's centre was re-read from matplotlib's line cache, which still held the old
         circle until the next redraw."""
-        import callbacks.alignment as al
+        import pyquant4d.callbacks.alignment as al
         w = loaded_app
         set_mode(w, qapp, "AlignMod")
         before = (w.TBX.value(), w.TBY.value(), w.TBR.value())
@@ -288,7 +288,7 @@ class TestPickTheBeam:
             set_mode(w, qapp, "AnnMod")
 
     def test_only_in_alignment_mode(self, loaded_app, qapp, monkeypatch):
-        import callbacks.alignment as al
+        import pyquant4d.callbacks.alignment as al
         w = loaded_app
         set_mode(w, qapp, "AnnMod")
         called = []

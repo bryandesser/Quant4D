@@ -57,7 +57,7 @@ class TestSaveImages:
         _save(save_window, qapp, ["Real"], png=True)
         png = np.array(Image.open(tmp_path / "t_Real.png"))
         assert png.shape == (SCAN_Y, SCAN_X, 3), "one pixel per probe position"
-        from callbacks.io.export import rgb_as_displayed
+        from pyquant4d.callbacks.io.export import rgb_as_displayed
         assert np.array_equal(png, rgb_as_displayed(loaded_app.ImageAx.Real))
 
     def test_annotated_png_is_the_figure(self, loaded_app, qapp, save_window, tmp_path):
@@ -166,7 +166,7 @@ class TestExportEmd:
 
     def test_dataset_calibration_and_images(self, annular, qapp, save_window, tmp_path):
         h5py = pytest.importorskip("h5py")
-        from callbacks.io.emd import is_emd, read_emd_info
+        from pyquant4d.callbacks.io.emd import is_emd, read_emd_info
         app = annular
         path, _ = self._export(save_window, qapp, tmp_path, ["Real", "Dfrn"])
         assert is_emd(path)
@@ -188,7 +188,7 @@ class TestExportEmd:
             assert np.allclose(meta["beam_center_xy"][()], app.B0)
 
     def test_binned_calibration(self, annular, qapp, save_window, tmp_path):
-        from callbacks.io.emd import read_emd_info
+        from pyquant4d.callbacks.io.emd import read_emd_info
         app = annular
         path, _ = self._export(save_window, qapp, tmp_path, ["Dfrn"], binning=2)
         info = read_emd_info(path)

@@ -82,10 +82,10 @@ After installation, launch the application with:
 quant4d
 ```
 
-or run directly from the repository:
+or, equivalently:
 
 ```bash
-python Quant4D_app.py
+python -m pyquant4d
 ```
 
 ### Loading a dataset

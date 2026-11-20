@@ -12,9 +12,9 @@ After installation, launch pyQuant4D from the command line::
 
     quant4d
 
-or run directly from the repository root::
+or, equivalently::
 
-    python Quant4D_app.py
+    python -m pyquant4d
 
 Save images
 -----------

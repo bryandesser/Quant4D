@@ -47,18 +47,18 @@ class TestImports:
     """Smoke-test that all public modules import without error."""
 
     @pytest.mark.parametrize("module", [
-        "callbacks.appClass",
-        "callbacks.allFunctions",
-        "callbacks.histBoxWidget",
-        "callbacks.annularDetectorCallbacks",
-        "callbacks.virtualApertureCallbacks",
-        "callbacks.realSpaceROICallbacks",
-        "callbacks.displayCallbacks",
-        "annotationsClasses.interactiveCircle",
-        "annotationsClasses.interactivePoint",
-        "annotationsClasses.interactiveAnnulus",
-        "annotationsClasses.interactiveRectangle",
-        "annotationsClasses.interactivePolygon",
+        "pyquant4d.callbacks.appClass",
+        "pyquant4d.callbacks.allFunctions",
+        "pyquant4d.callbacks.histBoxWidget",
+        "pyquant4d.callbacks.annularDetectorCallbacks",
+        "pyquant4d.callbacks.virtualApertureCallbacks",
+        "pyquant4d.callbacks.realSpaceROICallbacks",
+        "pyquant4d.callbacks.displayCallbacks",
+        "pyquant4d.annotationsClasses.interactiveCircle",
+        "pyquant4d.annotationsClasses.interactivePoint",
+        "pyquant4d.annotationsClasses.interactiveAnnulus",
+        "pyquant4d.annotationsClasses.interactiveRectangle",
+        "pyquant4d.annotationsClasses.interactivePolygon",
     ])
     def test_import(self, module):
         import importlib

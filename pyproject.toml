@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77", "wheel"]          # >=77: SPDX license expression
 build-backend = "setuptools.build_meta"
 
 # ---------------------------------------------------------------------------
@@ -7,10 +7,11 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name            = "pyquant4d"
-version         = "0.3.0"
+version         = "0.4.0"
 description     = "Python GUI for quantitative 4D-STEM data visualisation and analysis"
 readme          = "README.md"
-license         = { file = "LICENSE" }
+license         = "GPL-3.0-or-later"
+license-files   = ["LICENSE"]
 requires-python = ">=3.10"
 
 authors = [
@@ -34,7 +35,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Visualization",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -80,7 +80,7 @@ docs = ["sphinx>=7", "furo", "myst-parser"]
 # Entry points
 # ---------------------------------------------------------------------------
 [project.scripts]
-quant4d = "Quant4D_app:main"
+quant4d = "pyquant4d.app:main"
 
 # ---------------------------------------------------------------------------
 # URLs
@@ -93,17 +93,15 @@ quant4d = "Quant4D_app:main"
 # ---------------------------------------------------------------------------
 # Package discovery — src/ layout
 # ---------------------------------------------------------------------------
-[tool.setuptools]
-# Quant4D_app.py lives in src/ and is the entry-point module.
-py-modules = ["Quant4D_app"]
-
+# Everything is one package, src/pyquant4d (callbacks, annotationsClasses, gui, app): nothing
+# else is installed at the top level of site-packages.
 [tool.setuptools.packages.find]
 where   = ["src"]
-exclude = ["*.tests*"]
+include = ["pyquant4d*"]
 
 # Include .ui files and icon assets shipped inside the gui/ package.
 [tool.setuptools.package-data]
-gui = ["*.ui", "icons/*", "icons/**/*"]
+"pyquant4d.gui" = ["*.ui", "icons/*", "icons/**/*"]
 
 # ---------------------------------------------------------------------------
 # Type checking (pyright, run in CI).  "basic" mode, zero errors required.

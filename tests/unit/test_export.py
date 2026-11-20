@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from callbacks.io import export as ex
-from callbacks.io.export import Region
+from pyquant4d.callbacks.io import export as ex
+from pyquant4d.callbacks.io.export import Region
 
 NFX, NFY, NPX, NPY = 5, 3, 12, 8
 SCAN, DET = (NFX, NFY), (NPX, NPY)
