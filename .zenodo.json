@@ -1,0 +1,35 @@
+{
+  "title": "Quant4D (Python): a graphical interface for exploring and analysing 4D-STEM data",
+  "upload_type": "software",
+  "description": "<p>Quant4D is an open source graphical interface for quickly and intuitively opening, interacting with, and performing basic analysis of 4D-STEM data. This is the Python version, with optional GPU acceleration, ported from the original MATLAB implementation (Quant4D_matlab).</p>",
+  "creators": [
+    {
+      "name": "Esser, Bryan D.",
+      "affiliation": "Monash Centre for Electron Microscopy",
+      "orcid": "0000-0001-8138-447X"
+    }
+  ],
+  "license": "gpl-3.0-or-later",
+  "access_right": "open",
+  "language": "eng",
+  "keywords": ["4D-STEM", "scanning transmission electron microscopy", "electron microscopy", "data visualisation", "python"],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.15493503",
+      "relation": "isDerivedFrom",
+      "resource_type": "software",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "https://github.com/bryandesser/Quant4D_matlab",
+      "relation": "isDerivedFrom",
+      "resource_type": "software",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://quant4d.readthedocs.io",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ]
+}
