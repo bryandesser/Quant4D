@@ -42,13 +42,26 @@ GPU acceleration additionally requires [PyTorch](https://pytorch.org/get-started
 
 ## Installation
 
-### From PyPI (once published)
+### 1. Create a conda environment
+
+Create and activate a fresh environment first (Python 3.10–3.12 are supported):
+
+```bash
+conda create -n quant4d python=3.11
+conda activate quant4d
+```
+
+All subsequent `pip` commands should be run inside this activated environment.
+
+### 2. Install Quant4D
+
+#### From PyPI (once published)
 
 ```bash
 pip install quant4d
 ```
 
-### From source (recommended during development)
+#### From source (recommended during development)
 
 ```bash
 git clone https://github.com/bryandesser/Quant4D.git
@@ -56,7 +69,7 @@ cd Quant4D
 pip install -e .
 ```
 
-### With GPU support
+#### With GPU support
 
 Install quant4d first, then install a CUDA-enabled PyTorch build matching your CUDA version.  
 See https://pytorch.org/get-started/locally/ for the right command. For example, for CUDA 12.1:
