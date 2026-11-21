@@ -1,4 +1,5 @@
 # Quant4D
+[![DOI](https://zenodo.org/badge/611474936.svg)](https://doi.org/10.5281/zenodo.24416072)
 [![CI](https://github.com/bryandesser/Quant4D/actions/workflows/ci.yml/badge.svg)](https://github.com/bryandesser/Quant4D/actions/workflows/ci.yml)
 
 A Python GUI application for quantitative 4D-STEM data visualisation and analysis, ported from the original MATLAB [Quant4D](https://github.com/bryandesser/Quant4D_matlab) application.
