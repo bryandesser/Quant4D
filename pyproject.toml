@@ -73,6 +73,7 @@ dev  = [
     "sphinx>=7",
     "furo",
     "myst-parser",
+    "py4DSTEM>=0.14",
     "ipykernel",
 ]
 docs = ["sphinx>=7", "furo", "myst-parser"]
