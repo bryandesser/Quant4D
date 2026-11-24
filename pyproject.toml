@@ -73,6 +73,7 @@ dev  = [
     "sphinx>=7",
     "furo",
     "myst-parser",
+    "ipykernel",
 ]
 docs = ["sphinx>=7", "furo", "myst-parser"]
 
