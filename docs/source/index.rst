@@ -7,10 +7,11 @@ Welcome to the Quant4D documentation
 opening, interacting with, and performing basic analysis of 4D-STEM data.
 It is a Python port of the original
 `Quant4D <https://github.com/bryandesser/Quant4D_matlab>`_ MATLAB application,
-developed at `Monash Imaging Physics <https://www.monash.edu/medicine/ccs/research/monash-imaging-physics>`_.
+developed with support from `Monash Centre for Electron Microscopy <https://www.monash.edu/researchinfrastructure/mcem>`_
+and `Monash Imaging Physics <https://www.monash.edu/science/schools/physics/research/imaging-physics>`_.
 
 .. note::
-   Quant4D is currently in early development (version |release|, alpha).
+   Quant4D is currently in early development (version |release|).
    The API and UI may change without notice.
 
 |
