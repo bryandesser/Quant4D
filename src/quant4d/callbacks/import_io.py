@@ -20,6 +20,11 @@ from PIL import Image
 from .utils import notifDLG, checkNaN  # noqa: E402
 from .signals import all_signals_blocked, signals_blocked  # noqa: E402
 from . import compute  # noqa: E402
+
+
+def _fmt_size(nbytes):
+    """File size as bytes, decimal GB and binary GiB (an EMPAD 512x512 float32 file is 17.18 GB = 16.00 GiB)."""
+    return "{} bytes ({:.2f} GB, {:.2f} GiB)".format(nbytes, nbytes / 1e9, nbytes / 1024**3)
 from .axis_direction import install_view_transform  # noqa: E402
 # NOTE: enableWindows is imported inside the functions that need it (unloadData,
 # importData) to avoid a circular import with callbacks.startup, which imports
@@ -219,8 +224,7 @@ def importSelectFile(self, path=None, source=None):
             from .scan_step import setImportStep  # noqa: E402
             setImportStep(self)
         self.ImportWindow.ImpActualFilesize.setText(
-            "{} bytes, {:.2f} GiB".format(
-                self.T.FileSize, self.T.FileSize / 1024**3))
+            _fmt_size(self.T.FileSize))
 
         # activate Import Preview
         self.DfrnDetrTabGroup.setVisible(True)
@@ -620,7 +624,7 @@ def importFileType(self, source=None, new_file=False):
                     self.ImportWindow.DataOffset.setValue(offset)
                     noteoffs = "Selected dataset's offset is {} bytes.".format(offset)
 
-                self.T.fileTail = self.T.FileSize - self.ImportWindow.DataOffset.value() - h5i.size
+                self.T.fileTail = self.T.FileSize - self.ImportWindow.DataOffset.value() - h5i.nbytes  # bytes, not elements
 
                 # set datatype; strip < or > if included as these represent big/little endian
                 self.ImportWindow.ImpDataType.setCurrentIndex(
@@ -790,8 +794,7 @@ def importBoxInput(self, source=_SENDER):
                     + self.ImportWindow.DNPxX.value() * self.ImportWindow.DNPxY.value() * byte_size + self.ImportWindow.FrFoot.value()) \
                 * self.ImportWindow.DNFrX.value() * self.ImportWindow.DNFrY.value()
             self.ImportWindow.ImpEstFilesize.setText(
-                "{} bytes, {:.2f} GiB".format(
-                    self.T.EstSize, self.T.EstSize / 1024**3))
+                _fmt_size(self.T.EstSize))
 
             if np.issubdtype(self.ImportWindow.ImpDataType.currentData(), np.integer):
                 if byte_size > 4:

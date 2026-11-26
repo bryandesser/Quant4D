@@ -61,6 +61,22 @@ class TestHDF5Import:
         assert wait_until(qapp, lambda: app.Data is not None and app.Data.shape == synthetic_data.shape)
         assert np.allclose(np.asarray(app.Data), synthetic_data)
 
+    def test_hdf5_size_estimate_matches_file(self, app, qapp, tmp_path, synthetic_data):
+        """A contiguous float32 dataset: the estimate counts bytes, not elements (an EMPAD
+        512x512 file was estimated at file size + 3 bytes/element), and the HDF5 metadata and
+        other datasets around it are carried as offset + tail."""
+        h5py = pytest.importorskip("h5py")
+        path = tmp_path / "f4.h5"
+        with h5py.File(path, "w") as f:
+            f.create_dataset("data", data=synthetic_data.reshape(SCAN_Y, SCAN_X, DET_Y, DET_X).astype("<f4"))
+            f.create_dataset("calibration", data=np.arange(10.0))
+        iw = _open(app, qapp, path, "HDF5Button")
+        assert iw.ImpDataType.currentData() == "f4"
+        qapp.processEvents()
+        assert app.T.EstSize == app.T.FileSize == path.stat().st_size
+        assert "0, 128, 0" in iw.ImpEstFilesize.styleSheet(), "a matching estimate is shown in green"
+        assert "GB" in iw.ImpEstFilesize.text() and "GiB" in iw.ImpActualFilesize.text()
+
 
 class TestImportCancel:
     def test_cancel_before_import(self, app, qapp, sample_raw_file):

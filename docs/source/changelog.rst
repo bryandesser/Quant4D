@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+- Import window, HDF5 files: the estimated file size counted the dataset's
+  elements where it needed its bytes, so any dataset wider than one byte was
+  over-estimated (a 512 x 512 EMPAD float32 file, 17.2 GB, showed about
+  28 GiB) and never turned green.  A contiguous dataset now gives an estimate
+  equal to the file size.
+- The actual and estimated file sizes are shown in bytes, GB and GiB.
+
 0.4.0 (2026)
 ------------
 
