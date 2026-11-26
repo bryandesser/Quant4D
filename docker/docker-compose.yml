@@ -1,0 +1,15 @@
+services:
+  gpu-runner:
+    build: .
+    restart: unless-stopped
+    environment:
+      REPO: bryandesser/Quant4D
+      RUNNER_NAME: wsl2-rtxpro1000
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
