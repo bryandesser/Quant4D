@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+0.4.2 (2026)
+------------
 
 - Import window, HDF5 files: the estimated file size counted the dataset's
   elements where it needed its bytes, so any dataset wider than one byte was
