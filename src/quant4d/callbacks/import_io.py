@@ -20,11 +20,6 @@ from PIL import Image
 from .utils import notifDLG, checkNaN  # noqa: E402
 from .signals import all_signals_blocked, signals_blocked  # noqa: E402
 from . import compute  # noqa: E402
-
-
-def _fmt_size(nbytes):
-    """File size as bytes, decimal GB and binary GiB (an EMPAD 512x512 float32 file is 17.18 GB = 16.00 GiB)."""
-    return "{} bytes ({:.2f} GB, {:.2f} GiB)".format(nbytes, nbytes / 1e9, nbytes / 1024**3)
 from .axis_direction import install_view_transform  # noqa: E402
 # NOTE: enableWindows is imported inside the functions that need it (unloadData,
 # importData) to avoid a circular import with callbacks.startup, which imports
@@ -54,6 +49,11 @@ except ImportError:
         @staticmethod
         def device(x): return x
     torch = _TorchStub()  # type: ignore[assignment]
+
+
+def _fmt_size(nbytes):
+    """File size as bytes, decimal GB and binary GiB (an EMPAD 512x512 float32 file is 17.18 GB = 16.00 GiB)."""
+    return "{} bytes ({:.2f} GB, {:.2f} GiB)".format(nbytes, nbytes / 1e9, nbytes / 1024**3)
 
 
 def gatherImportOptions(self, preview):
